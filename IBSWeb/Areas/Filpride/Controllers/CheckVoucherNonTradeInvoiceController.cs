@@ -583,8 +583,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
+
         [Authorize(Roles = "Admin,AccountingManager")]
         public async Task<IActionResult> Approve(int id, int? supplierId, CancellationToken cancellationToken)
         {
