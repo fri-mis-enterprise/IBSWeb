@@ -1279,16 +1279,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                         if (item.CV.CvType == "Commission")
                         {
+                            // Calculate net amount (excluding tax portion)
+                            var netAmount = Math.Round(deliveryReceipt!.CommissionAmount - ((deliveryReceipt.CommissionAmount / 1.12m) * item.CV.TaxPercent), 4);
+
                             // Mark as paid only if fully settled
-                            if (deliveryReceipt!.CommissionAmountPaid >= deliveryReceipt.CommissionAmount)
+                            if (deliveryReceipt!.CommissionAmountPaid >= netAmount)
                             {
                                 deliveryReceipt.IsCommissionPaid = true;
                             }
                         }
                         if (item.CV.CvType == "Hauler")
                         {
+                            // Calculate net amount (excluding tax portion)
+                            var netAmount = Math.Round(deliveryReceipt!.FreightAmount - ((deliveryReceipt.FreightAmount / 1.12m) * item.CV.TaxPercent), 4);
+
                             // Mark as paid only if fully settled
-                            if (deliveryReceipt!.FreightAmountPaid >= deliveryReceipt.FreightAmount)
+                            if (deliveryReceipt!.FreightAmountPaid >= netAmount)
                             {
                                 deliveryReceipt.IsFreightPaid = true;
                             }
