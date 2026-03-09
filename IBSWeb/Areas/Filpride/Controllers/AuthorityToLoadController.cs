@@ -362,6 +362,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     appointedId = g.SequenceId,
                     cosId = g.CustomerOrderSlipId,
                     cosNo = g.CustomerOrderSlip!.CustomerOrderSlipNo,
+                    customerName = g.CustomerOrderSlip!.CustomerName,
                     volume = g.UnreservedQuantity,
                     poNo = g.PurchaseOrder!.PurchaseOrderNo,
                 })
@@ -396,6 +397,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     appointedId = g.SequenceId,
                     cosId = g.CustomerOrderSlipId,
                     cosNo = g.CustomerOrderSlip!.CustomerOrderSlipNo,
+                    customerName = g.CustomerOrderSlip!.CustomerName,
                     volume = g.UnreservedQuantity,
                     poNo = g.PurchaseOrder!.PurchaseOrderNo,
                 })
@@ -414,6 +416,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     cos.cosId,
                     cos.cosNo,
                     volume = existingDetail != null ? cos.volume + existingDetail.Quantity : cos.volume,
+                    cos.customerName,
                     cos.poNo
                 };
             })

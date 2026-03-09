@@ -104,13 +104,13 @@
                                          data-cos-id="${cos.cosId}"
                                          data-appointed-id="${cos.appointedId}"
                                          data-volume="${cos.volume}">
-                                        <div class="col-md-6">
+                                        <div class="col-md-8">
                                             <input type="checkbox" class="form-check-input me-1 cos-checkbox" />
                                             <span class="fw-semibold">
-                                                ${cos.cosNo} | ${cos.poNo} | Available: ${formatNumber(cos.volume)}
+                                                ${cos.cosNo} | ${cos.poNo} | ${cos.customerName} | Available: ${formatNumber(cos.volume)}
                                             </span>
                                         </div>
-                                        <div class="col-md-6 volume-wrapper" style="display:none;">
+                                        <div class="col-md-4 volume-wrapper" style="display:none;">
                                             <input type="number"
                                                    step="0.01"
                                                    class="form-control form-control-sm cos-volume"
