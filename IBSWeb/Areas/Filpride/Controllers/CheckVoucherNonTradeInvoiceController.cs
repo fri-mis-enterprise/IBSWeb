@@ -135,21 +135,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
                 var filterTypeClaim = await GetCurrentFilterType();
 
-                var baseQuery = _dbContext.FilprideCheckVoucherHeaders
-                    .Where(cvh => cvh.Company == companyClaims &&
-                                  cvh.CvType == nameof(CVType.Invoicing) &&
-                                  !cvh.IsPayroll);
+                var checkVoucher = _unitOfWork.FilprideCheckVoucher.GetAllQueryAsync();
 
                 // Apply status filter based on filterType
                 if (!string.IsNullOrEmpty(filterTypeClaim) && filterTypeClaim == "ForApproval")
                 {
-                    baseQuery = baseQuery.Where(cv => cv.Status == nameof(CheckVoucherInvoiceStatus.ForApproval));
+                    checkVoucher = checkVoucher.Where(cv => cv.Status == nameof(CheckVoucherInvoiceStatus.ForApproval));
                 }
-
-                var query = baseQuery
-                    .Include(cvh => cvh.Supplier);
-
-                var checkVoucher = await query.ToListAsync(cancellationToken);
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
@@ -160,14 +152,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .Where(s =>
                             s.CheckVoucherHeaderNo!.ToLower().Contains(searchValue) ||
                             s.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
-                            s.Payee?.ToLower().Contains(searchValue) == true ||
+                            (s.Payee != null &&
+                            s.Payee.ToLower().Contains(searchValue) == true) ||
                             s.InvoiceAmount.ToString().Contains(searchValue) ||
                             s.AmountPaid.ToString().Contains(searchValue) ||
                             (s.InvoiceAmount - s.AmountPaid).ToString().Contains(searchValue) ||
                             s.Status.ToLower().Contains(searchValue) ||
-                            s.Particulars?.ToLower().Contains(searchValue) == true
-                        )
-                        .ToList();
+                            (s.Particulars != null &&
+                            s.Particulars.ToLower().Contains(searchValue) == true)
+                        );
                 }
 
                 if (filterDate != DateOnly.MinValue && filterDate != default)
@@ -177,11 +170,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     checkVoucher = checkVoucher
                         .Where(s =>
                             s.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        )
-                        .ToList();
+                        );
                 }
 
-                var projectedQuery = checkVoucher
+                var projectedQuery = await checkVoucher
+                    .Where(cvh => cvh.Company == companyClaims &&
+                                  cvh.CvType == nameof(CVType.Invoicing) &&
+                                  !cvh.IsPayroll)
                     .Select(x => new
                     {
                         x.CheckVoucherHeaderNo,
@@ -197,7 +192,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         x.IsPaid,
                         x.CheckVoucherHeaderId
                     })
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 // Sorting
                 if (parameters.Order?.Count > 0)
