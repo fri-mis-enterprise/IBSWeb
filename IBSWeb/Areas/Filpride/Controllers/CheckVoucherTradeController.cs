@@ -2968,6 +2968,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .OrderBy(dr => dr.DeliveryReceiptNo)
                 .ToListAsync(cancellationToken);
 
+            var drPaymentLookup = cvId != null
+                ? (await _dbContext.FilprideCVTradePayments
+                    .Where(cvp => cvp.CheckVoucherId == cvId && cvp.DocumentType == "DR")
+                    .ToListAsync(cancellationToken))
+                    .GroupBy(cvp => cvp.DocumentId)
+                    .ToDictionary(g => g.Key, g => g.Sum(x => x.AmountPaid))
+                : new Dictionary<int, decimal>();
+
             if (query.Any())
             {
                 var drList = deliverReceipt
@@ -2986,13 +2994,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             ? _unitOfWork.FilprideReceivingReport.ComputeNetOfEwt(dr.CommissionAmount, ewtAmount)
                             : dr.CommissionAmount;
 
+                        var thisDrAmountPaid = drPaymentLookup.TryGetValue(dr.DeliveryReceiptId, out var paid) ? paid : 0m; 
+
                         return new
                         {
                             Id = dr.DeliveryReceiptId,
                             dr.DeliveryReceiptNo,
                             dr.ManualDrNo,
                             AmountPaid = dr.CommissionAmountPaid.ToString(SD.Four_Decimal_Format),
-                            Balance = ((netOfEwtAmount - dr.CommissionAmountPaid) + drAmountPaid).ToString(SD.Four_Decimal_Format),
+                            Balance = (netOfEwtAmount - dr.CommissionAmountPaid + thisDrAmountPaid).ToString(SD.Four_Decimal_Format),
                             NetOfEwtAmount = netOfEwtAmount.ToString(SD.Four_Decimal_Format)
                         };
                     }).ToList();
@@ -3039,7 +3049,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 return Json(null);
             }
-
+            var drPaymentLookup = cvId != null
+                ? (await _dbContext.FilprideCVTradePayments
+                    .Where(cvp => cvp.CheckVoucherId == cvId && cvp.DocumentType == "DR")
+                    .ToListAsync(cancellationToken))
+                    .GroupBy(cvp => cvp.DocumentId)
+                    .ToDictionary(g => g.Key, g => g.Sum(x => x.AmountPaid))
+                : new Dictionary<int, decimal>();
             var drList = deliverReceipt
                 .OrderBy(x => x.DeliveryReceiptNo)
                 .Select(dr =>
@@ -3056,13 +3072,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         ? _unitOfWork.FilprideReceivingReport.ComputeNetOfEwt(dr.FreightAmount, ewtAmount)
                         : dr.FreightAmount;
 
+                    var thisDrAmountPaid = drPaymentLookup.TryGetValue(dr.DeliveryReceiptId, out var paid) ? paid : 0m;
+
                     return new
                     {
                         Id = dr.DeliveryReceiptId,
                         dr.DeliveryReceiptNo,
                         dr.ManualDrNo,
                         AmountPaid = dr.FreightAmountPaid.ToString(SD.Four_Decimal_Format),
-                        Balance = ((netOfEwtAmount - dr.FreightAmountPaid) + drAmountPaid).ToString(SD.Four_Decimal_Format),
+                        Balance = (netOfEwtAmount - dr.FreightAmountPaid + thisDrAmountPaid).ToString(SD.Four_Decimal_Format),
                         NetOfEwtAmount = netOfEwtAmount.ToString(SD.Four_Decimal_Format)
                     };
                 }).ToList();
