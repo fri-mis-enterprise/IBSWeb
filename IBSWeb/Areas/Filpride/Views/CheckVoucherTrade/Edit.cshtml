@@ -443,13 +443,15 @@
             const row = $(this).closest('tr');
             const inputField = row.find('.paymentAmount');
             const initialBalance = parseNumber(row.attr('data-balance'));
-            
+            const currentAmount = parseNumber(inputField.val());
+
             if (this.checked) {
                 if (!selectedRecords.includes(this.value)) {
                     selectedRecords.push(this.value);
                 }
-                inputField.val(formatNumberToFour(initialBalance)).addClass("inputAmount").show();
-                row.find('.balance').text(formatNumberToFour(0));
+                const payAmount = currentAmount > 0 ? currentAmount : initialBalance;
+                inputField.val(formatNumberToFour(payAmount)).addClass("inputAmount").show();
+                row.find('.balance').text(formatNumberToFour(initialBalance - payAmount));
             } else {
                 selectedRecords = selectedRecords.filter(v => v !== this.value);
                 inputField.removeAttr("name").hide().val('');
