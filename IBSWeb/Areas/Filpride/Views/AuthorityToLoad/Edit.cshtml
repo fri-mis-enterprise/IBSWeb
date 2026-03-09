@@ -73,7 +73,6 @@
     const existingCosDetails = @Html.Raw(Json.Serialize(Model.SelectedCosDetails));
 
     $(document).ready(function () {
-        const createBtn = $('#submitBtn');
         const supplierIdInput = $('#SupplierId');
         const loadPortInput = $('#LoadPortSelect');
 
@@ -108,7 +107,6 @@
                 success: function (data) {
                     if (data?.length > 0) {
                         data.forEach(cos => {
-                            // Check if this COS was previously selected
                             const existingDetail = existingCosDetails.find(
                                 x => x.cosId === cos.cosId && x.appointedId === cos.appointedId
                             );
@@ -120,13 +118,13 @@
                                      data-cos-id="${cos.cosId}" 
                                      data-appointed-id="${cos.appointedId}" 
                                      data-volume="${cos.volume}">
-                                    <div class="col-md-6">
+                                    <div class="col-md-8">
                                         <input type="checkbox" class="form-check-input me-1 cos-checkbox" ${isChecked ? 'checked' : ''} />
                                         <span class="fw-semibold">
-                                            ${cos.cosNo} | ${cos.poNo} | Available: ${formatNumber(cos.volume)}
+                                            ${cos.cosNo} | ${cos.poNo} | ${cos.customerName} | Available: ${formatNumber(cos.volume)}
                                         </span>
                                     </div>
-                                    <div class="col-md-6 volume-wrapper" style="display:${isChecked ? 'block' : 'none'};">
+                                    <div class="col-md-4 volume-wrapper" style="display:${isChecked ? 'block' : 'none'};">
                                         <input type="number" 
                                                step="0.01"
                                                class="form-control form-control-sm cos-volume"
@@ -139,7 +137,7 @@
                                 </div>`;
                             container.append(html);
 
-                            // If checked, add hidden fields
+                            // If checked, add hidden fields with correct index
                             if (isChecked) {
                                 const entry = container.find('.cos-entry').last();
                                 entry.append(`
@@ -151,6 +149,7 @@
                             }
                         });
                         bindCosCheckboxEvents();
+                        reindexSelectedCos();
                         validateVolumes();
                     }
                 },
@@ -158,6 +157,18 @@
                     console.error("Failed to fetch COS list");
                 }
             });
+        }
+
+        function reindexSelectedCos() {
+            let idx = 0;
+            $('.cos-checkbox:checked').each(function () {
+                const entry = $(this).closest('.cos-entry');
+                entry.find('.hidden-appointed').attr('name', `SelectedCosDetails[${idx}].AppointedId`);
+                entry.find('.hidden-cosid').attr('name', `SelectedCosDetails[${idx}].CosId`);
+                entry.find('.hidden-volume').attr('name', `SelectedCosDetails[${idx}].Volume`);
+                idx++;
+            });
+            cosIndex = idx;
         }
 
         function bindCosCheckboxEvents() {
@@ -186,12 +197,14 @@
                     entry.find('.hidden-appointed, .hidden-cosid, .hidden-volume').remove();
                 }
 
+                reindexSelectedCos();
                 validateVolumes();
             });
 
             $('#cosContainer').on('input', '.cos-volume', function () {
                 const entry = $(this).closest('.cos-entry');
                 entry.find('.hidden-volume').val($(this).val());
+                reindexSelectedCos();
                 validateVolumes();
             });
         }
@@ -212,8 +225,13 @@
                 }
             });
 
-            $('#cosErrorMessage').toggleClass('d-none', isValid && hasAnyChecked);
-            disableCreateButton(!(isValid && hasAnyChecked));
+            if (!hasAnyChecked) {
+                $('#cosErrorMessage').addClass('d-none');
+                disableCreateButton(true);
+            } else {
+                $('#cosErrorMessage').toggleClass('d-none', isValid);
+                disableCreateButton(!isValid);
+            }
         }
 
         function disableCreateButton(disable) {

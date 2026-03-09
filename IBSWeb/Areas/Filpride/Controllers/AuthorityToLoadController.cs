@@ -1,18 +1,18 @@
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
 using IBS.Models;
+using IBS.Models.Enums;
+using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.Integrated;
+using IBS.Models.Filpride.ViewModels;
+using IBS.Services.Attributes;
+using IBS.Utility.Constants;
+using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
-using IBS.Models.Enums;
-using IBS.Models.Filpride.Books;
-using IBS.Models.Filpride.ViewModels;
-using IBS.Services.Attributes;
-using IBS.Utility.Constants;
-using IBS.Utility.Helpers;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -199,7 +199,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var firstCosId = viewModel.SelectedCosDetails.FirstOrDefault()!.CosId;
+                var firstCosId = viewModel.SelectedCosDetails.FirstOrDefault()?.CosId;
 
                 var cosRecord = await _unitOfWork.FilprideCustomerOrderSlip
                     .GetAsync(x => x.CustomerOrderSlipId == firstCosId, cancellationToken);
@@ -284,7 +284,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
                 return View(viewModel);
             }
-
         }
 
         [HttpGet]
@@ -363,6 +362,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     appointedId = g.SequenceId,
                     cosId = g.CustomerOrderSlipId,
                     cosNo = g.CustomerOrderSlip!.CustomerOrderSlipNo,
+                    customerName = g.CustomerOrderSlip!.CustomerName,
                     volume = g.UnreservedQuantity,
                     poNo = g.PurchaseOrder!.PurchaseOrderNo,
                 })
@@ -397,6 +397,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     appointedId = g.SequenceId,
                     cosId = g.CustomerOrderSlipId,
                     cosNo = g.CustomerOrderSlip!.CustomerOrderSlipNo,
+                    customerName = g.CustomerOrderSlip!.CustomerName,
                     volume = g.UnreservedQuantity,
                     poNo = g.PurchaseOrder!.PurchaseOrderNo,
                 })
@@ -415,6 +416,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     cos.cosId,
                     cos.cosNo,
                     volume = existingDetail != null ? cos.volume + existingDetail.Quantity : cos.volume,
+                    cos.customerName,
                     cos.poNo
                 };
             })
@@ -479,7 +481,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 await transaction.CommitAsync(cancellationToken);
 
                 return Json(new { success = true });
-
             }
             catch (Exception ex)
             {
@@ -606,7 +607,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 _dbContext.FilprideBookAtlDetails.RemoveRange(atl.Details);
 
-                var firstCosId = viewModel.SelectedCosDetails.FirstOrDefault()!.CosId;
+                var firstCosId = viewModel.SelectedCosDetails.FirstOrDefault()?.CosId;
+
                 var cosRecord = await _unitOfWork.FilprideCustomerOrderSlip
                     .GetAsync(x => x.CustomerOrderSlipId == firstCosId, cancellationToken);
 

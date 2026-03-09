@@ -66,129 +66,148 @@
 </div>
 
 @section Scripts {
-@await Html.PartialAsync("_ValidationScriptsPartial")
-<script>
-    let cosIndex = 0;
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+    <script>
+        let cosIndex = 0;
 
-    $(document).ready(function () {
-        const createBtn = $('#submitBtn');
-        const supplierIdInput = $('#SupplierId');
-        const loadPortInput = $('#LoadPortSelect');
+        $(document).ready(function () {
+            const createBtn = $('#submitBtn');
+            const supplierIdInput = $('#SupplierId');
+            const loadPortInput = $('#LoadPortSelect');
 
-        supplierIdInput.on('change', function () {
-            $('#uppiAtlWrapper').toggle($(this).val() === '19');
-            loadCosList();
-        });
+            supplierIdInput.on('change', function () {
+                $('#uppiAtlWrapper').toggle($(this).val() === '19');
+                loadCosList();
+            });
 
-        loadPortInput.on('change', loadCosList);
+            loadPortInput.on('change', loadCosList);
 
-        function loadCosList() {
-            const supplierId = supplierIdInput.val();
-            const loadPortId = loadPortInput.val();
-            const container = $('#cosContainer');
-            container.empty();
-            cosIndex = 0;
-            disableCreateButton(true);
+            function loadCosList() {
+                const supplierId = supplierIdInput.val();
+                const loadPortId = loadPortInput.val();
+                const container = $('#cosContainer');
+                container.empty();
+                cosIndex = 0;
+                disableCreateButton(true);
 
-            if (!supplierId || !loadPortId) return;
+                if (!supplierId || !loadPortId) return;
 
-            $.ajax({
-                url: '@Url.Action("GetSupplierCOS", "AuthorityToLoad", new { area = "Filpride" })',
-                type: 'GET',
-                data: { supplierId, loadPortId },
-                success: function (data) {
-                    if (data?.length > 0) {
-                        data.forEach(cos => {
-                            const html = `
-                                    <div class="row align-items-center mb-2 cos-entry" 
-                                         data-cos-id="${cos.cosId}" 
-                                         data-appointed-id="${cos.appointedId}" 
+                $.ajax({
+                    url: '@Url.Action("GetSupplierCOS", "AuthorityToLoad", new { area = "Filpride" })',
+                    type: 'GET',
+                    data: { supplierId, loadPortId },
+                    success: function (data) {
+                        if (data?.length > 0) {
+                            data.forEach(cos => {
+                                const html = `
+                                    <div class="row align-items-center mb-2 cos-entry"
+                                         data-cos-id="${cos.cosId}"
+                                         data-appointed-id="${cos.appointedId}"
                                          data-volume="${cos.volume}">
-                                        <div class="col-md-6">
+                                        <div class="col-md-8">
                                             <input type="checkbox" class="form-check-input me-1 cos-checkbox" />
                                             <span class="fw-semibold">
-                                                ${cos.cosNo} | ${cos.poNo} | Available: ${formatNumber(cos.volume)}
+                                                ${cos.cosNo} | ${cos.poNo} | ${cos.customerName} | Available: ${formatNumber(cos.volume)}
                                             </span>
                                         </div>
-                                        <div class="col-md-6 volume-wrapper" style="display:none;">
-                                            <input type="number" 
+                                        <div class="col-md-4 volume-wrapper" style="display:none;">
+                                            <input type="number"
                                                    step="0.01"
                                                    class="form-control form-control-sm cos-volume"
                                                    placeholder="Enter volume (max: ${formatNumber(cos.volume)})"
-                                                   min="0.01" 
+                                                   min="0.01"
                                                    max="${cos.volume}"/>
                                         </div>
                                     </div>`;
-                            container.append(html);
-                        });
-                        bindCosCheckboxEvents();
+                                container.append(html);
+                            });
+                            bindCosCheckboxEvents();
+                        }
+                    },
+                    error: function () {
+                        console.error("Failed to fetch COS list");
                     }
-                },
-                error: function () {
-                    console.error("Failed to fetch COS list");
-                }
-            });
-        }
+                });
+            }
 
-        function bindCosCheckboxEvents() {
-            $('.cos-checkbox').on('change', function () {
-                const entry = $(this).closest('.cos-entry');
-                const volumeInput = entry.find('.cos-volume');
-                const wrapper = entry.find('.volume-wrapper');
+            function reindexSelectedCos() {
+                let idx = 0;
+                $('.cos-checkbox:checked').each(function () {
+                    const entry = $(this).closest('.cos-entry');
+                    entry.find('.hidden-appointed').attr('name', `SelectedCosDetails[${idx}].AppointedId`);
+                    entry.find('.hidden-cosid').attr('name', `SelectedCosDetails[${idx}].CosId`);
+                    entry.find('.hidden-volume').attr('name', `SelectedCosDetails[${idx}].Volume`);
+                    idx++;
+                });
+                cosIndex = idx;
+            }
 
-                if (this.checked) {
-                    wrapper.show();
-                    volumeInput.prop('disabled', false).prop('required', true);
+            function bindCosCheckboxEvents() {
+                $('.cos-checkbox').on('change', function () {
+                    const entry = $(this).closest('.cos-entry');
+                    const volumeInput = entry.find('.cos-volume');
+                    const wrapper = entry.find('.volume-wrapper');
 
-                    const appointedId = entry.data('appointed-id');
-                    const cosId = entry.data('cos-id');
+                    if (this.checked) {
+                        wrapper.show();
+                        volumeInput.prop('disabled', false).prop('required', true);
 
-                    entry.append(`
+                        const appointedId = entry.data('appointed-id');
+                        const cosId = entry.data('cos-id');
+
+                        entry.append(`
                             <input type="hidden" name="SelectedCosDetails[${cosIndex}].AppointedId" value="${appointedId}" class="hidden-appointed" />
                             <input type="hidden" name="SelectedCosDetails[${cosIndex}].CosId" value="${cosId}" class="hidden-cosid" />
                             <input type="hidden" name="SelectedCosDetails[${cosIndex}].Volume" class="hidden-volume" />
                         `);
 
-                    cosIndex++;
+                        cosIndex++;
+                    } else {
+                        wrapper.hide();
+                        volumeInput.prop('disabled', true).prop('required', false).val('');
+                        entry.find('.hidden-appointed, .hidden-cosid, .hidden-volume').remove();
+                    }
+
+                    reindexSelectedCos();
+                    validateVolumes();
+                });
+
+                $('#cosContainer').on('input', '.cos-volume', function () {
+                    const entry = $(this).closest('.cos-entry');
+                    entry.find('.hidden-volume').val($(this).val());
+                    reindexSelectedCos();
+                    validateVolumes();
+                });
+            }
+
+            function validateVolumes() {
+                let isValid = true;
+                let hasAnyChecked = false;
+
+                $('.cos-checkbox:checked').each(function () {
+                    hasAnyChecked = true;
+                    const entry = $(this).closest('.cos-entry');
+                    const input = entry.find('.cos-volume');
+                    const max = parseFloat(entry.data('volume'));
+                    const val = parseFloat(input.val());
+
+                    if (isNaN(val) || val <= 0 || val > max) {
+                        isValid = false;
+                    }
+                });
+
+                if (!hasAnyChecked) {
+                    $('#cosErrorMessage').addClass('d-none');
+                    disableCreateButton(true);
                 } else {
-                    wrapper.hide();
-                    volumeInput.prop('disabled', true).prop('required', false).val('');
-                    entry.find('.hidden-appointed, .hidden-cosid, .hidden-volume').remove();
+                    $('#cosErrorMessage').toggleClass('d-none', isValid);
+                    disableCreateButton(!isValid);
                 }
+            }
 
-                validateVolumes();
-            });
-
-            $('#cosContainer').on('input', '.cos-volume', function () {
-                const entry = $(this).closest('.cos-entry');
-                entry.find('.hidden-volume').val($(this).val());
-                validateVolumes();
-            });
-        }
-
-        function validateVolumes() {
-            let isValid = true;
-            let hasAnyChecked = false;
-
-            $('.cos-checkbox:checked').each(function () {
-                hasAnyChecked = true;
-                const entry = $(this).closest('.cos-entry');
-                const input = entry.find('.cos-volume');
-                const max = parseFloat(entry.data('volume'));
-                const val = parseFloat(input.val());
-
-                if (isNaN(val) || val <= 0 || val > max) {
-                    isValid = false;
-                }
-            });
-
-            $('#cosErrorMessage').toggleClass('d-none', isValid && hasAnyChecked);
-            disableCreateButton(!(isValid && hasAnyChecked));
-        }
-
-        function disableCreateButton(disable) {
-            $('#submitBtn').prop('disabled', disable);
-        }
-    });
-</script>
+            function disableCreateButton(disable) {
+                $('#submitBtn').prop('disabled', disable);
+            }
+        });
+    </script>
 }
