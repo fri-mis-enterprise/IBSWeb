@@ -316,17 +316,17 @@
                             currentPO = rr.purchaseOrderNo;
                             const initialBalance = parseNumber(rr.balance);
 
-                            const tr = $(`
-                                <tr data-po="${rr.purchaseOrderNo}" data-balance="${initialBalance}">
-                                    <td><input type="checkbox" value="${rr.id}" class="selectCheckbox"></td>
-                                    <td>${rr.purchaseOrderNo}</td>
-                                    <td>${rr.receivingReportNo}</td>
-                                    <td>${rr.oldRRNo}</td>
-                                    <td class="text-end grossAmount">${formatNumberToFour(rr.netOfEwtAmount)}</td>
-                                    <td class="text-end"><input type="text" class="paymentAmount text-end" style="display: none"></td>
-                                    <td class="text-end balance">${formatNumberToFour(initialBalance)}</td>
-                                </tr>
-                            `);
+                            const tr = $('<tr>').attr({ 'data-po': rr.purchaseOrderNo, 'data-balance': initialBalance });
+                            const checkbox = $('<input>').attr({ type: 'checkbox', class: 'selectCheckbox' }).val(rr.id);
+                            tr.append($('<td>').append(checkbox));
+                            tr.append($('<td>').text(rr.purchaseOrderNo));
+                            tr.append($('<td>').text(rr.receivingReportNo));
+                            tr.append($('<td>').text(rr.oldRRNo));
+                            tr.append($('<td>').addClass('text-end grossAmount').text(formatNumberToFour(rr.netOfEwtAmount)));
+                            tr.append($('<td>').addClass('text-end').append($('<input>').attr({ type: 'text', class: 'paymentAmount text-end' }).hide()));
+                            tr.append($('<td>').addClass('text-end balance').text(formatNumberToFour(initialBalance)));
+
+                            tbody.append(tr);
 
                             subTotalGross += parseNumber(rr.netOfEwtAmount);
                             totalGross += parseNumber(rr.netOfEwtAmount);
@@ -458,6 +458,17 @@
             const row = $(this).closest('tr');
             const initialBalance = parseNumber(row.attr('data-balance'));
             const paymentAmount = parseNumber($(this).val());
+
+            if (paymentAmount > initialBalance) {
+                $(this).addClass('is-invalid');
+                $(this).val(formatNumberToFour(initialBalance));
+                row.find('.balance').text(formatNumberToFour(0));
+                updateAmounts();
+                return;
+            }
+
+            $(this).removeClass('is-invalid');
+
             row.find('.balance').text(formatNumberToFour(initialBalance - paymentAmount));
             updateAmounts();
         });

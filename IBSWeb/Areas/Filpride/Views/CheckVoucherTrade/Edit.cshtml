@@ -479,6 +479,17 @@
             let inputAmount = parseNumber($(this).val());
             const grossAmount = parseNumber(row.find('.grossAmount').text());
             // data-balance
+
+            if (inputAmount > initialBalance) {
+                $(this).addClass('is-invalid');
+                inputAmount = initialBalance;
+                $(this).val(formatNumberToFour(initialBalance));
+                row.find('.balance').text(formatNumberToFour(0));
+                updateAmounts();
+                return;
+            }
+            $(this).removeClass('is-invalid');
+
             row.find('.balance').text(formatNumberToFour(initialBalance - inputAmount));
             updateAmounts();
         });
