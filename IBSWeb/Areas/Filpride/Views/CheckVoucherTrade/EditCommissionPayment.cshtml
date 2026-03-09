@@ -377,12 +377,12 @@
         $(document).on('input', '.inputAmount', function () {
             const row = $(this).closest('tr');
             const initialBalance = parseNumber(row.attr('data-balance'));
-            const paymentAmount = parseNumber($(this).val());
+            let paymentAmount = parseNumber($(this).val());
 
             if (paymentAmount > initialBalance) {
                 $(this).addClass('is-invalid');
                 $(this).val(formatNumberToFour(initialBalance));
-                row.attr('data-last-amount', inputAmount);
+                row.attr('data-last-amount', paymentAmount);
                 row.find('.balance').text(formatNumberToFour(0));
                 updateAmounts();
                 return;
@@ -390,9 +390,9 @@
                 $(this).removeClass('is-invalid');
                 // negative values should not be allowed, reset to 0 if negative
                 if (paymentAmount < 0) {
-                    inputAmount = 0;
-                    $(this).val(formatNumberToFour(0));
-                    row.attr('data-last-amount', inputAmount);
+                    paymentAmount = 0;
+                    $(this).val(formatNumberToFour(paymentAmount));
+                    row.attr('data-last-amount', paymentAmount);
                     row.find('.balance').text(formatNumberToFour(initialBalance));
                     updateAmounts();
                     return;
