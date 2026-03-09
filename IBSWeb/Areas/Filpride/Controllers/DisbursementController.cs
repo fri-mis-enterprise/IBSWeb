@@ -163,11 +163,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return Json(new { success = false, message = "Record not found" });
             }
 
-            if (cv.DcrDate != null)
-            {
-                return Json(new { success = false, message = "Cannot update DCP date because DCR date is already set." });
-            }
-
             ///TODO: Uncomment this code later when we need to validate the DCP date based on the posted periods. For now, we will allow any DCP date since the period validation is not yet implemented for DCP date.
             //var minDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
 
@@ -184,6 +179,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             //}
 
             cv.DcpDate = dcpDate;
+            cv.DcrDate = null;
 
             FilprideAuditTrail auditTrailBook = new(GetUserFullName(), $"Update DCP date of CV# {cv.CheckVoucherHeaderNo}", "Disbursement", cv.Company);
             await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
