@@ -42,7 +42,7 @@ namespace IBS.DataAccess.Repository
 
         public virtual IQueryable<T> GetAllQueryAsync(CancellationToken cancellationToken = default)
         {
-            return dbSet;
+            return dbSet.AsNoTracking();
         }
 
         public async Task AddAsync(T entity, CancellationToken cancellationToken = default)

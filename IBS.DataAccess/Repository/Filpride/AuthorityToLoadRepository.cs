@@ -70,5 +70,18 @@ namespace IBS.DataAccess.Repository.Filpride
                 .Include(atl => atl.Details).ThenInclude(atl => atl.CustomerOrderSlip).ThenInclude(cos => cos!.Product)
                 .FirstOrDefaultAsync(cancellationToken);
         }
+
+        public override IQueryable<FilprideAuthorityToLoad> GetAllQueryAsync(CancellationToken cancellationToken = default)
+        {
+            return dbSet
+                .Include(atl => atl.Supplier)
+                .Include(a => a.Details).ThenInclude(d => d.CustomerOrderSlip)
+                .Include(atl => atl.CustomerOrderSlip).ThenInclude(po => po!.Product)
+                .Include(atl => atl.CustomerOrderSlip).ThenInclude(dr => dr!.Hauler)
+                .Include(atl => atl.CustomerOrderSlip).ThenInclude(dr => dr!.Customer)
+                .Include(atl => atl.CustomerOrderSlip).ThenInclude(cos => cos!.PickUpPoint)
+                .AsSplitQuery()
+                .AsNoTracking();
+        }
     }
 }

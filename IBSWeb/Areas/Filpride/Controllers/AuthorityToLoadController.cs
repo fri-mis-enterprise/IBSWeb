@@ -71,10 +71,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 var companyClaims = await GetCompanyClaimAsync();
 
-                var atlList = await _dbContext.FilprideAuthorityToLoads
-                    .Include(a => a.Details).ThenInclude(d => d.CustomerOrderSlip)
-                    .Where(a => a.Company == companyClaims)
-                    .ToListAsync(cancellationToken);
+                var atlList = _unitOfWork.FilprideAuthorityToLoad
+                    .GetAllQueryAsync();
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search?.Value))
@@ -86,12 +84,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         s.AuthorityToLoadNo.ToLower().Contains(searchValue) ||
                         s.DateBooked.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
                         s.ValidUntil.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
-                        s.UppiAtlNo?.ToLower().Contains(searchValue) == true ||
+                        (s.UppiAtlNo != null &&
+                        s.UppiAtlNo.ToLower().Contains(searchValue) == true) ||
                         s.Details.Any(d =>
                             d.CustomerOrderSlip!.CustomerOrderSlipNo.ToLower().Contains(searchValue)) ||
                         s.Remarks.ToLower().Contains(searchValue)
-                        )
-                    .ToList();
+                        );
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
@@ -100,8 +98,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     atlList = atlList
                         .Where(s =>
                             s.DateBooked.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        )
-                        .ToList();
+                        );
                 }
 
                 // Sorting
@@ -113,15 +110,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     atlList = atlList
                         .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
+                        .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = atlList.Count;
+                var totalRecords = atlList.Count();
 
-                var pagedData = atlList
+                var pagedData = await atlList
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
+                    .Where(x => x.Company == companyClaims)
                     .Select(atl => new
                     {
                         atl.AuthorityToLoadId,
@@ -134,7 +131,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             .ToList(),
                         atl.Remarks
                     })
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
