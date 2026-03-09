@@ -586,10 +586,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var companyClaims = await GetCompanyClaimAsync();
 
             var query = _dbContext.FilprideReceivingReports
-                .Where(rr => rr.Company == companyClaims && !rr.IsPaid
-                                                         && rr.AmountPaid < (rr.Amount - ((rr.Amount / 1.12m) * rr.TaxPercentage))
-                                                         && poNumber.Contains(rr.PONo)
-                                                         && rr.PostedBy != null);
+            .Where(rr => rr.Company == companyClaims && !rr.IsPaid
+                                                    && rr.AmountPaid < (
+                                                        rr.PurchaseOrder!.VatType == SD.VatType_Vatable
+                                                            ? (rr.PurchaseOrder.TaxType == SD.TaxType_WithTax
+                                                                ? rr.Amount - ((rr.Amount / 1.12m) * rr.TaxPercentage)  // Vatable + WithTax: Amount minus EWT only
+                                                                : rr.Amount)                                             // Vatable + Exempt: full Amount (VAT is not deducted from payment)
+                                                            : (rr.PurchaseOrder.TaxType == SD.TaxType_WithTax
+                                                                ? rr.Amount - (rr.Amount * rr.TaxPercentage)            // Non-Vatable + WithTax: Amount minus EWT
+                                                                : rr.Amount)                                             // Non-Vatable + Exempt: full Amount
+                                                    )
+                                                    && poNumber.Contains(rr.PONo)
+                                                    && rr.PostedBy != null);
             var rrAmountPaidById = new Dictionary<int, decimal>();
 
             if (cvId != null)
@@ -1264,19 +1272,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         var receivingReport = await _unitOfWork.FilprideReceivingReport
                             .GetAsync(rr => rr.ReceivingReportId == item.DocumentId, cancellationToken);
 
-                        // Calculate net amount using VatType-aware base amount
-                        var baseAmount = receivingReport!.PurchaseOrder?.VatType == SD.VatType_Vatable
-                            ? receivingReport.Amount / 1.12m
-                            : receivingReport.Amount;
-                        var netAmount = Math.Round(baseAmount * (1m - receivingReport.TaxPercentage), 4);
+                        var netAmount = receivingReport!.PurchaseOrder?.VatType == SD.VatType_Vatable
+                            ? receivingReport.PurchaseOrder?.TaxType == SD.TaxType_WithTax
+                                ? Math.Round(receivingReport.Amount - ((receivingReport.Amount / 1.12m) * receivingReport.TaxPercentage), 4)
+                                : receivingReport.Amount                        // Vatable + Exempt
+                            : receivingReport.PurchaseOrder?.TaxType == SD.TaxType_WithTax
+                                ? Math.Round(receivingReport.Amount - (receivingReport.Amount * receivingReport.TaxPercentage), 4)
+                                : receivingReport.Amount;                       // Non-Vatable + Exempt
 
-                        // Mark as paid only if fully settled
                         if (receivingReport.AmountPaid >= netAmount)
                         {
                             receivingReport.IsPaid = true;
                             receivingReport.PaidDate = DateTimeHelper.GetCurrentPhilippineTime();
                         }
                     }
+
                     if (item.DocumentType == "DR")
                     {
                         var deliveryReceipt = await _unitOfWork.FilprideDeliveryReceipt
@@ -1284,27 +1294,30 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                         if (item.CV.CvType == "Commission")
                         {
-                            // Calculate net amount using CommissioneeVatType-aware base amount
-                            var baseAmount = deliveryReceipt!.CustomerOrderSlip?.CommissioneeVatType == SD.VatType_Vatable
-                                ? deliveryReceipt.CommissionAmount / 1.12m
-                                : deliveryReceipt.CommissionAmount;
-                            var netAmount = Math.Round(baseAmount * (1m - item.CV.TaxPercent), 4);
+                            var netAmount = deliveryReceipt!.CustomerOrderSlip?.CommissioneeVatType == SD.VatType_Vatable
+                                ? item.CV.TaxPercent > 0
+                                    ? Math.Round(deliveryReceipt.CommissionAmount - ((deliveryReceipt.CommissionAmount / 1.12m) * item.CV.TaxPercent), 4)
+                                    : deliveryReceipt.CommissionAmount          // Vatable + Exempt
+                                : item.CV.TaxPercent > 0
+                                    ? Math.Round(deliveryReceipt.CommissionAmount - (deliveryReceipt.CommissionAmount * item.CV.TaxPercent), 4)
+                                    : deliveryReceipt.CommissionAmount;         // Non-Vatable + Exempt
 
-                            // Mark as paid only if fully settled
                             if (deliveryReceipt.CommissionAmountPaid >= netAmount)
                             {
                                 deliveryReceipt.IsCommissionPaid = true;
                             }
                         }
+
                         if (item.CV.CvType == "Hauler")
                         {
-                            // Calculate net amount using HaulerVatType-aware base amount
-                            var baseAmount = deliveryReceipt!.HaulerVatType == SD.VatType_Vatable
-                                ? deliveryReceipt.FreightAmount / 1.12m
-                                : deliveryReceipt.FreightAmount;
-                            var netAmount = Math.Round(baseAmount * (1m - item.CV.TaxPercent), 4);
+                            var netAmount = deliveryReceipt!.HaulerVatType == SD.VatType_Vatable
+                                ? item.CV.TaxPercent > 0
+                                    ? Math.Round(deliveryReceipt.FreightAmount - ((deliveryReceipt.FreightAmount / 1.12m) * item.CV.TaxPercent), 4)
+                                    : deliveryReceipt.FreightAmount             // Vatable + Exempt
+                                : item.CV.TaxPercent > 0
+                                    ? Math.Round(deliveryReceipt.FreightAmount - (deliveryReceipt.FreightAmount * item.CV.TaxPercent), 4)
+                                    : deliveryReceipt.FreightAmount;            // Non-Vatable + Exempt
 
-                            // Mark as paid only if fully settled
                             if (deliveryReceipt.FreightAmountPaid >= netAmount)
                             {
                                 deliveryReceipt.IsFreightPaid = true;
@@ -2939,11 +2952,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             var query = _dbContext.FilprideDeliveryReceipts
                 .Where(dr => companyClaims != null
-                             && dr.Company == companyClaims
-                             && commissioneeId == dr.CommissioneeId
-                             && dr.CommissionAmountPaid < dr.CommissionAmount
-                             && !dr.IsCommissionPaid
-                             && dr.PostedBy != null);
+                            && dr.Company == companyClaims
+                            && commissioneeId == dr.CommissioneeId
+                            && !dr.IsCommissionPaid
+                            && dr.PostedBy != null
+                            && dr.CommissionAmountPaid < (
+                                dr.CustomerOrderSlip!.CommissioneeVatType == SD.VatType_Vatable
+                                    ? dr.CustomerOrderSlip.CommissioneeTaxType == SD.TaxType_WithTax
+                                        ? dr.CommissionAmount - ((dr.CommissionAmount / 1.12m) * (dr.Commissionee!.WithholdingTaxPercent))
+                                        : dr.CommissionAmount                  // Vatable + Exempt
+                                    : dr.CustomerOrderSlip.CommissioneeTaxType == SD.TaxType_WithTax
+                                        ? dr.CommissionAmount - (dr.CommissionAmount * (dr.Commissionee!.WithholdingTaxPercent))
+                                        : dr.CommissionAmount                  // Non-Vatable + Exempt
+                            ));
 
             var drAmountPaid = 0m;
 
@@ -2964,7 +2985,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             var deliverReceipt = await query
                 .Include(dr => dr.CustomerOrderSlip)
-                .Include(filprideDeliveryReceipt => filprideDeliveryReceipt.Commissionee)
+                .Include(dr => dr.Commissionee)
                 .OrderBy(dr => dr.DeliveryReceiptNo)
                 .ToListAsync(cancellationToken);
 
@@ -2976,40 +2997,41 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ToDictionary(g => g.Key, g => g.Sum(x => x.AmountPaid))
                 : new Dictionary<int, decimal>();
 
-            if (query.Any())
+            if (!deliverReceipt.Any())
             {
-                var drList = deliverReceipt
-                    .OrderBy(x => x.DeliveryReceiptNo)
-                    .Select(dr =>
-                    {
-                        var netOfVatAmount = dr.CustomerOrderSlip!.CommissioneeVatType == SD.VatType_Vatable
-                            ? _unitOfWork.FilprideReceivingReport.ComputeNetOfVat(dr.CommissionAmount)
-                            : dr.CommissionAmount;
-
-                        var ewtAmount = dr.CustomerOrderSlip!.CommissioneeTaxType == SD.TaxType_WithTax
-                            ? _unitOfWork.FilprideReceivingReport.ComputeEwtAmount(netOfVatAmount, dr.Commissionee?.WithholdingTaxPercent ?? 0m)
-                            : 0m;
-
-                        var netOfEwtAmount = dr.CustomerOrderSlip!.CommissioneeTaxType == SD.TaxType_WithTax
-                            ? _unitOfWork.FilprideReceivingReport.ComputeNetOfEwt(dr.CommissionAmount, ewtAmount)
-                            : dr.CommissionAmount;
-
-                        var thisDrAmountPaid = drPaymentLookup.TryGetValue(dr.DeliveryReceiptId, out var paid) ? paid : 0m; 
-
-                        return new
-                        {
-                            Id = dr.DeliveryReceiptId,
-                            dr.DeliveryReceiptNo,
-                            dr.ManualDrNo,
-                            AmountPaid = dr.CommissionAmountPaid.ToString(SD.Four_Decimal_Format),
-                            Balance = (netOfEwtAmount - dr.CommissionAmountPaid + thisDrAmountPaid).ToString(SD.Four_Decimal_Format),
-                            NetOfEwtAmount = netOfEwtAmount.ToString(SD.Four_Decimal_Format)
-                        };
-                    }).ToList();
-                return Json(drList);
+                return Json(null);
             }
 
-            return Json(null);
+            var drList = deliverReceipt
+                .OrderBy(x => x.DeliveryReceiptNo)
+                .Select(dr =>
+                {
+                    var netOfVatAmount = dr.CustomerOrderSlip!.CommissioneeVatType == SD.VatType_Vatable
+                        ? _unitOfWork.FilprideReceivingReport.ComputeNetOfVat(dr.CommissionAmount)
+                        : dr.CommissionAmount;
+
+                    var ewtAmount = dr.CustomerOrderSlip!.CommissioneeTaxType == SD.TaxType_WithTax
+                        ? _unitOfWork.FilprideReceivingReport.ComputeEwtAmount(netOfVatAmount, dr.Commissionee?.WithholdingTaxPercent ?? 0m)
+                        : 0m;
+
+                    var netOfEwtAmount = dr.CustomerOrderSlip!.CommissioneeTaxType == SD.TaxType_WithTax
+                        ? _unitOfWork.FilprideReceivingReport.ComputeNetOfEwt(dr.CommissionAmount, ewtAmount)
+                        : dr.CommissionAmount;
+
+                    var thisDrAmountPaid = drPaymentLookup.TryGetValue(dr.DeliveryReceiptId, out var paid) ? paid : 0m;
+
+                    return new
+                    {
+                        Id = dr.DeliveryReceiptId,
+                        dr.DeliveryReceiptNo,
+                        dr.ManualDrNo,
+                        AmountPaid = dr.CommissionAmountPaid.ToString(SD.Four_Decimal_Format),
+                        Balance = (netOfEwtAmount - dr.CommissionAmountPaid + thisDrAmountPaid).ToString(SD.Four_Decimal_Format),
+                        NetOfEwtAmount = netOfEwtAmount.ToString(SD.Four_Decimal_Format)
+                    };
+                }).ToList();
+
+            return Json(drList);
         }
 
         public async Task<IActionResult> GetHaulerDRs(int? haulerId, int? cvId, CancellationToken cancellationToken)
@@ -3018,10 +3040,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             var query = _dbContext.FilprideDeliveryReceipts
                 .Where(dr => dr.Company == companyClaims
-                             && dr.HaulerId == haulerId
-                             && dr.FreightAmountPaid < dr.FreightAmount
-                             && !dr.IsFreightPaid
-                             && dr.PostedBy != null);
+                            && dr.HaulerId == haulerId
+                            && !dr.IsFreightPaid
+                            && dr.PostedBy != null
+                            && dr.FreightAmountPaid < (
+                                dr.HaulerVatType == SD.VatType_Vatable
+                                    ? dr.HaulerTaxType == SD.TaxType_WithTax
+                                        ? dr.FreightAmount - ((dr.FreightAmount / 1.12m) * (dr.Hauler!.WithholdingTaxPercent))
+                                        : dr.FreightAmount                     // Vatable + Exempt
+                                    : dr.HaulerTaxType == SD.TaxType_WithTax
+                                        ? dr.FreightAmount - (dr.FreightAmount * (dr.Hauler!.WithholdingTaxPercent))
+                                        : dr.FreightAmount                     // Non-Vatable + Exempt
+                            ));
 
             var drAmountPaid = 0m;
 
@@ -3045,10 +3075,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .OrderBy(dr => dr.DeliveryReceiptNo)
                 .ToListAsync(cancellationToken);
 
-            if (!query.Any())
+            if (!deliverReceipt.Any())
             {
                 return Json(null);
             }
+
             var drPaymentLookup = cvId != null
                 ? (await _dbContext.FilprideCVTradePayments
                     .Where(cvp => cvp.CheckVoucherId == cvId && cvp.DocumentType == "DR")
@@ -3056,6 +3087,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .GroupBy(cvp => cvp.DocumentId)
                     .ToDictionary(g => g.Key, g => g.Sum(x => x.AmountPaid))
                 : new Dictionary<int, decimal>();
+
             var drList = deliverReceipt
                 .OrderBy(x => x.DeliveryReceiptNo)
                 .Select(dr =>
@@ -3084,6 +3116,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         NetOfEwtAmount = netOfEwtAmount.ToString(SD.Four_Decimal_Format)
                     };
                 }).ToList();
+
             return Json(drList);
         }
 
