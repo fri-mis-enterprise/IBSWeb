@@ -313,29 +313,30 @@
 
                         data.forEach((rr, index) => {
                             currentPO = rr.purchaseOrderNo;
-                            const isChecked = modelRRs.has(rr.id) ? 'checked' : '';
-                            let display = modelRRs.has(rr.id) ? '' : 'display: none';
-                            let inputamountClass = modelRRs.has(rr.id) ? 'inputAmount' : '';
                             const amountPaid = modelRRs.get(rr.id);
                             const initialBalance = parseNumber(rr.balance);
+                            const paymentInput = $('<input>').attr({ type: 'text', class: 'paymentAmount text-end' });
                             
-                            // Add to selectedRecords if already checked
                             if (modelRRs.has(rr.id)) {
                                 selectedRecords.push(rr.id.toString());
                             }
 
-                            const tr = $(`
-                                <tr data-po="${rr.purchaseOrderNo}" data-balance="${initialBalance}">
-                                    <td><input type="checkbox" value="${rr.id}" class="selectCheckbox" ${isChecked}></td>
-                                    <td>${rr.purchaseOrderNo}</td>
-                                    <td>${rr.receivingReportNo}</td>
-                                    <td>${rr.oldRRNo}</td>
-                                    <td class="text-end grossAmount">${formatNumberToFour(rr.netOfEwtAmount)}</td>
-                                    <td class="text-end"><input type="text" class="paymentAmount text-end ${inputamountClass}" style="${display}" value="${amountPaid}"></td>
-                                    <td class="text-end balance">${formatNumberToFour(initialBalance)}</td>
-                                </tr>
-                            `);
-
+                            const tr = $('<tr>').attr('data-po', rr.purchaseOrderNo).attr('data-balance', initialBalance);
+                            const checkbox = $('<input>').attr({ type: 'checkbox', class: 'selectCheckbox' }).val(rr.id).prop('checked', modelRRs.has(rr.id));
+                            tr.append($('<td>').append(checkbox));
+                            tr.append($('<td>').text(rr.purchaseOrderNo));
+                            tr.append($('<td>').text(rr.receivingReportNo));
+                            tr.append($('<td>').text(rr.oldRRNo));
+                            tr.append($('<td>').addClass('text-end grossAmount').text(formatNumberToFour(rr.netOfEwtAmount)));
+                            tr.append($('<td>').addClass('text-end').append(paymentInput));
+                            tr.append($('<td>').addClass('text-end balance').text(formatNumberToFour(initialBalance)));
+                            // conditionally show input and set value for pre-checked rows
+                            if (modelRRs.has(rr.id)) {
+                                paymentInput.addClass('inputAmount').val(amountPaid).show();
+                            } else {
+                                paymentInput.hide();
+                            }
+                            
                             subTotalGross += parseNumber(rr.netOfEwtAmount);
                             totalGross += parseNumber(rr.netOfEwtAmount);
 
@@ -343,14 +344,14 @@
 
                             if (index === data.length - 1 || data[index + 1].purchaseOrderNo !== currentPO) {
                                 const subTotal = $(`
-                                <tr class="fw-bold bg-light subtotalRow" data-po="${currentPO}">
-                                    <td colspan="3"></td>
-                                    <td class="fw-bold text-end">Subtotal (${rr.purchaseOrderNo}):</td>
-                                    <td class="text-end subTotalGross">${formatNumberToFour(subTotalGross)}</td>
-                                    <td class="text-end subTotalAmountPaid">0.00</td>
-                                    <td class="text-end subTotalBalance">0.00</td>
-                                </tr>
-                            `);
+                                    <tr class="fw-bold bg-light subtotalRow" data-po="${currentPO}">
+                                        <td colspan="3"></td>
+                                        <td class="fw-bold text-end">Subtotal (${rr.purchaseOrderNo}):</td>
+                                        <td class="text-end subTotalGross">${formatNumberToFour(subTotalGross)}</td>
+                                        <td class="text-end subTotalAmountPaid">0.00</td>
+                                        <td class="text-end subTotalBalance">0.00</td>
+                                    </tr>
+                                `);
                                 tbody.append(subTotal);
                                 subTotalGross = 0;
                             }
@@ -487,6 +488,15 @@
                 row.find('.balance').text(formatNumberToFour(0));
                 updateAmounts();
                 return;
+            } else {
+                $(this).removeClass('is-invalid');
+                // negative values should not be allowed, reset to 0 if negative
+                if (inputAmount < 0) {
+                    $(this).val(formatNumberToFour(0));
+                    row.find('.balance').text(formatNumberToFour(initialBalance));
+                    updateAmounts();
+                    return;
+                }
             }
             $(this).removeClass('is-invalid');
 

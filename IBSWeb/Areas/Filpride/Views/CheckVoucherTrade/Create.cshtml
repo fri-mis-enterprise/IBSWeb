@@ -465,6 +465,15 @@
                 row.find('.balance').text(formatNumberToFour(0));
                 updateAmounts();
                 return;
+            } else {
+                $(this).removeClass('is-invalid');
+                // negative values should not be allowed, reset to 0 if negative
+                if (paymentAmount < 0) {
+                    $(this).val(formatNumberToFour(0));
+                    row.find('.balance').text(formatNumberToFour(initialBalance));
+                    updateAmounts();
+                    return;
+                }
             }
 
             $(this).removeClass('is-invalid');
