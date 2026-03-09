@@ -129,7 +129,7 @@
                         "name": "dcrDate",
                         "render": function (data, type, row) {
                             if (!data) {
-                                return ''; // Return an empty string or any placeholder for null values
+                                return ''; 
                             }
                             var date = new Date(data);
                             return date.toLocaleDateString('en-US', { 
@@ -158,12 +158,12 @@
                             if (row.dcpDate === null) {
                                 actions += `<li><a class="dropdown-item" href="#" onclick="showAddDCPDate('${data}')"> Add DCP Date</a></li>`;
                             } else  {
-                                actions += `<li><a class="dropdown-item" href="#" onclick="showAddDCPDate('${data}')"> Update DCP Date</a></li>`;
+                                actions += `<li><a class="dropdown-item" href="#" onclick="showAddDCPDate('${data}', '${row.dcpDate}', ${row.dcrDate ? `'${row.dcrDate}'` : null})"> Update DCP Date</a></li>`;
                                 
                                 if (row.dcrDate === null) {
                                     actions += `<li><a class="dropdown-item" href="#" onclick="showAddDCRDate('${data}', '${row.dcpDate}')"> Add DCR Date</a></li>`;
                                 } else  {
-                                    actions += `<li><a class="dropdown-item" href="#" onclick="showAddDCRDate('${data}', '${row.dcpDate}')"> Update DCR Date</a></li>`;
+                                    actions += `<li><a class="dropdown-item" href="#" onclick="showAddDCRDate('${data}', '${row.dcpDate}', '${row.dcrDate}')"> Update DCR Date</a></li>`;
                                 }
                             }
 
@@ -209,15 +209,33 @@
 
         });
 
-        function showAddDCPDate(cvId) {
-            const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+        function showAddDCPDate(cvId, existingDcpDate, existingDcrDate) {
+            const today = new Date().toISOString().split('T')[0];
+            const defaultDate = existingDcpDate
+                ? new Date(existingDcpDate).toISOString().split('T')[0]
+                : today;
+
+            const formattedDcrDate = existingDcrDate
+                ? new Date(existingDcrDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' })
+                : null;
+
+            const warningHtml = formattedDcrDate
+                ? `<div class="alert alert-warning mt-2 text-start p-2" style="font-size:0.875rem;">
+                       <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                       <strong>Warning:</strong> A DCR Date of <strong>${formattedDcrDate}</strong> is currently tagged.
+                       Updating the DCP Date will <strong>permanently remove</strong> this DCR Date.
+                   </div>`
+                : '';
+
             Swal.fire({
-                title: 'Add DCP Date',
+                title: existingDcpDate ? 'Update DCP Date' : 'Add DCP Date',
                 html: `
-                <label for="dcpDate" class="form-label">Select DCP Date</label>
-                <input type="date" id="dcpDate" class="swal2-input" value="${today}" required>
-            `,
+                    <label for="dcpDate" class="form-label">Select DCP Date</label>
+                    <input type="date" id="dcpDate" class="swal2-input" value="${defaultDate}" required>
+                    ${warningHtml}
+                `,
                 confirmButtonText: 'Save',
+                confirmButtonColor: formattedDcrDate ? '#d33' : '#3085d6',
                 showCancelButton: true,
                 preConfirm: () => {
                     const dcpDate = document.getElementById('dcpDate').value;
@@ -229,48 +247,108 @@
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
-                    const dcpDate = result.value;
-                    updateDCPDate(cvId, dcpDate);
+                    if (formattedDcrDate) {
+                        Swal.fire({
+                            title: 'Are you sure?',
+                            html: `Proceeding will <strong>remove</strong> the tagged DCR Date of <strong>${formattedDcrDate}</strong>.<br><br>This action cannot be undone.`,
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#d33',
+                            cancelButtonColor: '#6c757d',
+                            confirmButtonText: 'Yes, remove DCR Date',
+                            cancelButtonText: 'Cancel',
+                        }).then((confirmResult) => {
+                            if (confirmResult.isConfirmed) {
+                                updateDCPDate(cvId, result.value);
+                            }
+                        });
+                    } else {
+                        updateDCPDate(cvId, result.value);
+                    }
                 }
             });
         }
 
-        function showAddDCRDate(cvId, dcpDate) {
+        function showAddDCRDate(cvId, dcpDate, existingDcrDate) {
             if (!dcpDate) {
-                Swal.fire('Error', 'DCP date must be set before adding DCR date', 'error');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Missing DCP Date',
+                    text: 'DCP date must be set before adding a DCR date.',
+                    confirmButtonColor: '#d33'
+                });
                 return;
             }
 
             const today = new Date().toISOString().split('T')[0];
             const minDate = new Date(dcpDate).toISOString().split('T')[0];
+            const defaultDate = existingDcrDate
+                ? new Date(existingDcrDate).toISOString().split('T')[0]
+                : today;
+
+            const formattedDcpDate = new Date(dcpDate).toLocaleDateString('en-US', {
+                year: 'numeric', month: 'short', day: '2-digit'
+            });
+
+            const formattedDcrDate = existingDcrDate
+                ? new Date(existingDcrDate).toLocaleDateString('en-US', {
+                    year: 'numeric', month: 'short', day: '2-digit'
+                })
+                : null;
+
+            const infoHtml = formattedDcrDate
+                ? `<div class="alert alert-info mt-2 text-start p-2" style="font-size:0.875rem;">
+                       <i class="bi bi-info-circle-fill me-1"></i>
+                       <strong>Current DCR Date:</strong> <strong>${formattedDcrDate}</strong>
+                   </div>`
+                : `<div class="alert alert-secondary mt-2 text-start p-2" style="font-size:0.875rem;">
+                       <i class="bi bi-info-circle me-1"></i>
+                       DCR Date must be on or after the DCP Date of <strong>${formattedDcpDate}</strong>.
+                   </div>`;
 
             Swal.fire({
-                title: 'Add DCR Date',
+                title: existingDcrDate ? 'Update DCR Date' : 'Add DCR Date',
                 html: `
-                <label for="dcrDate" class="form-label">Select DCR Date</label>
-                <input type="date" id="dcrDate" class="swal2-input" value="${today}" min="${minDate}" required>
-            `,
+                    <label for="dcrDate" class="form-label">Select DCR Date</label>
+                    <input type="date" id="dcrDate" class="swal2-input" value="${defaultDate}" min="${minDate}" required>
+                    ${infoHtml}
+                `,
                 confirmButtonText: 'Save',
+                confirmButtonColor: '#3085d6',
                 showCancelButton: true,
+                cancelButtonColor: '#6c757d',
                 preConfirm: () => {
                     const dcrDate = document.getElementById('dcrDate').value;
                     if (!dcrDate) {
                         Swal.showValidationMessage('Please select a DCR date');
                         return false;
                     }
-
-                    // Additional validation to ensure DCR date is not before DCP date
                     if (new Date(dcrDate) < new Date(minDate)) {
-                        Swal.showValidationMessage('DCR date cannot be earlier than DCP date');
+                        Swal.showValidationMessage(`DCR date cannot be earlier than DCP date (${formattedDcpDate})`);
                         return false;
                     }
-
                     return dcrDate;
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
-                    const dcrDate = result.value;
-                    updateDCRDate(cvId, dcrDate);
+                    if (formattedDcrDate) {
+                        Swal.fire({
+                            title: 'Update DCR Date?',
+                            html: `The current DCR Date of <strong>${formattedDcrDate}</strong> will be replaced.<br><br>Do you want to proceed?`,
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#3085d6',
+                            cancelButtonColor: '#6c757d',
+                            confirmButtonText: 'Yes, update it',
+                            cancelButtonText: 'Cancel',
+                        }).then((confirmResult) => {
+                            if (confirmResult.isConfirmed) {
+                                updateDCRDate(cvId, result.value);
+                            }
+                        });
+                    } else {
+                        updateDCRDate(cvId, result.value);
+                    }
                 }
             });
         }
