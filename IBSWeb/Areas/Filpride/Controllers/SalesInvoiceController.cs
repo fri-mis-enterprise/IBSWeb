@@ -75,8 +75,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 var companyClaims = await GetCompanyClaimAsync();
 
-                var salesInvoices = await _unitOfWork.FilprideSalesInvoice
-                    .GetAllAsync(si => si.Company == companyClaims, cancellationToken);
+                var salesInvoices = _unitOfWork.FilprideSalesInvoice
+                    .GetAllQueryAsync(cancellationToken);
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
@@ -94,9 +94,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             s.CreatedBy!.ToLower().Contains(searchValue) ||
                             s.Status.ToLower().Contains(searchValue) ||
                             s.Remarks.ToLower().Contains(searchValue) ||
-                            s.DeliveryReceipt?.DeliveryReceiptNo.ToLower().Contains(searchValue) == true
-                            )
-                        .ToList();
+                            (s.DeliveryReceipt != null &&
+                            s.DeliveryReceipt.DeliveryReceiptNo.ToLower().Contains(searchValue) == true)
+                            );
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
@@ -105,8 +105,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     salesInvoices = salesInvoices
                         .Where(s =>
                             s.TransactionDate.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        )
-                        .ToList();
+                        );
                 }
 
                 // Sorting
@@ -118,20 +117,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     salesInvoices = salesInvoices
                         .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
+                        .OrderBy($"{columnName} {sortDirection}");
                 }
 
                 var totalRecords = salesInvoices.Count();
 
-                var pagedData = salesInvoices
+                var pagedData = await salesInvoices
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
+                    .Where(x => x.Company == companyClaims)
                     .Select(si => new
                     {
                         si.Amount,
                         si.SalesInvoiceNo,
-                        DeliveryReceiptNo = si.DeliveryReceipt?.DeliveryReceiptNo ?? "",
+                        DeliveryReceiptNo = si.DeliveryReceipt != null ? si.DeliveryReceipt.DeliveryReceiptNo : "",
                         si.TransactionDate,
                         si.Customer!.CustomerName,
                         si.Terms,
@@ -145,7 +144,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         si.CanceledBy,
                         si.PaymentStatus,
                     })
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
