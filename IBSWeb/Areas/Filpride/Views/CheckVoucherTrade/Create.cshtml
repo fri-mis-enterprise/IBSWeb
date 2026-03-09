@@ -303,6 +303,7 @@
                     let totalAmountPaid = 0;
                     let totalBalance = 0;
                     let subTotalGross = 0;
+                    let subTotalBalance = 0;
                     
                     tbody.empty();
                     // Reset selected count when loading new records
@@ -328,23 +329,24 @@
 
                             tbody.append(tr);
 
-                            subTotalGross += parseNumber(rr.netOfEwtAmount);
-                            totalGross += parseNumber(rr.netOfEwtAmount);
-                            
-                            tbody.append(tr);
+                            subTotalGross   += parseNumber(rr.netOfEwtAmount);
+                            subTotalBalance += initialBalance;
+                            totalGross      += parseNumber(rr.netOfEwtAmount);
+                            totalBalance    += initialBalance;
 
                             if (index === data.length - 1 || data[index + 1].purchaseOrderNo !== currentPO) {
                                 const subTotal = $(`
-                                <tr class="fw-bold bg-light subtotalRow" data-po="${currentPO}">
+                                <tr class="fw-bold bg-light subtotalRow" data-po="${currentPO}" data-balance="${subTotalBalance}">
                                     <td colspan="3"></td>
                                     <td class="fw-bold text-end">Subtotal (${rr.purchaseOrderNo}):</td>
                                     <td class="text-end subTotalGross">${formatNumberToFour(subTotalGross)}</td>
                                     <td class="text-end subTotalAmountPaid">0.00</td>
-                                    <td class="text-end subTotalBalance">0.00</td>
+                                    <td class="text-end subTotalBalance">${formatNumberToFour(subTotalBalance)}</td>
                                 </tr>
                             `);
                                 tbody.append(subTotal);
-                                subTotalGross = 0;
+                                subTotalGross   = 0;
+                                subTotalBalance = 0;
                             }
                         });
                     }
@@ -358,7 +360,7 @@
                             <td class="fw-bold text-end p-2">Grand Total:</td>
                             <td class="text-end grandTotalGross" id="grandTotalRRAmount">${formatNumberToFour(totalGross)}</td>
                             <td class="text-end grandTotalAmountPaid" id="grandTotalNetAmount">0.00</td>
-                            <td class="text-end grandTotalBalance" id="grandTotalNetOfEWT">${formatNumberToFour(totalBalance)}</td>
+                            <td class="text-end grandTotalBalance" id="grandTotalNetOfEWT" data-balance="${totalBalance}">${formatNumberToFour(totalBalance)}</td>
                         </tr>
                     `);
                     tbody.append(totalRow);
@@ -491,22 +493,18 @@
                 let subTotalAmountPaid = 0;
 
                 amountInputs.forEach(function (input) {
-                    let rawValue = input.value;
-                    let rrAmount = parseNumber(rawValue);
-
-                    totalNetOfEWT += rrAmount;
-                    subTotalAmountPaid += rrAmount;
+                    subTotalAmountPaid += parseNumber(input.value);
                 });
-                
-                let subTotalGross = parseNumber($(this).find(".subTotalGross").text());
+
+                totalNetOfEWT += subTotalAmountPaid;
+
                 $(this).find(".subTotalAmountPaid").text(formatNumberToFour(subTotalAmountPaid));
-                $(this).find(".subTotalBalance").text(formatNumberToFour(Math.abs(subTotalGross - subTotalAmountPaid)));
+                $(this).find(".subTotalBalance").text(formatNumberToFour(Math.abs($(this).data('balance') - subTotalAmountPaid)));
             });
             
             $(".totalNetOfEWT").val(formatNumberToFour(totalNetOfEWT));
             $(".grandTotalAmountPaid").text(formatNumberToFour(totalNetOfEWT));
-            let grandTotalGross = parseNumber($(".grandTotalGross").text());
-            $(".grandTotalBalance").text(formatNumberToFour(Math.abs(grandTotalGross - totalNetOfEWT)));
+            $(".grandTotalBalance").text(formatNumberToFour(Math.abs($(".grandTotalBalance").data('balance') - totalNetOfEWT)));
 
             var hasAdvances = $("#advancesRow").is(":visible");
             var advancesAmount = hasAdvances ? parseNumber($("#advancesCredit").val()) : 0;

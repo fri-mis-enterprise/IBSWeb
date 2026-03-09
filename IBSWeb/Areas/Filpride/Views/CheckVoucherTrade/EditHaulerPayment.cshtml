@@ -279,7 +279,7 @@
                             } else {
                                 paymentInput.hide();
                             }
-                            
+
                             tbody.append(tr);
 
                             totalGross += parseNumber(dr.netOfEwtAmount);
@@ -300,7 +300,7 @@
                     <td class="fw-bold text-end p-2">Grand Total:</td>
                     <td class="text-end grandTotalGross" id="grandTotalRRAmount">${formatNumberToFour(totalGross)}</td>
                     <td class="text-end grandTotalAmountPaid" id="grandTotalNetAmount">${formatNumberToFour(totalAmountPaid)}</td>
-                    <td class="text-end grandTotalBalance" id="grandTotalNetOfEWT">${formatNumberToFour(totalBalance)}</td>
+                    <td class="text-end grandTotalBalance" id="grandTotalNetOfEWT" data-balance="${totalBalance}">${formatNumberToFour(totalBalance)}</td>
                 </tr>
             `);
                     tbody.append(totalRow);
@@ -410,8 +410,8 @@
             });
             $(".totalNetOfEWT").val(formatNumberToFour(totalNetOfEWT));
             $(".grandTotalAmountPaid").text(formatNumberToFour(totalNetOfEWT));
-            let grandTotalGross = parseNumber($(".grandTotalGross").text());
-            $(".grandTotalBalance").text(formatNumberToFour(Math.abs(grandTotalGross - totalNetOfEWT)));
+            $(".grandTotalBalance").text(formatNumberToFour(Math.abs(parseNumber($(".grandTotalBalance").attr('data-balance')) - totalNetOfEWT)));
+
             updateTotalDebitAndCredit();
             validateDebitAndCredit();
         }
