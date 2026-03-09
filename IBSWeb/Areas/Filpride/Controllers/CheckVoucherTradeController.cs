@@ -1262,9 +1262,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         var receivingReport = await _unitOfWork.FilprideReceivingReport
                             .GetAsync(rr => rr.ReceivingReportId == item.DocumentId, cancellationToken);
 
-                        // Calculate net amount (excluding tax portion)
-                        var netAmount = Math.Round(receivingReport!.Amount - ((receivingReport.Amount / 1.12m) * receivingReport.TaxPercentage), 4);
-                        
+                        // Calculate net amount using VatType-aware base amount
+                        var baseAmount = receivingReport!.PurchaseOrder?.VatType == SD.VatType_Vatable
+                            ? receivingReport.Amount / 1.12m
+                            : receivingReport.Amount;
+                        var netAmount = Math.Round(baseAmount * (1m - receivingReport.TaxPercentage), 4);
+
                         // Mark as paid only if fully settled
                         if (receivingReport.AmountPaid >= netAmount)
                         {
@@ -1279,22 +1282,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                         if (item.CV.CvType == "Commission")
                         {
-                            // Calculate net amount (excluding tax portion)
-                            var netAmount = Math.Round(deliveryReceipt!.CommissionAmount - ((deliveryReceipt.CommissionAmount / 1.12m) * item.CV.TaxPercent), 4);
+                            // Calculate net amount using CommissioneeVatType-aware base amount
+                            var baseAmount = deliveryReceipt!.CustomerOrderSlip?.CommissioneeVatType == SD.VatType_Vatable
+                                ? deliveryReceipt.CommissionAmount / 1.12m
+                                : deliveryReceipt.CommissionAmount;
+                            var netAmount = Math.Round(baseAmount * (1m - item.CV.TaxPercent), 4);
 
                             // Mark as paid only if fully settled
-                            if (deliveryReceipt!.CommissionAmountPaid >= netAmount)
+                            if (deliveryReceipt.CommissionAmountPaid >= netAmount)
                             {
                                 deliveryReceipt.IsCommissionPaid = true;
                             }
                         }
                         if (item.CV.CvType == "Hauler")
                         {
-                            // Calculate net amount (excluding tax portion)
-                            var netAmount = Math.Round(deliveryReceipt!.FreightAmount - ((deliveryReceipt.FreightAmount / 1.12m) * item.CV.TaxPercent), 4);
+                            // Calculate net amount using HaulerVatType-aware base amount
+                            var baseAmount = deliveryReceipt!.HaulerVatType == SD.VatType_Vatable
+                                ? deliveryReceipt.FreightAmount / 1.12m
+                                : deliveryReceipt.FreightAmount;
+                            var netAmount = Math.Round(baseAmount * (1m - item.CV.TaxPercent), 4);
 
                             // Mark as paid only if fully settled
-                            if (deliveryReceipt!.FreightAmountPaid >= netAmount)
+                            if (deliveryReceipt.FreightAmountPaid >= netAmount)
                             {
                                 deliveryReceipt.IsFreightPaid = true;
                             }
