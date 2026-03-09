@@ -590,7 +590,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                                          && rr.AmountPaid < (rr.Amount - ((rr.Amount / 1.12m) * rr.TaxPercentage))
                                                          && poNumber.Contains(rr.PONo)
                                                          && rr.PostedBy != null);
-            var rrAmountPaid = 0m;
+            var rrAmountPaidById = new Dictionary<int, decimal>();
 
             if (cvId != null)
             {
@@ -599,9 +599,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Select(cvp => cvp.DocumentId)
                     .ToListAsync(cancellationToken);
                 
-                rrAmountPaid = await _dbContext.FilprideCVTradePayments
+                rrAmountPaidById = await _dbContext.FilprideCVTradePayments
                     .Where(cvp => cvp.CheckVoucherId == cvId && cvp.DocumentType == "RR")
-                    .SumAsync(cvp => cvp.AmountPaid, cancellationToken);
+                    .GroupBy(cvp => cvp.DocumentId)
+                    .ToDictionaryAsync(g => g.Key, g => g.Sum(x => x.AmountPaid), cancellationToken);
 
                 query = query.Union(_dbContext.FilprideReceivingReports
                     .Where(rr => poNumber.Contains(rr.PONo) && rrIds.Contains(rr.ReceivingReportId)));
@@ -633,16 +634,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         ? _unitOfWork.FilprideReceivingReport.ComputeNetOfEwt(rr.Amount, ewtAmount)
                         : rr.Amount;
 
+                    var currentCvPaid = rrAmountPaidById.GetValueOrDefault(rr.ReceivingReportId);
                     return new
-                    {
-                        Id = rr.ReceivingReportId,
-                        rr.ReceivingReportNo,
-                        rr.PurchaseOrder?.PurchaseOrderNo,
-                        rr.OldRRNo,
-                        AmountPaid = rr.AmountPaid.ToString(SD.Four_Decimal_Format),
-                        Balance = ((netOfEwtAmount - rr.AmountPaid) + rrAmountPaid).ToString(SD.Four_Decimal_Format),
-                        NetOfEwtAmount = netOfEwtAmount.ToString(SD.Four_Decimal_Format)
-                    };
+                     {
+                         Id = rr.ReceivingReportId,
+                         rr.ReceivingReportNo,
+                         rr.PurchaseOrder?.PurchaseOrderNo,
+                         rr.OldRRNo,
+                         AmountPaid = rr.AmountPaid.ToString(SD.Four_Decimal_Format),
+                         Balance = ((netOfEwtAmount - rr.AmountPaid) + currentCvPaid).ToString(SD.Four_Decimal_Format),
+                         NetOfEwtAmount = netOfEwtAmount.ToString(SD.Four_Decimal_Format),
+                     };
                 }).ToList();
 
             return Json(rrList);
