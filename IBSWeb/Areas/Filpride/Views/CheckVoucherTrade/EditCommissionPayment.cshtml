@@ -259,6 +259,7 @@
                             const initialBalance = parseNumber(dr.balance);
                             const amountPaid = modelDRs.get(dr.id);
                             const paymentInput = $('<input>').attr({ type: 'text', class: 'paymentAmount text-end' });
+                            const displayedBalance = modelDRs.has(dr.id) ? initialBalance - (Number(amountPaid) || 0) : initialBalance;
 
                             if (modelDRs.has(dr.id)) {
                                 selectedRecords.push(dr.id.toString());
@@ -271,10 +272,11 @@
                             tr.append($('<td>').text(dr.manualDrNo));
                             tr.append($('<td>').addClass('text-end grossAmount').text(formatNumberToFour(dr.netOfEwtAmount)));
                             tr.append($('<td>').addClass('text-end').append(paymentInput));
-                            tr.append($('<td>').addClass('text-end balance').text(formatNumberToFour(initialBalance)));
+                            tr.append($('<td>').addClass('text-end balance').text(formatNumberToFour(displayedBalance)));  
 
                             if (modelDRs.has(dr.id)) {
                                 paymentInput.addClass('inputAmount').val(amountPaid).show();
+                                tr.attr('data-last-amount', amountPaid);
                             } else {
                                 paymentInput.hide();
                             }
@@ -342,8 +344,9 @@
                 if (!selectedRecords.includes(this.value)) {
                     selectedRecords.push(this.value);
                 }
-                inputField.val(formatNumberToFour(initialBalance)).addClass("inputAmount").show();
-                row.find('.balance').text(formatNumberToFour(initialBalance - initialBalance));
+                const lastAmount = row.attr('data-last-amount');
+                inputField.val(lastAmount !== undefined ? formatNumberToFour(parseNumber(lastAmount)) : formatNumberToFour(initialBalance)).addClass("inputAmount").show();
+                row.find('.balance').text(formatNumberToFour(initialBalance - parseNumber(inputField.val())));
             } else {
                 selectedRecords = selectedRecords.filter(v => v !== this.value);
                 inputField.removeAttr("name").hide().val('');
@@ -395,6 +398,7 @@
             $(this).removeClass('is-invalid');
 
             row.find('.balance').text(formatNumberToFour(initialBalance - paymentAmount));
+            row.attr('data-last-amount', paymentAmount);
             updateAmounts();
         });
 
