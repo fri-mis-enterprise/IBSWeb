@@ -376,7 +376,7 @@
         $(document).on('input', '.inputAmount', function () {
             const row = $(this).closest('tr');
             const initialBalance = parseNumber(row.attr('data-balance'));
-            const paymentAmount = parseNumber($(this).val());
+            let paymentAmount = parseNumber($(this).val());
 
             if (paymentAmount > initialBalance) {
                 $(this).addClass('is-invalid');
