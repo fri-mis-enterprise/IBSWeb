@@ -322,7 +322,7 @@ namespace IBS.DataAccess.Repository.Filpride
             var serviceInvoices = await _db.FilprideServiceInvoices
                 .Where(dr => dr.Company == company &&
                              dr.Period >= dateFrom &&
-                             dr.Period  <= dateTo &&
+                             dr.Period <= dateTo &&
                              dr.Status == nameof(Status.Posted))
                 .Include(dr => dr.Customer)
                 .Include(dr => dr.Service)
@@ -359,12 +359,15 @@ namespace IBS.DataAccess.Repository.Filpride
             }
 
             var checkVoucherHeader = await _db.FilprideCheckVoucherHeaders
+                .AsNoTracking()
                 .Where(cd =>
                     cd.Company == company && cd.DcrDate >= dateFrom && cd.DcrDate <= dateTo &&
                     cd.Status == nameof(Status.Posted) &&
                     cd.CvType != nameof(CVType.Invoicing))
                 .Include(cd => cd.BankAccount)
+                .Include(cd => cd.Details)
                 .OrderBy(cd => cd.Date)
+                .AsSplitQuery()
                 .ToListAsync(cancellationToken);
 
             return checkVoucherHeader;
