@@ -492,6 +492,7 @@
                 $(this).addClass('is-invalid');
                 inputAmount = initialBalance;
                 $(this).val(formatNumberToFour(initialBalance));
+                row.attr('data-last-amount', inputAmount);
                 row.find('.balance').text(formatNumberToFour(0));
                 updateAmounts();
                 return;
@@ -499,7 +500,9 @@
                 $(this).removeClass('is-invalid');
                 // negative values should not be allowed, reset to 0 if negative
                 if (inputAmount < 0) {
+                    inputAmount = 0;
                     $(this).val(formatNumberToFour(0));
+                    row.attr('data-last-amount', inputAmount);
                     row.find('.balance').text(formatNumberToFour(initialBalance));
                     updateAmounts();
                     return;
