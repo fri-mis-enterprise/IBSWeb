@@ -112,17 +112,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
                 var filterTypeClaim = await GetCurrentFilterType();
 
-                var purchaseOrders = await _dbContext.FilpridePurchaseOrders
-                    .Include(po => po.PickUpPoint)
-                    .Include(po => po.ActualPrices)
-                    .Where(po => po.Company == companyClaims)
-                    .ToListAsync(cancellationToken);
+                var purchaseOrders = _unitOfWork.FilpridePurchaseOrder.GetAllQuery(cancellationToken);
 
                 if (!string.IsNullOrEmpty(filterTypeClaim))
                 {
                     purchaseOrders = purchaseOrders
-                        .Where(po => po.Status == nameof(CosStatus.ForApprovalOfOM))
-                        .ToList();
+                        .Where(po => po.Status == nameof(CosStatus.ForApprovalOfOM));
                 }
 
                 if (!string.IsNullOrEmpty(filterTypeClaim))
@@ -131,8 +126,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     {
                         case nameof(CosStatus.ForApprovalOfOM):
                             purchaseOrders = purchaseOrders
-                                .Where(rr => rr.Status == nameof(CosStatus.ForApprovalOfOM))
-                                .ToList();
+                                .Where(rr => rr.Status == nameof(CosStatus.ForApprovalOfOM));
                             break;
                             // Add other cases as needed
                     }
@@ -155,8 +149,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         s.Remarks.ToString().Contains(searchValue) ||
                         s.CreatedBy!.ToLower().Contains(searchValue) ||
                         s.Status.ToLower().Contains(searchValue)
-                        )
-                    .ToList();
+                        );
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
@@ -165,9 +158,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     purchaseOrders = purchaseOrders
                         .Where(s =>
                             s.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        )
-                        .ToList();
+                        );
                 }
+
+                var projectedQuery = await purchaseOrders
+                    .Where(po => po.Company == companyClaims)
+                    .ToListAsync(cancellationToken);
 
                 // Sorting
                 if (parameters.Order?.Count > 0)
@@ -178,11 +174,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     purchaseOrders = purchaseOrders
                         .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
+                        .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = purchaseOrders.Count;
+                var totalRecords = purchaseOrders.Count();
 
                 var pagedData = purchaseOrders
                     .Skip(parameters.Start)
@@ -196,7 +191,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         po.SupplierId,
                         po.SupplierName,
                         po.ProductName,
-                        po.PickUpPoint?.Depot,
+                        po.PickUpPoint!.Depot,
                         po.Quantity,
                         po.QuantityReceived,
                         po.FinalPrice,
