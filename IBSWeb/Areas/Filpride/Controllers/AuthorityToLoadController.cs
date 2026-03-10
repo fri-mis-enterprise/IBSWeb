@@ -72,7 +72,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
 
                 var atlList = _unitOfWork.FilprideAuthorityToLoad
-                    .GetAllQueryAsync();
+                    .GetAllQuery();
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search?.Value))

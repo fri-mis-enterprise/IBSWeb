@@ -138,8 +138,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     checkVoucherDetails = checkVoucherDetails.Where(cvd => cvd.CheckVoucherHeader!.Status == nameof(CheckVoucherInvoiceStatus.ForApproval));
                 }
 
-
-
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {

@@ -95,7 +95,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
 
                 var checkVoucherHeaders = _unitOfWork.FilprideCheckVoucher
-                    .GetAllQueryAsync(cancellationToken);
+                    .GetAllQuery(cancellationToken);
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))

@@ -130,7 +130,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
                 var filterTypeClaim = await GetCurrentFilterType();
 
-                var checkVoucher = _unitOfWork.FilprideCheckVoucher.GetAllQueryAsync();
+                var checkVoucher = _unitOfWork.FilprideCheckVoucher.GetAllQuery();
 
                 // Apply status filter based on filterType
                 if (!string.IsNullOrEmpty(filterTypeClaim) && filterTypeClaim == "ForApproval")
