@@ -140,8 +140,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var query = await _unitOfWork.FilprideBankAccount
-                    .GetAllAsync(null, cancellationToken);
+                var query = _unitOfWork.FilprideBankAccount
+                    .GetAllQuery(cancellationToken);
 
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
@@ -156,7 +156,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         b.Branch.ToLower().Contains(searchValue) ||
                         b.CreatedBy!.ToLower().Contains(searchValue) ||
                         b.CreatedDate.ToString().ToLower().Contains(searchValue)
-                        ).ToList();
+                        );
                 }
 
                 // Sorting
@@ -171,10 +171,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 var totalRecords = query.Count();
-                var pagedData = query
+                var pagedData = await query
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
