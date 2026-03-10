@@ -101,6 +101,16 @@ namespace IBS.DataAccess.Repository.Filpride
             return await query.ToListAsync(cancellationToken);
         }
 
+        public override IQueryable<FilprideServiceInvoice> GetAllQuery(CancellationToken cancellationToken = default)
+        {
+            return dbSet
+                .Include(s => s.Customer)
+                .Include(s => s.Service)
+                .Include(s => s.DeliveryReceipt)
+                .AsSplitQuery()
+                .AsNoTracking();
+        }
+
         public async Task PostAsync(FilprideServiceInvoice model, CancellationToken cancellationToken = default)
         {
             #region --Sales Book Recording

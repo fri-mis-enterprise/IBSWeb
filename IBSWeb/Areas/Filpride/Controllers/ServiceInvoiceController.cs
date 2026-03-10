@@ -76,8 +76,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 var companyClaims = await GetCompanyClaimAsync();
 
-                var serviceInvoices = await _unitOfWork.FilprideServiceInvoice
-                    .GetAllAsync(sv => sv.Company == companyClaims, cancellationToken);
+                var serviceInvoices = _unitOfWork.FilprideServiceInvoice
+                    .GetAllQuery(cancellationToken);
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
@@ -92,9 +92,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             s.Period.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
                             s.Total.ToString().Contains(searchValue) ||
                             s.Instructions.ToLower().Contains(searchValue) ||
-                            s.CreatedBy?.ToLower().Contains(searchValue) == true
-                            )
-                        .ToList();
+                            s.CreatedBy!.ToLower().Contains(searchValue) == true
+                            );
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
@@ -103,9 +102,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     serviceInvoices = serviceInvoices
                         .Where(s =>
                             s.Period.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        )
-                        .ToList();
+                        );
                 }
+
+                var projectedQuery = await serviceInvoices
+                    .Where(x => x.Company == companyClaims)
+                    .ToListAsync(cancellationToken);
 
                 // Sorting
                 if (parameters.Order?.Count > 0)
@@ -114,15 +116,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var columnName = parameters.Columns[orderColumn.Column].Data;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
-                    serviceInvoices = serviceInvoices
+                    projectedQuery = projectedQuery
                         .AsQueryable()
                         .OrderBy($"{columnName} {sortDirection}")
                         .ToList();
                 }
 
-                var totalRecords = serviceInvoices.Count();
+                var totalRecords = projectedQuery.Count();
 
-                var pagedData = serviceInvoices
+                var pagedData = projectedQuery
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
                     .ToList();
