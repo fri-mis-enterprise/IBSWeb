@@ -153,7 +153,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         );
                 }
 
-                var pagedData = collectionReceipts
+                var pagedData = await collectionReceipts
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
                     .Where(c => c.Company == companyClaims)
@@ -176,7 +176,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         c.DepositedDate,
 
                     })
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 // Sorting
                 if (parameters.Order?.Count > 0)
