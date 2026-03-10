@@ -27,6 +27,10 @@
     }
     
     var decimalFormat = customerType != nameof(CustomerType.Government) ? SD.Two_Decimal_Format : SD.Four_Decimal_Format;
+    
+    var invoiceNo = Model.SalesInvoice?.SalesInvoiceNo ?? Model.ServiceInvoice!.ServiceInvoiceNo;
+    var invoiceDate = Model.SalesInvoice?.TransactionDate.ToString(SD.Date_Format) ?? Model.ServiceInvoice!.Period.ToString(SD.Date_Format);
+    var product = Model.SalesInvoice?.CustomerOrderSlip?.ProductName ?? @Model.ServiceInvoice!.ServiceName;
 }
 
 <style>
@@ -131,9 +135,9 @@
             </thead>
             <tbody>
                 <tr style="height:80px;">
-                    <td>@Html.DisplayFor(model => model.SalesInvoice!.SalesInvoiceNo)</td>
-                    <td>@Model.SalesInvoice!.TransactionDate.ToString(SD.Date_Format)</td>
-                    <td>@Html.DisplayFor(model => model.SalesInvoice!.CustomerOrderSlip!.ProductName)</td>
+                    <td>@invoiceNo</td>
+                    <td>@invoiceDate</td>
+                    <td>@product</td>
                     <td>@Model.Description.ToUpper()</td>
                     <td>@Model.DebitAmount.ToString(decimalFormat)</td>
                 </tr>
