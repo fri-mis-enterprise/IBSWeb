@@ -3044,8 +3044,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         : 0m;
 
                     var netOfEwtAmount = dr.CustomerOrderSlip!.CommissioneeTaxType == SD.TaxType_WithTax
-                        ? _unitOfWork.FilprideReceivingReport.ComputeNetOfEwt(netOfVatAmount, ewtAmount)
-                        : netOfVatAmount;
+                        ? _unitOfWork.FilprideReceivingReport.ComputeNetOfEwt(dr.CommissionAmount, ewtAmount)
+                        : dr.CommissionAmount;
 
                     var thisDrAmountPaid = drPaymentLookup.TryGetValue(dr.DeliveryReceiptId, out var paid) ? paid : 0m;
 
@@ -3128,8 +3128,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         : 0.0000m;
 
                     var netOfEwtAmount = dr.HaulerTaxType == SD.TaxType_WithTax
-                        ? _unitOfWork.FilprideReceivingReport.ComputeNetOfEwt(netOfVatAmount, ewtAmount)
-                        : netOfVatAmount;
+                        ? _unitOfWork.FilprideReceivingReport.ComputeNetOfEwt(dr.FreightAmount, ewtAmount)
+                        : dr.FreightAmount;
 
                     var thisDrAmountPaid = drPaymentLookup.TryGetValue(dr.DeliveryReceiptId, out var paid) ? paid : 0m;
 
