@@ -122,8 +122,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
                 var filterTypeClaim = await GetCurrentFilterType();
 
-                var drList = await _unitOfWork.FilprideDeliveryReceipt
-                    .GetAllAsync(cos => cos.Company == companyClaims, cancellationToken);
+                var drList = _unitOfWork.FilprideDeliveryReceipt
+                    .GetAllQuery(cancellationToken);
 
                 // Apply status filter based on filterType
                 if (!string.IsNullOrEmpty(filterTypeClaim))
@@ -169,9 +169,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         s.PurchaseOrder!.PurchaseOrderNo!.ToLower().Contains(searchValue) ||
                         s.CreatedBy!.ToLower().Contains(searchValue) ||
                         s.Freight.ToString().Contains(searchValue) ||
-                        s.HaulerName?.ToLower().Contains(searchValue) == true
-                        )
-                    .ToList();
+                        s.HaulerName!.ToLower().Contains(searchValue) == true
+                        );
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
@@ -180,8 +179,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     drList = drList
                         .Where(s =>
                             s.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        )
-                        .ToList();
+                        );
                 }
 
                 // Sorting
@@ -193,15 +191,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     drList = drList
                         .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
+                        .OrderBy($"{columnName} {sortDirection}");
                 }
 
                 var totalRecords = drList.Count();
 
-                var pagedData = drList
+                var pagedData = await drList
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
+                    .Where(x => x.Company == companyClaims)
                     .Select(dr => new
                     {
                         dr.DeliveryReceiptId,
@@ -225,7 +223,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         dr.Freight,
                         dr.HaulerName
                     })
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
