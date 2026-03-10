@@ -8,6 +8,7 @@ using IBS.Models.Filpride.MasterFile;
 using IBS.Services.Attributes;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -108,8 +109,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var queried = await _unitOfWork.FilprideEmployee
-                    .GetAllAsync(null, cancellationToken);
+                var queried = _unitOfWork.FilprideEmployee
+                    .GetAllQuery(cancellationToken);
 
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
@@ -119,15 +120,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     queried = queried
                     .Where(e =>
                         e.EmployeeNumber.ToLower().Contains(searchValue) ||
-                        e.Initial?.ToLower().Contains(searchValue) == true ||
+                        e.Initial!.ToLower().Contains(searchValue) == true ||
                         e.FirstName.ToLower().Contains(searchValue) ||
                         e.LastName.ToLower().Contains(searchValue) ||
-                        e.BirthDate?.ToString().Contains(searchValue) == true ||
-                        e.TelNo?.ToLower().Contains(searchValue) == true ||
-                        e.Department?.ToLower().Contains(searchValue) == true ||
+                        e.BirthDate!.ToString()!.Contains(searchValue) == true ||
+                        e.TelNo!.ToLower().Contains(searchValue) == true ||
+                        e.Department!.ToLower().Contains(searchValue) == true ||
                         e.Position.ToLower().Contains(searchValue)
-                        ).ToList();
+                        );
                 }
+
+                var projectedQuery = await queried.ToListAsync(cancellationToken);
 
                 // Sorting
                 if (parameters.Order?.Count > 0)
@@ -135,13 +138,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var orderColumn = parameters.Order[0];
                     var columnName = parameters.Columns[orderColumn.Column].Data;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
-                    queried = queried
+                    projectedQuery = projectedQuery
                         .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}");
+                        .OrderBy($"{columnName} {sortDirection}")
+                        .ToList();
                 }
 
-                var totalRecords = queried.Count();
-                var pagedData = queried
+                var totalRecords = projectedQuery.Count();
+                var pagedData = projectedQuery
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
                     .ToList();
