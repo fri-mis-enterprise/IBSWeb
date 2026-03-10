@@ -162,7 +162,9 @@ namespace IBS.DataAccess.Repository.Filpride
         public override IQueryable<FilprideChartOfAccount> GetAllQuery(CancellationToken cancellationToken = default)
         {
             return dbSet
-                .Include(c => c.Children);
+                .Include(c => c.Children)
+                .AsSplitQuery()
+                .AsNoTracking();
         }
     }
 }

@@ -136,7 +136,9 @@ namespace IBS.DataAccess.Repository.Filpride
         public override IQueryable<FilprideCustomer> GetAllQuery(CancellationToken cancellationToken = default)
         {
             return dbSet
-                .Include(dr => dr.Commissionee);
+                .Include(dr => dr.Commissionee)
+                .AsSplitQuery()
+                .AsNoTracking();
         }
     }
 }

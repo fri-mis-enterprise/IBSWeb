@@ -45,5 +45,13 @@ namespace IBS.DataAccess.Repository.Filpride
                 .Include(b => b.Customer)
                 .ToListAsync(cancellationToken);
         }
+
+        public override IQueryable<FilprideCustomerBranch> GetAllQuery(CancellationToken cancellationToken = default)
+        {
+            return dbSet
+                .Include(b => b.Customer)
+                .AsSplitQuery()
+                .AsNoTracking();
+        }
     }
 }
