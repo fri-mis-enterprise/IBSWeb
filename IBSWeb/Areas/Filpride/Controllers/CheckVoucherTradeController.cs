@@ -594,8 +594,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var companyClaims = await GetCompanyClaimAsync();
 
             var query = _dbContext.FilprideReceivingReports
-            .Where(rr => rr.Company == companyClaims && !rr.IsPaid
-                                                    &&  rr.AmountPaid < (
+                                                .Where(rr => rr.Company == companyClaims && !rr.IsPaid
+                                                    && rr.AmountPaid < (
                                                         rr.PurchaseOrder!.VatType == SD.VatType_Vatable
                                                             ? rr.PurchaseOrder.TaxType == SD.TaxType_WithTax
                                                                 ? rr.Amount - ((rr.Amount / 1.12m) * rr.TaxPercentage)         // Vatable + WithTax (EWT)
@@ -3002,7 +3002,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 dr.CustomerOrderSlip!.CommissioneeVatType == SD.VatType_Vatable
                                     ? dr.CustomerOrderSlip.CommissioneeTaxType == SD.TaxType_WithTax
                                         ? dr.CommissionAmount - ((dr.CommissionAmount / 1.12m) * (dr.Commissionee!.WithholdingTaxPercent))
-                                        : dr.CommissionAmount                  // Vatable + Exempt
+                                        : dr.CustomerOrderSlip.CommissioneeTaxType == SD.TaxType_WithVat
+                                            ? dr.CommissionAmount / 1.12m
+                                            : dr.CommissionAmount
                                     : dr.CustomerOrderSlip.CommissioneeTaxType == SD.TaxType_WithTax
                                         ? dr.CommissionAmount - (dr.CommissionAmount * (dr.Commissionee!.WithholdingTaxPercent))
                                         : dr.CommissionAmount                  // Non-Vatable + Exempt
@@ -3089,7 +3091,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 dr.HaulerVatType == SD.VatType_Vatable
                                     ? dr.HaulerTaxType == SD.TaxType_WithTax
                                         ? dr.FreightAmount - ((dr.FreightAmount / 1.12m) * (dr.Hauler!.WithholdingTaxPercent))
-                                        : dr.FreightAmount                     // Vatable + Exempt
+                                        : dr.HaulerTaxType == SD.TaxType_WithVat
+                                            ? dr.FreightAmount / 1.12m
+                                            : dr.FreightAmount                     // Vatable + Exempt
                                     : dr.HaulerTaxType == SD.TaxType_WithTax
                                         ? dr.FreightAmount - (dr.FreightAmount * (dr.Hauler!.WithholdingTaxPercent))
                                         : dr.FreightAmount                     // Non-Vatable + Exempt
