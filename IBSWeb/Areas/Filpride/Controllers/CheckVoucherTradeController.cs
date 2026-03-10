@@ -599,12 +599,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         rr.PurchaseOrder!.VatType == SD.VatType_Vatable
                             ? rr.PurchaseOrder.TaxType == SD.TaxType_WithTax
                                 ? rr.Amount - ((rr.Amount / 1.12m) * rr.TaxPercentage)    // Vatable + Taxable
-                                : rr.Amount - (rr.Amount - (rr.Amount / 1.12m))           // Vatable + Non-Taxable
-                            : rr.Amount - (rr.Amount * rr.TaxPercentage)                  // Non-Vatable + Non-Tax
+                                : rr.Amount / 1.12m                                        // Vatable + Non-Taxable
+                            : rr.PurchaseOrder.TaxType == SD.TaxType_WithTax
+                                ? rr.Amount - (rr.Amount * rr.TaxPercentage)               // Non-Vatable + Taxable
+                                : rr.Amount                                                 // Non-Vatable + Non-Taxable
                     )
                     && poNumber.Contains(rr.PONo)
                     && rr.PostedBy != null);
-                    
+
             var rrAmountPaidById = new Dictionary<int, decimal>();
 
             if (cvId != null)
@@ -1289,13 +1291,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                         var netAmount = receivingReport!.PurchaseOrder?.VatType == SD.VatType_Vatable
                             ? receivingReport.PurchaseOrder?.TaxType == SD.TaxType_WithTax
-                                ? Math.Round(receivingReport.Amount - ((receivingReport.Amount / 1.12m) * receivingReport.TaxPercentage), 4)
-                                : receivingReport.PurchaseOrder?.TaxType == SD.TaxType_WithVat
-                                    ? Math.Round(receivingReport.Amount / 1.12m, 4)                // Vatable + WithVat: threshold is net of VAT
-                                    : receivingReport.Amount                                        // Vatable + Exempt
+                                ? Math.Round(receivingReport.Amount - ((receivingReport.Amount / 1.12m) * receivingReport.TaxPercentage), 4)  // Vatable + Taxable
+                                : Math.Round(receivingReport.Amount / 1.12m, 4)                                                               // Vatable + Non-Taxable
                             : receivingReport.PurchaseOrder?.TaxType == SD.TaxType_WithTax
-                                ? Math.Round(receivingReport.Amount - (receivingReport.Amount * receivingReport.TaxPercentage), 4)
-                                : receivingReport.Amount;                                           // Non-Vatable + Exempt/WithVat               // Non-Vatable + Exempt
+                                ? Math.Round(receivingReport.Amount - (receivingReport.Amount * receivingReport.TaxPercentage), 4)             // Non-Vatable + Taxable
+                                : receivingReport.Amount;                                                                                       // Non-Vatable + Non-Taxable                                  // Non-Vatable + Exempt/WithVat               // Non-Vatable + Exempt
 
                         if (receivingReport.AmountPaid >= netAmount)
                         {
@@ -1313,13 +1313,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         {
                             var netAmount = deliveryReceipt!.CustomerOrderSlip?.CommissioneeVatType == SD.VatType_Vatable
                                 ? item.CV.TaxPercent > 0
-                                    ? Math.Round(deliveryReceipt.CommissionAmount - ((deliveryReceipt.CommissionAmount / 1.12m) * item.CV.TaxPercent), 4)
-                                    : item.CV.TaxType == SD.TaxType_WithVat
-                                        ? Math.Round(deliveryReceipt.CommissionAmount / 1.12m, 4)      // Vatable + WithVat
-                                        : deliveryReceipt.CommissionAmount                              // Vatable + Exempt
+                                    ? Math.Round(deliveryReceipt.CommissionAmount - ((deliveryReceipt.CommissionAmount / 1.12m) * item.CV.TaxPercent), 4)  // Vatable + Taxable
+                                    : Math.Round(deliveryReceipt.CommissionAmount / 1.12m, 4)                                                              // Vatable + Non-Taxable
                                 : item.CV.TaxPercent > 0
-                                    ? Math.Round(deliveryReceipt.CommissionAmount - (deliveryReceipt.CommissionAmount * item.CV.TaxPercent), 4)
-                                    : deliveryReceipt.CommissionAmount;                                 // Non-Vatable + Exempt/WithVat   // Non-Vatable + Exempt
+                                    ? Math.Round(deliveryReceipt.CommissionAmount - (deliveryReceipt.CommissionAmount * item.CV.TaxPercent), 4)            // Non-Vatable + Taxable
+                                    : deliveryReceipt.CommissionAmount;                                                                                     // Non-Vatable + Non-Taxable                               // Non-Vatable + Exempt/WithVat   // Non-Vatable + Exempt
 
                             if (deliveryReceipt.CommissionAmountPaid >= netAmount)
                             {
@@ -1331,13 +1329,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         {
                             var netAmount = deliveryReceipt!.HaulerVatType == SD.VatType_Vatable
                                 ? item.CV.TaxPercent > 0
-                                    ? Math.Round(deliveryReceipt.FreightAmount - ((deliveryReceipt.FreightAmount / 1.12m) * item.CV.TaxPercent), 4)
-                                    : item.CV.TaxType == SD.TaxType_WithVat
-                                        ? Math.Round(deliveryReceipt.FreightAmount / 1.12m, 4)         // Vatable + WithVat
-                                        : deliveryReceipt.FreightAmount                                 // Vatable + Exempt
+                                    ? Math.Round(deliveryReceipt.FreightAmount - ((deliveryReceipt.FreightAmount / 1.12m) * item.CV.TaxPercent), 4)  // Vatable + Taxable
+                                    : Math.Round(deliveryReceipt.FreightAmount / 1.12m, 4)                                                           // Vatable + Non-Taxable
                                 : item.CV.TaxPercent > 0
-                                    ? Math.Round(deliveryReceipt.FreightAmount - (deliveryReceipt.FreightAmount * item.CV.TaxPercent), 4)
-                                    : deliveryReceipt.FreightAmount;                                    // Non-Vatable + Exempt/WithVat          // Non-Vatable + Exempt
+                                    ? Math.Round(deliveryReceipt.FreightAmount - (deliveryReceipt.FreightAmount * item.CV.TaxPercent), 4)            // Non-Vatable + Taxable
+                                    : deliveryReceipt.FreightAmount;                                                                                  // Non-Vatable + Non-Taxable                     // Non-Vatable + Exempt/WithVat          // Non-Vatable + Exempt
 
                             if (deliveryReceipt.FreightAmountPaid >= netAmount)
                             {
