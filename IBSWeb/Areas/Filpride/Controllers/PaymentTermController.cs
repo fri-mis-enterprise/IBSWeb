@@ -60,8 +60,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var queried = await _unitOfWork.FilprideTerms
-                    .GetAllAsync(null, cancellationToken);
+                var queried = _unitOfWork.FilprideTerms
+                    .GetAllQuery(cancellationToken);
 
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
@@ -73,8 +73,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         s.TermsCode.ToLower().Contains(searchValue) ||
                         s.NumberOfDays.ToString("N0").Contains(searchValue) ||
                         s.NumberOfMonths.ToString("N0").Contains(searchValue)
-                        ).ToList();
+                        );
                 }
+
+                var projectedQuery = await queried.ToListAsync(cancellationToken);
 
                 // Sorting
                 if (parameters.Order?.Count > 0)
@@ -82,13 +84,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var orderColumn = parameters.Order[0];
                     var columnName = parameters.Columns[orderColumn.Column].Data;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
-                    queried = queried
+                    projectedQuery = projectedQuery
                         .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}");
+                        .OrderBy($"{columnName} {sortDirection}")
+                        .ToList();
                 }
 
-                var totalRecords = queried.Count();
-                var pagedData = queried
+                var totalRecords = projectedQuery.Count();
+                var pagedData = projectedQuery
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
                     .ToList();
