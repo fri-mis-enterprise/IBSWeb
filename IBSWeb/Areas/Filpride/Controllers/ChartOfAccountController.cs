@@ -192,15 +192,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var chartOfAccounts = await _unitOfWork.FilprideChartOfAccount
-                    .GetAllAsync(cancellationToken: cancellationToken);
+                var chartOfAccounts = _unitOfWork.FilprideChartOfAccount
+                    .GetAllQuery(cancellationToken: cancellationToken);
 
                 // Apply date range filter if provided (using CreatedDate)
                 if (dateFrom.HasValue)
                 {
                     chartOfAccounts = chartOfAccounts
-                        .Where(s => s.CreatedDate >= dateFrom.Value)
-                        .ToList();
+                        .Where(s => s.CreatedDate >= dateFrom.Value);
                 }
 
                 if (dateTo.HasValue)
@@ -208,8 +207,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     // Add one day to include the entire end date
                     var dateToInclusive = dateTo.Value.AddDays(1);
                     chartOfAccounts = chartOfAccounts
-                        .Where(s => s.CreatedDate < dateToInclusive)
-                        .ToList();
+                        .Where(s => s.CreatedDate < dateToInclusive);
                 }
 
                 // Apply search filter if provided
@@ -225,8 +223,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             (s.NormalBalance != null && s.NormalBalance.ToLower().Contains(searchValue)) ||
                             s.Level.ToString().Contains(searchValue) ||
                             s.CreatedDate.ToString("MMM dd, yyyy").ToLower().Contains(searchValue)
-                        )
-                        .ToList();
+                        );
                 }
 
                 // Apply sorting if provided
@@ -253,8 +250,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         : columnName;
 
                     chartOfAccounts = chartOfAccounts
-                        .AsQueryable()
-                        .ToList();
+                        .AsQueryable();
                 }
 
                 var totalRecords = chartOfAccounts.Count();
@@ -270,9 +266,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 else
                 {
                     // Normal pagination
-                    pagedChartOfAccounts = chartOfAccounts
+                    pagedChartOfAccounts = await chartOfAccounts
                         .Skip(parameters.Start)
-                        .Take(parameters.Length);
+                        .Take(parameters.Length)
+                        .ToListAsync(cancellationToken);
                 }
 
                 var pagedData = pagedChartOfAccounts
