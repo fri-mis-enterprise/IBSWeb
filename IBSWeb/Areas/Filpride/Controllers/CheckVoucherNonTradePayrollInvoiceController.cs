@@ -131,24 +131,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
                 var filterTypeClaim = await GetCurrentFilterType();
 
-                var baseQuery = _dbContext.FilprideCheckVoucherDetails
-                    .Where(cvd => cvd.CheckVoucherHeader!.Company == companyClaims &&
-                                  cvd.CheckVoucherHeader.CvType == nameof(CVType.Invoicing) &&
-                                  cvd.CheckVoucherHeader.IsPayroll &&
-                                  cvd.SubAccountId.HasValue &&
-                                  cvd.Amount > 0);
+                var checkVoucherDetails = _dbContext.FilprideCheckVoucherDetails
+                    .Include(cvd => cvd.CheckVoucherHeader)
+                    .ThenInclude(cvh => cvh!.Supplier)
+                    .AsSplitQuery()
+                    .AsNoTracking();
 
                 // Apply status filter based on filterType
                 if (!string.IsNullOrEmpty(filterTypeClaim) && filterTypeClaim == "ForApproval")
                 {
-                    baseQuery = baseQuery.Where(cvd => cvd.CheckVoucherHeader!.Status == nameof(CheckVoucherInvoiceStatus.ForApproval));
+                    checkVoucherDetails = checkVoucherDetails.Where(cvd => cvd.CheckVoucherHeader!.Status == nameof(CheckVoucherInvoiceStatus.ForApproval));
                 }
 
-                var query = baseQuery
-                    .Include(cvd => cvd.CheckVoucherHeader)
-                    .ThenInclude(cvh => cvh!.Supplier);
 
-                var checkVoucherDetails = await query.ToListAsync(cancellationToken);
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
@@ -159,14 +154,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .Where(s =>
                             s.TransactionNo.ToLower().Contains(searchValue) ||
                             s.CheckVoucherHeader!.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
-                            s.SubAccountName?.ToLower().Contains(searchValue) == true ||
+                            s.SubAccountName!.ToLower().Contains(searchValue) == true ||
                             s.Amount.ToString().Contains(searchValue) ||
                             s.AmountPaid.ToString().Contains(searchValue) ||
                             (s.Amount - s.AmountPaid).ToString().Contains(searchValue) ||
-                            s.CheckVoucherHeader?.Status.ToLower().Contains(searchValue) == true ||
-                            s.CheckVoucherHeader?.Particulars?.ToLower().Contains(searchValue) == true
-                        )
-                        .ToList();
+                            s.CheckVoucherHeader!.Status.ToLower().Contains(searchValue) == true ||
+                            s.CheckVoucherHeader!.Particulars!.ToLower().Contains(searchValue) == true
+                        );
                 }
 
                 if (filterDate != DateOnly.MinValue && filterDate != default)
@@ -176,11 +170,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     checkVoucherDetails = checkVoucherDetails
                         .Where(s =>
                             s.CheckVoucherHeader!.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        )
-                        .ToList();
+                        ) ;
                 }
 
-                var projectedQuery = checkVoucherDetails
+                var projectedQuery = await checkVoucherDetails
+                    .Where(cvd => cvd.CheckVoucherHeader!.Company == companyClaims &&
+                                  cvd.CheckVoucherHeader.CvType == nameof(CVType.Invoicing) &&
+                                  cvd.CheckVoucherHeader.IsPayroll &&
+                                  cvd.SubAccountId.HasValue &&
+                                  cvd.Amount > 0)
                     .Select(x => new
                     {
                         x.TransactionNo,
@@ -196,7 +194,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         x.CheckVoucherHeader!.IsPaid,
                         x.CheckVoucherHeaderId
                     })
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 // Sorting
                 if (parameters.Order?.Count > 0)
