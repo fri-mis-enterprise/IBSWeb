@@ -132,8 +132,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var query = await _unitOfWork.FilpridePickUpPoint
-                    .GetAllAsync(null, cancellationToken);
+                var query = _unitOfWork.FilpridePickUpPoint
+                    .GetAllQuery(cancellationToken);
 
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
@@ -144,7 +144,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Where(p =>
                         p.Depot.ToLower().Contains(searchValue) ||
                         p.Supplier!.SupplierName.ToLower().Contains(searchValue)
-                        ).ToList();
+                        );
                 }
 
                 // Sorting
@@ -159,7 +159,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 var totalRecords = query.Count();
-                var pagedData = query
+                var pagedData = await query
                     .Select(p => new
                     {
                         p.PickUpPointId,
@@ -168,7 +168,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
