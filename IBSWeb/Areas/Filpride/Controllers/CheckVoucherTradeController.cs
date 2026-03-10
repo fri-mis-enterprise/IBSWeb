@@ -596,13 +596,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var query = _dbContext.FilprideReceivingReports
                 .Where(rr => rr.Company == companyClaims && !rr.IsPaid
                     && rr.AmountPaid < (
-                        rr.PurchaseOrder!.VatType == SD.VatType_Vatable
-                            ? rr.PurchaseOrder.TaxType == SD.TaxType_WithTax
-                                ? rr.Amount - ((rr.Amount / 1.12m) * rr.TaxPercentage)    // Vatable + Taxable
-                                : rr.Amount / 1.12m                                        // Vatable + Non-Taxable
-                            : rr.PurchaseOrder.TaxType == SD.TaxType_WithTax
-                                ? rr.Amount - (rr.Amount * rr.TaxPercentage)               // Non-Vatable + Taxable
-                                : rr.Amount                                                 // Non-Vatable + Non-Taxable
+                        rr.PurchaseOrder!.TaxType == SD.TaxType_WithTax
+                            ? rr.PurchaseOrder.VatType == SD.VatType_Vatable
+                                ? rr.Amount - ((rr.Amount / 1.12m) * rr.TaxPercentage)    // Vatable + WithTax
+                                : rr.Amount - (rr.Amount * rr.TaxPercentage)               // Non-Vatable + WithTax
+                            : rr.Amount                                                     // WithVat / Exempt
                     )
                     && poNumber.Contains(rr.PONo)
                     && rr.PostedBy != null);
@@ -648,8 +646,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         : 0.0000m;
 
                     var netOfEwtAmount = rr.PurchaseOrder?.TaxType == SD.TaxType_WithTax
-                        ? _unitOfWork.FilprideReceivingReport.ComputeNetOfEwt(netOfVatAmount, ewtAmount)
-                        : netOfVatAmount;
+                        ? _unitOfWork.FilprideReceivingReport.ComputeNetOfEwt(rr.Amount, ewtAmount)
+                        : rr.Amount;
 
                     var currentCvPaid = rrAmountPaidById.GetValueOrDefault(rr.ReceivingReportId);
                     return new
@@ -2990,13 +2988,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             && !dr.IsCommissionPaid
                             && dr.PostedBy != null
                             && dr.CommissionAmountPaid < (
-                                dr.CustomerOrderSlip!.CommissioneeVatType == SD.VatType_Vatable 
-                                    ? dr.CustomerOrderSlip.CommissioneeTaxType == SD.TaxType_WithTax
-                                        ? dr.CommissionAmount - ((dr.CommissionAmount / 1.12m) * dr.Commissionee!.WithholdingTaxPercent)  // Vatable + Taxable
-                                        : dr.CommissionAmount / 1.12m                                                                      // Vatable + Non-Taxable
-                                    : dr.CustomerOrderSlip.CommissioneeTaxType == SD.TaxType_WithTax
-                                        ? dr.CommissionAmount - (dr.CommissionAmount * dr.Commissionee!.WithholdingTaxPercent)             // Non-Vatable + Taxable
-                                        : dr.CommissionAmount                                                                               // Non-Vatable + Non-Taxable
+                                dr.CustomerOrderSlip!.CommissioneeTaxType == SD.TaxType_WithTax
+                                    ? dr.CustomerOrderSlip.CommissioneeVatType == SD.VatType_Vatable
+                                        ? dr.CommissionAmount - ((dr.CommissionAmount / 1.12m) * dr.Commissionee!.WithholdingTaxPercent)    // Vatable + WithTax
+                                        : dr.CommissionAmount - (dr.CommissionAmount * dr.Commissionee!.WithholdingTaxPercent)              // Non-Vatable + WithTax
+                                    : dr.CommissionAmount                                                                                    // WithVat / Exempt
                             ));
 
             var drAmountPaid = 0m;
@@ -3077,13 +3073,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             && !dr.IsFreightPaid
                             && dr.PostedBy != null
                             && dr.FreightAmountPaid < (
-                                dr.HaulerVatType == SD.VatType_Vatable
-                                    ? dr.HaulerTaxType == SD.TaxType_WithTax
-                                        ? dr.FreightAmount - ((dr.FreightAmount / 1.12m) * dr.Hauler!.WithholdingTaxPercent)  // Vatable + Taxable
-                                        : dr.FreightAmount / 1.12m                                                             // Vatable + Non-Taxable
-                                    : dr.HaulerTaxType == SD.TaxType_WithTax
-                                        ? dr.FreightAmount - (dr.FreightAmount * dr.Hauler!.WithholdingTaxPercent)             // Non-Vatable + Taxable
-                                        : dr.FreightAmount                                                                      // Non-Vatable + Non-Taxable
+                                dr.HaulerTaxType == SD.TaxType_WithTax
+                                    ? dr.HaulerVatType == SD.VatType_Vatable
+                                        ? dr.FreightAmount - ((dr.FreightAmount / 1.12m) * dr.Hauler!.WithholdingTaxPercent)    // Vatable + WithTax
+                                        : dr.FreightAmount - (dr.FreightAmount * dr.Hauler!.WithholdingTaxPercent)              // Non-Vatable + WithTax
+                                    : dr.FreightAmount                                                                           // WithVat / Exempt
                             ));
 
             var drAmountPaid = 0m;
