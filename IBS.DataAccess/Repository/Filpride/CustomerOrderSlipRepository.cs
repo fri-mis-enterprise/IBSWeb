@@ -73,6 +73,21 @@ namespace IBS.DataAccess.Repository.Filpride
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
+        public override IQueryable<FilprideCustomerOrderSlip> GetAllQuery(CancellationToken cancellationToken = default)
+        {
+            return dbSet
+                .Include(cos => cos.Customer)
+                .Include(cos => cos.Hauler)
+                .Include(cos => cos.Product)
+                .Include(cos => cos.Supplier)
+                .Include(cos => cos.PickUpPoint)
+                .Include(cos => cos.PurchaseOrder).ThenInclude(po => po!.Product)
+                .Include(cos => cos.PurchaseOrder).ThenInclude(po => po!.Supplier)
+                .Include(cos => cos.AppointedSuppliers)
+                .AsSplitQuery()
+                .AsNoTracking();
+        }
+
         public async Task UpdateAsync(CustomerOrderSlipViewModel viewModel, bool thereIsNewFile, CancellationToken cancellationToken = default)
         {
             var existingRecord = await GetAsync(cos => cos.CustomerOrderSlipId == viewModel.CustomerOrderSlipId,
