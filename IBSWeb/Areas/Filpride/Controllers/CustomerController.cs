@@ -9,6 +9,7 @@ using IBS.Models.Filpride.MasterFile;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 
 namespace IBSWeb.Areas.Filpride.Controllers
@@ -212,8 +213,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var query = await _unitOfWork.FilprideCustomer
-                    .GetAllAsync(null, cancellationToken);
+                var query = _unitOfWork.FilprideCustomer
+                    .GetAllQuery(cancellationToken);
 
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
@@ -226,7 +227,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         c.CustomerName.ToLower().Contains(searchValue) ||
                         c.CustomerTerms.ToLower().Contains(searchValue) ||
                         c.VatType.ToLower().Contains(searchValue)
-                        ).ToList();
+                        );
                 }
 
                 // Sorting
@@ -241,10 +242,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 var totalRecords = query.Count();
-                var pagedData = query
+                var pagedData = await query
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
@@ -405,133 +406,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return RedirectToAction(nameof(Deactivate), new { id = id });
             }
         }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> GetCustomerList(
-            [FromForm] DataTablesParameters parameters,
-            DateTime? dateFrom,
-            DateTime? dateTo,
-            CancellationToken cancellationToken)
-        {
-            try
-            {
-                var customers = await _unitOfWork.FilprideCustomer
-                    .GetAllAsync(null, cancellationToken);
-
-                // Apply date range filter if provided (using CreatedDate)
-                if (dateFrom.HasValue)
-                {
-                    customers = customers
-                        .Where(s => s.CreatedDate >= dateFrom.Value)
-                        .ToList();
-                }
-
-                if (dateTo.HasValue)
-                {
-                    // Add one day to include the entire end date
-                    var dateToInclusive = dateTo.Value.AddDays(1);
-                    customers = customers
-                        .Where(s => s.CreatedDate < dateToInclusive)
-                        .ToList();
-                }
-
-                // Apply search filter if provided
-                if (!string.IsNullOrEmpty(parameters.Search.Value))
-        {
-            var searchValue = parameters.Search.Value.ToLower();
-            
-            customers = customers
-                .Where(s =>
-                    (s.CustomerCode != null && s.CustomerCode.ToLower().Contains(searchValue)) ||
-                    (s.CustomerName != null && s.CustomerName.ToLower().Contains(searchValue)) ||
-                    (s.CustomerTin != null && s.CustomerTin.ToLower().Contains(searchValue)) ||
-                    (s.BusinessStyle != null && s.BusinessStyle.ToLower().Contains(searchValue)) ||
-                    (s.CustomerTerms != null && s.CustomerTerms.ToLower().Contains(searchValue)) ||
-                    (s.CustomerType != null && s.CustomerType.ToLower().Contains(searchValue)) ||
-                    s.CreatedDate.ToString("MMM dd, yyyy").ToLower().Contains(searchValue)
-                )
-                .ToList();
-        }
-
-        // Apply sorting if provided
-        if (parameters.Order?.Count > 0)
-        {
-            var orderColumn = parameters.Order[0];
-            var columnName = parameters.Columns[orderColumn.Column].Data;
-            var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
-
-            // Map frontend column names to actual entity property names
-            var columnMapping = new Dictionary<string, string>
-            {
-                { "customerCode", "CustomerCode" },
-                { "customerName", "CustomerName" },
-                { "customerTin", "CustomerTin" },
-                { "businessStyle", "BusinessStyle" },
-                { "customerTerms", "CustomerTerms" },
-                { "customerType", "CustomerType" },
-                { "createdDate", "CreatedDate" }
-            };
-
-            // Get the actual property name
-            var actualColumnName = columnMapping.ContainsKey(columnName) 
-                ? columnMapping[columnName] 
-                : columnName;
-
-            customers = customers
-                .AsQueryable()
-                .OrderBy($"{actualColumnName} {sortDirection}")
-                .ToList();
-        }
-
-        var totalRecords = customers.Count();
-
-        // Apply pagination - HANDLE -1 FOR "ALL"
-        IEnumerable<FilprideCustomer> pagedCustomers;
-        
-        if (parameters.Length == -1)
-        {
-            // "All" selected - return all records
-            pagedCustomers = customers;
-        }
-        else
-        {
-            // Normal pagination
-            pagedCustomers = customers
-                .Skip(parameters.Start)
-                .Take(parameters.Length);
-        }
-
-        var pagedData = pagedCustomers
-            .Select(x => new
-            {
-                x.CustomerId,
-                x.CustomerCode,
-                x.CustomerName,
-                x.CustomerTin,
-                x.BusinessStyle,
-                x.CustomerTerms,
-                x.CustomerType,
-                x.CreatedDate
-            })
-            .ToList();
-
-        return Json(new
-        {
-            draw = parameters.Draw,
-            recordsTotal = totalRecords,
-            recordsFiltered = totalRecords,
-            data = pagedData
-        });
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "Failed to get customers. Error: {ErrorMessage}, Stack: {StackTrace}.",
-            ex.Message, ex.StackTrace);
-        TempData["error"] = ex.Message;
-        return RedirectToAction(nameof(Index));
-    }
-}
 
         //Download as .xlsx file.(Export)
 
