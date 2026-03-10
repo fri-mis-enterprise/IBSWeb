@@ -113,24 +113,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
-                var collectionReceipts = await _dbContext.FilprideCollectionReceipts
-                    .Include(c => c.ReceiptDetails)
-                    .Include(c => c.Customer)
-                    .Where(c => c.Company == companyClaims)
-                    .OrderBy(x => x.CollectionReceiptNo)
-                    .ToListAsync(cancellationToken);
+                var collectionReceipts = _unitOfWork.FilprideCollectionReceipt.GetAllQuery();
 
                 switch (invoiceType)
                 {
                     case "Sales":
                         collectionReceipts = collectionReceipts
-                            .Where(s => s.SalesInvoiceId != null || s.MultipleSIId != null)
-                            .ToList();
+                            .Where(s => s.SalesInvoiceId != null || s.MultipleSIId != null);
                         break;
                     case "Service":
                         collectionReceipts = collectionReceipts
-                            .Where(s => s.ServiceInvoiceId != null)
-                            .ToList();
+                            .Where(s => s.ServiceInvoiceId != null);
                         break;
                 }
 
@@ -148,8 +141,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             s.TransactionDate.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
                             s.CreatedBy!.ToLower().Contains(searchValue) ||
                             s.Status.ToLower().Contains(searchValue)
-                            )
-                        .ToList();
+                            );
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
@@ -158,13 +150,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     collectionReceipts = collectionReceipts
                         .Where(s =>
                             s.TransactionDate.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        )
-                        .ToList();
+                        );
                 }
 
                 var pagedData = collectionReceipts
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
+                    .Where(c => c.Company == companyClaims)
                     .Select(c => new
                     {
                         c.CollectionReceiptId,
@@ -199,7 +191,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .ToList();
                 }
 
-                var totalRecords = collectionReceipts.Count;
+                var totalRecords = collectionReceipts.Count();
 
                 return Json(new
                 {
