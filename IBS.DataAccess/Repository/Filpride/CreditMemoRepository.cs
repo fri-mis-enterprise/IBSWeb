@@ -108,5 +108,20 @@ namespace IBS.DataAccess.Repository.Filpride
 
             return await query.ToListAsync(cancellationToken);
         }
+
+        public override IQueryable<FilprideCreditMemo> GetAllQuery(CancellationToken cancellationToken = default)
+        {
+            return dbSet
+                .Include(c => c.SalesInvoice)
+                .ThenInclude(s => s!.Product)
+                .Include(c => c.SalesInvoice)
+                .ThenInclude(s => s!.Customer)
+                .Include(c => c.ServiceInvoice)
+                .ThenInclude(sv => sv!.Customer)
+                .Include(c => c.ServiceInvoice)
+                .ThenInclude(sv => sv!.Service)
+                .AsSplitQuery()
+                .AsNoTracking();
+        }
     }
 }
