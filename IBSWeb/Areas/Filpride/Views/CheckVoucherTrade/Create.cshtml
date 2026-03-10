@@ -303,6 +303,7 @@
                     let totalAmountPaid = 0;
                     let totalBalance = 0;
                     let subTotalGross = 0;
+                    let subTotalBalance = 0;
                     
                     tbody.empty();
                     // Reset selected count when loading new records
@@ -314,36 +315,38 @@
 
                         data.forEach((rr, index) => {
                             currentPO = rr.purchaseOrderNo;
+                            const initialBalance = parseNumber(rr.balance);
 
-                            const tr = $(`
-                                <tr data-po="${rr.purchaseOrderNo}">
-                                    <td><input type="checkbox" value="${rr.id}" class="selectCheckbox"></td>
-                                    <td>${rr.purchaseOrderNo}</td>
-                                    <td>${rr.receivingReportNo}</td>
-                                    <td>${rr.oldRRNo}</td>
-                                    <td class="text-end grossAmount">${formatNumberToFour(rr.netOfEwtAmount)}</td>
-                                    <td class="text-end"><input type="text" class="paymentAmount text-end" readonly style="display: none"></td>
-                                    <td class="text-end balance">${formatNumberToFour(parseNumber(rr.netOfEwtAmount) - parseNumber(rr.amountPaid))}</td>
-                                </tr>
-                            `);
+                            const tr = $('<tr>').attr({ 'data-po': rr.purchaseOrderNo, 'data-balance': initialBalance });
+                            const checkbox = $('<input>').attr({ type: 'checkbox', class: 'selectCheckbox' }).val(rr.id);
+                            tr.append($('<td>').append(checkbox));
+                            tr.append($('<td>').text(rr.purchaseOrderNo));
+                            tr.append($('<td>').text(rr.receivingReportNo));
+                            tr.append($('<td>').text(rr.oldRRNo));
+                            tr.append($('<td>').addClass('text-end grossAmount').text(formatNumberToFour(rr.netOfEwtAmount)));
+                            tr.append($('<td>').addClass('text-end').append($('<input>').attr({ type: 'text', class: 'paymentAmount text-end' }).hide()));
+                            tr.append($('<td>').addClass('text-end balance').text(formatNumberToFour(initialBalance)));
 
-                            subTotalGross += parseNumber(rr.netOfEwtAmount);
-                            totalGross += parseNumber(rr.netOfEwtAmount);
-                            
                             tbody.append(tr);
+
+                            subTotalGross   += parseNumber(rr.netOfEwtAmount);
+                            subTotalBalance += initialBalance;
+                            totalGross      += parseNumber(rr.netOfEwtAmount);
+                            totalBalance    += initialBalance;
 
                             if (index === data.length - 1 || data[index + 1].purchaseOrderNo !== currentPO) {
                                 const subTotal = $(`
-                                <tr class="fw-bold bg-light subtotalRow" data-po="${currentPO}">
+                                <tr class="fw-bold bg-light subtotalRow" data-po="${currentPO}" data-balance="${subTotalBalance}">
                                     <td colspan="3"></td>
                                     <td class="fw-bold text-end">Subtotal (${rr.purchaseOrderNo}):</td>
                                     <td class="text-end subTotalGross">${formatNumberToFour(subTotalGross)}</td>
                                     <td class="text-end subTotalAmountPaid">0.00</td>
-                                    <td class="text-end subTotalBalance">0.00</td>
+                                    <td class="text-end subTotalBalance">${formatNumberToFour(subTotalBalance)}</td>
                                 </tr>
                             `);
                                 tbody.append(subTotal);
-                                subTotalGross = 0;
+                                subTotalGross   = 0;
+                                subTotalBalance = 0;
                             }
                         });
                     }
@@ -357,7 +360,7 @@
                             <td class="fw-bold text-end p-2">Grand Total:</td>
                             <td class="text-end grandTotalGross" id="grandTotalRRAmount">${formatNumberToFour(totalGross)}</td>
                             <td class="text-end grandTotalAmountPaid" id="grandTotalNetAmount">0.00</td>
-                            <td class="text-end grandTotalBalance" id="grandTotalNetOfEWT">${formatNumberToFour(totalBalance)}</td>
+                            <td class="text-end grandTotalBalance" id="grandTotalNetOfEWT" data-balance="${totalBalance}">${formatNumberToFour(totalBalance)}</td>
                         </tr>
                     `);
                     tbody.append(totalRow);
@@ -420,24 +423,23 @@
         $(document).on('change', '.selectCheckbox', function () {
             const row = $(this).closest('tr');
             const inputField = row.find('.paymentAmount');
-            const balance = parseNumber(row.find('.balance').text().trim());
-            const grossAmount = parseNumber(row.find('.grossAmount').text());
+            const initialBalance = parseNumber(row.attr('data-balance'));
 
             if (this.checked) {
                 selectedRecords.add(this.value);
-                inputField.val(balance).addClass("inputAmount").show();
-                row.find('.balance').text(formatNumberToFour(grossAmount - balance));
+                inputField.val(formatNumberToFour(initialBalance)).addClass("inputAmount").show();
+                row.find('.balance').text(formatNumberToFour(initialBalance - initialBalance));
             } else {
                 selectedRecords.delete(this.value);
                 inputField.removeAttr("name").hide().val('');
                 row.find('.selectCheckbox').removeAttr("name");
-                row.find('.balance').text(formatNumberToFour(grossAmount));
+                row.find('.balance').text(formatNumberToFour(initialBalance));
             }
 
             reindexSelected();
             updateAmounts();
             updateSelectedCount();
-            
+
             // Update "Select All" checkbox state
             const totalCheckboxes = $('.selectCheckbox').length;
             const checkedCheckboxes = $('.selectCheckbox:checked').length;
@@ -455,9 +457,33 @@
         }
 
         $(document).on('input', '.inputAmount', function () {
+            const row = $(this).closest('tr');
+            const initialBalance = parseNumber(row.attr('data-balance'));
+            const paymentAmount = parseNumber($(this).val());
+
+            if (paymentAmount > initialBalance) {
+                $(this).addClass('is-invalid');
+                $(this).val(formatNumberToFour(initialBalance));
+                row.find('.balance').text(formatNumberToFour(0));
+                updateAmounts();
+                return;
+            } else {
+                $(this).removeClass('is-invalid');
+                // negative values should not be allowed, reset to 0 if negative
+                if (paymentAmount < 0) {
+                    $(this).val(formatNumberToFour(0));
+                    row.find('.balance').text(formatNumberToFour(initialBalance));
+                    updateAmounts();
+                    return;
+                }
+            }
+
+            $(this).removeClass('is-invalid');
+
+            row.find('.balance').text(formatNumberToFour(initialBalance - paymentAmount));
             updateAmounts();
         });
-        
+
         function updateAmounts() {
             var totalNetOfEWT = 0;
 
@@ -467,22 +493,18 @@
                 let subTotalAmountPaid = 0;
 
                 amountInputs.forEach(function (input) {
-                    let rawValue = input.value;
-                    let rrAmount = parseNumber(rawValue);
-
-                    totalNetOfEWT += rrAmount;
-                    subTotalAmountPaid += rrAmount;
+                    subTotalAmountPaid += parseNumber(input.value);
                 });
-                
-                let subTotalGross = parseNumber($(this).find(".subTotalGross").text());
+
+                totalNetOfEWT += subTotalAmountPaid;
+
                 $(this).find(".subTotalAmountPaid").text(formatNumberToFour(subTotalAmountPaid));
-                $(this).find(".subTotalBalance").text(formatNumberToFour(Math.abs(subTotalGross - subTotalAmountPaid)));
+                $(this).find(".subTotalBalance").text(formatNumberToFour(Math.abs($(this).data('balance') - subTotalAmountPaid)));
             });
             
             $(".totalNetOfEWT").val(formatNumberToFour(totalNetOfEWT));
             $(".grandTotalAmountPaid").text(formatNumberToFour(totalNetOfEWT));
-            let grandTotalGross = parseNumber($(".grandTotalGross").text());
-            $(".grandTotalBalance").text(formatNumberToFour(Math.abs(grandTotalGross - totalNetOfEWT)));
+            $(".grandTotalBalance").text(formatNumberToFour(Math.abs($(".grandTotalBalance").data('balance') - totalNetOfEWT)));
 
             var hasAdvances = $("#advancesRow").is(":visible");
             var advancesAmount = hasAdvances ? parseNumber($("#advancesCredit").val()) : 0;
