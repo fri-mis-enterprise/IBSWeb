@@ -15,6 +15,7 @@ using IBS.Services.Attributes;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -75,8 +76,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 var companyClaims = await GetCompanyClaimAsync();
 
-                var debitMemos = await _unitOfWork.FilprideDebitMemo
-                    .GetAllAsync(dm => dm.Company == companyClaims, cancellationToken);
+                var debitMemos = _unitOfWork.FilprideDebitMemo
+                    .GetAllQuery(cancellationToken);
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
@@ -86,15 +87,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     debitMemos = debitMemos
                         .Where(s =>
                             s.DebitMemoNo!.ToLower().Contains(searchValue) ||
-                            s.SalesInvoice?.SalesInvoiceNo!.ToLower().Contains(searchValue) == true ||
-                            s.ServiceInvoice?.ServiceInvoiceNo.ToLower().Contains(searchValue) == true ||
+                            s.SalesInvoice!.SalesInvoiceNo!.ToLower().Contains(searchValue) == true ||
+                            s.ServiceInvoice!.ServiceInvoiceNo.ToLower().Contains(searchValue) == true ||
                             s.TransactionDate.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
                             s.DebitAmount.ToString().Contains(searchValue) ||
-                            s.Remarks?.ToLower().Contains(searchValue) == true ||
+                            s.Remarks!.ToLower().Contains(searchValue) == true ||
                             s.Description.ToLower().Contains(searchValue) ||
                             s.CreatedBy!.ToLower().Contains(searchValue)
-                            )
-                        .ToList();
+                            );
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
@@ -103,8 +103,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     debitMemos = debitMemos
                         .Where(s =>
                             s.TransactionDate.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        )
-                        .ToList();
+                        );
                 }
 
                 // Sorting
@@ -116,16 +115,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     debitMemos = debitMemos
                         .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
+                        .OrderBy($"{columnName} {sortDirection}");
                 }
 
                 var totalRecords = debitMemos.Count();
 
-                var pagedData = debitMemos
+                var pagedData = await debitMemos
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .ToList();
+                    .Where(x => x.Company == companyClaims)
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
