@@ -129,16 +129,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
                 var filterTypeClaim = await GetCurrentFilterType();
 
-                var query = _dbContext.FilprideCustomerOrderSlips
-                    .Include(cos => cos.Customer)
-                    .Include(cos => cos.Hauler)
-                    .Include(cos => cos.Product)
-                    .Include(cos => cos.Supplier)
-                    .Include(cos => cos.PickUpPoint)
-                    .Include(cos => cos.PurchaseOrder).ThenInclude(po => po!.Product)
-                    .Include(cos => cos.PurchaseOrder).ThenInclude(po => po!.Supplier)
-                    .Include(cos => cos.AppointedSuppliers)
-                    .Where(cos => cos.Company == companyClaims);
+                var query = _unitOfWork.FilprideCustomerOrderSlip.GetAllQuery(cancellationToken);
 
                 // Apply status filter based on filterType
                 if (!string.IsNullOrEmpty(filterTypeClaim))
@@ -221,6 +212,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var pagedData = await query
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
+                    .Where(cos => cos.Company == companyClaims)
                     .Select(cos => new
                     {
                         cos.CustomerOrderSlipId,
