@@ -61,6 +61,6 @@ namespace IBS.DataAccess.Repository.IRepository
 
         Task<DateOnly> ComputeDueDateAsync(string terms, DateOnly transactionDate, CancellationToken cancellationToken = default);
 
-        IQueryable<T> GetAllQueryAsync(CancellationToken cancellationToken = default);
+        IQueryable<T> GetAllQuery(CancellationToken cancellationToken = default);
     }
 }

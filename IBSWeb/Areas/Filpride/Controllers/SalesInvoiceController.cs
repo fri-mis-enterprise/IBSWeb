@@ -76,7 +76,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
 
                 var salesInvoices = _unitOfWork.FilprideSalesInvoice
-                    .GetAllQueryAsync(cancellationToken);
+                    .GetAllQuery(cancellationToken);
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
