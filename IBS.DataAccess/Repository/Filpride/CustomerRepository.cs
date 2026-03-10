@@ -132,5 +132,11 @@ namespace IBS.DataAccess.Repository.Filpride
 
             return await query.ToListAsync(cancellationToken);
         }
+
+        public override IQueryable<FilprideCustomer> GetAllQuery(CancellationToken cancellationToken = default)
+        {
+            return dbSet
+                .Include(dr => dr.Commissionee);
+        }
     }
 }
