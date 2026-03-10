@@ -759,6 +759,26 @@ namespace IBS.DataAccess.Repository.Filpride
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
+        public override IQueryable<FilprideCollectionReceipt> GetAllQuery(CancellationToken cancellationToken = default)
+        {
+            return dbSet
+                .Include(cr => cr.Customer)
+                .Include(cr => cr.SalesInvoice)
+                .ThenInclude(s => s!.Customer)
+                .Include(cr => cr.SalesInvoice)
+                .ThenInclude(s => s!.Product)
+                .Include(cr => cr.SalesInvoice)
+                .ThenInclude(s => s!.CustomerOrderSlip)
+                .Include(cr => cr.ServiceInvoice)
+                .ThenInclude(sv => sv!.Customer)
+                .Include(cr => cr.ServiceInvoice)
+                .ThenInclude(sv => sv!.Service)
+                .Include(cr => cr.BankAccount)
+                .Include(c => c.ReceiptDetails)
+                .AsSplitQuery()
+                .AsNoTracking();
+        }
+
         public async Task ReturnedCheck(string crNo, string company, string userName, CancellationToken cancellationToken = default)
         {
             var originalEntries = await _db.FilprideGeneralLedgerBooks
