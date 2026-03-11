@@ -72,18 +72,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
 
                 var atlList = _unitOfWork.FilprideAuthorityToLoad
-                    .GetAllQuery();
+                    .GetAllQuery()
+                    .Where(x => x.Company == companyClaims);
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search?.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasDateBooked = DateOnly.TryParse(searchValue, out var dateBooked);
+                    var hasValidUntil = DateOnly.TryParse(searchValue, out var validUntil);
 
                     atlList = atlList
                     .Where(s =>
                         s.AuthorityToLoadNo.ToLower().Contains(searchValue) ||
-                        s.DateBooked.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
-                        s.ValidUntil.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
+                        (hasDateBooked && s.DateBooked == dateBooked) ||
+                        (hasValidUntil && s.ValidUntil == validUntil) ||
                         (s.UppiAtlNo != null &&
                         s.UppiAtlNo.ToLower().Contains(searchValue) == true) ||
                         s.Details.Any(d =>
@@ -93,11 +96,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var searchValue = filterDate.ToString(SD.Date_Format).ToLower();
+                    var hasFilterDate = DateOnly.TryParse(filterDate.ToString(SD.Date_Format).ToLower(), out var searchValue);
 
                     atlList = atlList
                         .Where(s =>
-                            s.DateBooked.ToString(SD.Date_Format).ToLower().Contains(searchValue)
+                            hasFilterDate && s.DateBooked == searchValue
                         );
                 }
 
@@ -113,12 +116,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = atlList.Count();
+                var totalRecords = await atlList.CountAsync(cancellationToken);
 
                 var pagedData = await atlList
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .Where(x => x.Company == companyClaims)
                     .Select(atl => new
                     {
                         atl.AuthorityToLoadId,
