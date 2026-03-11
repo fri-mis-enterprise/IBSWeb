@@ -303,6 +303,14 @@ namespace IBS.Services
         {
             try
             {
+                var isAlreadyLocked = await _dbContext.FilprideSalesLockedRecordsQueues
+                    .AnyAsync(x => x.LockedDate >= periodMonth, cancellationToken);
+
+                if (isAlreadyLocked)
+                {
+                    return;
+                }
+
                 var cosNotUpdatedPrice = await _dbContext.FilprideCustomerOrderSlips
                     .Include(x => x.DeliveryReceipts)
                     .Where(x =>
@@ -319,7 +327,7 @@ namespace IBS.Services
                 }
 
                 var lockedRecordQueues = new List<FilprideSalesLockedRecordsQueue>();
-                var lockedDate = DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime());
+                var lockedDate = periodMonth;
 
                 foreach (var cos in cosNotUpdatedPrice)
                 {
@@ -349,6 +357,14 @@ namespace IBS.Services
         {
             try
             {
+                var isAlreadyLocked = await _dbContext.FilpridePurchaseLockedRecordsQueues
+                    .AnyAsync(x => x.LockedDate >= periodMonth, cancellationToken);
+
+                if (isAlreadyLocked)
+                {
+                    return;
+                }
+
                 var poNotUpdatedPrice = await _dbContext.FilpridePurchaseOrders
                     .Include(x => x.ReceivingReports)
                     .Where(x =>
@@ -365,7 +381,7 @@ namespace IBS.Services
                 }
 
                 var lockedRecordQueues = new List<FilpridePurchaseLockedRecordsQueue>();
-                var lockedDate = DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime());
+                var lockedDate = periodMonth;
 
                 foreach (var po in poNotUpdatedPrice)
                 {
