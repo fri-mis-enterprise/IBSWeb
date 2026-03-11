@@ -582,6 +582,8 @@ namespace IBS.Services
 
         public async Task OpenAsync(DateOnly monthDate, string company, string user, CancellationToken cancellationToken = default)
         {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
             try
             {
                 await _dbContext.FilprideMonthlyNibits
@@ -609,11 +611,15 @@ namespace IBS.Services
                     .ExecuteUpdateAsync(e =>
                         e.SetProperty(d => d.IsValid, false), cancellationToken);
 
+                await transaction.CommitAsync(cancellationToken);
+
                 _logger.LogInformation("Opened the period {Period}", monthDate.ToString("MMM yyy"));
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync(cancellationToken);
                 _logger.LogError(ex, "An error occurred while opening the period {Period}", monthDate.ToString("MMM yyy"));
+                throw;
             }
         }
     }
