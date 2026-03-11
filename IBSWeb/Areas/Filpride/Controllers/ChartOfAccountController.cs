@@ -214,6 +214,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasCreatedDate = DateTime.TryParse(searchValue, out var createdDate);
 
                     chartOfAccounts = chartOfAccounts
                         .Where(s =>
@@ -222,38 +223,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             (s.AccountType != null && s.AccountType.ToLower().Contains(searchValue)) ||
                             (s.NormalBalance != null && s.NormalBalance.ToLower().Contains(searchValue)) ||
                             s.Level.ToString().Contains(searchValue) ||
-                            s.CreatedDate.ToString("MMM dd, yyyy").ToLower().Contains(searchValue)
+                            (hasCreatedDate && DateOnly.FromDateTime(s.CreatedDate) == DateOnly.FromDateTime(createdDate))
                         );
                 }
 
                 // Apply sorting if provided
                 if (parameters.Order?.Count > 0)
                 {
-                    var orderColumn = parameters.Order[0];
-                    var columnName = parameters.Columns[orderColumn.Column].Data;
-                    var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
-
-                    // Map frontend column names to actual entity property names
-                    var columnMapping = new Dictionary<string, string>
-                    {
-                        { "accountNumber", "AccountNumber" },
-                        { "accountName", "AccountName" },
-                        { "accountType", "AccountType" },
-                        { "normalBalance", "NormalBalance" },
-                        { "level", "Level" },
-                        { "createdDate", "CreatedDate" }
-                    };
-
-                    // Get the actual property name
-                    var actualColumnName = columnMapping.ContainsKey(columnName)
-                        ? columnMapping[columnName]
-                        : columnName;
-
                     chartOfAccounts = chartOfAccounts
                         .AsQueryable();
                 }
 
-                var totalRecords = chartOfAccounts.Count();
+                var totalRecords = await chartOfAccounts.CountAsync(cancellationToken);
 
                 // Apply pagination - HANDLE -1 FOR "ALL"
                 IEnumerable<FilprideChartOfAccount> pagedChartOfAccounts;
