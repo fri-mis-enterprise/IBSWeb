@@ -609,11 +609,11 @@ namespace IBS.Services
                     .ExecuteUpdateAsync(e =>
                         e.SetProperty(d => d.IsValid, false), cancellationToken);
 
-                _logger.LogInformation("Opened the period {Period}", monthDate);
+                _logger.LogInformation("Opened the period {Period}", monthDate.ToString("MMM yyy"));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred while opening the period {Period}", monthDate);
+                _logger.LogError(ex, "An error occurred while opening the period {Period}", monthDate.ToString("MMM yyy"));
             }
         }
     }
