@@ -147,6 +147,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasCreatedDate = DateTime.TryParse(searchValue, out var createdDateTime);
 
                     query = query
                     .Where(b =>
@@ -155,7 +156,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         b.Bank.ToLower().Contains(searchValue) ||
                         b.Branch.ToLower().Contains(searchValue) ||
                         b.CreatedBy!.ToLower().Contains(searchValue) ||
-                        b.CreatedDate.ToString().ToLower().Contains(searchValue)
+                        (hasCreatedDate && DateOnly.FromDateTime(b.CreatedDate) == DateOnly.FromDateTime(createdDateTime))
                         );
                 }
 
@@ -170,7 +171,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = query.Count();
+                var totalRecords = await query.CountAsync(cancellationToken);
                 var pagedData = await query
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
