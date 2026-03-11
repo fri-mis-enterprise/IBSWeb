@@ -1,0 +1,142 @@
+@using IBS.Utility.Helpers
+
+@{
+    ViewData["Title"] = "Monthly Period Management";
+    var currentMonth = DateTimeHelper.GetCurrentPhilippineTime().ToString("yyyy-MM");
+}
+
+<div class="card shadow border-0 mt-4">
+    <div class="card-header bg-secondary bg-gradient ml-0 py-3">
+        <div class="row">
+            <div class="col-12 text-center">
+                <h2 class="text-white py-2">@ViewData["Title"]</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-body p-4">
+
+        <form id="periodForm" method="post">
+            @Html.AntiForgeryToken()
+            <div class="row">
+
+                <div class="mb-3 col-md-4">
+                    <label class="control-label">Select Month</label>
+                    <input id="monthInput" type="month" name="monthDate" class="form-control" value="@currentMonth" />
+                </div>
+
+                <div class="mb-3 col-md-4">
+                    <label class="control-label">Action</label>
+                    <select id="actionType" class="form-select">
+                        <option value="close">Close Period</option>
+                        <option value="open">Open Period</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <div id="openWarning" class="alert alert-warning d-none mt-3">
+                <strong>Warning:</strong>
+                Reopening <span id="selectedMonth"></span> will mark this period and all succeeding periods as
+                <b>INVALID</b>.
+
+                <br /><br />
+
+                You will need to <b>close each month again sequentially</b> to rebuild the balances.
+
+                <ul class="mb-0 mt-2">
+                    <li>Balances from the selected month onward will be recalculated.</li>
+                    <li>Reports for those periods may become inaccurate until they are closed again.</li>
+                    <li>This action should only be performed by authorized users.</li>
+                </ul>
+            </div>
+
+            <div class="row pt-3">
+                <div class="col-6 col-md-3">
+                    <button type="submit" class="btn btn-primary form-control">
+                        <i class="bi bi-check-circle-fill me-2"></i>Submit
+                    </button>
+                </div>
+            </div>
+
+        </form>
+
+    </div>
+</div>
+
+@section Scripts
+{
+    <script>
+
+        const form = document.getElementById("periodForm");
+        const actionType = document.getElementById("actionType");
+        const warning = document.getElementById("openWarning");
+        const monthInput = document.getElementById("monthInput");
+        const selectedMonth = document.getElementById("selectedMonth");
+
+        let confirmed = false;
+
+        function formatMonth(value){
+            if(!value) return "";
+            const date = new Date(value + "-01");
+            return date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+        }
+
+        function updateWarning(){
+            selectedMonth.textContent = formatMonth(monthInput.value);
+        }
+
+        actionType.addEventListener("change", function () {
+
+            if (this.value === "open") {
+                warning.classList.remove("d-none");
+                form.action = '@Url.Action("TriggerMonthlyOpening", "MonthlyPeriod")';
+                updateWarning();
+            } else {
+                warning.classList.add("d-none");
+                form.action = '@Url.Action("TriggerMonthlyClosure", "MonthlyPeriod")';
+            }
+
+        });
+
+        monthInput.addEventListener("change", updateWarning);
+
+        form.action = '@Url.Action("TriggerMonthlyClosure", "MonthlyPeriod")';
+
+        form.addEventListener("submit", function(e){
+
+            if (confirmed) return;
+
+            if(actionType.value === "open"){
+
+                e.preventDefault();
+
+                const month = formatMonth(monthInput.value);
+
+                Swal.fire({
+                    title: "Reopen Period?",
+                    html: `
+                        <b>${month}</b> will be reopened.<br><br>
+                        All succeeding periods will be marked <b>INVALID</b>.<br><br>
+                        You must <b>close each month again sequentially</b> to rebuild balances.
+                    `,
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonText: "Yes, Reopen Period",
+                    cancelButtonText: "Cancel",
+                    confirmButtonColor: "#d33"
+                }).then((result) => {
+
+                    if (result.isConfirmed) {
+                        confirmed = true;
+                        form.requestSubmit(); // ensures proper POST lifecycle
+                    }
+
+                });
+
+            }
+
+        });
+
+    </script>
+}
