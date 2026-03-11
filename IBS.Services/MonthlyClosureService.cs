@@ -1,21 +1,19 @@
-using Google.Apis.Drive.v3.Data;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride;
 using IBS.Models.Filpride.Books;
 using IBS.Utility.Helpers;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace IBS.Services
 {
-
     public interface IMonthlyClosureService
     {
-        Task Execute(DateOnly monthDate, string company, string user, CancellationToken cancellationToken = default);
+        Task CloseAsync(DateOnly monthDate, string company, string user, CancellationToken cancellationToken = default);
+
+        Task OpenAsync(DateOnly monthDate, string company, string user, CancellationToken cancellationToken = default);
     }
 
     public class MonthlyClosureService : IMonthlyClosureService
@@ -35,7 +33,7 @@ namespace IBS.Services
             _unitOfWork = unitOfWork;
         }
 
-        public async Task Execute(DateOnly monthDate, string company, string user, CancellationToken cancellationToken = default)
+        public async Task CloseAsync(DateOnly monthDate, string company, string user, CancellationToken cancellationToken = default)
         {
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
             try
@@ -184,14 +182,12 @@ namespace IBS.Services
                         {
                             throw new ArgumentException("Debit and Credit is not equal, check your entries.");
                         }
-
                     }
 
                     await _dbContext.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
                     await _dbContext.FilprideJournalBooks.AddRangeAsync(journalBooks, cancellationToken);
                     await _dbContext.SaveChangesAsync(cancellationToken);
                 }
-
             }
             catch (Exception ex)
             {
@@ -204,6 +200,18 @@ namespace IBS.Services
         {
             try
             {
+                var hasAlreadyNibit = await _dbContext.FilprideMonthlyNibits
+                    .AnyAsync(x =>
+                        x.Month == periodMonth.Month &&
+                        x.Year == periodMonth.Year &&
+                        x.Company == company,
+                        cancellationToken);
+
+                if (hasAlreadyNibit)
+                {
+                    throw new InvalidOperationException($"Nibit for the period {periodMonth:MMM yyyy} already exist.");
+                }
+
                 var generalLedgers = await _dbContext.FilprideGeneralLedgerBooks
                     .Include(gl => gl.Account)
                     .ThenInclude(filprideChartOfAccount => filprideChartOfAccount.ParentAccount) // Level 4
@@ -283,7 +291,6 @@ namespace IBS.Services
 
                 await _dbContext.FilprideMonthlyNibits.AddAsync(nibitForThePeriod, cancellationToken);
                 await _dbContext.SaveChangesAsync(cancellationToken);
-
             }
             catch (Exception ex)
             {
@@ -330,7 +337,6 @@ namespace IBS.Services
 
                 await _dbContext.FilprideSalesLockedRecordsQueues.AddRangeAsync(lockedRecordQueues, cancellationToken);
                 await _dbContext.SaveChangesAsync(cancellationToken);
-
             }
             catch (Exception ex)
             {
@@ -370,14 +376,13 @@ namespace IBS.Services
                             LockedDate = lockedDate,
                             ReceivingReportId = rr.ReceivingReportId,
                             Quantity = rr.QuantityReceived,
-                            Price =  po.Price
+                            Price = po.Price
                         });
                     }
                 }
 
                 await _dbContext.FilpridePurchaseLockedRecordsQueues.AddRangeAsync(lockedRecordQueues, cancellationToken);
                 await _dbContext.SaveChangesAsync(cancellationToken);
-
             }
             catch (Exception ex)
             {
@@ -572,6 +577,43 @@ namespace IBS.Services
                     "An error occurred while recording the GL balance for period {PeriodMonth} and company {Company}.",
                     periodMonth.ToString("yyyy-MM-dd"), company);
                 throw;
+            }
+        }
+
+        public async Task OpenAsync(DateOnly monthDate, string company, string user, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                await _dbContext.FilprideMonthlyNibits
+                     .Where(n =>
+                        n.IsValid &&
+                        n.Company == company &&
+                         (n.Year > monthDate.Year ||
+                         (n.Year == monthDate.Year && n.Month >= monthDate.Month)))
+                     .ExecuteUpdateAsync(e =>
+                         e.SetProperty(d => d.IsValid, false), cancellationToken);
+
+                await _dbContext.FilprideGlSubAccountBalances
+                    .Where(s =>
+                        s.IsValid &&
+                        s.Company == company &&
+                        s.PeriodStartDate >= monthDate)
+                    .ExecuteUpdateAsync(e =>
+                        e.SetProperty(d => d.IsValid, false), cancellationToken);
+
+                await _dbContext.FilprideGlPeriodBalances
+                    .Where(s =>
+                        s.IsValid &&
+                        s.Company == company &&
+                        s.PeriodStartDate >= monthDate)
+                    .ExecuteUpdateAsync(e =>
+                        e.SetProperty(d => d.IsValid, false), cancellationToken);
+
+                _logger.LogInformation("Opened the period {Period}", monthDate);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while opening the period {Period}", monthDate);
             }
         }
     }

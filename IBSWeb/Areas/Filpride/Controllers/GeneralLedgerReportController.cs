@@ -791,11 +791,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         if (isDebitAccount)
                         {
                             transaction = journal.Debit - journal.Credit;
+                            groupMtd += transaction;
                             accountBalances[accountNo] += transaction;
                         }
                         else
                         {
                             transaction = journal.Credit - journal.Debit;
+                            groupMtd += transaction;
                             accountBalances[accountNo] += transaction;
                         }
 
@@ -807,7 +809,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[row, 6].Value = journal.SubAccountName;
                         worksheet.Cells[row, 7].Value = journal.Debit;
                         worksheet.Cells[row, 8].Value = journal.Credit;
-                        worksheet.Cells[row, 9].Value = transaction;
+                        worksheet.Cells[row, 9].Value = groupMtd;
                         worksheet.Cells[row, 10].Value = accountBalances[accountNo];
 
                         worksheet.Cells[row, 7].Style.Numberformat.Format = currencyFormat;
@@ -817,7 +819,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                         groupDebit += journal.Debit;
                         groupCredit += journal.Credit;
-                        groupMtd += transaction;
 
                         row++;
                     }

@@ -27,5 +27,7 @@ namespace IBS.Models.Filpride
 
         [StringLength(50)]
         public string Company { get; set; }
+
+        public bool IsValid { get; set; } = true;
     }
 }

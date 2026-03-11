@@ -809,6 +809,7 @@ namespace IBS.DataAccess.Data
 
             builder.Entity<FilprideMonthlyNibit>(n =>
             {
+                n.HasQueryFilter(x => x.IsValid);
                 n.HasIndex(n => n.Company);
                 n.HasIndex(n => n.Month);
                 n.HasIndex(n => n.Year);
@@ -867,6 +868,8 @@ namespace IBS.DataAccess.Data
 
             builder.Entity<FilprideGLPeriodBalance>(b =>
             {
+                b.HasQueryFilter(x => x.IsValid);
+
                 b.HasOne(a => a.Account)
                     .WithMany(c => c.Balances)
                     .HasForeignKey(a => a.AccountId)
@@ -875,6 +878,8 @@ namespace IBS.DataAccess.Data
 
             builder.Entity<FilprideGLSubAccountBalance>(b =>
             {
+                b.HasQueryFilter(x => x.IsValid);
+
                 b.HasOne(a => a.Account)
                     .WithMany(c => c.SubAccountBalances)
                     .HasForeignKey(a => a.AccountId)

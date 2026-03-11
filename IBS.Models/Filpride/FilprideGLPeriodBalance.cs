@@ -1,6 +1,6 @@
+using IBS.Models.Filpride.MasterFile;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using IBS.Models.Filpride.MasterFile;
 
 namespace IBS.Models.Filpride
 {
@@ -53,5 +53,7 @@ namespace IBS.Models.Filpride
 
         [Column(TypeName = "varchar(50)")]
         public string Company { get; set; }
+
+        public bool IsValid { get; set; } = true;
     }
 }
