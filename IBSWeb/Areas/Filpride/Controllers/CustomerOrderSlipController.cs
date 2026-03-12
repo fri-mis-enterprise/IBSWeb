@@ -129,7 +129,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
                 var filterTypeClaim = await GetCurrentFilterType();
 
-                var query = _unitOfWork.FilprideCustomerOrderSlip.GetAllQuery(cancellationToken);
+                var query = _unitOfWork.FilprideCustomerOrderSlip
+                    .GetAllQuery(cancellationToken)
+                    .Where(cos => cos.Company == companyClaims);
 
                 // Apply status filter based on filterType
                 if (!string.IsNullOrEmpty(filterTypeClaim))
@@ -203,16 +205,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var columnName = parameters.Columns[orderColumn.Column].Name;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
-                    query = query.OrderBy($"{columnName} {sortDirection}");
+                    query = query
+                        .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = query.Count();
+                var totalRecords = await query.CountAsync(cancellationToken);
 
                 // Apply pagination and project to a lighter DTO
                 var pagedData = await query
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .Where(cos => cos.Company == companyClaims)
                     .Select(cos => new
                     {
                         cos.CustomerOrderSlipId,

@@ -147,12 +147,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var hasFilterDate = DateOnly.TryParse(filterDate.ToString(SD.Date_Format).ToLower(), out var searchValue);
-
-                    collectionReceipts = collectionReceipts
-                        .Where(s =>
-                            hasFilterDate && s.TransactionDate == searchValue
-                        );
+                    collectionReceipts = collectionReceipts.Where(s => s.TransactionDate == filterDate);
                 }
 
                 // Sorting

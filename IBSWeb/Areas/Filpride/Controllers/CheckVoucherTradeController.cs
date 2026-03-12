@@ -123,12 +123,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var hasFilterDate = DateOnly.TryParse(filterDate.ToString(SD.Date_Format).ToLower(), out var searchValue);
-
-                    checkVoucherHeaders = checkVoucherHeaders
-                        .Where(s =>
-                            hasFilterDate && s.Date == searchValue
-                        ) ;
+                    checkVoucherHeaders = checkVoucherHeaders.Where(s => s.Date == filterDate) ;
                 }
 
                 // Sorting

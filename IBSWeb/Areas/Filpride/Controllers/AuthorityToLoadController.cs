@@ -96,12 +96,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var hasFilterDate = DateOnly.TryParse(filterDate.ToString(SD.Date_Format).ToLower(), out var searchValue);
-
-                    atlList = atlList
-                        .Where(s =>
-                            hasFilterDate && s.DateBooked == searchValue
-                        );
+                    atlList = atlList.Where(s => s.DateBooked == filterDate);
                 }
 
                 // Sorting

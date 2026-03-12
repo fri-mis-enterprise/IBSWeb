@@ -170,12 +170,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var hasFilterDate = DateOnly.TryParse(filterDate.ToString(SD.Date_Format).ToLower(), out var searchValue);
-
-                    checkVoucher = checkVoucher
-                        .Where(s =>
-                            hasFilterDate && s.Date == searchValue
-                        );
+                    checkVoucher = checkVoucher.Where(s => s.Date == filterDate);
                 }
 
                 // Sorting
