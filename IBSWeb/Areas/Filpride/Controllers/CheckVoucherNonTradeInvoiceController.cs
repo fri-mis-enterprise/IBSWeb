@@ -173,7 +173,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         );
                 }
 
-                var projectedQuery = await checkVoucher
+                // Sorting
+                if (parameters.Order?.Count > 0)
+                {
+                    var orderColumn = parameters.Order[0];
+                    var columnName = parameters.Columns[orderColumn.Column].Name;
+                    var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
+
+                    checkVoucher = checkVoucher
+                        .OrderBy($"{columnName} {sortDirection}") ;
+                }
+
+                var totalRecords = await checkVoucher.CountAsync(cancellationToken);
+
+                var pagedData = await checkVoucher
+                    .Skip(parameters.Start)
+                    .Take(parameters.Length)
                     .Select(x => new
                     {
                         x.CheckVoucherHeaderNo,
@@ -190,26 +205,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         x.CheckVoucherHeaderId
                     })
                     .ToListAsync(cancellationToken);
-
-                // Sorting
-                if (parameters.Order?.Count > 0)
-                {
-                    var orderColumn = parameters.Order[0];
-                    var columnName = parameters.Columns[orderColumn.Column].Name;
-                    var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
-
-                    projectedQuery = projectedQuery
-                        .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
-                }
-
-                var totalRecords = projectedQuery.Count;
-
-                var pagedData = projectedQuery
-                    .Skip(parameters.Start)
-                    .Take(parameters.Length)
-                    .ToList();
 
                 return Json(new
                 {

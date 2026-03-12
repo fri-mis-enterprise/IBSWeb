@@ -129,7 +129,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
                     checkVoucherHeaders = checkVoucherHeaders
-                        .AsQueryable()
                         .OrderBy($"{columnName} {sortDirection}");
                 }
 
