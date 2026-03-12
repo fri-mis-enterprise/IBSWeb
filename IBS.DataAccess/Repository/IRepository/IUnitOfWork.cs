@@ -1,7 +1,6 @@
 using IBS.DataAccess.Repository.Bienes.IRepository;
 using IBS.DataAccess.Repository.Filpride.IRepository;
 using IBS.DataAccess.Repository.MasterFile.IRepository;
-using IBS.DataAccess.Repository.MMSI.IRepository;
 using IBS.DataAccess.Repository.Mobility.IRepository;
 using IBS.Models.Enums;
 using IBS.Models.Mobility.MasterFile;
@@ -137,27 +136,6 @@ namespace IBS.DataAccess.Repository.IRepository
         Task<List<SelectListItem>> GetDistinctFilpridePickupPointListById(string company, CancellationToken cancellationToken = default);
 
         Task<List<SelectListItem>> GetFilprideServiceListById(string company, CancellationToken cancellationToken = default);
-
-        #endregion
-
-        #region --MMSI
-
-        IMsapRepository Msap { get; }
-        IServiceRequestRepository ServiceRequest { get; }
-        IDispatchTicketRepository DispatchTicket { get; }
-        IBillingRepository Billing { get; }
-        ICollectionRepository Collection { get; }
-        IMMSIReportRepository MMSIReport { get; }
-        MMSI.IRepository.IServiceRepository Service { get; }
-        ITariffTableRepository TariffTable { get; }
-        IPortRepository Port { get; }
-        IPrincipalRepository Principal { get; }
-        ITerminalRepository Terminal { get; }
-        ITugboatRepository Tugboat { get; }
-        ITugMasterRepository TugMaster { get; }
-        ITugboatOwnerRepository TugboatOwner { get; }
-        IUserAccessRepository UserAccess { get; }
-        IVesselRepository Vessel { get; }
 
         #endregion
 

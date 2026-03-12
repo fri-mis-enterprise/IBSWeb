@@ -140,30 +140,6 @@ namespace IBSWeb.Areas.User.Controllers
 
                 #endregion -- Mobility Station
 
-                #region -- MMSI
-
-                MMSIServiceRequestForPosting = await _dbContext.MMSIDispatchTickets
-                        .Where(po => po.Status == "For Posting")
-                        .CountAsync(),
-
-                MMSIDispatchTicketForTariff = await _dbContext.MMSIDispatchTickets
-                        .Where(po => po.Status == "For Tariff")
-                        .CountAsync(),
-
-                MMSIDispatchTicketForApproval = await _dbContext.MMSIDispatchTickets
-                        .Where(po => po.Status == "For Approval")
-                        .CountAsync(),
-
-                MMSIDispatchTicketForBilling = await _dbContext.MMSIDispatchTickets
-                        .Where(po => po.Status == "For Billing")
-                        .CountAsync(),
-
-                MMSIBillingForCollection = await _dbContext.MMSIBillings
-                        .Where(po => po.Status == "For Collection")
-                        .CountAsync(),
-
-                #endregion -- MMSI
-
                 #region -- Accounting - For Approval
 
                 JournalVoucherForApprovalCount = await _dbContext.FilprideJournalVoucherHeaders
