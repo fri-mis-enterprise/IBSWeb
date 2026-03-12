@@ -127,7 +127,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var filterTypeClaim = await GetCurrentFilterType();
 
                 var receivingReports = _unitOfWork.FilprideReceivingReport
-                    .GetAllQuery(cancellationToken);
+                    .GetAllQuery(cancellationToken)
+                    .Where(x => x.Company == companyClaims);
 
                 if (!string.IsNullOrEmpty(filterTypeClaim))
                 {
@@ -153,13 +154,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasDate = DateOnly.TryParse(searchValue, out var date);
 
                     receivingReports = receivingReports
                     .Where(s =>
                         s.ReceivingReportNo!.ToLower().Contains(searchValue) ||
                         s.PurchaseOrder!.PurchaseOrderNo!.ToLower().Contains(searchValue) ||
                         s.DeliveryReceipt!.DeliveryReceiptNo.ToLower().Contains(searchValue) == true ||
-                        s.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
+                        (hasDate && s.Date == date) ||
                         s.QuantityReceived.ToString().Contains(searchValue) ||
                         s.Amount.ToString().Contains(searchValue) ||
                         s.CreatedBy!.ToLower().Contains(searchValue) ||
@@ -168,12 +170,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var searchValue = filterDate.ToString(SD.Date_Format).ToLower();
-
-                    receivingReports = receivingReports
-                        .Where(s =>
-                            s.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        );
+                    receivingReports = receivingReports.Where(s => s.Date == filterDate);
                 }
 
                 // Sorting
@@ -184,16 +181,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
                     receivingReports = receivingReports
-                        .AsQueryable()
                         .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = receivingReports.Count();
+                var totalRecords = await receivingReports.CountAsync(cancellationToken);
 
-                var pagedData = receivingReports
+                var pagedData = await receivingReports
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .Where(x => x.Company == companyClaims)
                     .Select(rr => new
                     {
                         rr.ReceivingReportId,
@@ -213,7 +208,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         rr.PostedBy,
                         rr.CanceledBy,
                     })
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
