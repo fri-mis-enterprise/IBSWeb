@@ -227,25 +227,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         );
                 }
 
-                var projectedQuery = await queried.ToListAsync(cancellationToken);
-
                 // Sorting
                 if (parameters.Order?.Count > 0)
                 {
                     var orderColumn = parameters.Order[0];
                     var columnName = parameters.Columns[orderColumn.Column].Data;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
-                    projectedQuery = projectedQuery
-                        .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
+
+                    queried = queried
+                        .OrderBy($"{columnName} {sortDirection}") ;
                 }
 
-                var totalRecords = projectedQuery.Count();
-                var pagedData = projectedQuery
+                var totalRecords = await queried.CountAsync(cancellationToken);
+                var pagedData = await queried
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
