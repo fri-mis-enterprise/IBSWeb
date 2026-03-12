@@ -95,20 +95,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
 
                 var checkVoucherHeaders = _unitOfWork.FilprideCheckVoucher
-                    .GetAllQuery(cancellationToken);
+                    .GetAllQuery(cancellationToken)
+                    .Where(cv => cv.Company == companyClaims && cv.Category == "Trade");
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasDate = DateOnly.TryParse(searchValue, out var date);
 
                     checkVoucherHeaders = checkVoucherHeaders
                         .Where(s =>
                             s.CheckVoucherHeaderNo!.ToLower().Contains(searchValue) ||
-                            s.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
+                            (hasDate && s.Date == date) ||
                             s.Supplier!.SupplierName.ToLower().Contains(searchValue) == true ||
                             s.Total.ToString().Contains(searchValue) ||
-                            s.Amount!.ToString()!.Contains(searchValue) == true ||
+                            s.Amount!.Any(a => a.ToString().Contains(searchValue)) ||
                             s.Category.ToLower().Contains(searchValue) ||
                             s.CvType!.ToLower().Contains(searchValue) == true ||
                             s.CreatedBy!.ToLower().Contains(searchValue) ||
@@ -117,17 +119,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var searchValue = filterDate.ToString(SD.Date_Format).ToLower();
+                    var hasFilterDate = DateOnly.TryParse(filterDate.ToString(SD.Date_Format).ToLower(), out var searchValue);
 
                     checkVoucherHeaders = checkVoucherHeaders
                         .Where(s =>
-                            s.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue)
+                            hasFilterDate && s.Date == searchValue
                         ) ;
                 }
-
-                var projectedQuery = await checkVoucherHeaders
-                    .Where(cv => cv.Company == companyClaims && cv.Category == "Trade")
-                    .ToListAsync(cancellationToken);
 
                 // Sorting
                 if (parameters.Order?.Count > 0)
@@ -136,18 +134,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var columnName = parameters.Columns[orderColumn.Column].Data;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
-                    projectedQuery = projectedQuery
+                    checkVoucherHeaders = checkVoucherHeaders
                         .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
+                        .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = projectedQuery.Count();
+                var totalRecords = await checkVoucherHeaders.CountAsync(cancellationToken);
 
-                var pagedData = projectedQuery
+                var pagedData = await checkVoucherHeaders
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
