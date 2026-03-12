@@ -77,19 +77,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
 
                 var debitMemos = _unitOfWork.FilprideDebitMemo
-                    .GetAllQuery(cancellationToken);
+                    .GetAllQuery(cancellationToken)
+                    .Where(x => x.Company == companyClaims);
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasTransactionDate = DateOnly.TryParse(searchValue, out var transactionDate);
 
                     debitMemos = debitMemos
                         .Where(s =>
                             s.DebitMemoNo!.ToLower().Contains(searchValue) ||
                             s.SalesInvoice!.SalesInvoiceNo!.ToLower().Contains(searchValue) == true ||
                             s.ServiceInvoice!.ServiceInvoiceNo.ToLower().Contains(searchValue) == true ||
-                            s.TransactionDate.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
+                            (hasTransactionDate && s.TransactionDate == transactionDate) ||
                             s.DebitAmount.ToString().Contains(searchValue) ||
                             s.Remarks!.ToLower().Contains(searchValue) == true ||
                             s.Description.ToLower().Contains(searchValue) ||
@@ -98,12 +100,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var searchValue = filterDate.ToString(SD.Date_Format).ToLower();
-
-                    debitMemos = debitMemos
-                        .Where(s =>
-                            s.TransactionDate.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        );
+                    debitMemos = debitMemos.Where(s => s.TransactionDate == filterDate);
                 }
 
                 // Sorting
@@ -114,16 +111,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
                     debitMemos = debitMemos
-                        .AsQueryable()
                         .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = debitMemos.Count();
+                var totalRecords = await debitMemos.CountAsync(cancellationToken);
 
                 var pagedData = await debitMemos
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .Where(x => x.Company == companyClaims)
                     .ToListAsync(cancellationToken);
 
                 return Json(new
