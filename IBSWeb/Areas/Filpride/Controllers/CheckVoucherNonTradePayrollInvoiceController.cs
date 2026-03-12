@@ -130,7 +130,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Include(cvd => cvd.CheckVoucherHeader)
                     .ThenInclude(cvh => cvh!.Supplier)
                     .AsSplitQuery()
-                    .AsNoTracking();
+                    .AsNoTracking()
+                    .Where(cvd => cvd.CheckVoucherHeader!.Company == companyClaims &&
+                                  cvd.CheckVoucherHeader.CvType == nameof(CVType.Invoicing) &&
+                                  cvd.CheckVoucherHeader.IsPayroll &&
+                                  cvd.SubAccountId.HasValue &&
+                                  cvd.Amount > 0);
 
                 // Apply status filter based on filterType
                 if (!string.IsNullOrEmpty(filterTypeClaim) && filterTypeClaim == "ForApproval")
@@ -142,11 +147,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasDate = DateOnly.TryParse(searchValue, out var date);
 
                     checkVoucherDetails = checkVoucherDetails
                         .Where(s =>
                             s.TransactionNo.ToLower().Contains(searchValue) ||
-                            s.CheckVoucherHeader!.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
+                            (hasDate && s.CheckVoucherHeader!.Date == date) ||
                             s.SubAccountName!.ToLower().Contains(searchValue) == true ||
                             s.Amount.ToString().Contains(searchValue) ||
                             s.AmountPaid.ToString().Contains(searchValue) ||
@@ -158,20 +164,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var searchValue = filterDate.ToString(SD.Date_Format).ToLower();
+                    var hasFilterDate = DateOnly.TryParse(filterDate.ToString(SD.Date_Format).ToLower(), out var searchValue);
 
                     checkVoucherDetails = checkVoucherDetails
                         .Where(s =>
-                            s.CheckVoucherHeader!.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue)
+                            hasFilterDate && s.CheckVoucherHeader!.Date == searchValue
                         ) ;
                 }
 
                 var projectedQuery = await checkVoucherDetails
-                    .Where(cvd => cvd.CheckVoucherHeader!.Company == companyClaims &&
-                                  cvd.CheckVoucherHeader.CvType == nameof(CVType.Invoicing) &&
-                                  cvd.CheckVoucherHeader.IsPayroll &&
-                                  cvd.SubAccountId.HasValue &&
-                                  cvd.Amount > 0)
                     .Select(x => new
                     {
                         x.TransactionNo,
