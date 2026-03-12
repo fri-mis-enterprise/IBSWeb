@@ -76,12 +76,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
 
                 var salesInvoices = _unitOfWork.FilprideSalesInvoice
-                    .GetAllQuery(cancellationToken);
+                    .GetAllQuery(cancellationToken)
+                    .Where(x => x.Company == companyClaims);
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasTransactionDate = DateOnly.TryParse(searchValue, out var transactionDate);
 
                     salesInvoices = salesInvoices
                         .Where(s =>
@@ -89,7 +91,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             s.Customer!.CustomerName.ToLower().Contains(searchValue) ||
                             s.Customer.CustomerTerms.ToLower().Contains(searchValue) ||
                             s.Product!.ProductName.ToLower().Contains(searchValue) ||
-                            s.TransactionDate.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
+                            (hasTransactionDate && s.TransactionDate == transactionDate) ||
                             s.Amount.ToString().Contains(searchValue) ||
                             s.CreatedBy!.ToLower().Contains(searchValue) ||
                             s.Status.ToLower().Contains(searchValue) ||
@@ -100,12 +102,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var searchValue = filterDate.ToString(SD.Date_Format).ToLower();
-
-                    salesInvoices = salesInvoices
-                        .Where(s =>
-                            s.TransactionDate.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        );
+                    salesInvoices = salesInvoices.Where(s => s.TransactionDate == filterDate);
                 }
 
                 // Sorting
@@ -116,16 +113,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
                     salesInvoices = salesInvoices
-                        .AsQueryable()
                         .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = salesInvoices.Count();
+                var totalRecords = await salesInvoices.CountAsync(cancellationToken);
 
                 var pagedData = await salesInvoices
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .Where(x => x.Company == companyClaims)
                     .Select(si => new
                     {
                         si.Amount,
