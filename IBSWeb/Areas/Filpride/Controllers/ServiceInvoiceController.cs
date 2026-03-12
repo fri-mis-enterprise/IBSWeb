@@ -77,19 +77,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
 
                 var serviceInvoices = _unitOfWork.FilprideServiceInvoice
-                    .GetAllQuery(cancellationToken);
+                    .GetAllQuery(cancellationToken)
+                    .Where(x => x.Company == companyClaims);
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasPeriod = DateOnly.TryParse(searchValue, out var period);
 
                     serviceInvoices = serviceInvoices
                         .Where(s =>
                             s.ServiceInvoiceNo.ToLower().Contains(searchValue) ||
                             s.CustomerName.ToLower().Contains(searchValue) ||
                             s.ServiceName.ToLower().Contains(searchValue) ||
-                            s.Period.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
+                            (hasPeriod && s.Period == period) ||
                             s.Total.ToString().Contains(searchValue) ||
                             s.Instructions.ToLower().Contains(searchValue) ||
                             s.CreatedBy!.ToLower().Contains(searchValue) == true
@@ -97,17 +99,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var searchValue = filterDate.ToString(SD.Date_Format).ToLower();
-
-                    serviceInvoices = serviceInvoices
-                        .Where(s =>
-                            s.Period.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        );
+                    serviceInvoices = serviceInvoices.Where(s => s.Period == filterDate);
                 }
-
-                var projectedQuery = await serviceInvoices
-                    .Where(x => x.Company == companyClaims)
-                    .ToListAsync(cancellationToken);
 
                 // Sorting
                 if (parameters.Order?.Count > 0)
@@ -116,18 +109,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var columnName = parameters.Columns[orderColumn.Column].Data;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
-                    projectedQuery = projectedQuery
-                        .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
+                    serviceInvoices = serviceInvoices
+                        .OrderBy($"{columnName} {sortDirection}") ;
                 }
 
-                var totalRecords = projectedQuery.Count();
+                var totalRecords = await serviceInvoices.CountAsync(cancellationToken);
 
-                var pagedData = projectedQuery
+                var pagedData = await serviceInvoices
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
