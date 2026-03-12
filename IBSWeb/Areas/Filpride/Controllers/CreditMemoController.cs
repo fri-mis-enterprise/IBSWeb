@@ -77,19 +77,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
 
                 var creditMemos = _unitOfWork.FilprideCreditMemo
-                    .GetAllQuery(cancellationToken);
+                    .GetAllQuery(cancellationToken)
+                    .Where(x => x.Company == companyClaims);
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasTransactionDate = DateOnly.TryParse(searchValue, out var transactionDate);
 
                     creditMemos = creditMemos
                     .Where(s =>
                         s.CreditMemoNo!.ToLower().Contains(searchValue) ||
                         s.SalesInvoice!.SalesInvoiceNo!.ToLower().Contains(searchValue) == true ||
                         s.ServiceInvoice!.ServiceInvoiceNo.ToLower().Contains(searchValue) == true ||
-                        s.TransactionDate.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
+                        (hasTransactionDate && s.TransactionDate == transactionDate) ||
                         s.CreditAmount.ToString().Contains(searchValue) ||
                         s.Remarks!.ToLower().Contains(searchValue) == true ||
                         s.Description.ToLower().Contains(searchValue) ||
@@ -98,11 +100,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var searchValue = filterDate.ToString(SD.Date_Format).ToLower();
+                    var hasFilterDate = DateOnly.TryParse(filterDate.ToString(SD.Date_Format).ToLower(), out var searchValue);
 
                     creditMemos = creditMemos
                         .Where(s =>
-                            s.TransactionDate.ToString(SD.Date_Format).ToLower().Contains(searchValue)
+                            hasFilterDate && s.TransactionDate == searchValue
                         );
                 }
 
@@ -114,16 +116,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
                     creditMemos = creditMemos
-                        .AsQueryable()
                         .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = creditMemos.Count();
+                var totalRecords = await creditMemos.CountAsync(cancellationToken);
 
                 var pagedData = await creditMemos
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .Where(x => x.Company == companyClaims)
                     .ToListAsync(cancellationToken);
 
                 return Json(new
