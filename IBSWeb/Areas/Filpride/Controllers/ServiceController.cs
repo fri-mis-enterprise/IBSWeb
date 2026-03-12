@@ -188,6 +188,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasCreatedDate = DateTime.TryParse(searchValue, out var createdDate);
 
                     query = query
                     .Where(s =>
@@ -195,11 +196,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         s.Name.ToLower().Contains(searchValue) ||
                         s.Percent.ToString().ToLower().Contains(searchValue) ||
                         s.CreatedBy!.ToLower().Contains(searchValue) ||
-                        s.CreatedDate.ToString("MM dd, yyyy").ToLower().Contains(searchValue)
+                        (hasCreatedDate && DateOnly.FromDateTime(s.CreatedDate) == DateOnly.FromDateTime(createdDate))
                         );
                 }
-
-                var projectedQuery = await query.ToListAsync(cancellationToken);
 
                 // Sorting
                 if (parameters.Order?.Count > 0)
@@ -207,17 +206,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var orderColumn = parameters.Order[0];
                     var columnName = parameters.Columns[orderColumn.Column].Data;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
-                    projectedQuery = projectedQuery
-                        .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
+
+                    query = query
+                        .OrderBy($"{columnName} {sortDirection}") ;
                 }
 
-                var totalRecords = projectedQuery.Count();
-                var pagedData = projectedQuery
+                var totalRecords = await query.CountAsync(cancellationToken);
+                var pagedData = await query
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
