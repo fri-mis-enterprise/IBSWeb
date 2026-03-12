@@ -21,7 +21,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
     [CompanyAuthorize(nameof(Filpride))]
-    [DepartmentAuthorize(SD.Department_Accounting, SD.Department_RCD, SD.Department_HRAndAdminOrLegal, SD.Department_Finance)]
+    [DepartmentAuthorize(
+        SD.Department_Accounting,
+        SD.Department_RCD,
+        SD.Department_ManagementAccounting,
+        SD.Department_HRAndAdminOrLegal,
+        SD.Department_Finance)]
     public class CheckVoucherNonTradePaymentController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;
@@ -224,6 +229,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return RedirectToAction(nameof(Print), new { id });
         }
 
+        [DepartmentAuthorize(
+            SD.Department_Accounting,
+            SD.Department_RCD,
+            SD.Department_HRAndAdminOrLegal,
+            SD.Department_ManagementAccounting)]
         public async Task<IActionResult> Post(int id, CancellationToken cancellationToken)
         {
             var modelHeader = await _unitOfWork.FilprideCheckVoucher.GetAsync(cv => cv.CheckVoucherHeaderId == id, cancellationToken);
@@ -336,6 +346,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [DepartmentAuthorize(
+            SD.Department_Accounting,
+            SD.Department_RCD,
+            SD.Department_HRAndAdminOrLegal,
+            SD.Department_ManagementAccounting)]
         public async Task<IActionResult> Cancel(int id, string? cancellationRemarks, CancellationToken cancellationToken)
         {
             var existingHeaderModel = await _dbContext.FilprideCheckVoucherHeaders
@@ -481,6 +496,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [DepartmentAuthorize(
+            SD.Department_Accounting,
+            SD.Department_RCD,
+            SD.Department_HRAndAdminOrLegal,
+            SD.Department_ManagementAccounting)]
         public async Task<IActionResult> Unpost(int id, CancellationToken cancellationToken)
         {
             var cvHeader = await _unitOfWork.FilprideCheckVoucher.GetAsync(cv => cv.CheckVoucherHeaderId == id, cancellationToken);
@@ -548,6 +568,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [DepartmentAuthorize(
+            SD.Department_Accounting,
+            SD.Department_RCD,
+            SD.Department_HRAndAdminOrLegal,
+            SD.Department_ManagementAccounting)]
         [HttpGet]
         public async Task<IActionResult> Edit(int id, CancellationToken cancellationToken)
         {
@@ -1114,6 +1139,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
             });
         }
 
+        [DepartmentAuthorize(
+            SD.Department_Accounting,
+            SD.Department_RCD,
+            SD.Department_HRAndAdminOrLegal,
+            SD.Department_ManagementAccounting)]
         [HttpGet]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
@@ -1707,6 +1737,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
             });
         }
 
+        [DepartmentAuthorize(
+            SD.Department_Accounting,
+            SD.Department_RCD,
+            SD.Department_HRAndAdminOrLegal,
+            SD.Department_ManagementAccounting)]
         [HttpGet]
         public async Task<IActionResult> CreateAdvancesToEmployee(CancellationToken cancellationToken)
         {
@@ -1878,6 +1913,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [DepartmentAuthorize(
+            SD.Department_Accounting,
+            SD.Department_RCD,
+            SD.Department_HRAndAdminOrLegal,
+            SD.Department_ManagementAccounting)]
         [HttpGet]
         public async Task<IActionResult> EditAdvancesToEmployee(int? id, CancellationToken cancellationToken)
         {
@@ -2110,6 +2150,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
             });
         }
 
+        [DepartmentAuthorize(
+            SD.Department_Accounting,
+            SD.Department_RCD,
+            SD.Department_HRAndAdminOrLegal,
+            SD.Department_ManagementAccounting)]
         [HttpGet]
         public async Task<IActionResult> CreateAdvancesToSupplier(CancellationToken cancellationToken)
         {
@@ -2307,6 +2352,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [DepartmentAuthorize(
+            SD.Department_Accounting,
+            SD.Department_RCD,
+            SD.Department_HRAndAdminOrLegal,
+            SD.Department_ManagementAccounting)]
         [HttpGet]
         public async Task<IActionResult> EditAdvancesToSupplier(int? id, CancellationToken cancellationToken)
         {

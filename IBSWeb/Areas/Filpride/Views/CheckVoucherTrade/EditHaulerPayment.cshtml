@@ -253,35 +253,38 @@
                     // Reset selected records
                     selectedRecords = [];
 
-                    if (data){
+                    if (data) {
                         data.forEach((dr) => {
-                            let balance = parseNumber(dr.netOfEwtAmount) - parseNumber(dr.amountPaid);
-
-                            const isChecked = modelDRs.has(dr.id) ? 'checked' : '';
-                            let display = modelDRs.has(dr.id) ? '' : 'display: none';
-                            let inputAmountClass = modelDRs.has(dr.id) ? 'inputAmount' : '';
+                            const initialBalance = parseNumber(dr.balance);
                             const amountPaid = modelDRs.get(dr.id);
-                            
-                            // Add to selectedRecords if already checked
+                            const tr = $('<tr>').attr('data-balance', initialBalance);
+                            const checkbox = $('<input>').attr({ type: 'checkbox', class: 'selectCheckbox' }).val(dr.id).prop('checked', modelDRs.has(dr.id));
+                            const paymentInput = $('<input>').attr({ type: 'text', class: 'paymentAmount text-end' });
+                            const displayedBalance = modelDRs.has(dr.id) ? initialBalance - (Number(amountPaid) || 0) : initialBalance;
                             if (modelDRs.has(dr.id)) {
                                 selectedRecords.push(dr.id.toString());
                             }
+
+
+                            tr.append($('<td>').append(checkbox));
+                            tr.append($('<td>').text(dr.deliveryReceiptNo));
+                            tr.append($('<td>').text(dr.manualDrNo));
+                            tr.append($('<td>').addClass('text-end grossAmount').text(formatNumberToFour(dr.netOfEwtAmount)));
+                            tr.append($('<td>').addClass('text-end').append(paymentInput));
+                            tr.append($('<td>').addClass('text-end balance').text(formatNumberToFour(displayedBalance)));
                             
-                            const tr = $(`
-                                        <tr>
-                                            <td><input type="checkbox" value="${dr.id}" class="selectCheckbox" ${isChecked}></td>
-                                            <td>${dr.deliveryReceiptNo}</td>
-                                            <td>${dr.manualDrNo}</td>
-                                            <td class="text-end grossAmount">${formatNumberToFour(dr.netOfEwtAmount)}</td>
-                                            <td class="text-end"><input type="text" class="paymentAmount text-end ${inputAmountClass}" readonly style="${display}" value="${amountPaid}"></td>
-                                            <td class="text-end balance">${formatNumberToFour(parseNumber(dr.netOfEwtAmount) - parseNumber(dr.amountPaid))}</td>
-                                        </tr>
-                                    `);
+                            if (modelDRs.has(dr.id)) {
+                                paymentInput.addClass('inputAmount').val(amountPaid).show();
+                                tr.attr('data-last-amount', amountPaid);
+                            } else {
+                                paymentInput.hide();
+                            }
+
                             tbody.append(tr);
 
                             totalGross += parseNumber(dr.netOfEwtAmount);
                             totalAmountPaid += parseNumber(dr.amountPaid);
-                            totalBalance += balance;
+                            totalBalance += initialBalance;
                         });
                         reindexSelected();
                         updateSelectedCount(); // Update count after loading
@@ -297,7 +300,7 @@
                     <td class="fw-bold text-end p-2">Grand Total:</td>
                     <td class="text-end grandTotalGross" id="grandTotalRRAmount">${formatNumberToFour(totalGross)}</td>
                     <td class="text-end grandTotalAmountPaid" id="grandTotalNetAmount">${formatNumberToFour(totalAmountPaid)}</td>
-                    <td class="text-end grandTotalBalance" id="grandTotalNetOfEWT">${formatNumberToFour(totalBalance)}</td>
+                    <td class="text-end grandTotalBalance" id="grandTotalNetOfEWT" data-balance="${totalBalance}">${formatNumberToFour(totalBalance)}</td>
                 </tr>
             `);
                     tbody.append(totalRow);
@@ -335,26 +338,26 @@
         $(document).on('change', '.selectCheckbox', function () {
             const row = $(this).closest('tr');
             const inputField = row.find('.paymentAmount');
-            const balance = parseNumber(row.find('.balance').text().trim());
-            const grossAmount = parseNumber(row.find('.grossAmount').text());
+            const initialBalance = parseNumber(row.attr('data-balance'));
 
             if (this.checked) {
                 if (!selectedRecords.includes(this.value)) {
                     selectedRecords.push(this.value);
                 }
-                inputField.val(balance).addClass("inputAmount").show();
-                row.find('.balance').text(formatNumberToFour(grossAmount - balance));
+                const lastAmount = row.attr('data-last-amount');
+                inputField.val(lastAmount !== undefined ? formatNumberToFour(parseNumber(lastAmount)) : formatNumberToFour(initialBalance)).addClass("inputAmount").show();
+                row.find('.balance').text(formatNumberToFour(initialBalance - parseNumber(inputField.val())));
             } else {
                 selectedRecords = selectedRecords.filter(v => v !== this.value);
                 inputField.removeAttr("name").hide().val('');
                 row.find('.selectCheckbox').removeAttr("name");
-                row.find('.balance').text(formatNumberToFour(grossAmount));
+                row.find('.balance').text(formatNumberToFour(initialBalance));
             }
 
             reindexSelected();
             updateAmounts();
             updateSelectedCount();
-            
+
             const totalCheckboxes = $('.selectCheckbox').length;
             const checkedCheckboxes = $('.selectCheckbox:checked').length;
             $('#selectAll').prop('checked', totalCheckboxes > 0 && totalCheckboxes === checkedCheckboxes);
@@ -371,6 +374,33 @@
         }
 
         $(document).on('input', '.inputAmount', function () {
+            const row = $(this).closest('tr');
+            const initialBalance = parseNumber(row.attr('data-balance'));
+            let paymentAmount = parseNumber($(this).val());
+
+            if (paymentAmount > initialBalance) {
+                $(this).addClass('is-invalid');
+                $(this).val(formatNumberToFour(initialBalance));
+                row.attr('data-last-amount', paymentAmount);
+                row.find('.balance').text(formatNumberToFour(0));
+                updateAmounts();
+                return;
+            } else {
+                $(this).removeClass('is-invalid');
+                // negative values should not be allowed, reset to 0 if negative
+                if (paymentAmount < 0) {
+                    paymentAmount = 0;
+                    $(this).val(formatNumberToFour(paymentAmount));
+                    row.attr('data-last-amount', paymentAmount);
+                    row.find('.balance').text(formatNumberToFour(initialBalance));
+                    updateAmounts();
+                    return;
+                }
+            }   
+            $(this).removeClass('is-invalid');
+
+            row.find('.balance').text(formatNumberToFour(initialBalance - paymentAmount));
+            row.attr('data-last-amount', paymentAmount);
             updateAmounts();
         });
 
@@ -385,8 +415,8 @@
             });
             $(".totalNetOfEWT").val(formatNumberToFour(totalNetOfEWT));
             $(".grandTotalAmountPaid").text(formatNumberToFour(totalNetOfEWT));
-            let grandTotalGross = parseNumber($(".grandTotalGross").text());
-            $(".grandTotalBalance").text(formatNumberToFour(Math.abs(grandTotalGross - totalNetOfEWT)));
+            $(".grandTotalBalance").text(formatNumberToFour(Math.abs(parseNumber($(".grandTotalBalance").attr('data-balance')) - totalNetOfEWT)));
+
             updateTotalDebitAndCredit();
             validateDebitAndCredit();
         }
