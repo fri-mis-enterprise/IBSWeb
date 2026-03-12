@@ -69,12 +69,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
 
                 var disbursements = _unitOfWork.FilprideCheckVoucher
-                    .GetAllQuery(cancellationToken);
+                    .GetAllQuery(cancellationToken)
+                    .Where(x=> x.CvType != nameof(CVType.Invoicing) &&
+                               x.PostedBy != null &&
+                               x.Company == companyClaims);
 
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasDate = DateOnly.TryParse(searchValue, out var date);
+                    var hasDcpDate = DateOnly.TryParse(searchValue, out var dcpDate);
+                    var hasDcrDate = DateOnly.TryParse(searchValue, out var dcrDate);
 
                     disbursements = disbursements
                     .Where(s =>
@@ -83,9 +89,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         s.Total.ToString().Contains(searchValue) ||
                         s.CheckVoucherHeaderId.ToString().Contains(searchValue) ||
                         s.Reference!.ToLower().Contains(searchValue) == true ||
-                        s.Date.ToString().Contains(searchValue) ||
-                        s.DcpDate!.ToString()!.Contains(searchValue) == true ||
-                        s.DcrDate!.ToString()!.Contains(searchValue) == true
+                        (hasDate && s.Date == date) ||
+                        (hasDcpDate && s.DcpDate == dcpDate) == true ||
+                        (hasDcrDate && s.DcrDate == dcrDate) == true
                         )
                     .Where(cv => cv.Company == companyClaims);
                 }
@@ -113,12 +119,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     }
                 }
 
-                var projectedQuery = await disbursements
-                    .Where(x=> x.CvType != nameof(CVType.Invoicing) &&
-                                                              x.PostedBy != null &&
-                                                              x.Company == companyClaims)
-                    .ToListAsync(cancellationToken);
-
                 // Sorting
                 if (parameters.Order != null && parameters.Order.Count > 0)
                 {
@@ -126,18 +126,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var columnName = parameters.Columns[orderColumn.Column].Data;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
-                    projectedQuery = projectedQuery
-                        .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
+                    disbursements = disbursements
+                        .OrderBy($"{columnName} {sortDirection}") ;
                 }
 
-                var totalRecords = projectedQuery.Count();
+                var totalRecords = await disbursements.CountAsync(cancellationToken);
 
-                var pagedData = projectedQuery
+                var pagedData = await disbursements
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
