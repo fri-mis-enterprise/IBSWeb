@@ -130,7 +130,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
                 var filterTypeClaim = await GetCurrentFilterType();
 
-                var checkVoucher = _unitOfWork.FilprideCheckVoucher.GetAllQuery();
+                var checkVoucher = _unitOfWork.FilprideCheckVoucher
+                    .GetAllQuery()
+                    .Where(cvh => cvh.Company == companyClaims &&
+                                  cvh.CvType == nameof(CVType.Invoicing) &&
+                                  !cvh.IsPayroll);
 
                 // Apply status filter based on filterType
                 if (!string.IsNullOrEmpty(filterTypeClaim) && filterTypeClaim == "ForApproval")
@@ -142,11 +146,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasDate = DateOnly.TryParse(searchValue, out var date);
 
                     checkVoucher = checkVoucher
                         .Where(s =>
                             s.CheckVoucherHeaderNo!.ToLower().Contains(searchValue) ||
-                            s.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
+                            (hasDate && s.Date == date) ||
                             (s.Payee != null &&
                             s.Payee.ToLower().Contains(searchValue) == true) ||
                             s.InvoiceAmount.ToString().Contains(searchValue) ||
@@ -160,18 +165,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var searchValue = filterDate.ToString(SD.Date_Format).ToLower();
+                    var hasFilterDate = DateOnly.TryParse(filterDate.ToString(SD.Date_Format).ToLower(), out var searchValue);
 
                     checkVoucher = checkVoucher
                         .Where(s =>
-                            s.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue)
+                            hasFilterDate && s.Date == searchValue
                         );
                 }
 
                 var projectedQuery = await checkVoucher
-                    .Where(cvh => cvh.Company == companyClaims &&
-                                  cvh.CvType == nameof(CVType.Invoicing) &&
-                                  !cvh.IsPayroll)
                     .Select(x => new
                     {
                         x.CheckVoucherHeaderNo,
