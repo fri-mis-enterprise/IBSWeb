@@ -143,7 +143,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         s.References!.Contains(searchValue) == true ||
                         s.CheckVoucherHeader!.CheckVoucherHeaderNo!.ToLower().Contains(searchValue) == true ||
                         s.Particulars.ToLower().Contains(searchValue) ||
-                        s.CRNo!.ToLower().Contains(searchValue) == true ||
+                        (s.CRNo != null && s.CRNo.ToLower().Contains(searchValue)) ||
                         s.JVReason.ToLower().Contains(searchValue) ||
                         s.CreatedBy!.ToLower().Contains(searchValue)
                         );

@@ -145,7 +145,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         s.PurchaseOrderNo!.ToLower().Contains(searchValue) ||
                         s.OldPoNo.ToLower().Contains(searchValue) ||
                         s.SupplierName.ToLower().Contains(searchValue) ||
-                        s.PickUpPoint!.Depot.ToLower().Contains(searchValue) ||
+                        (s.PickUpPoint != null && s.PickUpPoint.Depot.ToLower().Contains(searchValue)) ||
                         s.ProductName.ToLower().Contains(searchValue) ||
                         (hasDate && s.Date == date) ||
                         s.Quantity.ToString().Contains(searchValue) ||
@@ -184,7 +184,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         po.SupplierId,
                         po.SupplierName,
                         po.ProductName,
-                        po.PickUpPoint!.Depot,
+                        Depot = po.PickUpPoint != null ? po.PickUpPoint.Depot : string.Empty,
                         po.Quantity,
                         po.QuantityReceived,
                         po.FinalPrice,
