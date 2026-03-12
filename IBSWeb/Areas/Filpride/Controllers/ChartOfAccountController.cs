@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
+using System.Linq.Dynamic.Core;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -227,17 +228,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         );
                 }
 
-                // Apply sorting if provided
+                //Apply sorting if provided
                 if (parameters.Order?.Count > 0)
                 {
+                    var orderColumn = parameters.Order[0];
+                    var columnName = parameters.Columns[orderColumn.Column].Name;
+                    var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
+
                     chartOfAccounts = chartOfAccounts
-                        .AsQueryable();
+                        .OrderBy($"{columnName} {sortDirection}");
                 }
 
                 var totalRecords = await chartOfAccounts.CountAsync(cancellationToken);
 
                 // Apply pagination - HANDLE -1 FOR "ALL"
-                IEnumerable<FilprideChartOfAccount> pagedChartOfAccounts;
+                IQueryable<FilprideChartOfAccount> pagedChartOfAccounts;
 
                 if (parameters.Length == -1)
                 {
@@ -247,13 +252,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 else
                 {
                     // Normal pagination
-                    pagedChartOfAccounts = await chartOfAccounts
+                    pagedChartOfAccounts = chartOfAccounts
                         .Skip(parameters.Start)
-                        .Take(parameters.Length)
-                        .ToListAsync(cancellationToken);
+                        .Take(parameters.Length);
                 }
 
-                var pagedData = pagedChartOfAccounts
+                var pagedData = await pagedChartOfAccounts
                     .Select(x => new
                     {
                         x.AccountId,
@@ -264,7 +268,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         x.Level,
                         x.CreatedDate
                     })
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {

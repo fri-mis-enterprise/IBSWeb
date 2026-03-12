@@ -210,12 +210,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var columnName = parameters.Columns[orderColumn.Column].Name;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
                     query = query
-                        .AsQueryable()
                         .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = query.Count();
+                var totalRecords = await query.CountAsync(cancellationToken);
                 var pagedData = await query
+                    .Skip(parameters.Start)
+                    .Take(parameters.Length)
                     .Select(b  => new
                     {
                         b.Id,
@@ -224,8 +225,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         b.BranchAddress,
                         b.BranchTin,
                     })
-                    .Skip(parameters.Start)
-                    .Take(parameters.Length)
                     .ToListAsync(cancellationToken);
 
                 return Json(new
