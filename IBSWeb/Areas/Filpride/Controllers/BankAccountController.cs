@@ -167,7 +167,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var columnName = parameters.Columns[orderColumn.Column].Data;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
                     query = query
-                        .AsQueryable()
                         .OrderBy($"{columnName} {sortDirection}");
                 }
 

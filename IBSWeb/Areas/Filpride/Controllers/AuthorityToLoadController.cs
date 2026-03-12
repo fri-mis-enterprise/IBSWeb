@@ -112,7 +112,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
                     atlList = atlList
-                        .AsQueryable()
                         .OrderBy($"{columnName} {sortDirection}");
                 }
 
