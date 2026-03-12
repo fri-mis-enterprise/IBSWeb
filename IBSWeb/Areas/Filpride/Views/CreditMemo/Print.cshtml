@@ -31,7 +31,9 @@
 
     var invoiceNo = Model.SalesInvoice?.SalesInvoiceNo ?? Model.ServiceInvoice!.ServiceInvoiceNo;
     var invoiceDate = Model.SalesInvoice?.TransactionDate.ToString(SD.Date_Format) ?? Model.ServiceInvoice!.Period.ToString(SD.Date_Format);
-    var product = Model.SalesInvoice?.CustomerOrderSlip?.ProductName ?? @Model.ServiceInvoice!.ServiceName;
+    var product = Model.SalesInvoice != null
+        ? Model.SalesInvoice.CustomerOrderSlip?.ProductName ?? string.Empty
+        : Model.ServiceInvoice?.ServiceName ?? string.Empty;
 }
 
 <style>
