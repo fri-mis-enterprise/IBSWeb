@@ -153,21 +153,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var orderColumn = parameters.Order[0];
                     var columnName = parameters.Columns[orderColumn.Column].Name;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
+
                     query = query
-                        .AsQueryable()
                         .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = query.Count();
+                var totalRecords = await query.CountAsync(cancellationToken);
                 var pagedData = await query
+                    .Skip(parameters.Start)
+                    .Take(parameters.Length)
                     .Select(p => new
                     {
                         p.PickUpPointId,
                         p.Depot,
                         p.Supplier!.SupplierName
                     })
-                    .Skip(parameters.Start)
-                    .Take(parameters.Length)
                     .ToListAsync(cancellationToken);
 
                 return Json(new
