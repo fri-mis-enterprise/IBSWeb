@@ -71,12 +71,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     queried = queried
                     .Where(s =>
                         s.TermsCode.ToLower().Contains(searchValue) ||
-                        s.NumberOfDays.ToString("N0").Contains(searchValue) ||
-                        s.NumberOfMonths.ToString("N0").Contains(searchValue)
+                        s.NumberOfDays.ToString().Contains(searchValue) ||
+                        s.NumberOfMonths.ToString().Contains(searchValue)
                         );
                 }
-
-                var projectedQuery = await queried.ToListAsync(cancellationToken);
 
                 // Sorting
                 if (parameters.Order?.Count > 0)
@@ -84,17 +82,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var orderColumn = parameters.Order[0];
                     var columnName = parameters.Columns[orderColumn.Column].Data;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
-                    projectedQuery = projectedQuery
-                        .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
+
+                    queried = queried
+                        .OrderBy($"{columnName} {sortDirection}") ;
                 }
 
-                var totalRecords = projectedQuery.Count();
-                var pagedData = projectedQuery
+                var totalRecords = await queried.CountAsync(cancellationToken);
+                var pagedData = await queried
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
