@@ -6618,6 +6618,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .OrderBy(rr => rr.Date)
                     .ToList();
 
+                var rrWithIOCForAccountOfMMSI = receivingReportsThisMonth
+                    .Where(rr =>
+                        rr.PurchaseOrder!.SupplierId == 182)
+                    .OrderBy(rr => rr.Date)
+                    .ToList();
+
                 #endregion == Initializations ==
 
                 #region == Contents ==
@@ -7156,6 +7162,150 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     totalGmAmount = 0m;
 
                     foreach (var receivingReport in inTransitNowToNextMonth)
+                    {
+                        var quantityServed = receivingReport.QuantityReceived;
+                        var salesAmount = receivingReport.DeliveryReceipt!.TotalAmount;
+                        var salesAmountVatEx = salesAmount / 1.12m;
+                        var salesPerLiterVatEx = salesAmountVatEx / quantityServed;
+                        var costAmount = receivingReport.Amount;
+                        var costAmountVatEx = costAmount / 1.12m;
+                        var costPerLiterVatEx = costAmountVatEx / quantityServed;
+                        var freightAmount = receivingReport.DeliveryReceipt!.FreightAmount;
+                        var freightAmountEx = freightAmount / 1.12m;
+                        var freightPerLiterEx = freightAmountEx / quantityServed;
+                        var commissionAmount = receivingReport.DeliveryReceipt!.CommissionAmount;
+                        var commissionPerLiter = commissionAmount / quantityServed;
+                        var gmAmount = salesAmountVatEx - costAmountVatEx - freightAmountEx - commissionAmount;
+                        var gmPerLiter = gmAmount / quantityServed;
+
+                        // SUBTOTAL BY SEGMENT
+                        worksheet.Cells[row, 2].Value = receivingReport.Date.ToString("MM/dd/yyyy");
+                        worksheet.Cells[row, 3].Value = receivingReport.DeliveryReceipt!.DeliveredDate?.ToString("MM/dd/yyyy");
+                        worksheet.Cells[row, 4].Value = receivingReport.DeliveryReceipt.Customer!.CustomerType;
+                        worksheet.Cells[row, 5].Value = receivingReport.PurchaseOrder!.Supplier!.SupplierName;
+                        worksheet.Cells[row, 6].Value = receivingReport.PurchaseOrder!.PurchaseOrderNo;
+                        worksheet.Cells[row, 7].Value = receivingReport.ReceivingReportNo;
+                        worksheet.Cells[row, 8].Value = receivingReport.DeliveryReceipt.DeliveryReceiptNo;
+                        worksheet.Cells[row, 9].Value = receivingReport.DeliveryReceipt.Customer.CustomerName;
+                        worksheet.Cells[row, 10].Value = receivingReport.PurchaseOrder.Product!.ProductName;
+                        worksheet.Cells[row, 11].Value = quantityServed;
+                        worksheet.Cells[row, 12].Value = salesAmount;
+                        worksheet.Cells[row, 13].Value = salesAmountVatEx;
+                        worksheet.Cells[row, 14].Value = salesPerLiterVatEx;
+                        worksheet.Cells[row, 15].Value = costAmount;
+                        worksheet.Cells[row, 16].Value = costAmountVatEx;
+                        worksheet.Cells[row, 17].Value = commissionPerLiter;
+                        worksheet.Cells[row, 18].Value = freightAmount;
+                        worksheet.Cells[row, 19].Value = freightAmountEx;
+                        worksheet.Cells[row, 20].Value = freightPerLiterEx;
+                        worksheet.Cells[row, 21].Value = commissionAmount;
+                        worksheet.Cells[row, 22].Value = commissionPerLiter;
+                        worksheet.Cells[row, 23].Value = gmAmount;
+                        worksheet.Cells[row, 24].Value = gmPerLiter;
+
+                        // styling
+                        using (var range = worksheet.Cells[row, 11, row, 23])
+                        {
+                            range.Style.Numberformat.Format = currencyFormatTwoDecimal;
+                        }
+                        fourDecimalColumnsGrandTotal = [14, 17, 20, 22, 24];
+                        foreach (var column in fourDecimalColumnsGrandTotal)
+                        {
+                            worksheet.Cells[row, column].Style.Numberformat.Format = currencyFormatFourDecimal;
+                        }
+
+                        row++;
+                        totalQuantityServed += quantityServed;
+                        totalSalesAmount += salesAmount;
+                        totalSalesAmountVatEx += salesAmountVatEx;
+                        totalCostAmount += costAmount;
+                        totalCostAmountVatEx += costAmountVatEx;
+                        totalFreightAmount += freightAmount;
+                        totalFreightAmountEx += freightAmountEx;
+                        totalCommissionAmount += commissionAmount;
+                        totalGmAmount += gmAmount;
+                    }
+
+                    row++;
+
+                    worksheet.Cells[row, 10].Value = "Sub-total";
+                    worksheet.Cells[row, 11].Value = totalQuantityServed;
+                    worksheet.Cells[row, 12].Value = totalSalesAmount;
+                    worksheet.Cells[row, 13].Value = totalSalesAmountVatEx;
+                    worksheet.Cells[row, 14].Value = totalSalesAmountVatEx / totalQuantityServed;
+                    worksheet.Cells[row, 15].Value = totalCostAmount;
+                    worksheet.Cells[row, 16].Value = totalCostAmountVatEx;
+                    worksheet.Cells[row, 17].Value = totalCostAmountVatEx / totalQuantityServed;
+                    worksheet.Cells[row, 18].Value = totalFreightAmount;
+                    worksheet.Cells[row, 19].Value = totalFreightAmountEx;
+                    worksheet.Cells[row, 20].Value = totalFreightAmountEx / totalQuantityServed;
+                    worksheet.Cells[row, 21].Value = totalCommissionAmount;
+                    worksheet.Cells[row, 22].Value = totalCommissionAmount / totalQuantityServed;
+                    worksheet.Cells[row, 23].Value = totalGmAmount;
+                    worksheet.Cells[row, 24].Value = totalGmAmount / totalQuantityServed;
+
+                    // styling
+                    using (var range = worksheet.Cells[row, 11, row, 23])
+                    {
+                        range.Style.Numberformat.Format = currencyFormatTwoDecimal;
+                    }
+                    fourDecimalColumnsGrandTotal = [14, 17, 20, 22, 24];
+                    foreach (var column in fourDecimalColumnsGrandTotal)
+                    {
+                        worksheet.Cells[row, column].Style.Numberformat.Format = currencyFormatFourDecimal;
+                    }
+                    using (var range = worksheet.Cells[row, 11, row, 24])
+                    {
+                        range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                        range.Style.Border.Bottom.Style = ExcelBorderStyle.Double;
+                    }
+                    using (var range = worksheet.Cells[row, 10, row, 24])
+                    {
+                        range.Style.Font.Bold = true;
+                    }
+                }
+
+                if (rrWithIOCForAccountOfMMSI.Count != 0)
+                {
+                    row += 2;
+
+                    // SEGMENT TITLE
+                    worksheet.Cells[row, 2].Value = "III. Breakdown of Trading Fee to MMSI";
+                    worksheet.Cells[row, 2].Style.Font.Color.SetColor(Color.Red);
+                    worksheet.Cells[row, 2].Style.Font.Bold = true;
+
+                    row++;
+                    col = 2;
+
+                    // SEGMENT COLUMN NAMES
+                    foreach (var columnName in breakdownColumnNames)
+                    {
+                        worksheet.Cells[row, col].Value = columnName;
+                        worksheet.Cells[row, col].Style.WrapText = true;
+                        col++;
+                    }
+                    // styling
+                    worksheet.Row(row).Height = 30;
+                    using (var range = worksheet.Cells[row, 2, row, 24])
+                    {
+                        range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                        range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                        range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+                        range.Style.Font.Bold = true;
+                    }
+
+                    row++;
+                    totalQuantityServed = 0m;
+                    totalSalesAmount = 0m;
+                    totalSalesAmountVatEx = 0m;
+                    totalCostAmount = 0m;
+                    totalCostAmountVatEx = 0m;
+                    totalFreightAmount = 0m;
+                    totalFreightAmountEx = 0m;
+                    totalCommissionAmount = 0m;
+                    totalGmAmount = 0m;
+
+                    foreach (var receivingReport in rrWithIOCForAccountOfMMSI)
                     {
                         var quantityServed = receivingReport.QuantityReceived;
                         var salesAmount = receivingReport.DeliveryReceipt!.TotalAmount;
