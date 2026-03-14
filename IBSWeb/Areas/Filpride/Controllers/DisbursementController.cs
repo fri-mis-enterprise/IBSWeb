@@ -74,6 +74,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                x.PostedBy != null &&
                                x.Company == companyClaims);
 
+                var totalRecords = await disbursements.CountAsync(cancellationToken);
+
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -130,7 +132,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .OrderBy($"{columnName} {sortDirection}") ;
                 }
 
-                var totalRecords = await disbursements.CountAsync(cancellationToken);
+                var totalFilteredRecords = await disbursements.CountAsync(cancellationToken);
 
                 var pagedData = await disbursements
                     .Skip(parameters.Start)
@@ -141,7 +143,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }

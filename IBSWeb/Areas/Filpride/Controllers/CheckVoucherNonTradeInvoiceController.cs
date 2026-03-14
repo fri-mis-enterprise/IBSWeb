@@ -141,6 +141,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                   cvh.CvType == nameof(CVType.Invoicing) &&
                                   !cvh.IsPayroll);
 
+                var totalRecords = await checkVoucher.CountAsync(cancellationToken);
+
                 // Apply status filter based on filterType
                 if (!string.IsNullOrEmpty(filterTypeClaim) && filterTypeClaim == "ForApproval")
                 {
@@ -184,7 +186,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .OrderBy($"{columnName} {sortDirection}") ;
                 }
 
-                var totalRecords = await checkVoucher.CountAsync(cancellationToken);
+                var totalFilteredRecords = await checkVoucher.CountAsync(cancellationToken);
 
                 var pagedData = await checkVoucher
                     .Skip(parameters.Start)
@@ -210,7 +212,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }

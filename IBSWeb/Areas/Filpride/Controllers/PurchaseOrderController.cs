@@ -116,6 +116,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .GetAllQuery(cancellationToken)
                     .Where(po => po.Company == companyClaims);
 
+                var totalRecords = await purchaseOrders.CountAsync(cancellationToken);
+
                 if (!string.IsNullOrEmpty(filterTypeClaim))
                 {
                     purchaseOrders = purchaseOrders
@@ -170,7 +172,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = await purchaseOrders.CountAsync(cancellationToken);
+                var totalFilteredRecords = await purchaseOrders.CountAsync(cancellationToken);
 
                 var pagedData = await purchaseOrders
                     .Skip(parameters.Start)
@@ -206,7 +208,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }
