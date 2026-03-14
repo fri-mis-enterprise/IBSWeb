@@ -99,6 +99,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Where(x => x.Company == companyClaims
                                 && x.CvType == nameof(CVType.Payment));
 
+                var totalRecords = await checkVoucherHeaders.CountAsync(cancellationToken);
+
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -132,7 +134,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = await checkVoucherHeaders.CountAsync(cancellationToken);
+                var totalFilteredRecords = await checkVoucherHeaders.CountAsync(cancellationToken);
 
                 var pagedData = await checkVoucherHeaders
                     .Skip(parameters.Start)
@@ -143,7 +145,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }

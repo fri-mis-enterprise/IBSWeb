@@ -119,6 +119,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .GetAllQuery(cancellationToken)
                     .Where(x => x.Company == companyClaims);
 
+                var totalRecords = await journalVoucherHeader.CountAsync(cancellationToken);
+
                 // Apply status filter based on filterType
                 if (!string.IsNullOrEmpty(filterTypeClaim))
                 {
@@ -164,7 +166,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .OrderBy($"{columnName} {sortDirection}") ;
                 }
 
-                var totalRecords = await journalVoucherHeader.CountAsync(cancellationToken);
+                var totalFilteredRecords = await journalVoucherHeader.CountAsync(cancellationToken);
 
                 var pagedData = await journalVoucherHeader
                     .Skip(parameters.Start)
@@ -175,7 +177,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }

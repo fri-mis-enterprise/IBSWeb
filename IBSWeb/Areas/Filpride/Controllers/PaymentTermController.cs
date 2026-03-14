@@ -63,6 +63,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var queried = _unitOfWork.FilprideTerms
                     .GetAllQuery(cancellationToken);
 
+                var totalRecords = await queried.CountAsync(cancellationToken);
+
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -87,7 +89,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .OrderBy($"{columnName} {sortDirection}") ;
                 }
 
-                var totalRecords = await queried.CountAsync(cancellationToken);
+                var totalFilteredRecords = await queried.CountAsync(cancellationToken);
                 var pagedData = await queried
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
@@ -97,7 +99,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }

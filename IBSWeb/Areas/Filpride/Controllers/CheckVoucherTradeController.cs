@@ -102,6 +102,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .GetAllQuery(cancellationToken)
                     .Where(cv => cv.Company == companyClaims && cv.Category == "Trade");
 
+                var totalRecords = await checkVoucherHeaders.CountAsync(cancellationToken);
+
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -137,7 +139,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = await checkVoucherHeaders.CountAsync(cancellationToken);
+                var totalFilteredRecords = await checkVoucherHeaders.CountAsync(cancellationToken);
 
                 var pagedData = await checkVoucherHeaders
                     .Skip(parameters.Start)
@@ -148,7 +150,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }
@@ -606,7 +608,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Where(cvp => cvp.CheckVoucherId == cvId && cvp.DocumentType == "RR")
                     .Select(cvp => cvp.DocumentId)
                     .ToListAsync(cancellationToken);
-                
+
                 rrAmountPaidById = await _dbContext.FilprideCVTradePayments
                     .Where(cvp => cvp.CheckVoucherId == cvId && cvp.DocumentType == "RR")
                     .GroupBy(cvp => cvp.DocumentId)

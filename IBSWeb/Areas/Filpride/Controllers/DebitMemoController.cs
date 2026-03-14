@@ -80,6 +80,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .GetAllQuery(cancellationToken)
                     .Where(x => x.Company == companyClaims);
 
+                var totalRecords = await debitMemos.CountAsync(cancellationToken);
+
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -114,7 +116,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = await debitMemos.CountAsync(cancellationToken);
+                var totalFilteredRecords = await debitMemos.CountAsync(cancellationToken);
 
                 var pagedData = await debitMemos
                     .Skip(parameters.Start)
@@ -125,7 +127,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }

@@ -196,6 +196,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var chartOfAccounts = _unitOfWork.FilprideChartOfAccount
                     .GetAllQuery(cancellationToken: cancellationToken);
 
+                var totalRecords = await chartOfAccounts.CountAsync(cancellationToken);
+
                 // Apply date range filter if provided (using CreatedDate)
                 if (dateFrom.HasValue)
                 {
@@ -239,7 +241,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = await chartOfAccounts.CountAsync(cancellationToken);
+                var totalFilteredRecords = await chartOfAccounts.CountAsync(cancellationToken);
 
                 // Apply pagination - HANDLE -1 FOR "ALL"
                 IQueryable<FilprideChartOfAccount> pagedChartOfAccounts;
@@ -274,7 +276,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }
