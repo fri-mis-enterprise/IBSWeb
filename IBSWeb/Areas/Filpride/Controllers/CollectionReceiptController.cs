@@ -2926,7 +2926,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 throw new ArgumentException("Company claims not found!");
             }
 
-            using var reader = new StreamReader(@"C:\Users\Administrator\Downloads\SINGLE-INVOICE-AUGUST-2024-NOVEMBER-2025_1.csv");
+            using var reader = new StreamReader(@"C:\Users\Administrator\Documents\SINGLE INVOICE AUGUST 2024 - NOVEMBER 2025_1.csv");
             using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
             var records = csv.GetRecords<UploadCsvForSingleInvoiceViewModel>().OrderBy(x => x.TransactionDate).ToList();
 
@@ -2991,7 +2991,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     model.Add(
                         new FilprideCollectionReceipt
                         {
-                            CollectionReceiptNo = string.Empty,
+                            CollectionReceiptNo = Guid.NewGuid().ToString("N").Substring(0, 13),
                             SalesInvoiceId = getSalesInvoice.SalesInvoiceId,
                             SINo = getSalesInvoice.SalesInvoiceNo,
                             CustomerId = getSalesInvoice.CustomerId,
@@ -3096,7 +3096,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            using var reader = new StreamReader(@"C:\Users\Administrator\Downloads\MULTI-INVOICE-AUGUST-2024-NOVEMBER-2025_1.csv");
+            using var reader = new StreamReader(@"C:\Users\Administrator\Documents\MULTI INVOICE AUGUST 2024 - NOVEMBER 2025_1.csv");
             using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
             var records = csv.GetRecords<UploadCsvForMultipleInvoiceViewModel>().ToList();
 
@@ -3224,7 +3224,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     model.Add(
                         new FilprideCollectionReceipt
                         {
-                            CollectionReceiptNo = string.Empty,
+                            CollectionReceiptNo = Guid.NewGuid().ToString("N").Substring(0, 13),
                             TransactionDate = cr.Select(x => x.TransactionDate).FirstOrDefault(),
                             CustomerId = customerId,
                             ReferenceNo = cr.Select(x => x.ReferenceNo).FirstOrDefault() ?? string.Empty,
