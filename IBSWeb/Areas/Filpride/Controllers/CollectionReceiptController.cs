@@ -1,35 +1,34 @@
-using System.Diagnostics;
-using System.Globalization;
+using CsvHelper;
+using Humanizer;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
 using IBS.Models;
+using IBS.Models.Enums;
 using IBS.Models.Filpride;
 using IBS.Models.Filpride.AccountsReceivable;
 using IBS.Models.Filpride.Books;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using OfficeOpenXml;
-using System.Linq.Dynamic.Core;
-using System.Security.Claims;
-using System.Text;
-using IBS.Models.Enums;
-using System.Text.Json;
-using CsvHelper;
-using Humanizer;
 using IBS.Models.Filpride.ViewModels;
 using IBS.Services;
 using IBS.Services.Attributes;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
+using OfficeOpenXml;
+using System.Diagnostics;
+using System.Globalization;
+using System.Linq.Dynamic.Core;
+using System.Security.Claims;
+using System.Text;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
     [CompanyAuthorize(nameof(Filpride))]
-    [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
+    [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_Finance, SD.Department_RCD)]
     public class CollectionReceiptController : Controller
     {
         private readonly ApplicationDbContext _dbContext;
@@ -91,7 +90,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
 
             return View("ExportIndex");
-
         }
 
         public async Task<IActionResult> ServiceInvoiceIndex()
@@ -127,6 +125,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             .Where(s => s.SalesInvoiceId != null || s.MultipleSIId != null)
                             .ToList();
                         break;
+
                     case "Service":
                         collectionReceipts = collectionReceipts
                             .Where(s => s.ServiceInvoiceId != null)
@@ -182,7 +181,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         c.CanceledBy,
                         c.MultipleSIId,
                         c.DepositedDate,
-
                     })
                     .ToList();
 
@@ -218,6 +216,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
         [HttpGet]
         public async Task<IActionResult> SingleCollectionCreateForSales(CancellationToken cancellationToken)
         {
@@ -312,7 +311,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     await _unitOfWork.FilprideCollectionReceipt.ApplyCostOfMoney(dr, costOfMoney,
                         GetUserFullName(), depositDate, cancellationToken);
-
                 }
 
                 #region --Audit Trail Recording
@@ -489,6 +487,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
         [HttpGet]
         public async Task<IActionResult> MultipleCollectionCreateForSales(CancellationToken cancellationToken)
         {
@@ -673,6 +672,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
         [HttpGet]
         public async Task<IActionResult> MultipleCollectionEdit(int? id, CancellationToken cancellationToken)
         {
@@ -904,7 +904,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     existingModel.MultipleTransactionDate[i] = salesInvoice.TransactionDate;
                     existingModel.SIMultipleAmount[i] = viewModel.SIMultipleAmount[i];
 
-                    details.Add(new  FilprideCollectionReceiptDetail
+                    details.Add(new FilprideCollectionReceiptDetail
                     {
                         CollectionReceiptId = existingModel.CollectionReceiptId,
                         CollectionReceiptNo = existingModel.CollectionReceiptNo!,
@@ -961,6 +961,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
         [HttpGet]
         public async Task<IActionResult> CreateForService(CancellationToken cancellationToken)
         {
@@ -1424,6 +1425,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
         [HttpGet]
         public async Task<IActionResult> EditForSales(int? id, CancellationToken cancellationToken)
         {
@@ -1685,6 +1687,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
         [HttpGet]
         public async Task<IActionResult> EditForService(int? id, CancellationToken cancellationToken)
         {
@@ -1948,6 +1951,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
         public async Task<IActionResult> Post(int id, CancellationToken cancellationToken)
         {
             var model = await _unitOfWork.FilprideCollectionReceipt
@@ -2005,7 +2009,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 TempData["error"] = ex.Message;
                 return RedirectToAction(nameof(Index));
             }
-
         }
 
         [Authorize(Roles = "Admin")]
@@ -2072,9 +2075,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 TempData["error"] = ex.Message;
             }
             return RedirectToAction(nameof(Index));
-
         }
 
+        [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
         public async Task<IActionResult> Cancel(int id, string? cancellationRemarks, CancellationToken cancellationToken)
         {
             var model = await _unitOfWork.FilprideCollectionReceipt
@@ -2267,6 +2270,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
 
             #endregion --Audit Trail Recording
+
             return RedirectToAction(nameof(MultipleCollectionPrint), new { id });
         }
 
@@ -2292,6 +2296,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             using (var package = new ExcelPackage())
             {
                 // Add a new worksheet to the Excel package
+
                 #region -- Sales Invoice Table Header --
 
                 var worksheet3 = package.Workbook.Worksheets.Add("SalesInvoice");
@@ -2752,6 +2757,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
         [HttpGet]
         public async Task<IActionResult> ApplyClearingDate(int id, DateOnly clearingDate, CancellationToken cancellationToken)
         {
@@ -2921,6 +2927,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return RedirectToAction(nameof(Index));
             }
         }
+
         public async Task<IActionResult> UploadCsvForSingleInvoice(CancellationToken cancellationToken)
         {
             var companyClaims = await GetCompanyClaimAsync();
@@ -2984,7 +2991,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     // Working hours: 8:30 AM to 7:00 PM
                     var start = new TimeSpan(8, 30, 0);
-                    var end   = new TimeSpan(19, 0, 0);
+                    var end = new TimeSpan(19, 0, 0);
 
                     // Compute random time inside the range
                     var range = end - start;
@@ -2992,9 +2999,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     #region --Saving default value
 
-                        model.Add(
-                            new FilprideCollectionReceipt
-                            {
+                    model.Add(
+                        new FilprideCollectionReceipt
+                        {
                             CollectionReceiptNo = string.Empty,
                             SalesInvoiceId = getSalesInvoice.SalesInvoiceId,
                             SINo = getSalesInvoice.SalesInvoiceNo,
@@ -3004,15 +3011,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             Remarks = record.Remarks,
                             CashAmount = record.CashAmount,
                             CheckDate = record.CheckDate != DateOnly.MinValue
-                                ? record.CheckDate
-                                : null,
+                            ? record.CheckDate
+                            : null,
                             CheckNo = record.CheckNo,
                             CheckBank = record.CheckBank,
                             CheckBranch = record.CheckBranch,
                             CheckAmount = record.CheckAmount,
                             ManagersCheckDate = record.ManagersCheckDate != DateOnly.MinValue
-                                ? record.ManagersCheckDate
-                                : null,
+                            ? record.ManagersCheckDate
+                            : null,
                             ManagersCheckNo = record.ManagersCheckNo,
                             ManagersCheckBank = record.ManagersCheckBank,
                             ManagersCheckBranch = record.ManagersCheckBranch,
@@ -3027,21 +3034,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             BatchNumber = record.BatchNumber
                         });
 
-                        var netDiscount = getSalesInvoice.Amount - getSalesInvoice.Discount;
+                    var netDiscount = getSalesInvoice.Amount - getSalesInvoice.Discount;
 
-                        getSalesInvoice.AmountPaid += total;
-                        getSalesInvoice.Balance = netDiscount - getSalesInvoice.AmountPaid;
+                    getSalesInvoice.AmountPaid += total;
+                    getSalesInvoice.Balance = netDiscount - getSalesInvoice.AmountPaid;
 
-                        if (getSalesInvoice.Balance == 0 && getSalesInvoice.AmountPaid == netDiscount)
-                        {
-                            getSalesInvoice.IsPaid = true;
-                            getSalesInvoice.PaymentStatus = "Paid";
-                        }
-                        else if (getSalesInvoice.AmountPaid > netDiscount)
-                        {
-                            getSalesInvoice.IsPaid = true;
-                            getSalesInvoice.PaymentStatus = "OverPaid";
-                        }
+                    if (getSalesInvoice.Balance == 0 && getSalesInvoice.AmountPaid == netDiscount)
+                    {
+                        getSalesInvoice.IsPaid = true;
+                        getSalesInvoice.PaymentStatus = "Paid";
+                    }
+                    else if (getSalesInvoice.AmountPaid > netDiscount)
+                    {
+                        getSalesInvoice.IsPaid = true;
+                        getSalesInvoice.PaymentStatus = "OverPaid";
+                    }
 
                     #endregion --Saving default value
                 }
@@ -3069,7 +3076,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 var fileContent = new StringBuilder();
                 fileContent.AppendLine($"duration of uploading single collection:{timer.Elapsed}");
-                fileContent.AppendLine($"{"Sales Invoice No", -17}\t{"OR Number", -12}\t{"Problem"}");
+                fileContent.AppendLine($"{"Sales Invoice No",-17}\t{"OR Number",-12}\t{"Problem"}");
                 foreach (var record in listOfNeedToCorrect)
                 {
                     fileContent.AppendLine($"{record.salesInvoiceNo}\t{record.OrNumber}\t{record.problem}\t{record.customerName}\t{record.transactionDate}");
@@ -3228,44 +3235,43 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     model.Add(
                         new FilprideCollectionReceipt
                         {
-                        CollectionReceiptNo = string.Empty,
-                        TransactionDate = cr.Select(x => x.TransactionDate).FirstOrDefault(),
-                        CustomerId = customerId,
-                        ReferenceNo = cr.Select(x => x.ReferenceNo).FirstOrDefault() ?? string.Empty,
-                        Remarks = cr.Select(x => x.Remarks).FirstOrDefault().Truncate(100),
-                        CashAmount = cr.Select(x => x.CashAmount).FirstOrDefault(),
-                        CheckAmount = cr.Select(x => x.CheckAmount).FirstOrDefault(),
-                        CheckNo = cr.Select(x => x.CheckNo).FirstOrDefault(),
-                        CheckBranch = cr.Select(x => x.CheckBranch).FirstOrDefault(),
-                        CheckDate = cr.Select(x => x.CheckDate).FirstOrDefault() != DateOnly.Parse("0001-01-01")
+                            CollectionReceiptNo = string.Empty,
+                            TransactionDate = cr.Select(x => x.TransactionDate).FirstOrDefault(),
+                            CustomerId = customerId,
+                            ReferenceNo = cr.Select(x => x.ReferenceNo).FirstOrDefault() ?? string.Empty,
+                            Remarks = cr.Select(x => x.Remarks).FirstOrDefault().Truncate(100),
+                            CashAmount = cr.Select(x => x.CashAmount).FirstOrDefault(),
+                            CheckAmount = cr.Select(x => x.CheckAmount).FirstOrDefault(),
+                            CheckNo = cr.Select(x => x.CheckNo).FirstOrDefault(),
+                            CheckBranch = cr.Select(x => x.CheckBranch).FirstOrDefault(),
+                            CheckDate = cr.Select(x => x.CheckDate).FirstOrDefault() != DateOnly.Parse("0001-01-01")
                             ? cr.Select(x => x.CheckDate).FirstOrDefault()
                             : null,
-                        CheckBank = cr.Select(x => x.CheckBank).FirstOrDefault(),
-                        ManagersCheckDate = cr.Select(x => x.ManagersCheckDate).FirstOrDefault() !=
+                            CheckBank = cr.Select(x => x.CheckBank).FirstOrDefault(),
+                            ManagersCheckDate = cr.Select(x => x.ManagersCheckDate).FirstOrDefault() !=
                                             DateOnly.Parse("0001-01-01")
                             ? cr.Select(x => x.ManagersCheckDate).FirstOrDefault()
                             : null,
-                        ManagersCheckNo = cr.Select(x => x.ManagersCheckNo).FirstOrDefault(),
-                        ManagersCheckBank = cr.Select(x => x.ManagersCheckBank).FirstOrDefault(),
-                        ManagersCheckBranch = cr.Select(x => x.ManagersCheckBranch).FirstOrDefault(),
-                        ManagersCheckAmount = cr.Select(x => x.ManagersCheckAmount).FirstOrDefault(),
-                        EWT = cr.Select(x => x.EWT).FirstOrDefault(),
-                        WVAT = cr.Select(x => x.WVAT).FirstOrDefault(),
-                        Total = total,
-                        CreatedBy = "JAMES MATTHEW B. CASTILLEJO",
-                        CreatedDate = cr.Select(x => x.TransactionDate).FirstOrDefault()
+                            ManagersCheckNo = cr.Select(x => x.ManagersCheckNo).FirstOrDefault(),
+                            ManagersCheckBank = cr.Select(x => x.ManagersCheckBank).FirstOrDefault(),
+                            ManagersCheckBranch = cr.Select(x => x.ManagersCheckBranch).FirstOrDefault(),
+                            ManagersCheckAmount = cr.Select(x => x.ManagersCheckAmount).FirstOrDefault(),
+                            EWT = cr.Select(x => x.EWT).FirstOrDefault(),
+                            WVAT = cr.Select(x => x.WVAT).FirstOrDefault(),
+                            Total = total,
+                            CreatedBy = "JAMES MATTHEW B. CASTILLEJO",
+                            CreatedDate = cr.Select(x => x.TransactionDate).FirstOrDefault()
                             .ToDateTime(TimeOnly.FromTimeSpan(randomTime)),
-                        Company = companyClaims,
-                        Type = cr.Select(x => x.Type).FirstOrDefault(),
-                        BatchNumber = cr.Select(x => x.BatchNumber).FirstOrDefault() ?? string.Empty,
-                        MultipleSIId = invoiceId.ToArray(),
-                        MultipleSI = invoiceNos.ToArray(),
-                        SIMultipleAmount = invoiceAmounts.ToArray(),
-                        MultipleTransactionDate = invoiceTranDate.ToArray()
-                    });
+                            Company = companyClaims,
+                            Type = cr.Select(x => x.Type).FirstOrDefault(),
+                            BatchNumber = cr.Select(x => x.BatchNumber).FirstOrDefault() ?? string.Empty,
+                            MultipleSIId = invoiceId.ToArray(),
+                            MultipleSI = invoiceNos.ToArray(),
+                            SIMultipleAmount = invoiceAmounts.ToArray(),
+                            MultipleTransactionDate = invoiceTranDate.ToArray()
+                        });
 
                     #endregion --Saving default value
-
                 }
                 await _dbContext.FilprideCollectionReceipts.AddRangeAsync(model, cancellationToken);
                 await _dbContext.SaveChangesAsync(cancellationToken);
