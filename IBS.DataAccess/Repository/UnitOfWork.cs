@@ -8,8 +8,6 @@ using IBS.DataAccess.Repository.Filpride.IRepository;
 using IBS.DataAccess.Repository.IRepository;
 using IBS.DataAccess.Repository.MasterFile;
 using IBS.DataAccess.Repository.MasterFile.IRepository;
-using IBS.DataAccess.Repository.MMSI;
-using IBS.DataAccess.Repository.MMSI.IRepository;
 using IBS.DataAccess.Repository.Mobility;
 using IBS.DataAccess.Repository.Mobility.IRepository;
 using IBS.Models.Enums;
@@ -210,27 +208,6 @@ namespace IBS.DataAccess.Repository
 
         #endregion
 
-        #region --MMSI
-
-        public IMsapRepository Msap { get; private set; }
-        public IServiceRequestRepository ServiceRequest { get; private set; }
-        public IDispatchTicketRepository DispatchTicket { get; private set; }
-        public IBillingRepository Billing { get; private set; }
-        public ICollectionRepository Collection { get; private set; }
-        public IMMSIReportRepository MMSIReport { get; private set; }
-        public ITariffTableRepository TariffTable { get; private set; }
-        public IPortRepository Port { get; private set; }
-        public IPrincipalRepository Principal { get; private set; }
-        public MMSI.IRepository.IServiceRepository Service { get; private set; }
-        public ITerminalRepository Terminal { get; private set; }
-        public ITugboatRepository Tugboat { get; private set; }
-        public ITugMasterRepository TugMaster { get; private set; }
-        public ITugboatOwnerRepository TugboatOwner { get; private set; }
-        public IUserAccessRepository UserAccess { get; private set; }
-        public IVesselRepository Vessel { get; private set; }
-
-        #endregion
-
         public UnitOfWork(ApplicationDbContext db)
         {
             _db = db;
@@ -317,27 +294,6 @@ namespace IBS.DataAccess.Repository
             FilprideService = new Filpride.ServiceRepository(_db);
 
             #endregion
-
-            #endregion
-
-            #region --MMSI
-
-            Billing = new BillingRepository(_db);
-            Collection = new CollectionRepository(_db);
-            DispatchTicket = new DispatchTicketRepository(_db);
-            MMSIReport = new MMSIReportRepository(_db);
-            Msap = new MsapRepository(_db);
-            Port = new PortRepository(_db);
-            Principal = new PrincipalRepository(_db);
-            Service = new MMSI.ServiceRepository(_db);
-            ServiceRequest = new ServiceRequestRepository(_db);
-            TariffTable = new TariffTableRepository(_db);
-            Terminal = new TerminalRepository(_db);
-            Tugboat = new TugboatRepository(_db);
-            TugMaster = new TugMasterRepository(_db);
-            TugboatOwner = new TugboatOwnerRepository(_db);
-            UserAccess = new UserAccessRepository(_db);
-            Vessel = new VesselRepository(_db);
 
             #endregion
 
@@ -525,7 +481,6 @@ namespace IBS.DataAccess.Repository
                 nameof(Filpride) => Expression.Property(param, "IsFilpride"),
                 nameof(Mobility) => Expression.Property(param, "IsMobility"),
                 nameof(Bienes) => Expression.Property(param, "IsBienes"),
-                nameof(MMSI) => Expression.Property(param, "IsMMSI"),
                 _ => Expression.Constant(false)
             };
 
