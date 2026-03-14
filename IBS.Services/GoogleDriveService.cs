@@ -12,8 +12,11 @@ namespace IBS.Services
     public interface IGoogleDriveService
     {
         Task<string> UploadFileAsync(Stream fileStream, string fileName, string folderId, string mimeType);
+
         Task<GoogleDriveFileViewModel> DownloadFileAsync(string fileId);
+
         Task<GoogleDriveFileViewModel> GetFileByNameAsync(string fileName, string folderId);
+
         Task DeleteFileAsync(string? fileId);
     }
 
@@ -216,7 +219,6 @@ namespace IBS.Services
 
             try
             {
-                // Execute the delete request
                 await _driveService.Files.Delete(fileId).ExecuteAsync();
                 _logger.LogInformation($"Successfully deleted file with ID '{fileId}' from Google Drive.");
             }

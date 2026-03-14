@@ -3,21 +3,20 @@ using IBS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Quartz;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
     [Authorize(Roles = "Admin")]
-    public class MonthlyCloseController : Controller
+    public class MonthlyPeriodController : Controller
     {
-        private readonly ILogger<MonthlyCloseController> _logger;
+        private readonly ILogger<MonthlyPeriodController> _logger;
 
         private readonly IMonthlyClosureService _monthlyClosureService;
 
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public MonthlyCloseController(ILogger<MonthlyCloseController> logger,
+        public MonthlyPeriodController(ILogger<MonthlyPeriodController> logger,
             IMonthlyClosureService monthlyClosureService,
             UserManager<ApplicationUser> userManager)
         {
@@ -45,6 +44,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> TriggerMonthlyClosure(DateOnly monthDate, CancellationToken cancellationToken)
         {
             var companyClaim = await GetCompanyClaimAsync();
@@ -56,7 +56,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                await _monthlyClosureService.Execute(monthDate, companyClaim, User.Identity!.Name!, cancellationToken);
+                await _monthlyClosureService.CloseAsync(monthDate, companyClaim, User.Identity!.Name!, cancellationToken);
 
                 TempData["success"] = $"Month of {monthDate:MMM yyyy} closed successfully.";
                 return RedirectToAction(nameof(Index));
@@ -69,5 +69,30 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> TriggerMonthlyOpening(DateOnly monthDate, CancellationToken cancellationToken)
+        {
+            var companyClaim = await GetCompanyClaimAsync();
+
+            if (companyClaim == null)
+            {
+                return BadRequest();
+            }
+
+            try
+            {
+                await _monthlyClosureService.OpenAsync(monthDate, companyClaim, User.Identity!.Name!, cancellationToken);
+
+                TempData["success"] = $"Month of {monthDate:MMM yyyy} opened successfully.";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                TempData["error"] = ex.Message;
+                _logger.LogError(ex, "Failed to open period. Open by: {Username}", User.Identity!.Name);
+                return RedirectToAction(nameof(Index));
+            }
+        }
     }
 }
