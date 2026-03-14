@@ -115,8 +115,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
                 var filterTypeClaim = await GetCurrentFilterType();
 
-                var query = await _unitOfWork.FilprideJournalVoucher
-                    .GetAllAsync(jv => jv.Company == companyClaims, cancellationToken);
+                var journalVoucherHeader = _unitOfWork.FilprideJournalVoucher
+                    .GetAllQuery(cancellationToken)
+                    .Where(x => x.Company == companyClaims);
+
+                var totalRecords = await journalVoucherHeader.CountAsync(cancellationToken);
 
                 // Apply status filter based on filterType
                 if (!string.IsNullOrEmpty(filterTypeClaim))
@@ -124,40 +127,32 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     switch (filterTypeClaim)
                     {
                         case "ForApproval":
-                            query = query.Where(jv => jv.Status == nameof(JvStatus.ForApproval));
+                            journalVoucherHeader = journalVoucherHeader.Where(jv => jv.Status == nameof(JvStatus.ForApproval));
                             break;
                     }
                 }
-
-                var journalVoucherHeader = query.ToList();
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasDate = DateOnly.TryParse(searchValue, out var date);
 
                     journalVoucherHeader = journalVoucherHeader
                     .Where(s =>
                         s.JournalVoucherHeaderNo!.ToLower().Contains(searchValue) ||
-                        s.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
-                        s.References?.Contains(searchValue) == true ||
-                        s.CheckVoucherHeader?.CheckVoucherHeaderNo!.ToLower().Contains(searchValue) == true ||
+                        (hasDate && s.Date == date) ||
+                        s.References!.ToLower().Contains(searchValue) == true ||
+                        s.CheckVoucherHeader!.CheckVoucherHeaderNo!.ToLower().Contains(searchValue) == true ||
                         s.Particulars.ToLower().Contains(searchValue) ||
-                        s.CRNo?.ToLower().Contains(searchValue) == true ||
-                        s.JVReason.ToLower().ToString().Contains(searchValue) ||
+                        (s.CRNo != null && s.CRNo.ToLower().Contains(searchValue)) ||
+                        s.JVReason.ToLower().Contains(searchValue) ||
                         s.CreatedBy!.ToLower().Contains(searchValue)
-                        )
-                    .ToList();
+                        );
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var searchValue = filterDate.ToString(SD.Date_Format).ToLower();
-
-                    journalVoucherHeader = journalVoucherHeader
-                        .Where(s =>
-                            s.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        )
-                        .ToList();
+                    journalVoucherHeader = journalVoucherHeader.Where(s => s.Date == filterDate);
                 }
 
                 // Sorting
@@ -168,23 +163,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
                     journalVoucherHeader = journalVoucherHeader
-                        .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
+                        .OrderBy($"{columnName} {sortDirection}") ;
                 }
 
-                var totalRecords = journalVoucherHeader.Count();
+                var totalFilteredRecords = await journalVoucherHeader.CountAsync(cancellationToken);
 
-                var pagedData = journalVoucherHeader
+                var pagedData = await journalVoucherHeader
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }

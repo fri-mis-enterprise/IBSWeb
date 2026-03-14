@@ -76,35 +76,32 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 var companyClaims = await GetCompanyClaimAsync();
 
-                var serviceInvoices = await _unitOfWork.FilprideServiceInvoice
-                    .GetAllAsync(sv => sv.Company == companyClaims, cancellationToken);
+                var serviceInvoices = _unitOfWork.FilprideServiceInvoice
+                    .GetAllQuery(cancellationToken)
+                    .Where(x => x.Company == companyClaims);
+
+                var totalRecords = await serviceInvoices.CountAsync(cancellationToken);
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasPeriod = DateOnly.TryParse(searchValue, out var period);
 
                     serviceInvoices = serviceInvoices
                         .Where(s =>
                             s.ServiceInvoiceNo.ToLower().Contains(searchValue) ||
                             s.CustomerName.ToLower().Contains(searchValue) ||
                             s.ServiceName.ToLower().Contains(searchValue) ||
-                            s.Period.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
+                            (hasPeriod && s.Period == period) ||
                             s.Total.ToString().Contains(searchValue) ||
                             s.Instructions.ToLower().Contains(searchValue) ||
-                            s.CreatedBy?.ToLower().Contains(searchValue) == true
-                            )
-                        .ToList();
+                            s.CreatedBy!.ToLower().Contains(searchValue) == true
+                            );
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var searchValue = filterDate.ToString(SD.Date_Format).ToLower();
-
-                    serviceInvoices = serviceInvoices
-                        .Where(s =>
-                            s.Period.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        )
-                        .ToList();
+                    serviceInvoices = serviceInvoices.Where(s => s.Period == filterDate);
                 }
 
                 // Sorting
@@ -115,23 +112,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
                     serviceInvoices = serviceInvoices
-                        .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
+                        .OrderBy($"{columnName} {sortDirection}") ;
                 }
 
-                var totalRecords = serviceInvoices.Count();
+                var totalFilteredRecords = await serviceInvoices.CountAsync(cancellationToken);
 
-                var pagedData = serviceInvoices
+                var pagedData = await serviceInvoices
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }

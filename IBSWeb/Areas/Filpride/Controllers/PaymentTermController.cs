@@ -60,8 +60,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var queried = await _unitOfWork.FilprideTerms
-                    .GetAllAsync(null, cancellationToken);
+                var queried = _unitOfWork.FilprideTerms
+                    .GetAllQuery(cancellationToken);
+
+                var totalRecords = await queried.CountAsync(cancellationToken);
 
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
@@ -71,9 +73,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     queried = queried
                     .Where(s =>
                         s.TermsCode.ToLower().Contains(searchValue) ||
-                        s.NumberOfDays.ToString("N0").Contains(searchValue) ||
-                        s.NumberOfMonths.ToString("N0").Contains(searchValue)
-                        ).ToList();
+                        s.NumberOfDays.ToString().Contains(searchValue) ||
+                        s.NumberOfMonths.ToString().Contains(searchValue)
+                        );
                 }
 
                 // Sorting
@@ -82,22 +84,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var orderColumn = parameters.Order[0];
                     var columnName = parameters.Columns[orderColumn.Column].Data;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
+
                     queried = queried
-                        .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}");
+                        .OrderBy($"{columnName} {sortDirection}") ;
                 }
 
-                var totalRecords = queried.Count();
-                var pagedData = queried
+                var totalFilteredRecords = await queried.CountAsync(cancellationToken);
+                var pagedData = await queried
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }

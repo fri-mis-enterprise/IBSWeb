@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
+using System.Linq.Dynamic.Core;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -192,15 +193,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var chartOfAccounts = await _unitOfWork.FilprideChartOfAccount
-                    .GetAllAsync(cancellationToken: cancellationToken);
+                var chartOfAccounts = _unitOfWork.FilprideChartOfAccount
+                    .GetAllQuery(cancellationToken: cancellationToken);
+
+                var totalRecords = await chartOfAccounts.CountAsync(cancellationToken);
 
                 // Apply date range filter if provided (using CreatedDate)
                 if (dateFrom.HasValue)
                 {
                     chartOfAccounts = chartOfAccounts
-                        .Where(s => s.CreatedDate >= dateFrom.Value)
-                        .ToList();
+                        .Where(s => s.CreatedDate >= dateFrom.Value);
                 }
 
                 if (dateTo.HasValue)
@@ -208,14 +210,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     // Add one day to include the entire end date
                     var dateToInclusive = dateTo.Value.AddDays(1);
                     chartOfAccounts = chartOfAccounts
-                        .Where(s => s.CreatedDate < dateToInclusive)
-                        .ToList();
+                        .Where(s => s.CreatedDate < dateToInclusive);
                 }
 
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasCreatedDate = DateTime.TryParse(searchValue, out var createdDate);
 
                     chartOfAccounts = chartOfAccounts
                         .Where(s =>
@@ -224,43 +226,25 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             (s.AccountType != null && s.AccountType.ToLower().Contains(searchValue)) ||
                             (s.NormalBalance != null && s.NormalBalance.ToLower().Contains(searchValue)) ||
                             s.Level.ToString().Contains(searchValue) ||
-                            s.CreatedDate.ToString("MMM dd, yyyy").ToLower().Contains(searchValue)
-                        )
-                        .ToList();
+                            (hasCreatedDate && DateOnly.FromDateTime(s.CreatedDate) == DateOnly.FromDateTime(createdDate))
+                        );
                 }
 
-                // Apply sorting if provided
+                //Apply sorting if provided
                 if (parameters.Order?.Count > 0)
                 {
                     var orderColumn = parameters.Order[0];
-                    var columnName = parameters.Columns[orderColumn.Column].Data;
+                    var columnName = parameters.Columns[orderColumn.Column].Name;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
-                    // Map frontend column names to actual entity property names
-                    var columnMapping = new Dictionary<string, string>
-                    {
-                        { "accountNumber", "AccountNumber" },
-                        { "accountName", "AccountName" },
-                        { "accountType", "AccountType" },
-                        { "normalBalance", "NormalBalance" },
-                        { "level", "Level" },
-                        { "createdDate", "CreatedDate" }
-                    };
-
-                    // Get the actual property name
-                    var actualColumnName = columnMapping.ContainsKey(columnName)
-                        ? columnMapping[columnName]
-                        : columnName;
-
                     chartOfAccounts = chartOfAccounts
-                        .AsQueryable()
-                        .ToList();
+                        .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = chartOfAccounts.Count();
+                var totalFilteredRecords = await chartOfAccounts.CountAsync(cancellationToken);
 
                 // Apply pagination - HANDLE -1 FOR "ALL"
-                IEnumerable<FilprideChartOfAccount> pagedChartOfAccounts;
+                IQueryable<FilprideChartOfAccount> pagedChartOfAccounts;
 
                 if (parameters.Length == -1)
                 {
@@ -275,7 +259,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .Take(parameters.Length);
                 }
 
-                var pagedData = pagedChartOfAccounts
+                var pagedData = await pagedChartOfAccounts
                     .Select(x => new
                     {
                         x.AccountId,
@@ -286,13 +270,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         x.Level,
                         x.CreatedDate
                     })
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }

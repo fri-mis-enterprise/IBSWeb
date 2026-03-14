@@ -122,8 +122,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
                 var filterTypeClaim = await GetCurrentFilterType();
 
-                var drList = await _unitOfWork.FilprideDeliveryReceipt
-                    .GetAllAsync(cos => cos.Company == companyClaims, cancellationToken);
+                var drList = _unitOfWork.FilprideDeliveryReceipt
+                    .GetAllQuery(cancellationToken)
+                    .Where(x => x.Company == companyClaims);
+
+                var totalRecords = await drList.CountAsync(cancellationToken);
 
                 // Apply status filter based on filterType
                 if (!string.IsNullOrEmpty(filterTypeClaim))
@@ -154,11 +157,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasDate = DateOnly.TryParse(searchValue, out var date);
 
                     drList = drList
                     .Where(s =>
                         s.DeliveryReceiptNo.ToLower().Contains(searchValue) ||
-                        s.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
+                        (hasDate && s.Date == date) ||
                         s.CustomerOrderSlip!.CustomerName.ToLower().Contains(searchValue) ||
                         s.Quantity.ToString().Contains(searchValue) ||
                         s.TotalAmount.ToString().Contains(searchValue) ||
@@ -169,19 +173,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         s.PurchaseOrder!.PurchaseOrderNo!.ToLower().Contains(searchValue) ||
                         s.CreatedBy!.ToLower().Contains(searchValue) ||
                         s.Freight.ToString().Contains(searchValue) ||
-                        s.HaulerName?.ToLower().Contains(searchValue) == true
-                        )
-                    .ToList();
+                        s.HaulerName!.ToLower().Contains(searchValue) == true
+                        );
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var searchValue = filterDate.ToString(SD.Date_Format).ToLower();
-
-                    drList = drList
-                        .Where(s =>
-                            s.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        )
-                        .ToList();
+                    drList = drList.Where(s => s.Date == filterDate);
                 }
 
                 // Sorting
@@ -192,14 +189,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
                     drList = drList
-                        .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
+                        .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = drList.Count();
+                var totalFilteredRecords = await drList.CountAsync(cancellationToken);
 
-                var pagedData = drList
+                var pagedData = await drList
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
                     .Select(dr => new
@@ -225,13 +220,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         dr.Freight,
                         dr.HaulerName
                     })
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }

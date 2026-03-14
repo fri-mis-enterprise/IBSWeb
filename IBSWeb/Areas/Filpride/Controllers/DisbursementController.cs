@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -67,30 +68,34 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 var companyClaims = await GetCompanyClaimAsync();
 
-                var disbursements = await _unitOfWork.FilprideCheckVoucher
-                    .GetAllAsync(d =>
-                        d.CvType != nameof(CVType.Invoicing) &&
-                        d.PostedBy != null &&
-                        d.Company == companyClaims, cancellationToken);
+                var disbursements = _unitOfWork.FilprideCheckVoucher
+                    .GetAllQuery(cancellationToken)
+                    .Where(x=> x.CvType != nameof(CVType.Invoicing) &&
+                               x.PostedBy != null &&
+                               x.Company == companyClaims);
+
+                var totalRecords = await disbursements.CountAsync(cancellationToken);
 
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasDate = DateOnly.TryParse(searchValue, out var date);
+                    var hasDcpDate = DateOnly.TryParse(searchValue, out var dcpDate);
+                    var hasDcrDate = DateOnly.TryParse(searchValue, out var dcrDate);
 
                     disbursements = disbursements
                     .Where(s =>
-                        s.CheckVoucherHeaderNo?.ToLower().Contains(searchValue) == true ||
-                        s.Payee?.ToLower().Contains(searchValue) == true ||
+                        s.CheckVoucherHeaderNo!.ToLower().Contains(searchValue) == true ||
+                        s.Payee!.ToLower().Contains(searchValue) == true ||
                         s.Total.ToString().Contains(searchValue) ||
                         s.CheckVoucherHeaderId.ToString().Contains(searchValue) ||
-                        s.Reference?.ToLower().Contains(searchValue) == true ||
-                        s.Date.ToString().Contains(searchValue) ||
-                        s.DcpDate?.ToString().Contains(searchValue) == true ||
-                        s.DcrDate?.ToString().Contains(searchValue) == true
+                        s.Reference!.ToLower().Contains(searchValue) == true ||
+                        (hasDate && s.Date == date) ||
+                        (hasDcpDate && s.DcpDate == dcpDate) == true ||
+                        (hasDcrDate && s.DcrDate == dcrDate) == true
                         )
-                    .Where(cv => cv.Company == companyClaims)
-                    .ToList();
+                    .Where(cv => cv.Company == companyClaims);
                 }
 
                 // Column-specific search
@@ -103,14 +108,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         {
                             case "dcpDate":
                                 disbursements = searchValue == "not-null"
-                                    ? disbursements.Where(s => s.DcpDate != null).ToList()
-                                    : disbursements.Where(s => s.DcpDate == null).ToList();
+                                    ? disbursements.Where(s => s.DcpDate != null)
+                                    : disbursements.Where(s => s.DcpDate == null);
                                 break;
 
                             case "dcrDate":
                                 disbursements = searchValue == "not-null"
-                                    ? disbursements.Where(s => s.DcrDate != null).ToList()
-                                    : disbursements.Where(s => s.DcrDate == null).ToList();
+                                    ? disbursements.Where(s => s.DcrDate != null)
+                                    : disbursements.Where(s => s.DcrDate == null);
                                 break;
                         }
                     }
@@ -124,23 +129,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
                     disbursements = disbursements
-                        .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
+                        .OrderBy($"{columnName} {sortDirection}") ;
                 }
 
-                var totalRecords = disbursements.Count();
+                var totalFilteredRecords = await disbursements.CountAsync(cancellationToken);
 
-                var pagedData = disbursements
+                var pagedData = await disbursements
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }

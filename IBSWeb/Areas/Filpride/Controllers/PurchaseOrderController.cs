@@ -112,17 +112,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
                 var filterTypeClaim = await GetCurrentFilterType();
 
-                var purchaseOrders = await _dbContext.FilpridePurchaseOrders
-                    .Include(po => po.PickUpPoint)
-                    .Include(po => po.ActualPrices)
-                    .Where(po => po.Company == companyClaims)
-                    .ToListAsync(cancellationToken);
+                var purchaseOrders = _unitOfWork.FilpridePurchaseOrder
+                    .GetAllQuery(cancellationToken)
+                    .Where(po => po.Company == companyClaims);
+
+                var totalRecords = await purchaseOrders.CountAsync(cancellationToken);
 
                 if (!string.IsNullOrEmpty(filterTypeClaim))
                 {
                     purchaseOrders = purchaseOrders
-                        .Where(po => po.Status == nameof(CosStatus.ForApprovalOfOM))
-                        .ToList();
+                        .Where(po => po.Status == nameof(CosStatus.ForApprovalOfOM));
                 }
 
                 if (!string.IsNullOrEmpty(filterTypeClaim))
@@ -131,8 +130,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     {
                         case nameof(CosStatus.ForApprovalOfOM):
                             purchaseOrders = purchaseOrders
-                                .Where(rr => rr.Status == nameof(CosStatus.ForApprovalOfOM))
-                                .ToList();
+                                .Where(rr => rr.Status == nameof(CosStatus.ForApprovalOfOM));
                             break;
                             // Add other cases as needed
                     }
@@ -142,31 +140,25 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasDate = DateOnly.TryParse(searchValue, out var date);
 
                     purchaseOrders = purchaseOrders
                     .Where(s =>
                         s.PurchaseOrderNo!.ToLower().Contains(searchValue) ||
                         s.OldPoNo.ToLower().Contains(searchValue) ||
                         s.SupplierName.ToLower().Contains(searchValue) ||
-                        s.PickUpPoint!.Depot.ToLower().Contains(searchValue) ||
+                        (s.PickUpPoint != null && s.PickUpPoint.Depot.ToLower().Contains(searchValue)) ||
                         s.ProductName.ToLower().Contains(searchValue) ||
-                        s.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
+                        (hasDate && s.Date == date) ||
                         s.Quantity.ToString().Contains(searchValue) ||
-                        s.Remarks.ToString().Contains(searchValue) ||
+                        s.Remarks.ToLower().Contains(searchValue) ||
                         s.CreatedBy!.ToLower().Contains(searchValue) ||
                         s.Status.ToLower().Contains(searchValue)
-                        )
-                    .ToList();
+                        );
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var searchValue = filterDate.ToString(SD.Date_Format).ToLower();
-
-                    purchaseOrders = purchaseOrders
-                        .Where(s =>
-                            s.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        )
-                        .ToList();
+                    purchaseOrders = purchaseOrders.Where(s => s.Date == filterDate);
                 }
 
                 // Sorting
@@ -177,14 +169,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
                     purchaseOrders = purchaseOrders
-                        .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
+                        .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = purchaseOrders.Count;
+                var totalFilteredRecords = await purchaseOrders.CountAsync(cancellationToken);
 
-                var pagedData = purchaseOrders
+                var pagedData = await purchaseOrders
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
                     .Select(po => new
@@ -196,7 +186,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         po.SupplierId,
                         po.SupplierName,
                         po.ProductName,
-                        po.PickUpPoint?.Depot,
+                        Depot = po.PickUpPoint != null ? po.PickUpPoint.Depot : string.Empty,
                         po.Quantity,
                         po.QuantityReceived,
                         po.FinalPrice,
@@ -212,13 +202,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         po.IsClosed,
                         TypeOfPurchase = po.TypeOfPurchase.ToUpper()
                     })
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }

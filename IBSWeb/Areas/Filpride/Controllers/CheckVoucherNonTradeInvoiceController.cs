@@ -135,53 +135,62 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
                 var filterTypeClaim = await GetCurrentFilterType();
 
-                var baseQuery = _dbContext.FilprideCheckVoucherHeaders
+                var checkVoucher = _unitOfWork.FilprideCheckVoucher
+                    .GetAllQuery()
                     .Where(cvh => cvh.Company == companyClaims &&
                                   cvh.CvType == nameof(CVType.Invoicing) &&
                                   !cvh.IsPayroll);
 
+                var totalRecords = await checkVoucher.CountAsync(cancellationToken);
+
                 // Apply status filter based on filterType
                 if (!string.IsNullOrEmpty(filterTypeClaim) && filterTypeClaim == "ForApproval")
                 {
-                    baseQuery = baseQuery.Where(cv => cv.Status == nameof(CheckVoucherInvoiceStatus.ForApproval));
+                    checkVoucher = checkVoucher.Where(cv => cv.Status == nameof(CheckVoucherInvoiceStatus.ForApproval));
                 }
-
-                var query = baseQuery
-                    .Include(cvh => cvh.Supplier);
-
-                var checkVoucher = await query.ToListAsync(cancellationToken);
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasDate = DateOnly.TryParse(searchValue, out var date);
 
                     checkVoucher = checkVoucher
                         .Where(s =>
                             s.CheckVoucherHeaderNo!.ToLower().Contains(searchValue) ||
-                            s.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
-                            s.Payee?.ToLower().Contains(searchValue) == true ||
+                            (hasDate && s.Date == date) ||
+                            (s.Payee != null &&
+                            s.Payee.ToLower().Contains(searchValue) == true) ||
                             s.InvoiceAmount.ToString().Contains(searchValue) ||
                             s.AmountPaid.ToString().Contains(searchValue) ||
                             (s.InvoiceAmount - s.AmountPaid).ToString().Contains(searchValue) ||
                             s.Status.ToLower().Contains(searchValue) ||
-                            s.Particulars?.ToLower().Contains(searchValue) == true
-                        )
-                        .ToList();
+                            (s.Particulars != null &&
+                            s.Particulars.ToLower().Contains(searchValue) == true)
+                        );
                 }
 
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var searchValue = filterDate.ToString(SD.Date_Format).ToLower();
-
-                    checkVoucher = checkVoucher
-                        .Where(s =>
-                            s.Date.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        )
-                        .ToList();
+                    checkVoucher = checkVoucher.Where(s => s.Date == filterDate);
                 }
 
-                var projectedQuery = checkVoucher
+                // Sorting
+                if (parameters.Order?.Count > 0)
+                {
+                    var orderColumn = parameters.Order[0];
+                    var columnName = parameters.Columns[orderColumn.Column].Name;
+                    var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
+
+                    checkVoucher = checkVoucher
+                        .OrderBy($"{columnName} {sortDirection}") ;
+                }
+
+                var totalFilteredRecords = await checkVoucher.CountAsync(cancellationToken);
+
+                var pagedData = await checkVoucher
+                    .Skip(parameters.Start)
+                    .Take(parameters.Length)
                     .Select(x => new
                     {
                         x.CheckVoucherHeaderNo,
@@ -197,33 +206,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         x.IsPaid,
                         x.CheckVoucherHeaderId
                     })
-                    .ToList();
-
-                // Sorting
-                if (parameters.Order?.Count > 0)
-                {
-                    var orderColumn = parameters.Order[0];
-                    var columnName = parameters.Columns[orderColumn.Column].Name;
-                    var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
-
-                    projectedQuery = projectedQuery
-                        .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
-                }
-
-                var totalRecords = projectedQuery.Count;
-
-                var pagedData = projectedQuery
-                    .Skip(parameters.Start)
-                    .Take(parameters.Length)
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }

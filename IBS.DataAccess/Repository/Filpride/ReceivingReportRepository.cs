@@ -154,6 +154,16 @@ namespace IBS.DataAccess.Repository.Filpride
             return await query.ToListAsync(cancellationToken);
         }
 
+        public override IQueryable<FilprideReceivingReport> GetAllQuery(CancellationToken cancellationToken = default)
+        {
+            return dbSet
+                .Include(rr => rr.DeliveryReceipt).ThenInclude(dr => dr!.Customer)
+                .Include(rr => rr.PurchaseOrder).ThenInclude(po => po!.Product)
+                .Include(rr => rr.PurchaseOrder).ThenInclude(po => po!.Supplier)
+                .AsSplitQuery()
+                .AsNoTracking();
+        }
+
         public async Task<string> AutoGenerateReceivingReport(FilprideDeliveryReceipt deliveryReceipt, DateOnly liftingDate, string userName, CancellationToken cancellationToken = default)
         {
             FilprideReceivingReport model = new()

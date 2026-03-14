@@ -111,25 +111,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
-                var collectionReceipts = await _dbContext.FilprideCollectionReceipts
-                    .Include(c => c.ReceiptDetails)
-                    .Include(c => c.Customer)
-                    .Where(c => c.Company == companyClaims)
-                    .OrderBy(x => x.CollectionReceiptNo)
-                    .ToListAsync(cancellationToken);
+                var collectionReceipts = _unitOfWork.FilprideCollectionReceipt
+                    .GetAllQuery()
+                    .Where(c => c.Company == companyClaims);
+
+                var totalRecords = await collectionReceipts.CountAsync(cancellationToken);
 
                 switch (invoiceType)
                 {
                     case "Sales":
                         collectionReceipts = collectionReceipts
-                            .Where(s => s.SalesInvoiceId != null || s.MultipleSIId != null)
-                            .ToList();
+                            .Where(s => s.SalesInvoiceId != null || s.MultipleSIId != null);
                         break;
 
                     case "Service":
                         collectionReceipts = collectionReceipts
-                            .Where(s => s.ServiceInvoiceId != null)
-                            .ToList();
+                            .Where(s => s.ServiceInvoiceId != null);
                         break;
                 }
 
@@ -137,6 +134,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasTransactionDate = DateOnly.TryParse(searchValue, out var transactionDate);
 
                     collectionReceipts = collectionReceipts
                         .Where(s =>
@@ -144,24 +142,30 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             s.Customer!.CustomerName.ToLower().Contains(searchValue) ||
                             s.ReceiptDetails!.Any(d =>
                                 d.InvoiceNo.ToLower().Contains(searchValue)) ||
-                            s.TransactionDate.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
+                            (hasTransactionDate && s.TransactionDate == transactionDate) ||
                             s.CreatedBy!.ToLower().Contains(searchValue) ||
                             s.Status.ToLower().Contains(searchValue)
-                            )
-                        .ToList();
+                            );
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var searchValue = filterDate.ToString(SD.Date_Format).ToLower();
-
-                    collectionReceipts = collectionReceipts
-                        .Where(s =>
-                            s.TransactionDate.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        )
-                        .ToList();
+                    collectionReceipts = collectionReceipts.Where(s => s.TransactionDate == filterDate);
                 }
 
-                var pagedData = collectionReceipts
+                // Sorting
+                if (parameters.Order?.Count > 0)
+                {
+                    var orderColumn = parameters.Order[0];
+                    var columnName = parameters.Columns[orderColumn.Column].Data;
+                    var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
+
+                    collectionReceipts = collectionReceipts
+                        .OrderBy($"{columnName} {sortDirection}") ;
+                }
+
+                var totalFilteredRecords = await collectionReceipts.CountAsync(cancellationToken);
+
+                var pagedData = await collectionReceipts
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
                     .Select(c => new
@@ -182,28 +186,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         c.MultipleSIId,
                         c.DepositedDate,
                     })
-                    .ToList();
-
-                // Sorting
-                if (parameters.Order?.Count > 0)
-                {
-                    var orderColumn = parameters.Order[0];
-                    var columnName = parameters.Columns[orderColumn.Column].Data;
-                    var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
-
-                    pagedData = pagedData
-                        .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
-                }
-
-                var totalRecords = collectionReceipts.Count;
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }

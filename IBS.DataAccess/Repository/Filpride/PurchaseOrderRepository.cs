@@ -103,6 +103,17 @@ namespace IBS.DataAccess.Repository.Filpride
             return await query.ToListAsync(cancellationToken);
         }
 
+        public override IQueryable<FilpridePurchaseOrder> GetAllQuery(CancellationToken cancellationToken = default)
+        {
+            return dbSet
+                .Include(p => p.Supplier)
+                .Include(p => p.Product)
+                .Include(p => p.PickUpPoint)
+                .Include(po => po.ActualPrices)
+                .AsSplitQuery()
+                .AsNoTracking();
+        }
+
         public async Task<List<SelectListItem>> GetPurchaseOrderListAsyncByCode(string company, CancellationToken cancellationToken = default)
         {
             return await _db.FilpridePurchaseOrders

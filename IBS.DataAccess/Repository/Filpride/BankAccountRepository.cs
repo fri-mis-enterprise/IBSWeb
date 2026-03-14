@@ -38,5 +38,10 @@ namespace IBS.DataAccess.Repository.Filpride
             return await _db.FilprideBankAccounts
                 .AnyAsync(b => b.AccountNo == accountNo, cancellationToken);
         }
+
+        public override IQueryable<FilprideBankAccount> GetAllQuery(CancellationToken cancellationToken = default)
+        {
+            return dbSet.AsNoTracking();
+        }
     }
 }

@@ -208,8 +208,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var queried = await _unitOfWork.FilprideSupplier
-                    .GetAllAsync(null, cancellationToken);
+                var queried = _unitOfWork.FilprideSupplier
+                    .GetAllQuery(cancellationToken);
+
+                var totalRecords = await queried.CountAsync(cancellationToken);
 
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
@@ -224,7 +226,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         s.SupplierTin.ToLower().Contains(searchValue) ||
                         s.SupplierTerms.ToLower().Contains(searchValue) ||
                         s.Category.ToLower().Contains(searchValue)
-                        ).ToList();
+                        );
                 }
 
                 // Sorting
@@ -233,22 +235,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var orderColumn = parameters.Order[0];
                     var columnName = parameters.Columns[orderColumn.Column].Data;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
+
                     queried = queried
-                        .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}");
+                        .OrderBy($"{columnName} {sortDirection}") ;
                 }
 
-                var totalRecords = queried.Count();
-                var pagedData = queried
+                var totalFilteredRecords = await queried.CountAsync(cancellationToken);
+                var pagedData = await queried
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }
@@ -538,7 +540,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
             var searchValue = parameters.Search.Value.ToLower();
-            
+
             suppliers = suppliers
                 .Where(s =>
                     (s.SupplierCode != null && s.SupplierCode.ToLower().Contains(searchValue)) ||
@@ -574,8 +576,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             };
 
             // Get the actual property name
-            var actualColumnName = columnMapping.ContainsKey(columnName) 
-                ? columnMapping[columnName] 
+            var actualColumnName = columnMapping.ContainsKey(columnName)
+                ? columnMapping[columnName]
                 : columnName;
 
             suppliers = suppliers
@@ -588,7 +590,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         // Apply pagination - HANDLE -1 FOR "ALL"
         IEnumerable<FilprideSupplier> pagedSuppliers;
-        
+
         if (parameters.Length == -1)
         {
             // "All" selected - return all records

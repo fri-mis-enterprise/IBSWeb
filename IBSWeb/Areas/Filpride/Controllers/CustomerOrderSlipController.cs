@@ -129,16 +129,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
                 var filterTypeClaim = await GetCurrentFilterType();
 
-                var query = _dbContext.FilprideCustomerOrderSlips
-                    .Include(cos => cos.Customer)
-                    .Include(cos => cos.Hauler)
-                    .Include(cos => cos.Product)
-                    .Include(cos => cos.Supplier)
-                    .Include(cos => cos.PickUpPoint)
-                    .Include(cos => cos.PurchaseOrder).ThenInclude(po => po!.Product)
-                    .Include(cos => cos.PurchaseOrder).ThenInclude(po => po!.Supplier)
-                    .Include(cos => cos.AppointedSuppliers)
+                var query = _unitOfWork.FilprideCustomerOrderSlip
+                    .GetAllQuery(cancellationToken)
                     .Where(cos => cos.Company == companyClaims);
+
+                var totalRecords = await query.CountAsync(cancellationToken);
 
                 // Apply status filter based on filterType
                 if (!string.IsNullOrEmpty(filterTypeClaim))
@@ -212,10 +207,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var columnName = parameters.Columns[orderColumn.Column].Name;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
-                    query = query.OrderBy($"{columnName} {sortDirection}");
+                    query = query
+                        .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = query.Count();
+                var totalFilteredRecords = await query.CountAsync(cancellationToken);
 
                 // Apply pagination and project to a lighter DTO
                 var pagedData = await query
@@ -253,7 +249,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }

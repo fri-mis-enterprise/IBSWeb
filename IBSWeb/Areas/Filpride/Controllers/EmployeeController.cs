@@ -8,6 +8,7 @@ using IBS.Models.Filpride.MasterFile;
 using IBS.Services.Attributes;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -108,25 +109,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var queried = await _unitOfWork.FilprideEmployee
-                    .GetAllAsync(null, cancellationToken);
+                var queried = _unitOfWork.FilprideEmployee
+                    .GetAllQuery(cancellationToken);
+
+                var totalRecords = await queried.CountAsync(cancellationToken);
 
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasBirthDate = DateOnly.TryParse(searchValue, out var birthDate);
 
                     queried = queried
                     .Where(e =>
                         e.EmployeeNumber.ToLower().Contains(searchValue) ||
-                        e.Initial?.ToLower().Contains(searchValue) == true ||
+                        e.Initial!.ToLower().Contains(searchValue) == true ||
                         e.FirstName.ToLower().Contains(searchValue) ||
                         e.LastName.ToLower().Contains(searchValue) ||
-                        e.BirthDate?.ToString().Contains(searchValue) == true ||
-                        e.TelNo?.ToLower().Contains(searchValue) == true ||
-                        e.Department?.ToLower().Contains(searchValue) == true ||
+                        (hasBirthDate && e.BirthDate == birthDate) == true ||
+                        e.TelNo!.ToLower().Contains(searchValue) == true ||
+                        e.Department!.ToLower().Contains(searchValue) == true ||
                         e.Position.ToLower().Contains(searchValue)
-                        ).ToList();
+                        );
                 }
 
                 // Sorting
@@ -135,22 +139,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var orderColumn = parameters.Order[0];
                     var columnName = parameters.Columns[orderColumn.Column].Data;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
+
                     queried = queried
-                        .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}");
+                        .OrderBy($"{columnName} {sortDirection}") ;
                 }
 
-                var totalRecords = queried.Count();
-                var pagedData = queried
+                var totalFilteredRecords = await queried.CountAsync(cancellationToken);
+                var pagedData = await queried
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }

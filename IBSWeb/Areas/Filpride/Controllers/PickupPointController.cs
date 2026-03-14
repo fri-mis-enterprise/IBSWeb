@@ -132,8 +132,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var query = await _unitOfWork.FilpridePickUpPoint
-                    .GetAllAsync(null, cancellationToken);
+                var query = _unitOfWork.FilpridePickUpPoint
+                    .GetAllQuery(cancellationToken);
+
+                var totalRecords = await query.CountAsync(cancellationToken);
 
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
@@ -144,7 +146,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Where(p =>
                         p.Depot.ToLower().Contains(searchValue) ||
                         p.Supplier!.SupplierName.ToLower().Contains(searchValue)
-                        ).ToList();
+                        );
                 }
 
                 // Sorting
@@ -153,28 +155,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var orderColumn = parameters.Order[0];
                     var columnName = parameters.Columns[orderColumn.Column].Name;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
+
                     query = query
-                        .AsQueryable()
                         .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = query.Count();
-                var pagedData = query
+                var totalFilteredRecords = await query.CountAsync(cancellationToken);
+                var pagedData = await query
+                    .Skip(parameters.Start)
+                    .Take(parameters.Length)
                     .Select(p => new
                     {
                         p.PickUpPointId,
                         p.Depot,
                         p.Supplier!.SupplierName
                     })
-                    .Skip(parameters.Start)
-                    .Take(parameters.Length)
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }

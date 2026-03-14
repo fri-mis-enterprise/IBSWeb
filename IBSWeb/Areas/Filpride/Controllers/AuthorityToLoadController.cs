@@ -71,37 +71,34 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 var companyClaims = await GetCompanyClaimAsync();
 
-                var atlList = await _dbContext.FilprideAuthorityToLoads
-                    .Include(a => a.Details).ThenInclude(d => d.CustomerOrderSlip)
-                    .Where(a => a.Company == companyClaims)
-                    .ToListAsync(cancellationToken);
+                var atlList = _unitOfWork.FilprideAuthorityToLoad
+                    .GetAllQuery()
+                    .Where(x => x.Company == companyClaims);
+
+                var totalRecords = await atlList.CountAsync(cancellationToken);
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search?.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasDateBooked = DateOnly.TryParse(searchValue, out var dateBooked);
+                    var hasValidUntil = DateOnly.TryParse(searchValue, out var validUntil);
 
                     atlList = atlList
                     .Where(s =>
                         s.AuthorityToLoadNo.ToLower().Contains(searchValue) ||
-                        s.DateBooked.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
-                        s.ValidUntil.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
-                        s.UppiAtlNo?.ToLower().Contains(searchValue) == true ||
+                        (hasDateBooked && s.DateBooked == dateBooked) ||
+                        (hasValidUntil && s.ValidUntil == validUntil) ||
+                        (s.UppiAtlNo != null &&
+                        s.UppiAtlNo.ToLower().Contains(searchValue) == true) ||
                         s.Details.Any(d =>
                             d.CustomerOrderSlip!.CustomerOrderSlipNo.ToLower().Contains(searchValue)) ||
                         s.Remarks.ToLower().Contains(searchValue)
-                        )
-                    .ToList();
+                        );
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var searchValue = filterDate.ToString(SD.Date_Format).ToLower();
-
-                    atlList = atlList
-                        .Where(s =>
-                            s.DateBooked.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        )
-                        .ToList();
+                    atlList = atlList.Where(s => s.DateBooked == filterDate);
                 }
 
                 // Sorting
@@ -112,14 +109,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
                     atlList = atlList
-                        .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
+                        .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = atlList.Count;
+                var totalFilteredRecords = await atlList.CountAsync(cancellationToken);
 
-                var pagedData = atlList
+                var pagedData = await atlList
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
                     .Select(atl => new
@@ -134,13 +129,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             .ToList(),
                         atl.Remarks
                     })
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }

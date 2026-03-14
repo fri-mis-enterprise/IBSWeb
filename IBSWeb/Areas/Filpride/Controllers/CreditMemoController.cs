@@ -15,6 +15,7 @@ using IBS.Services.Attributes;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -75,36 +76,33 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 var companyClaims = await GetCompanyClaimAsync();
 
-                var creditMemos = await _unitOfWork.FilprideCreditMemo
-                    .GetAllAsync(cm => cm.Company == companyClaims, cancellationToken);
+                var creditMemos = _unitOfWork.FilprideCreditMemo
+                    .GetAllQuery(cancellationToken)
+                    .Where(x => x.Company == companyClaims);
+
+                var totalRecords = await creditMemos.CountAsync(cancellationToken);
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
+                    var hasTransactionDate = DateOnly.TryParse(searchValue, out var transactionDate);
 
                     creditMemos = creditMemos
                     .Where(s =>
                         s.CreditMemoNo!.ToLower().Contains(searchValue) ||
-                        s.SalesInvoice?.SalesInvoiceNo!.ToLower().Contains(searchValue) == true ||
-                        s.ServiceInvoice?.ServiceInvoiceNo.ToLower().Contains(searchValue) == true ||
-                        s.TransactionDate.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
+                        s.SalesInvoice!.SalesInvoiceNo!.ToLower().Contains(searchValue) == true ||
+                        s.ServiceInvoice!.ServiceInvoiceNo.ToLower().Contains(searchValue) == true ||
+                        (hasTransactionDate && s.TransactionDate == transactionDate) ||
                         s.CreditAmount.ToString().Contains(searchValue) ||
-                        s.Remarks?.ToLower().Contains(searchValue) == true ||
+                        s.Remarks!.ToLower().Contains(searchValue) == true ||
                         s.Description.ToLower().Contains(searchValue) ||
                         s.CreatedBy!.ToLower().Contains(searchValue)
-                        )
-                    .ToList();
+                        );
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    var searchValue = filterDate.ToString(SD.Date_Format).ToLower();
-
-                    creditMemos = creditMemos
-                        .Where(s =>
-                            s.TransactionDate.ToString(SD.Date_Format).ToLower().Contains(searchValue)
-                        )
-                        .ToList();
+                    creditMemos = creditMemos.Where(s => s.TransactionDate == filterDate);
                 }
 
                 // Sorting
@@ -115,23 +113,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
                     creditMemos = creditMemos
-                        .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
+                        .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = creditMemos.Count();
+                var totalFilteredRecords = await creditMemos.CountAsync(cancellationToken);
 
-                var pagedData = creditMemos
+                var pagedData = await creditMemos
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }
@@ -489,9 +485,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             var companyClaims = await GetCompanyClaimAsync();
 
+            if (companyClaims == null)
+            {
+                return NotFound();
+            }
+
             #region --Audit Trail Recording
 
-            FilprideAuditTrail auditTrailBook = new(GetUserFullName(), $"Preview credit memo# {creditMemo.CreditMemoNo}", "Credit Memo", companyClaims!);
+            FilprideAuditTrail auditTrailBook = new(GetUserFullName(), $"Preview credit memo# {creditMemo.CreditMemoNo}", "Credit Memo", companyClaims);
             await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
 
             #endregion --Audit Trail Recording

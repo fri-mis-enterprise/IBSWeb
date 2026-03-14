@@ -7,6 +7,7 @@ using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.MasterFile;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -185,8 +186,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var query = await _unitOfWork.FilprideCustomerBranch
-                    .GetAllAsync(null, cancellationToken);
+                var query = _unitOfWork.FilprideCustomerBranch
+                    .GetAllQuery(cancellationToken);
+
+                var totalRecords = await query.CountAsync(cancellationToken);
 
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
@@ -199,7 +202,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         b.BranchAddress.ToLower().Contains(searchValue) ||
                         b.BranchTin.ToLower().Contains(searchValue) ||
                         b.Customer!.CustomerName.ToLower().Contains(searchValue)
-                        ).ToList();
+                        );
                 }
 
                 // Sorting
@@ -209,12 +212,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var columnName = parameters.Columns[orderColumn.Column].Name;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
                     query = query
-                        .AsQueryable()
                         .OrderBy($"{columnName} {sortDirection}");
                 }
 
-                var totalRecords = query.Count();
-                var pagedData = query
+                var totalFilteredRecords = await query.CountAsync(cancellationToken);
+                var pagedData = await query
+                    .Skip(parameters.Start)
+                    .Take(parameters.Length)
                     .Select(b  => new
                     {
                         b.Id,
@@ -223,15 +227,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         b.BranchAddress,
                         b.BranchTin,
                     })
-                    .Skip(parameters.Start)
-                    .Take(parameters.Length)
-                    .ToList();
+                    .ToListAsync(cancellationToken);
 
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
-                    recordsFiltered = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
                     data = pagedData
                 });
             }
