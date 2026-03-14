@@ -2926,7 +2926,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 throw new ArgumentException("Company claims not found!");
             }
 
-            using var reader = new StreamReader(@"C:\Users\Administrator\Downloads\SINGLE-INVOICE-AUGUST-2024-NOVEMBER-2025_1.csv");
+            using var reader = new StreamReader(@"C:\Users\Administrator\Documents\SINGLE INVOICE AUGUST 2024 - NOVEMBER 2025_1.csv");
             using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
             var records = csv.GetRecords<UploadCsvForSingleInvoiceViewModel>().OrderBy(x => x.TransactionDate).ToList();
 
@@ -2951,6 +2951,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 List<(string salesInvoiceNo, string OrNumber, string problem, string customerName, DateOnly transactionDate)> listOfNeedToCorrect = new();
                 var model = new List<FilprideCollectionReceipt>();
                 var details = new List<FilprideCollectionReceiptDetail>();
+                var seriesNumber = 1;
 
                 foreach (var record in records)
                 {
@@ -2991,7 +2992,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     model.Add(
                         new FilprideCollectionReceipt
                         {
-                            CollectionReceiptNo = string.Empty,
+                            CollectionReceiptNo = seriesNumber.ToString(),
                             SalesInvoiceId = getSalesInvoice.SalesInvoiceId,
                             SINo = getSalesInvoice.SalesInvoiceNo,
                             CustomerId = getSalesInvoice.CustomerId,
@@ -3040,6 +3041,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     }
 
                     #endregion --Saving default value
+
+                    seriesNumber++;
                 }
                 await _dbContext.FilprideCollectionReceipts.AddRangeAsync(model, cancellationToken);
                 await _dbContext.SaveChangesAsync(cancellationToken);
@@ -3096,7 +3099,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            using var reader = new StreamReader(@"C:\Users\Administrator\Downloads\MULTI-INVOICE-AUGUST-2024-NOVEMBER-2025_1.csv");
+            using var reader = new StreamReader(@"C:\Users\Administrator\Documents\MULTI INVOICE AUGUST 2024 - NOVEMBER 2025_1.csv");
             using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
             var records = csv.GetRecords<UploadCsvForMultipleInvoiceViewModel>().ToList();
 
@@ -3114,11 +3117,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var model = new List<FilprideCollectionReceipt>();
             var details = new List<FilprideCollectionReceiptDetail>();
 
+            var lastSeries = _dbContext.FilprideCollectionReceipts
+                .OrderByDescending(x => x.CollectionReceiptId)
+                .Select(x => x.CollectionReceiptNo);
+
+            var seriesNumber = int.TryParse(lastSeries.First(), out var num) ? num : 0;
+
             var timer = Stopwatch.StartNew();
+
             try
             {
                 foreach (var cr in records.GroupBy(x => x.ReferenceNo))
                 {
+                    seriesNumber++;
+
                     var total = cr.Select(x => x.CashAmount).FirstOrDefault()
                                 + cr.Select(x => x.CheckAmount).FirstOrDefault()
                                 + cr.Select(x => x.ManagersCheckAmount).FirstOrDefault()
@@ -3224,7 +3236,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     model.Add(
                         new FilprideCollectionReceipt
                         {
-                            CollectionReceiptNo = string.Empty,
+                            CollectionReceiptNo = seriesNumber.ToString(),
                             TransactionDate = cr.Select(x => x.TransactionDate).FirstOrDefault(),
                             CustomerId = customerId,
                             ReferenceNo = cr.Select(x => x.ReferenceNo).FirstOrDefault() ?? string.Empty,
@@ -3276,7 +3288,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 new FilprideCollectionReceiptDetail
                                 {
                                     CollectionReceiptId = record.CollectionReceiptId,
-                                    CollectionReceiptNo = string.Empty,
+                                    CollectionReceiptNo = record.CollectionReceiptNo ?? string.Empty,
                                     InvoiceDate = getSalesInvoice.TransactionDate,
                                     InvoiceNo = getSalesInvoice.SalesInvoiceNo ?? string.Empty,
                                     Amount = record.SIMultipleAmount?[index] ?? 0
