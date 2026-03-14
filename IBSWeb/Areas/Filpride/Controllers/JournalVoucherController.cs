@@ -142,7 +142,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Where(s =>
                         s.JournalVoucherHeaderNo!.ToLower().Contains(searchValue) ||
                         (hasDate && s.Date == date) ||
-                        s.References!.Contains(searchValue) == true ||
+                        s.References!.ToLower().Contains(searchValue) == true ||
                         s.CheckVoucherHeader!.CheckVoucherHeaderNo!.ToLower().Contains(searchValue) == true ||
                         s.Particulars.ToLower().Contains(searchValue) ||
                         (s.CRNo != null && s.CRNo.ToLower().Contains(searchValue)) ||
