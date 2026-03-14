@@ -112,7 +112,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
                     serviceInvoices = serviceInvoices
-                        .OrderBy($"{columnName} {sortDirection}") ;
+                        .OrderBy($"{columnName} {sortDirection}");
                 }
 
                 var totalFilteredRecords = await serviceInvoices.CountAsync(cancellationToken);
@@ -440,7 +440,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 await _unitOfWork.FilprideServiceInvoice.RemoveRecords<FilprideSalesBook>(gl => gl.SerialNo == model.ServiceInvoiceNo, cancellationToken);
-                await _unitOfWork.FilprideServiceInvoice.RemoveRecords<FilprideGeneralLedgerBook>(gl => gl.Reference == model.ServiceInvoiceNo, cancellationToken);
+                await _unitOfWork.GeneralLedger.ReverseEntries(model.ServiceInvoiceNo, cancellationToken);
 
                 #region --Audit Trail Recording
 

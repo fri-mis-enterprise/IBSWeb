@@ -163,7 +163,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
                     journalVoucherHeader = journalVoucherHeader
-                        .OrderBy($"{columnName} {sortDirection}") ;
+                        .OrderBy($"{columnName} {sortDirection}");
                 }
 
                 var totalFilteredRecords = await journalVoucherHeader.CountAsync(cancellationToken);
@@ -411,6 +411,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
 
             #endregion --Audit Trail Recording
+
             ViewBag.FilterType = await GetCurrentFilterType();
             return View(viewModel);
         }
@@ -493,7 +494,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.Status = nameof(JvStatus.Voided);
 
                 await _unitOfWork.FilprideJournalVoucher.RemoveRecords<FilprideJournalBook>(crb => crb.Reference == model.JournalVoucherHeaderNo, cancellationToken);
-                await _unitOfWork.FilprideJournalVoucher.RemoveRecords<FilprideGeneralLedgerBook>(gl => gl.Reference == model.JournalVoucherHeaderNo, cancellationToken);
+                await _unitOfWork.GeneralLedger.ReverseEntries(model.JournalVoucherHeaderNo, cancellationToken);
 
                 #region --Audit Trail Recording
 

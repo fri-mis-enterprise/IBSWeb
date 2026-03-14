@@ -1,5 +1,3 @@
-using System.Linq.Dynamic.Core;
-using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
 using IBS.Models;
@@ -15,6 +13,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
+using System.Linq.Dynamic.Core;
+using System.Security.Claims;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -114,8 +114,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             //     await Void(receivingReports.ReceivingReportId, cancellationToken);
             //     await Post(receivingReports.ReceivingReportId, cancellationToken);
             // }
-
-
         }
 
         [HttpPost]
@@ -440,7 +438,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-
                 #region --Retrieve PO
 
                 var po = await _unitOfWork.FilpridePurchaseOrder
@@ -625,7 +622,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.DeliveryReceipt!.HasReceivingReport = false;
 
                 await _unitOfWork.FilprideReceivingReport.RemoveRecords<FilpridePurchaseBook>(pb => pb.DocumentNo == model.ReceivingReportNo, cancellationToken);
-                await _unitOfWork.FilprideReceivingReport.RemoveRecords<FilprideGeneralLedgerBook>(pb => pb.Reference == model.ReceivingReportNo, cancellationToken);
+                await _unitOfWork.GeneralLedger.ReverseEntries(model.ReceivingReportNo, cancellationToken);
                 await _unitOfWork.FilprideInventory.VoidInventory(existingInventory, cancellationToken);
                 await _unitOfWork.FilprideReceivingReport.RemoveQuantityReceived(model.POId, model.QuantityReceived, cancellationToken);
 
@@ -724,8 +721,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                    && rr.PONo == po.PurchaseOrderNo
                                    && rr.Status == nameof(Status.Posted))
                 .ToList();
-
-
 
             var rrNotPosted = rrList
                 .Where(rr => rr.Company == po.Company
@@ -926,6 +921,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             using (var package = new ExcelPackage())
             {
                 // Add a new worksheet to the Excel package
+
                 #region -- Purchase Order Table Header --
 
                 var worksheet2 = package.Workbook.Worksheets.Add("PurchaseOrder");

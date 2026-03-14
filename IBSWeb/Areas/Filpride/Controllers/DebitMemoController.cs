@@ -1,21 +1,21 @@
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
 using IBS.Models;
-using IBS.Models.Filpride.Books;
-using IBS.Models.Filpride.ViewModels;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using OfficeOpenXml;
-using System.Linq.Dynamic.Core;
-using System.Security.Claims;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsReceivable;
+using IBS.Models.Filpride.Books;
+using IBS.Models.Filpride.ViewModels;
 using IBS.Services.Attributes;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using OfficeOpenXml;
+using System.Linq.Dynamic.Core;
+using System.Security.Claims;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -184,7 +184,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            if(!ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
                 await IncludeSelectLists(viewModel, cancellationToken);
                 ModelState.AddModelError("", "The information you submitted is not valid!");
@@ -269,7 +269,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 #endregion -- checking for unposted DM or CM
-
 
                 model.CreatedBy = GetUserFullName();
                 model.Company = companyClaims;
@@ -368,7 +367,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var arTradeCwv = accountTitlesDto.Find(c => c.AccountNumber == "101020300") ?? throw new ArgumentException("Account title '101020300' not found.");
                 var vatOutputTitle = accountTitlesDto.Find(c => c.AccountNumber == "201030100") ?? throw new ArgumentException("Account title '201030100' not found.");
 
-
                 if (model.SalesInvoiceId != null)
                 {
                     var (salesAcctNo, salesAcctTitle) = _unitOfWork.FilprideSalesInvoice.GetSalesAccountTitle(model.SalesInvoice!.Product!.ProductCode);
@@ -402,10 +400,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             sales.VatAmount = _unitOfWork.FilprideDebitMemo.ComputeVatAmount(sales.VatableSales);
                             sales.NetSales = sales.VatableSales - sales.Discount;
                             break;
+
                         case SD.VatType_Exempt:
                             sales.VatExemptSales = sales.Amount;
                             sales.NetSales = sales.VatExemptSales - sales.Discount;
                             break;
+
                         default:
                             sales.ZeroRated = sales.Amount;
                             sales.NetSales = sales.ZeroRated - sales.Discount;
@@ -598,10 +598,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             sales.VatAmount = _unitOfWork.FilprideDebitMemo.ComputeVatAmount(sales.VatableSales);
                             sales.NetSales = sales.VatableSales - sales.Discount;
                             break;
+
                         case SD.VatType_Exempt:
                             sales.VatExemptSales = sales.Amount;
                             sales.NetSales = sales.VatExemptSales - sales.Discount;
                             break;
+
                         default:
                             sales.ZeroRated = sales.Amount;
                             sales.NetSales = sales.ZeroRated - sales.Discount;
@@ -773,7 +775,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.Status = nameof(Status.Voided);
 
                 await _unitOfWork.FilprideDebitMemo.RemoveRecords<FilprideSalesBook>(crb => crb.SerialNo == model.DebitMemoNo, cancellationToken);
-                await _unitOfWork.FilprideDebitMemo.RemoveRecords<FilprideGeneralLedgerBook>(gl => gl.Reference == model.DebitMemoNo, cancellationToken);
+                await _unitOfWork.GeneralLedger.ReverseEntries(model.DebitMemoNo, cancellationToken);
 
                 #region --Audit Trail Recording
 
@@ -962,6 +964,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                         existingDm.DebitAmount = (decimal)(model.Quantity! * model.AdjustedPrice!);
                         break;
+
                     case "Service Invoice":
                         model.SalesInvoiceId = null;
 
@@ -1183,6 +1186,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             using (var package = new ExcelPackage())
             {
                 // Add a new worksheet to the Excel package
+
                 #region -- Sales Invoice Table Header --
 
                 var worksheet2 = package.Workbook.Worksheets.Add("SalesInvoice");
