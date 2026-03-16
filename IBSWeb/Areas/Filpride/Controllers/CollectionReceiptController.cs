@@ -3123,7 +3123,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .OrderByDescending(x => x.CollectionReceiptId)
                 .Select(x => x.CollectionReceiptNo);
 
-            var seriesNumber = int.TryParse(lastSeries.First(), out var num) ? num : 0;
+            var seriesNumber = int.TryParse(lastSeries.FirstOrDefault(), out var num) ? num : 0;
 
             var timer = Stopwatch.StartNew();
 
@@ -3131,7 +3131,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 foreach (var cr in records.GroupBy(x => x.ReferenceNo))
                 {
-                    seriesNumber++;
 
                     var total = cr.Select(x => x.CashAmount).FirstOrDefault()
                                 + cr.Select(x => x.CheckAmount).FirstOrDefault()
@@ -3169,7 +3168,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     foreach (var record in cr)
                     {
-                        existingSalesInvoice.TryGetValue(record.SalesInvoiceNo!.Trim(), out var getSalesInvoice);
+                        existingSalesInvoice.TryGetValue(record.SalesInvoiceNo.Trim(), out var getSalesInvoice);
 
                         if (getSalesInvoice == null)
                         {
@@ -3180,13 +3179,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             ));
 
                             skipOuter = true;
-                            break;
+                            continue;
                         }
                         if (getSalesInvoice.CustomerId == 0)
                         {
                             listOfNeedToCorrect.Add((cr.Select(x => x.SalesInvoiceNo).FirstOrDefault(),
                                 cr.Select(x => x.ReferenceNo).FirstOrDefault(),
                                 "Customer Id not found!", record.CustomerName, record.TransactionDate));
+
                             continue;
                         }
                         if (record.SiAmount > getSalesInvoice.Balance)
@@ -3199,7 +3199,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             ));
 
                             skipOuter = true;
-                            break;
+                            continue;
                         }
 
                         invoiceId.Add(getSalesInvoice.SalesInvoiceId);
@@ -3234,7 +3234,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     {
                         continue;
                     }
-
+                    seriesNumber++;
                     model.Add(
                         new FilprideCollectionReceipt
                         {
