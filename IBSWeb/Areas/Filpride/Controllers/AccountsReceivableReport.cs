@@ -1034,20 +1034,54 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var dateRangeType = viewModel.DateTo != default ? "ByRange" : "AsOf";
                 var currencyFormatTwoDecimal = "#,##0.00";
 
-                if(viewModel.ReportType == "Delivered")
+                if (viewModel.ReportType == "Delivered")
                 {
                     if (dateRangeType == "AsOf")
                     {
-                        filter = i => i.Company == companyClaims
-                                      && i.Date <= viewModel.DateFrom
-                                      && (i.Status == nameof(DRStatus.Invoiced) || i.Status == nameof(DRStatus.ForInvoicing));
+                        if (viewModel.DRStatusFilter == "InvalidOnly")
+                        {
+                            filter = i => i.Company == companyClaims
+                                        && i.Date <= viewModel.DateFrom
+                                        && (i.Status == nameof(DRStatus.Voided) || i.Status == nameof(DRStatus.Canceled));
+                        }
+                        else if (viewModel.DRStatusFilter == "All")
+                        {
+                            filter = i => i.Company == companyClaims
+                                        && i.Date <= viewModel.DateFrom
+                                        && (i.Status == nameof(DRStatus.Invoiced) || i.Status == nameof(DRStatus.ForInvoicing)
+                                            || i.Status == nameof(DRStatus.Voided) || i.Status == nameof(DRStatus.Canceled));
+                        }
+                        else // ValidOnly
+                        {
+                            filter = i => i.Company == companyClaims
+                                        && i.Date <= viewModel.DateFrom
+                                        && (i.Status == nameof(DRStatus.Invoiced) || i.Status == nameof(DRStatus.ForInvoicing));
+                        }
                     }
                     else
                     {
-                        filter = i => i.Company == companyClaims
-                                      && i.Date >= viewModel.DateFrom
-                                      && i.Date <= viewModel.DateTo
-                                      && (i.Status == nameof(DRStatus.Invoiced) || i.Status == nameof(DRStatus.ForInvoicing));
+                        if (viewModel.DRStatusFilter == "InvalidOnly")
+                        {
+                            filter = i => i.Company == companyClaims
+                                        && i.Date >= viewModel.DateFrom
+                                        && i.Date <= viewModel.DateTo
+                                        && (i.Status == nameof(DRStatus.Voided) || i.Status == nameof(DRStatus.Canceled));
+                        }
+                        else if (viewModel.DRStatusFilter == "All")
+                        {
+                            filter = i => i.Company == companyClaims
+                                        && i.Date >= viewModel.DateFrom
+                                        && i.Date <= viewModel.DateTo
+                                        && (i.Status == nameof(DRStatus.Invoiced) || i.Status == nameof(DRStatus.ForInvoicing)
+                                            || i.Status == nameof(DRStatus.Voided) || i.Status == nameof(DRStatus.Canceled));
+                        }
+                        else // ValidOnly
+                        {
+                            filter = i => i.Company == companyClaims
+                                        && i.Date >= viewModel.DateFrom
+                                        && i.Date <= viewModel.DateTo
+                                        && (i.Status == nameof(DRStatus.Invoiced) || i.Status == nameof(DRStatus.ForInvoicing));
+                        }
                     }
                 }
                 else
@@ -1072,8 +1106,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ToList();
                 var receivingReports = await _dbContext.FilprideReceivingReports
                     .Where(rr => rr.DeliveryReceiptId != null
-                                 && drIds.Contains(rr.DeliveryReceiptId.Value)
-                                 && rr.Status == nameof(Status.Posted))
+                                && drIds.Contains(rr.DeliveryReceiptId.Value)
+                                && rr.Status == nameof(Status.Posted))
                     .GroupBy(rr => rr.DeliveryReceiptId!.Value)
                     .Select(g => g.OrderByDescending(rr => rr.Date).First())
                     .ToDictionaryAsync(rr => rr.DeliveryReceiptId!.Value, cancellationToken);
@@ -1082,10 +1116,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var worksheet = package.Workbook.Worksheets.Add("Dispatch Report");
 
                 // Insert image from root directory
-                var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, "img", "Filpride.jpg"); // Update this to your image file name
+                var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, "img", "Filpride.jpg");
                 var picture = await worksheet.Drawings.AddPictureAsync("CompanyLogo", new FileInfo(imagePath));
-                picture.SetPosition(0, 0, 0, 0); // Adjust position as needed
-                picture.SetSize(200, 60); // Adjust size as needed
+                picture.SetPosition(0, 0, 0, 0);
+                picture.SetSize(200, 60);
 
                 var mergedCellsA5 = worksheet.Cells["A5:B5"];
                 mergedCellsA5.Merge = true;
@@ -1128,7 +1162,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 //TODO Remove this in the future
                 worksheet.Cells["Q9"].Value = "OTC COS No.";
                 worksheet.Cells["R9"].Value = "OTC DR No.";
-
                 #endregion
 
                 worksheet.Cells["S9"].Value = "RR NO.";
@@ -1148,10 +1181,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 worksheet.Cells["Y9"].Value = "TOTAL COST";
 
+                // Audit info columns — only for Delivered + All or InvalidOnly
+                bool showVoidCancelColumns = viewModel.ReportType == "Delivered" && viewModel.DRStatusFilter != "ValidOnly";
+
+                if (showVoidCancelColumns)
+                {
+                    worksheet.Cells["Z9"].Value = "VOIDED BY";
+                    worksheet.Cells["AA9"].Value = "VOIDED DATE";
+                    worksheet.Cells["AB9"].Value = "CANCELLED BY";
+                    worksheet.Cells["AC9"].Value = "CANCELLED DATE";
+                }
 
                 int currentRow = 10;
-                string headerColumn = "Y9";
-                int grandTotalColumn = 25;
+                string headerColumn = showVoidCancelColumns ? "AC9" : "Y9";
+                int grandTotalColumn = showVoidCancelColumns ? 29 : 25;
                 decimal grandSumOfTotalFreightAmount = 0;
                 decimal grandTotalQuantity = 0;
                 decimal totalLiftedQuantity = 0;
@@ -1215,8 +1258,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 worksheet.Cells[currentRow, 24].Style.Numberformat.Format = currencyFormatTwoDecimal;
                             }
                         }
+
                         worksheet.Cells[currentRow, 25].Value = totalAmount;
                         worksheet.Cells[currentRow, 25].Style.Numberformat.Format = currencyFormatTwoDecimal;
+
+                        if (showVoidCancelColumns)
+                        {
+                            worksheet.Cells[currentRow, 26].Value = dr.VoidedBy;
+                            worksheet.Cells[currentRow, 27].Value = dr.VoidedDate;
+                            worksheet.Cells[currentRow, 27].Style.Numberformat.Format = "MMM/dd/yyyy";
+                            worksheet.Cells[currentRow, 28].Value = dr.CanceledBy;
+                            worksheet.Cells[currentRow, 29].Value = dr.CanceledDate;
+                            worksheet.Cells[currentRow, 29].Style.Numberformat.Format = "MMM/dd/yyyy";
+                        }
 
                         currentRow++;
                     }
@@ -1235,7 +1289,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     // Don't add record of other dates if entry is "as of" and "delivered"
                     var entriesToday = deliveryReceipts.Where(t => t.Date == viewModel.DateFrom).ToList();
                     worksheet.Cells[currentRow, 6].Value = entriesToday.Sum(dr => dr.Quantity);
-                    worksheet.Cells[currentRow, 16].Value = entriesToday.Sum(dr => (dr.FreightAmount));
+                    worksheet.Cells[currentRow, 16].Value = entriesToday.Sum(dr => dr.FreightAmount);
                 }
                 else
                 {
@@ -1255,9 +1309,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 // Adding borders and bold styling to the total row
-                using (var totalRowRange = worksheet.Cells[currentRow, 1, currentRow, grandTotalColumn]) // Whole row
+                using (var totalRowRange = worksheet.Cells[currentRow, 1, currentRow, grandTotalColumn])
                 {
-                    totalRowRange.Style.Font.Bold = true; // Make text bold
+                    totalRowRange.Style.Font.Bold = true;
                     totalRowRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
                     totalRowRange.Style.Border.Bottom.Style = ExcelBorderStyle.Double;
                 }
@@ -1283,7 +1337,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[currentRow, 4].Value = "LOGISTICS SUPERVISOR";
                 worksheet.Cells[currentRow, 8].Value = "CNC SUPERVISOR";
 
-                // Styling and formatting (optional)
+                // Styling and formatting
                 worksheet.Cells["N,O,T"].Style.Numberformat.Format = "#,##0.0000";
                 worksheet.Cells["F,P"].Style.Numberformat.Format = "#,##0.00";
 
@@ -1300,9 +1354,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 // Summary
                 if (dateRangeType == "AsOf" && viewModel.ReportType == "Delivered")
                 {
-                    //string[] customerTypes = { "Retail", "Industrial", "Government" };
-                    //var groupByCustomerType = deliveryReceipts.GroupBy(dr => dr.Customer!.CustomerType);
-
                     string[] productList = ["BIODIESEL", "ECONOGAS", "ENVIROGAS"];
 
                     foreach (var customerType in deliveryReceipts.GroupBy(dr => dr.Customer!.CustomerType))
@@ -1321,7 +1372,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[startOfSummary, 14].Value = "ECONOGAS";
                         worksheet.Cells[startOfSummary, 14].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(56, 156, 100));
                         worksheet.Cells[startOfSummary, 15].Value = "ENVIROGAS";
-                        worksheet.Cells[startOfSummary, 15].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255,4,4));
+                        worksheet.Cells[startOfSummary, 15].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 4, 4));
 
                         #region -- totalToday --
 
@@ -1330,12 +1381,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[startOfSummary, 11].Style.Font.Bold = true;
 
                         var totalToday = customerType.Where(t => t.Date == viewModel.DateFrom).Sum(dr => dr.Quantity);
-
                         worksheet.Cells[startOfSummary, 12].Value = totalToday != 0 ? totalToday : 0m;
                         worksheet.Cells[startOfSummary, 12].Style.Numberformat.Format = currencyFormatTwoDecimal;
 
                         int columnOne = 13;
-
                         foreach (var productName in productList)
                         {
                             var totalProductToday = customerType.Where(x => x.Date == viewModel.DateFrom && x.PurchaseOrder?.Product?.ProductName == productName)
@@ -1358,7 +1407,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[startOfSummary, 12].Style.Numberformat.Format = currencyFormatTwoDecimal;
 
                         int columnTwo = 13;
-
                         foreach (var productName in productList)
                         {
                             var totalProductYesterday = customerType.Where(x => x.Date < viewModel.DateFrom && x.PurchaseOrder?.Product?.ProductName == productName).Sum(dr => dr.Quantity);
@@ -1380,7 +1428,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[startOfSummary, 12].Style.Numberformat.Format = currencyFormatTwoDecimal;
 
                         int columnThree = 13;
-
                         foreach (var productName in productList)
                         {
                             var totalProductMonthToDate = customerType.Where(x => x.PurchaseOrder?.Product?.ProductName == productName).Sum(dr => dr.Quantity);
@@ -1393,7 +1440,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                         worksheet.Cells[startOfSummary, 11, startOfSummary, 15].Style.Border.Top.Style = ExcelBorderStyle.Thin;
                         startOfSummary += 2;
-
                     }
 
                     // All product types
@@ -1411,7 +1457,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[startOfSummary, 14].Value = "ECONOGAS";
                     worksheet.Cells[startOfSummary, 14].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(56, 156, 100));
                     worksheet.Cells[startOfSummary, 15].Value = "ENVIROGAS";
-                    worksheet.Cells[startOfSummary, 15].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255,4,4));
+                    worksheet.Cells[startOfSummary, 15].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(255, 4, 4));
 
                     #region -- totalToday --
 
@@ -1420,12 +1466,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[startOfSummary, 11].Style.Font.Bold = true;
 
                     var totalTodayOverAll = deliveryReceipts.Where(t => t.Date == viewModel.DateFrom).Sum(dr => dr.Quantity);
-
                     worksheet.Cells[startOfSummary, 12].Value = totalTodayOverAll != 0 ? totalTodayOverAll : 0m;
                     worksheet.Cells[startOfSummary, 12].Style.Numberformat.Format = currencyFormatTwoDecimal;
 
                     int columnOneOverAll = 13;
-
                     foreach (var productName in productList)
                     {
                         var totalProductToday = deliveryReceipts.Where(x => x.Date == viewModel.DateFrom && x.PurchaseOrder?.Product?.ProductName == productName)
@@ -1448,7 +1492,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[startOfSummary, 12].Style.Numberformat.Format = currencyFormatTwoDecimal;
 
                     int columnTwoOverAll = 13;
-
                     foreach (var productName in productList)
                     {
                         var totalProductYesterday = deliveryReceipts.Where(x => x.Date < viewModel.DateFrom && x.PurchaseOrder?.Product?.ProductName == productName).Sum(dr => dr.Quantity);
@@ -1470,7 +1513,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[startOfSummary, 12].Style.Numberformat.Format = currencyFormatTwoDecimal;
 
                     int columnThreeOverAll = 13;
-
                     foreach (var productName in productList)
                     {
                         var totalProductMonthToDate = deliveryReceipts.Where(x => x.PurchaseOrder?.Product?.ProductName == productName).Sum(dr => dr.Quantity);
@@ -1483,7 +1525,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     worksheet.Cells[startOfSummary, 11, startOfSummary, 15].Style.Border.Top.Style = ExcelBorderStyle.Thin;
                 }
-
 
                 worksheet.Cells.AutoFitColumns();
                 worksheet.View.FreezePanes(10, 1);
