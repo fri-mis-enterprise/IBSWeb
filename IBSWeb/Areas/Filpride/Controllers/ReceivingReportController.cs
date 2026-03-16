@@ -1,5 +1,3 @@
-using System.Linq.Dynamic.Core;
-using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
 using IBS.Models;
@@ -15,6 +13,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
+using System.Linq.Dynamic.Core;
+using System.Security.Claims;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -114,8 +114,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             //     await Void(receivingReports.ReceivingReportId, cancellationToken);
             //     await Post(receivingReports.ReceivingReportId, cancellationToken);
             // }
-
-
         }
 
         [HttpPost]
@@ -440,7 +438,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-
                 #region --Retrieve PO
 
                 var po = await _unitOfWork.FilpridePurchaseOrder
@@ -585,6 +582,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Void(int id, CancellationToken cancellationToken)
         {
@@ -625,7 +624,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.DeliveryReceipt!.HasReceivingReport = false;
 
                 await _unitOfWork.FilprideReceivingReport.RemoveRecords<FilpridePurchaseBook>(pb => pb.DocumentNo == model.ReceivingReportNo, cancellationToken);
-                await _unitOfWork.FilprideReceivingReport.RemoveRecords<FilprideGeneralLedgerBook>(pb => pb.Reference == model.ReceivingReportNo, cancellationToken);
+                await _unitOfWork.GeneralLedger.ReverseEntries(model.ReceivingReportNo, cancellationToken);
                 await _unitOfWork.FilprideInventory.VoidInventory(existingInventory, cancellationToken);
                 await _unitOfWork.FilprideReceivingReport.RemoveQuantityReceived(model.POId, model.QuantityReceived, cancellationToken);
 
@@ -637,19 +636,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #endregion --Audit Trail Recording
 
                 await transaction.CommitAsync(cancellationToken);
-                TempData["success"] = "Receiving Report has been voided.";
-                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
+
+                return Json(new { success = true, message = $"Receiving Report #{model.ReceivingReportNo} has been voided successfully." });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to void receiving report. Error: {ErrorMessage}, Stack: {StackTrace}. Voided by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
                 await transaction.RollbackAsync(cancellationToken);
-                TempData["error"] = ex.Message;
-                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
+                return Json(new { success = false, message = ex.Message });
             }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancel(int id, string? cancellationRemarks, CancellationToken cancellationToken)
         {
             var model = await _unitOfWork.FilprideReceivingReport
@@ -678,16 +678,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #endregion --Audit Trail Recording
 
                 await transaction.CommitAsync(cancellationToken);
-                TempData["success"] = "Receiving Report has been canceled.";
-                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
+
+                return Json(new { success = true, message = $"Receiving Report #{model.ReceivingReportNo} has been cancelled successfully." });
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync(cancellationToken);
                 _logger.LogError(ex, "Failed to cancel receiving report. Error: {ErrorMessage}, Stack: {StackTrace}. Canceled by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
-                TempData["error"] = $"Error: '{ex.Message}'";
-                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
+                return Json(new { success = false, message = ex.Message });
             }
         }
 
@@ -724,8 +723,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                    && rr.PONo == po.PurchaseOrderNo
                                    && rr.Status == nameof(Status.Posted))
                 .ToList();
-
-
 
             var rrNotPosted = rrList
                 .Where(rr => rr.Company == po.Company
@@ -926,6 +923,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             using (var package = new ExcelPackage())
             {
                 // Add a new worksheet to the Excel package
+
                 #region -- Purchase Order Table Header --
 
                 var worksheet2 = package.Workbook.Worksheets.Add("PurchaseOrder");

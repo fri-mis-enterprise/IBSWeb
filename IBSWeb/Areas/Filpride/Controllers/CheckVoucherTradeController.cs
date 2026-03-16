@@ -121,11 +121,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             s.CvType!.ToLower().Contains(searchValue) == true ||
                             s.CreatedBy!.ToLower().Contains(searchValue) ||
                             s.Particulars!.ToLower().Contains(searchValue) == true
-                        ) ;
+                        );
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
                 {
-                    checkVoucherHeaders = checkVoucherHeaders.Where(s => s.Date == filterDate) ;
+                    checkVoucherHeaders = checkVoucherHeaders.Where(s => s.Date == filterDate);
                 }
 
                 // Sorting
@@ -646,15 +646,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     var currentCvPaid = rrAmountPaidById.GetValueOrDefault(rr.ReceivingReportId);
                     return new
-                     {
-                         Id = rr.ReceivingReportId,
-                         rr.ReceivingReportNo,
-                         rr.PurchaseOrder?.PurchaseOrderNo,
-                         rr.OldRRNo,
-                         AmountPaid = rr.AmountPaid.ToString(SD.Four_Decimal_Format),
-                         Balance = ((netOfEwtAmount - rr.AmountPaid) + currentCvPaid).ToString(SD.Four_Decimal_Format),
-                         NetOfEwtAmount = netOfEwtAmount.ToString(SD.Four_Decimal_Format),
-                     };
+                    {
+                        Id = rr.ReceivingReportId,
+                        rr.ReceivingReportNo,
+                        rr.PurchaseOrder?.PurchaseOrderNo,
+                        rr.OldRRNo,
+                        AmountPaid = rr.AmountPaid.ToString(SD.Four_Decimal_Format),
+                        Balance = ((netOfEwtAmount - rr.AmountPaid) + currentCvPaid).ToString(SD.Four_Decimal_Format),
+                        NetOfEwtAmount = netOfEwtAmount.ToString(SD.Four_Decimal_Format),
+                    };
                 }).ToList();
 
             return Json(rrList);
@@ -1411,6 +1411,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             SD.Department_Accounting,
             SD.Department_RCD,
             SD.Department_ManagementAccounting)]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancel(int id, string? cancellationRemarks, CancellationToken cancellationToken)
         {
             var model = await _unitOfWork.FilprideCheckVoucher
@@ -1496,19 +1498,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await transaction.CommitAsync(cancellationToken);
 
-                TempData["success"] = "Check Voucher has been Cancelled.";
-                return RedirectToAction(nameof(Index));
+                return Json(new { success = true, message = $"Check Voucher #{model.CheckVoucherHeaderNo} has been cancelled successfully." });
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync(cancellationToken);
                 _logger.LogError(ex, "Failed to cancel check voucher. Error: {ErrorMessage}, Stack: {StackTrace}. Canceled by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
-                TempData["error"] = $"Error: '{ex.Message}'";
-                return RedirectToAction(nameof(Index));
+                return Json(new { success = false, message = ex.Message });
             }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Void(int id, CancellationToken cancellationToken)
         {
@@ -1529,7 +1531,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.Status = nameof(Status.Voided);
 
                 await _unitOfWork.FilprideCheckVoucher.RemoveRecords<FilprideDisbursementBook>(db => db.CVNo == model.CheckVoucherHeaderNo, cancellationToken);
-                await _unitOfWork.FilprideCheckVoucher.RemoveRecords<FilprideGeneralLedgerBook>(gl => gl.Reference == model.CheckVoucherHeaderNo, cancellationToken);
+                await _unitOfWork.GeneralLedger.ReverseEntries(model.CheckVoucherHeaderNo, cancellationToken);
 
                 #region -- Recalculate payment of RR's or DR's
 
@@ -1596,16 +1598,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #endregion --Audit Trail Recording
 
                 await transaction.CommitAsync(cancellationToken);
-                TempData["success"] = "Check Voucher has been Voided.";
-                return RedirectToAction(nameof(Index));
+
+                return Json(new { success = true, message = $"Check Voucher #{model.CheckVoucherHeaderNo} has been voided successfully." });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to void check voucher. Error: {ErrorMessage}, Stack: {StackTrace}. Voided by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
                 await transaction.RollbackAsync(cancellationToken);
-                TempData["error"] = ex.Message;
-                return RedirectToAction(nameof(Index));
+                return Json(new { success = false, message = ex.Message });
             }
         }
 

@@ -72,11 +72,30 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.ajax({
-                        url: '@Url.Action("Void", "CheckVoucherNonTradePayrollInvoice", new { area = "Filpride" })/' + id,
+                        url: '@Url.Action("Void", "CheckVoucherNonTradePayrollInvoice", new { area = "Filpride" })',
+                        data: { 
+                            id: id
+                        },
                         type: 'POST',
                         headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
-                        success: function() { window.location.reload(); },
-                        error: function() { Swal.fire('Error', 'Something went wrong.', 'error'); }
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success',
+                                    text: response.message,
+                                    showConfirmButton: false,
+                                    timer: 2000
+                                }).then(function() {
+                                    window.location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error', response.message, 'error');
+                            }
+                        },
+                        error: function() {
+                            Swal.fire('Error', 'Something went wrong.', 'error');
+                        }
                     });
                 }
             })
@@ -100,10 +119,29 @@
                     $.ajax({
                         url: '@Url.Action("Cancel", "CheckVoucherNonTradePayrollInvoice", new { area = "Filpride" })',
                         type: 'POST',
-                        data: { id: id, cancellationRemarks: $("#cancellationRemarks").val() },
+                        data: { 
+                            id: id,
+                            cancellationRemarks: $("#cancellationRemarks").val()
+                        },
                         headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
-                        success: function() { window.location.reload(); },
-                        error: function() { Swal.fire('Error', 'Something went wrong.', 'error'); }
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success',
+                                    text: response.message,
+                                    showConfirmButton: false,
+                                    timer: 2000
+                                }).then(function() {
+                                    window.location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error', response.message, 'error');
+                            }
+                        },
+                        error: function() {
+                            Swal.fire('Error', 'Something went wrong.', 'error');
+                        }
                     });
                 }
             })

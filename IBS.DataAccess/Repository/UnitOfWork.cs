@@ -1,5 +1,3 @@
-using System.ComponentModel;
-using System.Linq.Expressions;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Bienes;
 using IBS.DataAccess.Repository.Bienes.IRepository;
@@ -16,6 +14,8 @@ using IBS.Models.Mobility.MasterFile;
 using IBS.Utility.Constants;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel;
+using System.Linq.Expressions;
 using BankAccountRepository = IBS.DataAccess.Repository.Mobility.BankAccountRepository;
 using ChartOfAccountRepository = IBS.DataAccess.Repository.Mobility.ChartOfAccountRepository;
 using CustomerRepository = IBS.DataAccess.Repository.Mobility.CustomerRepository;
@@ -120,7 +120,7 @@ namespace IBS.DataAccess.Repository
         public ILubePurchaseDetailRepository MobilityLubePurchaseDetail { get; private set; }
         public IPOSalesRepository MobilityPOSales { get; private set; }
         public IOfflineRepository MobilityOffline { get; private set; }
-        public IGeneralLedgerRepository MobilityGeneralLedger { get; private set; }
+        public Mobility.IRepository.IGeneralLedgerRepository MobilityGeneralLedger { get; private set; }
         public IInventoryRepository MobilityInventory { get; private set; }
         public IStationRepository MobilityStation { get; private set; }
         public ISupplierRepository MobilitySupplier { get; private set; }
@@ -158,7 +158,9 @@ namespace IBS.DataAccess.Repository
         public IAuditTrailRepository FilprideAuditTrail { get; private set; }
         public Filpride.IRepository.IEmployeeRepository FilprideEmployee { get; private set; }
         public ICustomerBranchRepository FilprideCustomerBranch { get; private set; }
-        public ITermsRepository FilprideTerms { get; }
+        public ITermsRepository FilprideTerms { get; private set; }
+
+        public Filpride.IRepository.IGeneralLedgerRepository GeneralLedger { get; private set; }
 
         #endregion
 
@@ -226,7 +228,7 @@ namespace IBS.DataAccess.Repository
             MobilityLubePurchaseDetail = new LubePurchaseDetailRepository(_db);
             MobilityPOSales = new POSalesRepository(_db);
             MobilityOffline = new OfflineRepository(_db);
-            MobilityGeneralLedger = new GeneralLedgerRepository(_db);
+            MobilityGeneralLedger = new Mobility.GeneralLedgerRepository(_db);
             MobilityInventory = new InventoryRepository(_db);
             MobilityStation = new StationRepository(_db);
             MobilitySupplier = new SupplierRepository(_db);
@@ -263,6 +265,7 @@ namespace IBS.DataAccess.Repository
             FilprideEmployee = new Filpride.EmployeeRepository(_db);
             FilprideCustomerBranch = new CustomerBranchRepository(_db);
             FilprideTerms = new TermsRepository(_db);
+            GeneralLedger = new Filpride.GeneralLedgerRepository(_db);
 
             #endregion
 
@@ -470,7 +473,7 @@ namespace IBS.DataAccess.Repository
         #region--Filpride
 
         // Make the function generic
-        Expression<Func<T, bool>> GetCompanyFilter<T>(string companyName) where T : class
+        private Expression<Func<T, bool>> GetCompanyFilter<T>(string companyName) where T : class
         {
             // Use reflection or property pattern matching to dynamically access properties
             var param = Expression.Parameter(typeof(T), "x");
@@ -489,7 +492,6 @@ namespace IBS.DataAccess.Repository
 
         public async Task<List<SelectListItem>> GetFilprideCustomerListAsyncById(string company, CancellationToken cancellationToken = default)
         {
-
             return await _db.FilprideCustomers
                 .OrderBy(c => c.CustomerId)
                 .Where(c => c.IsActive)
@@ -552,7 +554,7 @@ namespace IBS.DataAccess.Repository
                 .Select(s => new SelectListItem
                 {
                     Value = s.SupplierId.ToString(),
-                    Text = s.SupplierCode + " " + s.SupplierName
+                    Text = s.SupplierName
                 })
                 .ToListAsync(cancellationToken);
         }

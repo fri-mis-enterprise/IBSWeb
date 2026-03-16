@@ -467,9 +467,10 @@ namespace IBS.DataAccess.Repository.Filpride
             model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
             model.Status = nameof(Status.Voided);
 
-            await RemoveRecords<FilpridePurchaseBook>(pb => pb.DocumentNo == model.ReceivingReportNo, cancellationToken);
-            await RemoveRecords<FilprideGeneralLedgerBook>(pb => pb.Reference == model.ReceivingReportNo, cancellationToken);
             var unitOfWork = new UnitOfWork(_db);
+            await RemoveRecords<FilpridePurchaseBook>(pb => pb.DocumentNo == model.ReceivingReportNo, cancellationToken);
+            await unitOfWork.GeneralLedger.ReverseEntries(model.ReceivingReportNo, cancellationToken);
+
             await unitOfWork.FilprideInventory.VoidInventory(existingInventory, cancellationToken);
             await RemoveQuantityReceived(model.POId, model.QuantityReceived, cancellationToken);
 

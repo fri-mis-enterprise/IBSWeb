@@ -163,7 +163,9 @@
             @foreach (var jvd in Model.Details!)
             {
                 <tr>
-                    <td style="width:60%; padding-left:20px;">@jvd.AccountNo&nbsp;@jvd.AccountName</td>
+                    <td style="width:60%; padding-left:20px;">
+                        @($"{jvd.AccountNo} {jvd.AccountName}" + (jvd.SubAccountName != null ? $" ({jvd.SubAccountName})" : string.Empty))
+                    </td>
                     <td class="text-end" style="width:7%;">@jvd.Debit.ToString(SD.Two_Decimal_Format)</td>
                     <td class="text-end" style="width:7%;">@jvd.Credit.ToString(SD.Two_Decimal_Format)</td>
                 </tr>

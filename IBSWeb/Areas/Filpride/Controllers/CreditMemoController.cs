@@ -1,21 +1,21 @@
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
 using IBS.Models;
+using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsReceivable;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.ViewModels;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using OfficeOpenXml;
-using System.Linq.Dynamic.Core;
-using System.Security.Claims;
-using IBS.Models.Enums;
 using IBS.Services.Attributes;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using OfficeOpenXml;
+using System.Linq.Dynamic.Core;
+using System.Security.Claims;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -424,6 +424,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                         existingCm.CreditAmount = (decimal)(model.Quantity! * -model.AdjustedPrice!);
                         break;
+
                     case "Service Invoice":
                         model.SalesInvoiceId = null;
 
@@ -529,7 +530,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var arTradeCwv = accountTitlesDto.Find(c => c.AccountNumber == "101020300") ?? throw new ArgumentException("Account title '101020300' not found.");
                 var vatOutputTitle = accountTitlesDto.Find(c => c.AccountNumber == "201030100") ?? throw new ArgumentException("Account title '201030100' not found.");
 
-
                 if (model.SalesInvoiceId != null)
                 {
                     var (salesAcctNo, salesAcctTitle) = _unitOfWork.FilprideSalesInvoice.GetSalesAccountTitle(model.SalesInvoice!.Product!.ProductCode);
@@ -562,10 +562,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             sales.VatAmount = (_unitOfWork.FilprideCreditMemo.ComputeVatAmount(Math.Abs(sales.VatableSales))) * -1;
                             sales.NetSales = sales.VatableSales - sales.Discount;
                             break;
+
                         case SD.VatType_Exempt:
                             sales.VatExemptSales = sales.Amount;
                             sales.NetSales = sales.VatExemptSales - sales.Discount;
                             break;
+
                         default:
                             sales.ZeroRated = sales.Amount;
                             sales.NetSales = sales.ZeroRated - sales.Discount;
@@ -787,10 +789,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             sales.VatAmount = (_unitOfWork.FilprideCreditMemo.ComputeVatAmount(Math.Abs(sales.VatableSales))) * -1;
                             sales.NetSales = sales.VatableSales - sales.Discount;
                             break;
+
                         case SD.VatType_Exempt:
                             sales.VatExemptSales = sales.Amount;
                             sales.NetSales = sales.VatExemptSales - sales.Discount;
                             break;
+
                         default:
                             sales.ZeroRated = sales.Amount;
                             sales.NetSales = sales.ZeroRated - sales.Discount;
@@ -965,9 +969,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 TempData["error"] = ex.Message;
                 return RedirectToAction(nameof(Index));
             }
-
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Void(int id, CancellationToken cancellationToken)
         {
@@ -988,7 +993,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.Status = nameof(Status.Voided);
 
                 await _unitOfWork.FilprideCreditMemo.RemoveRecords<FilprideSalesBook>(crb => crb.SerialNo == model.CreditMemoNo, cancellationToken);
-                await _unitOfWork.FilprideCreditMemo.RemoveRecords<FilprideGeneralLedgerBook>(gl => gl.Reference == model.CreditMemoNo, cancellationToken);
+                await _unitOfWork.GeneralLedger.ReverseEntries(model.CreditMemoNo, cancellationToken);
 
                 #region --Audit Trail Recording
 
@@ -999,18 +1004,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await _unitOfWork.SaveAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
-                TempData["success"] = "Credit Memo has been Voided.";
-                return RedirectToAction(nameof(Index));
+
+                return Json(new { success = true, message = $"Credit Memo #{model.CreditMemoNo} has been voided successfully." });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to void credit memo. Voided by: {UserName}", _userManager.GetUserName(User));
                 await transaction.RollbackAsync(cancellationToken);
-                TempData["error"] = ex.Message;
-                return RedirectToAction(nameof(Index));
+                return Json(new { success = false, message = ex.Message });
             }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancel(int id, string? cancellationRemarks, CancellationToken cancellationToken)
         {
             var model = await _unitOfWork.FilprideCreditMemo
@@ -1039,19 +1045,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await _unitOfWork.SaveAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
-                TempData["success"] = "Credit Memo has been Cancelled.";
-                return RedirectToAction(nameof(Index));
+
+                return Json(new { success = true, message = $"Collection Receipt #{model.CreditMemoNo} has been cancelled successfully." });
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync(cancellationToken);
                 _logger.LogError(ex, "Failed to cancel credit memo. Error: {ErrorMessage}, Stack: {StackTrace}. Canceled by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
-                TempData["error"] = $"Error: '{ex.Message}'";
-                return RedirectToAction(nameof(Index));
+                return Json(new { success = false, message = ex.Message });
             }
         }
-
 
         [HttpGet]
         public async Task<JsonResult> GetSVDetails(int svId, CancellationToken cancellationToken)
@@ -1067,7 +1071,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.Period,
                 model.Total
             });
-
         }
 
         public async Task<IActionResult> Printed(int id, CancellationToken cancellationToken)

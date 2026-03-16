@@ -1,5 +1,3 @@
-using System.Linq.Dynamic.Core;
-using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
 using IBS.Models;
@@ -19,6 +17,8 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
+using System.Linq.Dynamic.Core;
+using System.Security.Claims;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -137,14 +137,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             drList = drList.Where(dr =>
                                 dr.Status == nameof(DRStatus.PendingDelivery));
                             break;
+
                         case "ForInvoice":
                             drList = drList.Where(dr =>
                                 dr.Status == nameof(DRStatus.ForInvoicing));
                             break;
+
                         case "ForOMApproval":
                             drList = drList.Where(dr =>
                                 dr.Status == nameof(CosStatus.ForApprovalOfOM));
                             break;
+
                         case "RecordLiftingDate":
                             drList = drList.Where(dr =>
                                 !dr.HasReceivingReport && dr.CanceledBy == null && dr.VoidedBy == null);
@@ -281,7 +284,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken);
             viewModel.CustomerOrderSlips = await _unitOfWork.FilprideCustomerOrderSlip.GetCosListNotDeliveredAsync(companyClaims, cancellationToken);
             viewModel.Haulers = await _unitOfWork.GetFilprideHaulerListAsyncById(companyClaims, cancellationToken);
-            viewModel.MinDate =  await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.DeliveryReceipt, cancellationToken);
+            viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.DeliveryReceipt, cancellationToken);
 
             if (!ModelState.IsValid)
             {
@@ -856,7 +859,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             var result = orderSlips.ToList();
 
-
             return Json(result);
         }
 
@@ -971,7 +973,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     existingCos.IsDelivered = true;
                 }
 
-                #endregion
+                #endregion Mark the COS delivered
 
                 #region--Inventory Recording
 
@@ -1001,6 +1003,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         [DepartmentAuthorize(SD.Department_Logistics, SD.Department_RCD)]
         public async Task<IActionResult> Cancel(int id, string? cancellationRemarks, CancellationToken cancellationToken)
         {
@@ -1043,20 +1047,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #endregion --Audit Trail Recording
 
                 await transaction.CommitAsync(cancellationToken);
-                TempData["success"] = "Delivery Receipt has been canceled.";
-                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
+
+                return Json(new { success = true, message = $"Delivery Receipt #{model.DeliveryReceiptNo} has been cancelled successfully." });
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync(cancellationToken);
-                TempData["error"] = ex.Message;
                 _logger.LogError(ex, "Failed to cancel delivery receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Canceled by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
-                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
+                return Json(new { success = false, message = ex.Message });
             }
-
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Void(int id, CancellationToken cancellationToken)
         {
@@ -1077,7 +1081,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-
                 model.PostedBy = null;
                 model.VoidedBy = GetUserFullName();
                 model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
@@ -1098,7 +1101,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     await _unitOfWork.FilprideReceivingReport.VoidReceivingReportAsync(connectedReceivingReport.ReceivingReportId, model.VoidedBy!, cancellationToken);
                 }
 
-                await _unitOfWork.FilprideDeliveryReceipt.RemoveRecords<FilprideGeneralLedgerBook>(gl => gl.Reference == model.DeliveryReceiptNo, cancellationToken);
+                await _unitOfWork.GeneralLedger.ReverseEntries(model.DeliveryReceiptNo, cancellationToken);
                 await _unitOfWork.FilprideDeliveryReceipt.DeductTheVolumeToCos(model.CustomerOrderSlipId, model.Quantity, cancellationToken);
                 await _unitOfWork.FilprideDeliveryReceipt.UpdatePreviousAppointedSupplierAsync(model);
 
@@ -1111,16 +1114,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await _unitOfWork.SaveAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
-                TempData["success"] = "Delivery receipt has been Voided.";
-                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
+
+                return Json(new { success = true, message = $"Delivery Receipt #{model.DeliveryReceiptNo} has been voided successfully." });
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync(cancellationToken);
-                TempData["error"] = ex.Message;
                 _logger.LogError(ex, "Failed to void delivery receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Voided by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
-                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
+                return Json(new { success = false, message = ex.Message });
             }
         }
 
@@ -1269,7 +1271,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
                 return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
             }
-
         }
 
         private decimal ComputeGrossMargin(FilprideCustomerOrderSlip cos, FilpridePurchaseOrder po, decimal drFreight = 0)
@@ -1309,8 +1310,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 ? _unitOfWork.FilprideDeliveryReceipt.ComputeNetOfVat(productCost)
                 : productCost;
 
-            return netSellingPrice -  netProductCost - commission - freight;
-
+            return netSellingPrice - netProductCost - commission - freight;
         }
 
         public async Task<IActionResult> GetHaulers(CancellationToken cancellationToken = default)
@@ -1342,7 +1342,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return Json(dr);
         }
 
-        public async Task<IActionResult> ChangeHaulerFreight (int? id, decimal? freight, string? haulerId, CancellationToken cancellationToken)
+        public async Task<IActionResult> ChangeHaulerFreight(int? id, decimal? freight, string? haulerId, CancellationToken cancellationToken)
         {
             if (id == null)
             {
