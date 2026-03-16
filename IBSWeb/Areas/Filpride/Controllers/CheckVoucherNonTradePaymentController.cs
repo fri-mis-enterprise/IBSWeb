@@ -2179,7 +2179,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateAdvancesToSupplier(AdvancesToSupplierViewModel viewModel, CancellationToken cancellationToken)
+        public async Task<IActionResult> CreateAdvancesToSupplier(AdvancesToSupplierViewModel viewModel, string[]? accountNumber, CancellationToken cancellationToken)
         {
             var companyClaims = await GetCompanyClaimAsync();
 
@@ -2267,50 +2267,51 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var accountTitlesDto = await _unitOfWork.FilprideCheckVoucher.GetListOfAccountTitleDto(cancellationToken);
                 var advancesToSupplierTitle = accountTitlesDto.Find(c => c.AccountNumber == "101060100") ?? throw new ArgumentException("Account title '101060100' not found.");
                 var cashInBankTitle = accountTitlesDto.Find(c => c.AccountNumber == "101010100") ?? throw new ArgumentException("Account title '101010100' not found.");
-                var ewtTitle = accountTitlesDto.Find(c => c.AccountNumber == "201030210") ?? throw new ArgumentException("Account title '201030210' not found.");
+                var ewtTitle = accountTitlesDto.Find(c => c.AccountNumber == accountNumber?[1]);
 
                 var grossAmount = viewModel.Total;
-                var ewtAmount = _unitOfWork.FilprideCheckVoucher.ComputeEwtAmount(grossAmount, 0.01m);
+                var ewtAmount = _unitOfWork.FilprideCheckVoucher.ComputeEwtAmount(grossAmount, checkVoucherHeader.Supplier?.WithholdingTaxPercent ?? 0);
                 var netOfEwtAmount = _unitOfWork.FilprideCheckVoucher.ComputeNetOfEwt(grossAmount, ewtAmount);
 
-                var checkVoucherDetails = new List<FilprideCheckVoucherDetail>
-                {
-                    new()
-                    {
-                        AccountNo = advancesToSupplierTitle.AccountNumber,
-                        AccountName = advancesToSupplierTitle.AccountName,
-                        TransactionNo = checkVoucherHeader.CheckVoucherHeaderNo,
-                        CheckVoucherHeaderId = checkVoucherHeader.CheckVoucherHeaderId,
-                        Debit = grossAmount,
-                        Credit = 0,
-                        SubAccountType = SubAccountType.Supplier,
-                        SubAccountId = viewModel.SupplierId,
-                        SubAccountName = viewModel.Payee,
-                    },
+                var checkVoucherDetails = new List<FilprideCheckVoucherDetail>();
 
-                    new()
+                checkVoucherDetails.Add(new FilprideCheckVoucherDetail
+                {
+                    AccountNo = advancesToSupplierTitle.AccountNumber,
+                    AccountName = advancesToSupplierTitle.AccountName,
+                    TransactionNo = checkVoucherHeader.CheckVoucherHeaderNo,
+                    CheckVoucherHeaderId = checkVoucherHeader.CheckVoucherHeaderId,
+                    Debit = grossAmount,
+                    Credit = 0,
+                    SubAccountType = SubAccountType.Supplier,
+                    SubAccountId = viewModel.SupplierId,
+                    SubAccountName = viewModel.Payee,
+                });
+
+                if (ewtTitle != null && ewtAmount > 0)
+                {
+                    checkVoucherDetails.Add(new FilprideCheckVoucherDetail
                     {
                         AccountNo = ewtTitle.AccountNumber,
                         AccountName = ewtTitle.AccountName,
                         TransactionNo = checkVoucherHeader.CheckVoucherHeaderNo,
                         CheckVoucherHeaderId = checkVoucherHeader.CheckVoucherHeaderId,
                         Debit = 0,
-                        Credit = ewtAmount,
-                    },
-
-                    new()
-                    {
-                        AccountNo = cashInBankTitle.AccountNumber,
-                        AccountName = cashInBankTitle.AccountName,
-                        TransactionNo = checkVoucherHeader.CheckVoucherHeaderNo,
-                        CheckVoucherHeaderId = checkVoucherHeader.CheckVoucherHeaderId,
-                        Debit = 0,
-                        Credit = netOfEwtAmount,
-                        SubAccountType = SubAccountType.BankAccount,
-                        SubAccountId = viewModel.BankId,
-                        SubAccountName = $"{bank.AccountNo} {bank.AccountName}",
-                    },
-                };
+                        Credit = ewtAmount
+                    });
+                }
+                checkVoucherDetails.Add(new FilprideCheckVoucherDetail
+                {
+                    AccountNo = cashInBankTitle.AccountNumber,
+                    AccountName = cashInBankTitle.AccountName,
+                    TransactionNo = checkVoucherHeader.CheckVoucherHeaderNo,
+                    CheckVoucherHeaderId = checkVoucherHeader.CheckVoucherHeaderId,
+                    Debit = 0,
+                    Credit = netOfEwtAmount,
+                    SubAccountType = SubAccountType.BankAccount,
+                    SubAccountId = viewModel.BankId,
+                    SubAccountName = $"{bank.AccountNo} {bank.AccountName}",
+                });
 
                 await _dbContext.AddRangeAsync(checkVoucherDetails, cancellationToken);
 
