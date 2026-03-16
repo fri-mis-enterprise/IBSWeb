@@ -340,18 +340,18 @@ namespace IBS.DataAccess.Repository.Filpride
             }
 
             var query = _db.FilpridePurchaseOrders
-                .Where(p => p.Company == company && p.Date >= dateFrom && p.Date <= dateTo && p.Status == nameof(Status.Posted));
+                .Where(p => p.Company == company && p.Date >= dateFrom && p.Date <= dateTo);
 
             // Apply status filter
             if (statusFilter == "ValidOnly")
             {
-                query = query.Where(p => p.VoidedBy == null && p.CanceledBy == null);
+                query = query.Where(p => p.Status == nameof(Status.Posted));
             }
             else if (statusFilter == "InvalidOnly")
             {
-                query = query.Where(p => p.VoidedBy != null || p.CanceledBy != null);
+                query = query.Where(p => p.Status == nameof(Status.Voided) || p.Status == nameof(Status.Canceled));
             }
-            // "All" returns all records without filtering
+            // "All" returns Posted, Voided, and Canceled records
 
             var purchaseOrder = await query
                 .Include(p => p.Supplier)
@@ -405,6 +405,7 @@ namespace IBS.DataAccess.Repository.Filpride
             List<int>? customerIds = null,
             List<int>? commissioneeIds = null,
             string dateSelectionType = "RRDate",
+            string statusFilter = "ValidOnly",
             CancellationToken cancellationToken = default)
         {
             if (dateFrom > dateTo)
@@ -415,9 +416,19 @@ namespace IBS.DataAccess.Repository.Filpride
             // Base query without date filter yet
             var receivingReportsQuery = _db.FilprideReceivingReports
                 .Where(rr => rr.Company == company
-                            && rr.Status == nameof(Status.Posted)
                             && (customerIds == null || customerIds.Contains(rr.DeliveryReceipt!.CustomerId))
                             && (commissioneeIds == null || commissioneeIds.Contains(rr.DeliveryReceipt!.CommissioneeId!.Value)));
+
+            // Apply status filter
+            if (statusFilter == "ValidOnly")
+            {
+                receivingReportsQuery = receivingReportsQuery.Where(rr => rr.Status == nameof(Status.Posted));
+            }
+            else if (statusFilter == "InvalidOnly")
+            {
+                receivingReportsQuery = receivingReportsQuery.Where(rr => rr.Status == nameof(Status.Voided) || rr.Status == nameof(Status.Canceled));
+            }
+            // "All" returns Posted, Voided, and Canceled records
 
             // Apply date filter based on dateSelectionType
             if (dateSelectionType == "RRDate")
@@ -455,9 +466,19 @@ namespace IBS.DataAccess.Repository.Filpride
             // For the additional delivery receipts part, apply similar date filtering logic
             var additionalDeliveryReceiptsQuery = _db.FilprideDeliveryReceipts
                 .Where(dr => dr.Date >= dateFrom && dr.Date <= dateTo
-                          && dr.Status == nameof(DRStatus.PendingDelivery)
                           && (customerIds == null || customerIds.Contains(dr.CustomerId))
                           && (commissioneeIds == null || commissioneeIds.Contains(dr.CommissioneeId!.Value)));
+
+            // Apply status filter to additional delivery receipts
+            if (statusFilter == "ValidOnly")
+            {
+                additionalDeliveryReceiptsQuery = additionalDeliveryReceiptsQuery.Where(dr => dr.Status == nameof(DRStatus.PendingDelivery));
+            }
+            else if (statusFilter == "InvalidOnly")
+            {
+                additionalDeliveryReceiptsQuery = additionalDeliveryReceiptsQuery.Where(dr => dr.Status == nameof(DRStatus.Canceled) || dr.Status == nameof(DRStatus.Voided));
+            }
+            // "All" returns PendingDelivery, Voided, and Canceled records
 
             var additionalDeliveryReceipts = await additionalDeliveryReceiptsQuery
                 .Include(dr => dr.CustomerOrderSlip)

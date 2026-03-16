@@ -1683,6 +1683,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         model.DateTo,
                         companyClaims,
                         dateSelectionType: model.DateSelectionType,
+                        statusFilter: model.StatusFilter,
                         cancellationToken: cancellationToken);
 
                 // check if there is no record
@@ -1723,10 +1724,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 purchaseReportWorksheet.Cells["A2"].Value = "Date Range:";
                 purchaseReportWorksheet.Cells["A3"].Value = "Extracted By:";
                 purchaseReportWorksheet.Cells["A4"].Value = "Company:";
+                purchaseReportWorksheet.Cells["A5"].Value = "Status Filter:";
 
                 purchaseReportWorksheet.Cells["B2"].Value = $"{dateFrom} - {dateTo}";
                 purchaseReportWorksheet.Cells["B3"].Value = $"{extractedBy}";
                 purchaseReportWorksheet.Cells["B4"].Value = $"{companyClaims}";
+                purchaseReportWorksheet.Cells["B5"].Value = model.StatusFilter == "ValidOnly" ? "Valid Only" : model.StatusFilter == "All" ? "All" : "Voided/Cancelled Only";
+
+                // Determine if we need to show void/cancel columns
+                bool showVoidCancelColumns = model.StatusFilter != "ValidOnly";
 
                 purchaseReportWorksheet.Cells["A7"].Value = "LIFTING DATE";
                 purchaseReportWorksheet.Cells["B7"].Value = "CUSTOMER RECEIVED DATE";
@@ -1763,12 +1769,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 purchaseReportWorksheet.Cells["AG7"].Value = "IS PO#";
                 purchaseReportWorksheet.Cells["AH7"].Value = "IS RR#";
                 purchaseReportWorksheet.Cells["AI7"].Value = "TERMS";
+                
+                int lastColIndex = 35; // AI = 35
+                if (showVoidCancelColumns)
+                {
+                    purchaseReportWorksheet.Cells[7, 36].Value = "STATUS";
+                    purchaseReportWorksheet.Cells[7, 37].Value = "VOIDED BY";
+                    purchaseReportWorksheet.Cells[7, 38].Value = "VOIDED DATE";
+                    purchaseReportWorksheet.Cells[7, 39].Value = "CANCELLED BY";
+                    purchaseReportWorksheet.Cells[7, 40].Value = "CANCELLED DATE";
+                    lastColIndex = 40;
+                }
 
                 #endregion -- Set the column header  --
 
                 #region -- Apply styling to the header row --
 
-                using (var range = purchaseReportWorksheet.Cells["A7:AI7"])
+                using (var range = purchaseReportWorksheet.Cells["A7:" + (showVoidCancelColumns ? "AM7" : "AI7")])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
@@ -1882,6 +1899,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     purchaseReportWorksheet.Cells[row, 34].Value = pr.OldRRNo; // IS RR =========
                     purchaseReportWorksheet.Cells[row, 35].Value = pr.PurchaseOrder?.Terms;
 
+                    if (showVoidCancelColumns)
+                    {
+                        purchaseReportWorksheet.Cells[row, 36].Value = pr.Status;
+                        purchaseReportWorksheet.Cells[row, 37].Value = pr.VoidedBy;
+                        purchaseReportWorksheet.Cells[row, 38].Value = pr.VoidedDate;
+                        purchaseReportWorksheet.Cells[row, 39].Value = pr.CanceledBy;
+                        purchaseReportWorksheet.Cells[row, 40].Value = pr.CanceledDate;
+                    }
+
                     #endregion -- Assign Values to Cells --
 
                     #region -- Add the values to total --
@@ -1941,7 +1967,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 // Apply style to subtotal rows
                 // color to whole row
-                using (var range = purchaseReportWorksheet.Cells[row, 1, row, 30])
+                using (var range = purchaseReportWorksheet.Cells[row, 1, row, lastColIndex])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.Fill.PatternType = ExcelFillStyle.Solid;
