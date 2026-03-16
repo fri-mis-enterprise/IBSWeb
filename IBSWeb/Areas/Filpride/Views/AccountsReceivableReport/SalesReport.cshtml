@@ -39,6 +39,15 @@
                         Leave empty to include all commissionee by default. You can select more than one commissionee to filter results.
                     </div>
                 </div>
+                <div class="mb-3">
+                    <label asp-for="SalesStatusFilter" class="control-label">Status Filter</label>
+                    <select asp-for="SalesStatusFilter" class="form-control">
+                        <option value="ValidOnly">Valid Only (Exclude Voided/Cancelled)</option>
+                        <option value="All">All (Include Voided/Cancelled)</option>
+                        <option value="InvalidOnly">Voided/Cancelled Only</option>
+                    </select>
+                    <span asp-validation-for="SalesStatusFilter" class="text-danger"></span>
+                </div>
                 <div class="row pt-2">
                     @* <div class="col-6 col-md-3"> *@
                     @*     <button type="button" class="btn btn-primary form-control" onclick="submitForm('GeneratedSalesReport')"><i class="bi bi-printer"></i> Generate</button> *@

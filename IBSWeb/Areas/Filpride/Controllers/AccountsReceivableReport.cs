@@ -2030,6 +2030,25 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 var salesReport = await _unitOfWork.FilprideReport.GetSalesReport(model.DateFrom, model.DateTo, companyClaims, model.Commissionee, cancellationToken);
+
+                // Apply status filter
+                if (model.SalesStatusFilter == "InvalidOnly")
+                {
+                    salesReport = salesReport.Where(s =>
+                        s.DeliveryReceipt.VoidedBy != null ||
+                        s.DeliveryReceipt.CanceledBy != null).ToList();
+                }
+                else if (model.SalesStatusFilter == "All")
+                {
+                    // Include all - no filtering needed
+                }
+                else // ValidOnly
+                {
+                    salesReport = salesReport.Where(s =>
+                        s.DeliveryReceipt.VoidedBy == null &&
+                        s.DeliveryReceipt.CanceledBy == null).ToList();
+                }
+
                 if (salesReport.Count == 0)
                 {
                     TempData["info"] = "No Record Found";
@@ -2081,8 +2100,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["V7"].Value = "Commissionee";
                 worksheet.Cells["W7"].Value = "Remarks";
 
+                // Add void/cancel columns — only for All or InvalidOnly
+                bool showVoidCancelColumns = model.SalesStatusFilter != "ValidOnly";
+
+                if (showVoidCancelColumns)
+                {
+                    worksheet.Cells["X7"].Value = "VOIDED BY";
+                    worksheet.Cells["Y7"].Value = "VOIDED DATE";
+                    worksheet.Cells["Z7"].Value = "CANCELLED BY";
+                    worksheet.Cells["AA7"].Value = "CANCELLED DATE";
+                }
+
                 // Apply styling to the header row
-                using (var range = worksheet.Cells["A7:W7"])
+                string headerEndColumn = showVoidCancelColumns ? "AA7" : "W7";
+                using (var range = worksheet.Cells[$"A7:{headerEndColumn}"])
                 {
                     range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
                     range.Style.Font.Bold = true;
@@ -2140,6 +2171,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 22].Value = dr.DeliveryReceipt.CustomerOrderSlip?.CommissioneeName;
                     worksheet.Cells[row, 23].Value = dr.DeliveryReceipt.Remarks;
 
+                    // Add void/cancel data — only for All or InvalidOnly
+                    if (showVoidCancelColumns)
+                    {
+                        worksheet.Cells[row, 24].Value = dr.DeliveryReceipt.VoidedBy;
+                        worksheet.Cells[row, 25].Value = dr.DeliveryReceipt.VoidedDate;
+                        if (dr.DeliveryReceipt.VoidedDate.HasValue)
+                        {
+                            worksheet.Cells[row, 25].Style.Numberformat.Format = "MMM/dd/yyyy";
+                        }
+                        worksheet.Cells[row, 26].Value = dr.DeliveryReceipt.CanceledBy;
+                        worksheet.Cells[row, 27].Value = dr.DeliveryReceipt.CanceledDate;
+                        if (dr.DeliveryReceipt.CanceledDate.HasValue)
+                        {
+                            worksheet.Cells[row, 27].Style.Numberformat.Format = "MMM/dd/yyyy";
+                        }
+                    }
+
                     worksheet.Cells[row, 1].Style.Numberformat.Format = "MMM/dd/yyyy";
                     worksheet.Cells[row, 15].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[row, 16].Style.Numberformat.Format = currencyFormatTwoDecimal;
@@ -2176,18 +2224,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 21].Style.Numberformat.Format = currencyFormat;
 
                 // Apply style to subtotal row
-                using (var range = worksheet.Cells[row, 1, row, 23])
+                int lastColumn = showVoidCancelColumns ? 27 : 23;
+                using (var range = worksheet.Cells[row, 1, row, lastColumn])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.Fill.PatternType = ExcelFillStyle.Solid;
                     range.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(172, 185, 202));
                 }
 
-                using (var range = worksheet.Cells[row, 13, row, 23])
+                using (var range = worksheet.Cells[row, 13, row, lastColumn])
                 {
                     range.Style.Font.Bold = true;
-                    range.Style.Border.Top.Style = ExcelBorderStyle.Thin; // Single top border
-                    range.Style.Border.Bottom.Style = ExcelBorderStyle.Double; // Double bottom border
+                    range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                    range.Style.Border.Bottom.Style = ExcelBorderStyle.Double;
                 }
 
                 var rowForSummary = row + 8;
