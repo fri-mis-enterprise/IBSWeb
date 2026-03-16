@@ -554,7 +554,7 @@ namespace IBS.DataAccess.Repository
                 .Select(s => new SelectListItem
                 {
                     Value = s.SupplierId.ToString(),
-                    Text = s.SupplierCode + " " + s.SupplierName
+                    Text = s.SupplierName
                 })
                 .ToListAsync(cancellationToken);
         }
