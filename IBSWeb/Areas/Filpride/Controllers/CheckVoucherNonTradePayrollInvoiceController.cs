@@ -353,46 +353,24 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 List<FilprideCheckVoucherDetail> checkVoucherDetails = [];
 
-                var multipleSupplierIds = viewModel.PayrollAccountingEntries!
-                    .Where(x => x.MultipleSupplierId.HasValue)
-                    .Select(x => x.MultipleSupplierId!.Value)
-                    .Distinct()
-                    .ToList();
-
-                var multipleSupplierDict = multipleSupplierIds.Any()
-                    ? (await _unitOfWork.FilprideSupplier
-                        .GetAllAsync(x => multipleSupplierIds.Contains(x.SupplierId), cancellationToken))
-                    .ToDictionary(s => s.SupplierId, s => s.SupplierName)
-                    : new Dictionary<int, string>();
-
-                foreach (var subAccount in viewModel.PayrollAccountingEntries!)
+                foreach (var detail in viewModel.PayrollAccountingEntries!)
                 {
-                    var isPayable = subAccounts.Contains(subAccount.AccountNumber);
+                    var isPayable = subAccounts.Contains(detail.AccountNumber);
 
-                    supplierMapping.TryGetValue(subAccount.AccountNumber, out var supplier);
-
-                    string? multipleSupplierName = null;
-                    int? multipleSupplierId = null;
-
-                    if (subAccount.MultipleSupplierId.HasValue &&
-                        multipleSupplierDict.TryGetValue(subAccount.MultipleSupplierId.Value, out var foundName))
-                    {
-                        multipleSupplierId = subAccount.MultipleSupplierId.Value;
-                        multipleSupplierName = foundName;
-                    }
+                    supplierMapping.TryGetValue(detail.AccountNumber, out var supplier);
 
                     checkVoucherDetails.Add(new FilprideCheckVoucherDetail
                     {
-                        AccountNo = subAccount.AccountNumber,
-                        AccountName = subAccount.AccountTitle,
+                        AccountNo = detail.AccountNumber,
+                        AccountName = detail.AccountTitle,
                         TransactionNo = checkVoucherHeader.CheckVoucherHeaderNo,
                         CheckVoucherHeaderId = checkVoucherHeader.CheckVoucherHeaderId,
-                        Debit = subAccount.Debit,
-                        Credit = subAccount.Credit,
-                        Amount = isPayable ? subAccount.Credit : 0m,
+                        Debit = detail.Debit,
+                        Credit = detail.Credit,
+                        Amount = isPayable ? detail.Credit : 0m,
                         SubAccountType = isPayable ? SubAccountType.Supplier : null,
-                        SubAccountId = supplier?.SupplierId ?? multipleSupplierId,
-                        SubAccountName = supplier?.SupplierName ?? multipleSupplierName,
+                        SubAccountId = supplier?.SupplierId ?? detail.MultipleSupplierId,
+                        SubAccountName = supplier?.SupplierName ?? detail.MultipleSupplierCodeName,
                         IsUserSelected = true
                     });
                 }
@@ -627,46 +605,24 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 List<FilprideCheckVoucherDetail> checkVoucherDetails = [];
 
-                var multipleSupplierIds = viewModel.PayrollAccountingEntries!
-                    .Where(x => x.MultipleSupplierId.HasValue)
-                    .Select(x => x.MultipleSupplierId!.Value)
-                    .Distinct()
-                    .ToList();
-
-                var multipleSupplierDict = multipleSupplierIds.Any()
-                    ? (await _unitOfWork.FilprideSupplier
-                        .GetAllAsync(x => multipleSupplierIds.Contains(x.SupplierId), cancellationToken))
-                    .ToDictionary(s => s.SupplierId, s => s.SupplierName)
-                    : new Dictionary<int, string>();
-
-                foreach (var subAccount in viewModel.PayrollAccountingEntries!)
+                foreach (var detail in viewModel.PayrollAccountingEntries!)
                 {
-                    var isPayable = subAccounts.Contains(subAccount.AccountNumber);
+                    var isPayable = subAccounts.Contains(detail.AccountNumber);
 
-                    supplierMapping.TryGetValue(subAccount.AccountNumber, out var supplier);
-
-                    string? multipleSupplierName = null;
-                    int? multipleSupplierId = null;
-
-                    if (subAccount.MultipleSupplierId.HasValue &&
-                        multipleSupplierDict.TryGetValue(subAccount.MultipleSupplierId.Value, out var foundName))
-                    {
-                        multipleSupplierId = subAccount.MultipleSupplierId.Value;
-                        multipleSupplierName = foundName;
-                    }
+                    supplierMapping.TryGetValue(detail.AccountNumber, out var supplier);
 
                     checkVoucherDetails.Add(new FilprideCheckVoucherDetail
                     {
-                        AccountNo = subAccount.AccountNumber,
-                        AccountName = subAccount.AccountTitle,
+                        AccountNo = detail.AccountNumber,
+                        AccountName = detail.AccountTitle,
                         TransactionNo = existingHeaderModel.CheckVoucherHeaderNo!,
                         CheckVoucherHeaderId = existingHeaderModel.CheckVoucherHeaderId,
-                        Debit = subAccount.Debit,
-                        Credit = subAccount.Credit,
-                        Amount = isPayable ? subAccount.Credit : 0m,
+                        Debit = detail.Debit,
+                        Credit = detail.Credit,
+                        Amount = isPayable ? detail.Credit : 0m,
                         SubAccountType = isPayable ? SubAccountType.Supplier : null,
-                        SubAccountId = supplier?.SupplierId ?? multipleSupplierId,
-                        SubAccountName = supplier?.SupplierName ?? multipleSupplierName,
+                        SubAccountId = supplier?.SupplierId ?? detail.MultipleSupplierId,
+                        SubAccountName = supplier?.SupplierName ?? detail.MultipleSupplierCodeName,
                         IsUserSelected = true
                     });
                 }
