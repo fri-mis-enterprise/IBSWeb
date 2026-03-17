@@ -2179,7 +2179,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateAdvancesToSupplier(AdvancesToSupplierViewModel viewModel, string[]? accountNumber, CancellationToken cancellationToken)
+        public async Task<IActionResult> CreateAdvancesToSupplier(AdvancesToSupplierViewModel viewModel, CancellationToken cancellationToken)
         {
             var companyClaims = await GetCompanyClaimAsync();
 
@@ -2267,12 +2267,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var accountTitlesDto = await _unitOfWork.FilprideCheckVoucher.GetListOfAccountTitleDto(cancellationToken);
                 var advancesToSupplierTitle = accountTitlesDto.Find(c => c.AccountNumber == "101060100") ?? throw new ArgumentException("Account title '101060100' not found.");
                 var cashInBankTitle = accountTitlesDto.Find(c => c.AccountNumber == "101010100") ?? throw new ArgumentException("Account title '101010100' not found.");
-                var ewtAccountNo = (accountNumber != null && accountNumber.Length > 1)
-                    ? accountNumber[1]
-                    : null;
-                var ewtTitle = !string.IsNullOrWhiteSpace(ewtAccountNo)
-                    ? accountTitlesDto.Find(c => c.AccountNumber == ewtAccountNo)
-                    : null;
+                var ewtTitle = accountTitlesDto.Find(c => c.AccountNumber == supplier.WithholdingTaxTitle?.Split(' ')[0]);
 
                 var grossAmount = viewModel.Total;
                 var netOfVat = supplier.VatType == "Vatable" ? _unitOfWork.FilprideCheckVoucher.ComputeNetOfVat(viewModel.Total) : viewModel.Total;
@@ -2436,7 +2431,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditAdvancesToSupplier(AdvancesToSupplierViewModel viewModel, string[]? accountNumber, CancellationToken cancellationToken)
+        public async Task<IActionResult> EditAdvancesToSupplier(AdvancesToSupplierViewModel viewModel, CancellationToken cancellationToken)
         {
             var companyClaims = await GetCompanyClaimAsync();
 
@@ -2527,7 +2522,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var accountTitlesDto = await _unitOfWork.FilprideCheckVoucher.GetListOfAccountTitleDto(cancellationToken);
                 var advancesToSupplierTitle = accountTitlesDto.Find(c => c.AccountNumber == "101060100") ?? throw new ArgumentException("Account title '101060100' not found.");
                 var cashInBankTitle = accountTitlesDto.Find(c => c.AccountNumber == "101010100") ?? throw new ArgumentException("Account title '101010100' not found.");
-                var ewtTitle = accountTitlesDto.Find(c => c.AccountNumber == accountNumber?[1]);
+                var ewtTitle = accountTitlesDto.Find(c => c.AccountNumber == supplier.WithholdingTaxTitle?.Split(' ')[0]);
 
                 var grossAmount = viewModel.Total;
                 var netOfVat = supplier.VatType == "Vatable" ? _unitOfWork.FilprideCheckVoucher.ComputeNetOfVat(viewModel.Total) : viewModel.Total;
