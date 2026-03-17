@@ -2270,7 +2270,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var ewtTitle = accountTitlesDto.Find(c => c.AccountNumber == (supplier.WithholdingTaxTitle ?? string.Empty).Split(' ', 2).FirstOrDefault());
 
                 var grossAmount = viewModel.Total;
-                var netOfVat = supplier.VatType == "Vatable" ? _unitOfWork.FilprideCheckVoucher.ComputeNetOfVat(viewModel.Total) : viewModel.Total;
+                var netOfVat = supplier.VatType == SD.VatType_Vatable
+                    ? _unitOfWork.FilprideCheckVoucher.ComputeNetOfVat(viewModel.Total)
+                    : viewModel.Total;
                 var ewtAmount = _unitOfWork.FilprideCheckVoucher.ComputeEwtAmount(netOfVat, supplier.WithholdingTaxPercent ?? 0);
                 var netOfEwtAmount = _unitOfWork.FilprideCheckVoucher.ComputeNetOfEwt(grossAmount, ewtAmount);
 
@@ -2525,7 +2527,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var ewtTitle = accountTitlesDto.Find(c => c.AccountNumber == (supplier.WithholdingTaxTitle ?? string.Empty).Split(' ', 2).FirstOrDefault());
 
                 var grossAmount = viewModel.Total;
-                var netOfVat = supplier.VatType == "Vatable" ? _unitOfWork.FilprideCheckVoucher.ComputeNetOfVat(viewModel.Total) : viewModel.Total;
+                var netOfVat = supplier.VatType == SD.VatType_Vatable
+                    ? _unitOfWork.FilprideCheckVoucher.ComputeNetOfVat(viewModel.Total)
+                    : viewModel.Total;
                 var ewtAmount = _unitOfWork.FilprideCheckVoucher.ComputeEwtAmount(netOfVat, supplier.WithholdingTaxPercent ?? 0);
                 var netOfEwtAmount = _unitOfWork.FilprideCheckVoucher.ComputeNetOfEwt(grossAmount, ewtAmount);
 
