@@ -1589,7 +1589,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var sales = await _unitOfWork.FilprideReport.GetSalesReport(model.DateFrom, model.DateTo, companyClaims, model.Commissionee, cancellationToken);
+                var sales = await _unitOfWork.FilprideReport.GetSalesReport(model.DateFrom, model.DateTo, companyClaims, model.Commissionee, model.SalesStatusFilter, cancellationToken);
 
                 if (!sales.Any())
                 {
@@ -2029,25 +2029,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return RedirectToAction(nameof(GenerateSalesInvoiceReportExcelFile), new { dateFrom = model.DateFrom, dateTo = model.DateTo, cancellationToken });
                 }
 
-                var salesReport = await _unitOfWork.FilprideReport.GetSalesReport(model.DateFrom, model.DateTo, companyClaims, model.Commissionee, cancellationToken);
-
-                // Apply status filter
-                if (model.SalesStatusFilter == "InvalidOnly")
-                {
-                    salesReport = salesReport.Where(s =>
-                        s.DeliveryReceipt.VoidedBy != null ||
-                        s.DeliveryReceipt.CanceledBy != null).ToList();
-                }
-                else if (model.SalesStatusFilter == "All")
-                {
-                    // Include all - no filtering needed
-                }
-                else // ValidOnly
-                {
-                    salesReport = salesReport.Where(s =>
-                        s.DeliveryReceipt.VoidedBy == null &&
-                        s.DeliveryReceipt.CanceledBy == null).ToList();
-                }
+                var salesReport = await _unitOfWork.FilprideReport.GetSalesReport(model.DateFrom, model.DateTo, companyClaims, model.Commissionee, model.SalesStatusFilter, cancellationToken);
 
                 if (salesReport.Count == 0)
                 {
@@ -4077,7 +4059,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             try
             {
                 var salesInvoice = await _unitOfWork.FilprideReport
-                    .GetARPerCustomerReport(model.DateFrom, model.DateTo, companyClaims, model.Customers, cancellationToken);
+                    .GetARPerCustomerReport(model.DateFrom, model.DateTo, companyClaims, model.Customers, model.SalesStatusFilter, cancellationToken);
 
                 if (!salesInvoice.Any())
                 {
@@ -4401,25 +4383,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 var salesInvoice = await _unitOfWork.FilprideReport
-                    .GetARPerCustomerReport(model.DateFrom, model.DateTo, companyClaims, model.Customers, cancellationToken);
-
-                // Apply status filter
-                if (model.SalesStatusFilter == "InvalidOnly")
-                {
-                    salesInvoice = salesInvoice.Where(si =>
-                        si.VoidedBy != null ||
-                        si.CanceledBy != null).ToList();
-                }
-                else if (model.SalesStatusFilter == "All")
-                {
-                    // Include all - no filtering needed
-                }
-                else // ValidOnly
-                {
-                    salesInvoice = salesInvoice.Where(si =>
-                        si.VoidedBy == null &&
-                        si.CanceledBy == null).ToList();
-                }
+                    .GetARPerCustomerReport(model.DateFrom, model.DateTo, companyClaims, model.Customers, model.SalesStatusFilter, cancellationToken);
 
                 if (!salesInvoice.Any())
                 {
@@ -4770,7 +4734,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             try
             {
                 var serviceInvoice = await _unitOfWork.FilprideReport
-                    .GetServiceInvoiceReport(model.DateFrom, model.DateTo, companyClaims, cancellationToken);
+                    .GetServiceInvoiceReport(model.DateFrom, model.DateTo, companyClaims, model.SalesStatusFilter, cancellationToken);
 
                 if (!serviceInvoice.Any())
                 {
@@ -4965,25 +4929,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
-                var serviceReport = await _unitOfWork.FilprideReport.GetServiceInvoiceReport(model.DateFrom, model.DateTo, companyClaims, cancellationToken);
-
-                // Apply status filter
-                if (model.SalesStatusFilter == "InvalidOnly")
-                {
-                    serviceReport = serviceReport.Where(sv =>
-                        sv.VoidedBy != null ||
-                        sv.CanceledBy != null).ToList();
-                }
-                else if (model.SalesStatusFilter == "All")
-                {
-                    // Include all - no filtering needed
-                }
-                else // ValidOnly
-                {
-                    serviceReport = serviceReport.Where(sv =>
-                        sv.VoidedBy == null &&
-                        sv.CanceledBy == null).ToList();
-                }
+                var serviceReport = await _unitOfWork.FilprideReport.GetServiceInvoiceReport(model.DateFrom, model.DateTo, companyClaims, model.SalesStatusFilter, cancellationToken);
 
                 if (serviceReport.Count == 0)
                 {
@@ -5395,25 +5341,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 // fetch sales report
                 var salesReport = await _unitOfWork.FilprideReport
-                    .GetSalesReport(model.DateFrom, model.DateTo, companyClaims, cancellationToken: cancellationToken);
-
-                // Apply status filter
-                if (model.SalesStatusFilter == "InvalidOnly")
-                {
-                    salesReport = salesReport.Where(s =>
-                        s.DeliveryReceipt.VoidedBy != null ||
-                        s.DeliveryReceipt.CanceledBy != null).ToList();
-                }
-                else if (model.SalesStatusFilter == "All")
-                {
-                    // Include all - no filtering needed
-                }
-                else // ValidOnly
-                {
-                    salesReport = salesReport.Where(s =>
-                        s.DeliveryReceipt.VoidedBy == null &&
-                        s.DeliveryReceipt.CanceledBy == null).ToList();
-                }
+                    .GetSalesReport(model.DateFrom, model.DateTo, companyClaims, null, model.SalesStatusFilter, cancellationToken);
 
                 // check if there is no record
                 if (salesReport.Count == 0)
