@@ -2267,10 +2267,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var accountTitlesDto = await _unitOfWork.FilprideCheckVoucher.GetListOfAccountTitleDto(cancellationToken);
                 var advancesToSupplierTitle = accountTitlesDto.Find(c => c.AccountNumber == "101060100") ?? throw new ArgumentException("Account title '101060100' not found.");
                 var cashInBankTitle = accountTitlesDto.Find(c => c.AccountNumber == "101010100") ?? throw new ArgumentException("Account title '101010100' not found.");
-                var ewtTitle = accountTitlesDto.Find(c => c.AccountNumber == accountNumber?[1]);
+                var ewtAccountNo = (accountNumber != null && accountNumber.Length > 1)
+                    ? accountNumber[1]
+                    : null;
+                var ewtTitle = !string.IsNullOrWhiteSpace(ewtAccountNo)
+                    ? accountTitlesDto.Find(c => c.AccountNumber == ewtAccountNo)
+                    : null;
 
                 var grossAmount = viewModel.Total;
-                var ewtAmount = _unitOfWork.FilprideCheckVoucher.ComputeEwtAmount(grossAmount, checkVoucherHeader.Supplier?.WithholdingTaxPercent ?? 0);
+                var ewtAmount = _unitOfWork.FilprideCheckVoucher.ComputeEwtAmount(grossAmount, supplier.WithholdingTaxPercent ?? 0);
                 var netOfEwtAmount = _unitOfWork.FilprideCheckVoucher.ComputeNetOfEwt(grossAmount, ewtAmount);
 
                 var checkVoucherDetails = new List<FilprideCheckVoucherDetail>();
