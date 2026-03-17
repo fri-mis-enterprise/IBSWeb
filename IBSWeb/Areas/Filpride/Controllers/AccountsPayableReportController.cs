@@ -105,7 +105,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var checkVoucherHeader = await _unitOfWork.FilprideReport.GetClearedDisbursementReport(model.DateFrom, model.DateTo, companyClaims, "ValidOnly", cancellationToken);
+                var statusFilter = string.IsNullOrWhiteSpace(model.StatusFilter) ? "ValidOnly" : model.StatusFilter;
+                var checkVoucherHeader = await _unitOfWork.FilprideReport.GetClearedDisbursementReport(model.DateFrom, model.DateTo, companyClaims, statusFilter, cancellationToken);
 
                 if (checkVoucherHeader.Count == 0)
                 {
@@ -954,7 +955,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
             try
             {
-                var purchaseOrder = await _unitOfWork.FilprideReport.GetPurchaseOrderReport(model.DateFrom, model.DateTo, companyClaims, "ValidOnly");
+                var statusFilter = string.IsNullOrWhiteSpace(model.StatusFilter) ? "ValidOnly" : model.StatusFilter;
+                var purchaseOrder = await _unitOfWork.FilprideReport.GetPurchaseOrderReport(model.DateFrom, model.DateTo, companyClaims, statusFilter);
 
                 if (purchaseOrder.Count == 0)
                 {

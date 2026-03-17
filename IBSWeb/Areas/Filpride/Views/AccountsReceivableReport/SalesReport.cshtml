@@ -40,13 +40,13 @@
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label asp-for="SalesStatusFilter" class="control-label">Status Filter</label>
-                    <select asp-for="SalesStatusFilter" class="form-control">
+                    <label asp-for="StatusFilter" class="control-label">Status Filter</label>
+                    <select asp-for="StatusFilter" class="form-control">
                         <option value="ValidOnly">Valid Only (Exclude Voided/Cancelled)</option>
                         <option value="All">All (Include Voided/Cancelled)</option>
                         <option value="InvalidOnly">Voided/Cancelled Only</option>
                     </select>
-                    <span asp-validation-for="SalesStatusFilter" class="text-danger"></span>
+                    <span asp-validation-for="StatusFilter" class="text-danger"></span>
                 </div>
                 <div class="row pt-2">
                     @* <div class="col-6 col-md-3"> *@
