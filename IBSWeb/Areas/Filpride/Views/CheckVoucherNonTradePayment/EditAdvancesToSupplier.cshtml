@@ -1,3 +1,4 @@
+@using IBS.Utility.Constants
 @model AdvancesToSupplierViewModel
 
 @{
@@ -174,7 +175,7 @@
                     method: "GET",
                     data: { supplierId: supplierId },
                     success: function (data) {
-                        if (data && data.taxType === "Withholding Tax") {
+                        if (data && data.taxType === "@SD.TaxType_WithTax") {
                             $("#Ewt").css("display", "table-row");
                         } else {
                             $("#Ewt").hide();
@@ -218,7 +219,7 @@
 
         function updateAccountingEntries() {
             let total = parseNumber($("#Total").val()) || 0;
-            let ewtAmount = vatType === "Vatable" ? (total / 1.12) * taxPercent : total * taxPercent;
+            let ewtAmount = vatType === "@SD.VatType_Vatable" ? (total / 1.12) * taxPercent : total * taxPercent;
             let netOfEwtAmount = total - ewtAmount;
 
             $(".advances-debit").val(formatNumber(total));
