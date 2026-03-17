@@ -104,8 +104,8 @@
                             <td><input type="text" name="Credit" value="0.00" class="w-100" style="border:none" readonly/></td>
                         </tr>
                         <tr id="Ewt" style="display:none;">
-                            <td><input type="text" id="WithholdingTaxAccountNumber" name="AccountNumber" value="201030210" class="w-100" style="border:none" readonly/></td>
-                            <td><input type="text" id="WithholdingTaxTitle" name="AccountTitle" value="Expanded Withholding Tax 1%" class="w-100" style="border:none" readonly/></td>
+                            <td><input type="text" id="WithholdingTaxAccountNumber" name="AccountNumber" class="w-100" style="border:none" readonly/></td>
+                            <td><input type="text" id="WithholdingTaxTitle" name="AccountTitle" class="w-100" style="border:none" readonly/></td>
                             <td><input type="text" name="Debit" value="0.00" class="w-100" style="border:none" readonly/></td>
                             <td><input type="text" name="Credit" value="0.00" class="w-100 ewt-amount" style="border:none" readonly/></td>
                         </tr>
@@ -148,7 +148,12 @@
         let vatType = 0;
         $(document).ready(function() {
             // Initial update when the page loads
-            updateAccountingEntries();
+            const initialSupplierId = $("#SupplierId").val();
+            if (initialSupplierId) {
+                getSupplierDetails(initialSupplierId);
+            } else {
+                updateAccountingEntries();
+            }
             
             // Update accounting entries when Total field changes
             $("#Total").on("input", function() {
@@ -213,7 +218,7 @@
 
         function updateAccountingEntries() {
             let total = parseNumber($("#Total").val()) || 0;
-            let ewtAmount = total * taxPercent;
+            let ewtAmount = vatType === "Vatable" ? (total / 1.12) * taxPercent : total * taxPercent;
             let netOfEwtAmount = total - ewtAmount;
 
             $(".advances-debit").val(formatNumber(total));
