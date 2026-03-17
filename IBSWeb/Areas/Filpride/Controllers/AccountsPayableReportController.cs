@@ -470,6 +470,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     return BadRequest();
                 }
+                 var statusFilter = model.StatusFilter switch
+                {
+                    "All" => "All",
+                    "InvalidOnly" => "InvalidOnly",
+                    _ => "ValidOnly"
+                };
 
                 var nonTradeInvoiceReport =
                     await _dbContext.FilprideCheckVoucherDetails
@@ -478,8 +484,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                       && cvd.CheckVoucherHeader.CvType == nameof(CVType.Invoicing)
                                       && cvd.CheckVoucherHeader.Date >= dateFrom &&
                                       cvd.CheckVoucherHeader.Date <= dateTo
-                                      && (model.StatusFilter == "ValidOnly" ? (cvd.CheckVoucherHeader.VoidedBy == null && cvd.CheckVoucherHeader.CanceledBy == null)
-                                         : model.StatusFilter == "InvalidOnly" ? (cvd.CheckVoucherHeader.VoidedBy != null || cvd.CheckVoucherHeader.CanceledBy != null)
+                                      && (statusFilter == "ValidOnly" ? (cvd.CheckVoucherHeader.VoidedBy == null && cvd.CheckVoucherHeader.CanceledBy == null)
+                                         : statusFilter == "InvalidOnly" ? (cvd.CheckVoucherHeader.VoidedBy != null || cvd.CheckVoucherHeader.CanceledBy != null)
                                          : true))
                         .Include(cvd => cvd.CheckVoucherHeader)
                         .ThenInclude(cvh => cvh!.Supplier)
@@ -561,7 +567,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy"; col++;
                     worksheet.Cells[row, col].Value = "CANCELLED BY"; col++;
                     worksheet.Cells[row, col].Value = "CANCELLED DATE";
-                    worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy"; col++;
+                    worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy";
                 }
 
                 using (var range = worksheet.Cells[row, 1, row, col])
@@ -689,6 +695,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
+                var statusFilter = model.StatusFilter switch
+                {
+                    "All" => "All",
+                    "InvalidOnly" => "InvalidOnly",
+                    _ => "ValidOnly"
+                };
+
                 var cvTradeHeaderReport = await _dbContext.FilprideCheckVoucherHeaders
                         .AsNoTracking()
                         .Where(cvh =>
@@ -696,8 +709,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             cvh.CvType != nameof(CVType.Invoicing) &&
                             cvh.Date >= dateFrom &&
                             cvh.Date <= dateTo
-                            && (model.StatusFilter == "ValidOnly" ? (cvh.VoidedBy == null && cvh.CanceledBy == null)
-                               : model.StatusFilter == "InvalidOnly" ? (cvh.VoidedBy != null || cvh.CanceledBy != null)
+                            && (statusFilter == "ValidOnly" ? (cvh.VoidedBy == null && cvh.CanceledBy == null)
+                               : statusFilter == "InvalidOnly" ? (cvh.VoidedBy != null || cvh.CanceledBy != null)
                                : true))
                         .Include(cvh => cvh.Details!)
                         .Include(cvh => cvh.Supplier)

@@ -1116,7 +1116,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var worksheet = package.Workbook.Worksheets.Add("Dispatch Report");
 
                 // Insert image from root directory
-                var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, "img", "Filpride.jpg");
+                var imagePath = Path.Combine(_webHostEnvironment.WebRootPath, "img", "Filpride-logo.png");
                 var picture = await worksheet.Drawings.AddPictureAsync("CompanyLogo", new FileInfo(imagePath));
                 picture.SetPosition(0, 0, 0, 0);
                 picture.SetSize(200, 60);
