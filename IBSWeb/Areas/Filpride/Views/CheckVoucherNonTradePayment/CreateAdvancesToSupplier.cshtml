@@ -156,6 +156,7 @@
     }
     <script>
         let taxPercent = 0;
+        let vatType = 0;
         $(document).ready(function() {
             // Initial update when the page loads
             updateAccountingEntries();
@@ -164,38 +165,6 @@
             $("#Total").on("input", function() {
                 updateAccountingEntries();
             });
-            
-            function updateAccountingEntries() {
-                let total = parseNumber($("#Total").val()) || 0;
-                let ewtAmount = total * taxPercent;
-                let netOfEwtAmount = total - ewtAmount;
-                
-                $(".advances-debit").val(formatNumber(total));
-                $(".ewt-amount").val(formatNumber(ewtAmount));
-                $(".cib-credit").val(formatNumber(netOfEwtAmount));
-                
-                updateTotals();
-                validateDebitAndCredit();
-            }
-            
-            function updateTotals() {
-                var totalDebit = 0;
-                var totalCredit = 0;
-                
-                // Calculate total debit
-                $("input[name='Debit']").each(function() {
-                    totalDebit += parseNumber($(this).val()) || 0;
-                });
-                
-                // Calculate total credit
-                $("input[name='Credit']").each(function() {
-                    totalCredit += parseNumber($(this).val()) || 0;
-                });
-                
-                // Update total displays
-                $(".totalDebit").text(formatNumber(totalDebit));
-                $(".totalCredit").text(formatNumber(totalCredit));
-            }
 
             $("#SupplierId").change(function () {
                 let supplierId = $(this).val();
@@ -211,7 +180,7 @@
                     method: "GET",
                     data: { supplierId: supplierId },
                     success: function (data) {
-                        if (data.taxType === "Withholding Tax") {
+                        if (data && data.taxType === "Withholding Tax") {
                             $("#Ewt").css("display", "table-row");
                         } else {
                             $("#Ewt").hide();
@@ -223,6 +192,7 @@
                             const accountNumber = parts[0];
                             const accountTitle = parts.slice(1).join(" ");
                             taxPercent = data.taxPercent;
+                            vatType = data.vatType;
                             
                             
                             $("#Payee").val(data.name);
@@ -230,6 +200,7 @@
                             $("#PayeeTin").val(data.tinNo);
                             $("#WithholdingTaxAccountNumber").val(accountNumber);
                             $("#WithholdingTaxTitle").val(accountTitle);
+                            updateAccountingEntries();
                         }
                         else{
                             taxPercent = 0;
@@ -238,6 +209,7 @@
                             $("#PayeeTin").val('');
                             $("#WithholdingTaxAccountNumber").val('');
                             $("#WithholdingTaxTitle").val('');
+                            updateAccountingEntries();
                         }
                     },
                     error: function (xhr, status, error) {
@@ -249,6 +221,38 @@
                 $("#PayeeAddress").val("");
                 $("#PayeeTin").val("");
             }
+        }
+
+        function updateAccountingEntries() {
+            let total = parseNumber($("#Total").val()) || 0;
+            let ewtAmount = vatType === "Vatable" ? (total / 1.12) * taxPercent : total * taxPercent;
+            let netOfEwtAmount = total - ewtAmount;
+
+            $(".advances-debit").val(formatNumber(total));
+            $(".ewt-amount").val(formatNumber(ewtAmount));
+            $(".cib-credit").val(formatNumber(netOfEwtAmount));
+
+            updateTotals();
+            validateDebitAndCredit();
+        }
+
+        function updateTotals() {
+            var totalDebit = 0;
+            var totalCredit = 0;
+
+            // Calculate total debit
+            $("input[name='Debit']").each(function() {
+                totalDebit += parseNumber($(this).val()) || 0;
+            });
+
+            // Calculate total credit
+            $("input[name='Credit']").each(function() {
+                totalCredit += parseNumber($(this).val()) || 0;
+            });
+
+            // Update total displays
+            $(".totalDebit").text(formatNumber(totalDebit));
+            $(".totalCredit").text(formatNumber(totalCredit));
         }
 
         function validateDebitAndCredit() {
