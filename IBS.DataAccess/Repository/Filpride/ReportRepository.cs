@@ -736,7 +736,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
             var journalVoucherDetails = await query
                 .OrderBy(jvd => jvd.JournalVoucherHeader!.Date)
-                .OrderBy(jvd => jvd.JournalVoucherHeader!.JournalVoucherHeaderNo)
+                .ThenBy(jvd => jvd.JournalVoucherHeader!.JournalVoucherHeaderNo)
                 .ToListAsync(cancellationToken);
 
 

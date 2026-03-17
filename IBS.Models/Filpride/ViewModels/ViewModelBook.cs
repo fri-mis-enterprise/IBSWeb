@@ -56,13 +56,6 @@ namespace IBS.Models.Filpride.ViewModels
 
         #endregion
 
-        #region Sales Report
-
-        [Display(Name = "Status Filter")]
-        public string SalesStatusFilter { get; set; } = "ValidOnly";
-
-        #endregion
-
         #endregion
     }
 }

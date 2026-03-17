@@ -551,7 +551,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, col].Value = "SUB ACCOUNT NAME"; col++;
                 worksheet.Cells[row, col].Value = "DEBIT"; col++;
                 worksheet.Cells[row, col].Value = "CREDIT"; col++;
-                worksheet.Cells[row, col].Value = "STATUS";
+                worksheet.Cells[row, col].Value = "STATUS"; col++;
                 
                 if (showVoidCancelColumns)
                 {
@@ -604,7 +604,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, col].Style.Numberformat.Format = currencyFormat; col++;
                     worksheet.Cells[row, col].Value = inv.Credit;
                     worksheet.Cells[row, col].Style.Numberformat.Format = currencyFormat; col++;
-                    worksheet.Cells[row, col].Value = inv.CheckVoucherHeader.Status;
+                    worksheet.Cells[row, col].Value = inv.CheckVoucherHeader.Status; col++;  
 
                     if (showVoidCancelColumns)
                     {
@@ -760,7 +760,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, col].Value = "SUB ACCOUNT NAME"; col++;
                 worksheet.Cells[row, col].Value = "DEBIT"; col++;
                 worksheet.Cells[row, col].Value = "CREDIT"; col++;
-                worksheet.Cells[row, col].Value = "STATUS";
+                worksheet.Cells[row, col].Value = "STATUS"; col++;
                 
                 if (showVoidCancelColumns)
                 {
@@ -861,7 +861,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[row, col].Value = details.SubAccountName; col++;
                         worksheet.Cells[row, col].Value = details.Debit; col++;
                         worksheet.Cells[row, col].Value = details.Credit; col++;
-                        worksheet.Cells[row, col].Value = header.Status;
+                        worksheet.Cells[row, col].Value = header.Status; col++;
+                        
 
                         if (showVoidCancelColumns)
                         {

@@ -1589,7 +1589,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var sales = await _unitOfWork.FilprideReport.GetSalesReport(model.DateFrom, model.DateTo, companyClaims, model.Commissionee, model.SalesStatusFilter, cancellationToken);
+                var sales = await _unitOfWork.FilprideReport.GetSalesReport(model.DateFrom, model.DateTo, companyClaims, model.Commissionee, model.StatusFilter, cancellationToken);
 
                 if (!sales.Any())
                 {
@@ -2029,7 +2029,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return RedirectToAction(nameof(GenerateSalesInvoiceReportExcelFile), new { dateFrom = model.DateFrom, dateTo = model.DateTo, cancellationToken });
                 }
 
-                var salesReport = await _unitOfWork.FilprideReport.GetSalesReport(model.DateFrom, model.DateTo, companyClaims, model.Commissionee, model.SalesStatusFilter, cancellationToken);
+                var salesReport = await _unitOfWork.FilprideReport.GetSalesReport(model.DateFrom, model.DateTo, companyClaims, model.Commissionee, model.StatusFilter, cancellationToken);
 
                 if (salesReport.Count == 0)
                 {
@@ -2083,7 +2083,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["W7"].Value = "Remarks";
 
                 // Add void/cancel columns — only for All or InvalidOnly
-                bool showVoidCancelColumns = model.SalesStatusFilter != "ValidOnly";
+                bool showVoidCancelColumns = model.StatusFilter != "ValidOnly";
 
                 if (showVoidCancelColumns)
                 {
@@ -4059,7 +4059,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             try
             {
                 var salesInvoice = await _unitOfWork.FilprideReport
-                    .GetARPerCustomerReport(model.DateFrom, model.DateTo, companyClaims, model.Customers, model.SalesStatusFilter, cancellationToken);
+                    .GetARPerCustomerReport(model.DateFrom, model.DateTo, companyClaims, model.Customers, model.StatusFilter, cancellationToken);
 
                 if (!salesInvoice.Any())
                 {
@@ -4383,7 +4383,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 var salesInvoice = await _unitOfWork.FilprideReport
-                    .GetARPerCustomerReport(model.DateFrom, model.DateTo, companyClaims, model.Customers, model.SalesStatusFilter, cancellationToken);
+                    .GetARPerCustomerReport(model.DateFrom, model.DateTo, companyClaims, model.Customers, model.StatusFilter, cancellationToken);
 
                 if (!salesInvoice.Any())
                 {
@@ -4395,7 +4395,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 using var package = new ExcelPackage();
 
                 // Audit info columns — only for All or InvalidOnly
-                bool showVoidCancelColumns = model.SalesStatusFilter != "ValidOnly";
+                bool showVoidCancelColumns = model.StatusFilter != "ValidOnly";
 
                 // Add a new worksheet to the Excel package
                 var worksheet = package.Workbook.Worksheets.Add("ARPerCustomer");
@@ -4734,7 +4734,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             try
             {
                 var serviceInvoice = await _unitOfWork.FilprideReport
-                    .GetServiceInvoiceReport(model.DateFrom, model.DateTo, companyClaims, model.SalesStatusFilter, cancellationToken);
+                    .GetServiceInvoiceReport(model.DateFrom, model.DateTo, companyClaims, model.StatusFilter, cancellationToken);
 
                 if (!serviceInvoice.Any())
                 {
@@ -4929,7 +4929,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
-                var serviceReport = await _unitOfWork.FilprideReport.GetServiceInvoiceReport(model.DateFrom, model.DateTo, companyClaims, model.SalesStatusFilter, cancellationToken);
+                var serviceReport = await _unitOfWork.FilprideReport.GetServiceInvoiceReport(model.DateFrom, model.DateTo, companyClaims, model.StatusFilter, cancellationToken);
 
                 if (serviceReport.Count == 0)
                 {
@@ -4940,7 +4940,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 using var package = new ExcelPackage();
 
                 // Audit info columns — only for All or InvalidOnly
-                bool showVoidCancelColumns = model.SalesStatusFilter != "ValidOnly";
+                bool showVoidCancelColumns = model.StatusFilter != "ValidOnly";
 
                 // Add a new worksheet to the Excel package
                 var worksheet = package.Workbook.Worksheets.Add("ServiceReport");
@@ -5341,7 +5341,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 // fetch sales report
                 var salesReport = await _unitOfWork.FilprideReport
-                    .GetSalesReport(model.DateFrom, model.DateTo, companyClaims, null, model.SalesStatusFilter, cancellationToken);
+                    .GetSalesReport(model.DateFrom, model.DateTo, companyClaims, null, model.StatusFilter, cancellationToken);
 
                 // check if there is no record
                 if (salesReport.Count == 0)
@@ -5354,7 +5354,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 using var package = new ExcelPackage();
 
                 // Audit info columns — only for All or InvalidOnly
-                bool showVoidCancelColumns = model.SalesStatusFilter != "ValidOnly";
+                bool showVoidCancelColumns = model.StatusFilter != "ValidOnly";
 
                 #region == Product worksheets ==
 
