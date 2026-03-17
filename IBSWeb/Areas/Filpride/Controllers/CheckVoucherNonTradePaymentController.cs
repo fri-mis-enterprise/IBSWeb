@@ -2275,7 +2275,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     : null;
 
                 var grossAmount = viewModel.Total;
-                var ewtAmount = _unitOfWork.FilprideCheckVoucher.ComputeEwtAmount(grossAmount, supplier.WithholdingTaxPercent ?? 0);
+                var netOfVat = supplier.VatType == "Vatable" ? _unitOfWork.FilprideCheckVoucher.ComputeNetOfVat(viewModel.Total) : viewModel.Total;
+                var ewtAmount = _unitOfWork.FilprideCheckVoucher.ComputeEwtAmount(netOfVat, supplier.WithholdingTaxPercent ?? 0);
                 var netOfEwtAmount = _unitOfWork.FilprideCheckVoucher.ComputeNetOfEwt(grossAmount, ewtAmount);
 
                 var checkVoucherDetails = new List<FilprideCheckVoucherDetail>();
