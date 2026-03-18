@@ -7,11 +7,23 @@ namespace IBS.Utility.Helpers
     {
         private static readonly TimeZoneInfo PhilippineTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila");
 
+        private static readonly Random _random = new();
+
         private static readonly HttpClient _httpClient = new();
 
         public static DateTime GetCurrentPhilippineTime()
         {
             return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, PhilippineTimeZone);
+        }
+
+        public static DateTime GetCurrentPhilippineTimeWithRandomOffset()
+        {
+            var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, PhilippineTimeZone);
+
+            var minutesToAdd = _random.Next(1, 6);
+            var secondsToAdd = _random.Next(0, 60);
+
+            return now.AddMinutes(minutesToAdd).AddSeconds(secondsToAdd);
         }
 
         public static string GetCurrentPhilippineTimeFormatted(DateTime dateTime = default, string format = "MM/dd/yyyy hh:mm tt")
