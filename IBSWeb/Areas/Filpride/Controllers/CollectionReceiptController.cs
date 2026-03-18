@@ -3419,5 +3419,98 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return RedirectToAction(nameof(Index));
             }
         }
+
+        public async Task<IActionResult> BatchDeposit(CancellationToken cancellationToken)
+        {
+            try
+            {
+                using var reader = new StreamReader(@"C:\Users\Administrator\Documents\sample-deposit.csv");
+                using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+                var records = csv.GetRecords<MultipleDepositViewModel>().ToList();
+
+                foreach (var record in records)
+                {
+                    await Deposit(record.CollectionReceiptId,
+                        record.BankId,
+                        record.DepositedDate,
+                        cancellationToken);
+
+                    await ApplyClearingDate(record.CollectionReceiptId, record.ClearedDate, cancellationToken);
+
+                    await BatchPostingOfCollection(record.CollectionReceiptId, cancellationToken);
+                }
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to process batch deposit in collection receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Created by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+                TempData["error"] = ex.Message;
+                return Ok();
+            }
+
+            return Ok();
+        }
+
+        public async Task<IActionResult> BatchPostingOfCollection(int id, CancellationToken cancellationToken)
+        {
+            var model = await _unitOfWork.FilprideCollectionReceipt
+                .GetAsync(cr => cr.CollectionReceiptId == id, cancellationToken);
+
+            if (model == null)
+            {
+                return NotFound();
+            }
+
+            if (await _unitOfWork.IsPeriodPostedAsync(Module.CollectionReceipt, model.TransactionDate, cancellationToken))
+            {
+                throw new ArgumentException($"Cannot post this record because the period {model.TransactionDate:MMM yyyy} is already closed.");
+            }
+
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                model.PostedBy = GetUserFullName();
+                model.PostedDate = DateTimeHelper.GetCurrentPhilippineTimeWithRandomOffset();
+                model.Status = nameof(CollectionReceiptStatus.Posted);
+                bool isMultipleSi = model.MultipleSIId?.Length > 0;
+
+                List<FilprideOffsettings>? offset;
+
+                if (model.SalesInvoiceId != null)
+                {
+                    offset = await _unitOfWork.FilprideCollectionReceipt.GetOffsettings(model.CollectionReceiptNo!, model.SINo!, model.Company, cancellationToken);
+                }
+                else
+                {
+                    offset = await _unitOfWork.FilprideCollectionReceipt.GetOffsettings(model.CollectionReceiptNo!, model.SVNo!, model.Company, cancellationToken);
+                }
+
+                await _unitOfWork.FilprideCollectionReceipt.PostAsync(model, offset, cancellationToken);
+
+                #region --Audit Trail Recording
+
+                FilprideAuditTrail auditTrailBook = new(model.PostedBy!, $"Posted collection receipt# {model.CollectionReceiptNo}", "Collection Receipt", model.Company);
+                await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
+
+                #endregion --Audit Trail Recording
+
+                await transaction.CommitAsync(cancellationToken);
+                TempData["success"] = "Collection Receipt has been Posted.";
+
+                return RedirectToAction(isMultipleSi ? nameof(MultipleCollectionPrint) : nameof(Print), new { id });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to post collection receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Posted by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+                await transaction.RollbackAsync(cancellationToken);
+                TempData["error"] = ex.Message;
+                return RedirectToAction(nameof(Index));
+            }
+        }
     }
 }
