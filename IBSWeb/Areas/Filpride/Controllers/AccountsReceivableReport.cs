@@ -1603,9 +1603,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return RedirectToAction(nameof(SalesReport));
             }
 
+            var statusFilter = NormalizeStatusFilter(model.StatusFilter);
+
             try
             {
-                var sales = await _unitOfWork.FilprideReport.GetSalesReport(model.DateFrom, model.DateTo, companyClaims, model.Commissionee, model.StatusFilter, cancellationToken);
+                var sales = await _unitOfWork.FilprideReport.GetSalesReport(model.DateFrom, model.DateTo, companyClaims, model.Commissionee, statusFilter, cancellationToken);
 
                 if (!sales.Any())
                 {
@@ -4752,10 +4754,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return RedirectToAction(nameof(ServiceInvoiceReport));
             }
 
+            var statusFilter = NormalizeStatusFilter(model.StatusFilter);
+
             try
             {
                 var serviceInvoice = await _unitOfWork.FilprideReport
-                    .GetServiceInvoiceReport(model.DateFrom, model.DateTo, companyClaims, model.StatusFilter, cancellationToken);
+                    .GetServiceInvoiceReport(model.DateFrom, model.DateTo, companyClaims, statusFilter, cancellationToken);
 
                 if (!serviceInvoice.Any())
                 {
