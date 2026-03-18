@@ -64,6 +64,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
         }
 
+        private static string NormalizeStatusFilter(string? statusFilter) => statusFilter switch
+        {
+            "All" => "All",
+            "InvalidOnly" => "InvalidOnly",
+            _ => "ValidOnly"
+        };
+
+        private static string GetStatusFilterLabel(string statusFilter) => statusFilter switch
+        {
+            "All" => "All",
+            "InvalidOnly" => "Voided/Cancelled Only",
+            _ => "Valid Only"
+        };
+
         [HttpGet]
         public IActionResult COSUnservedVolume()
         {
@@ -1034,17 +1048,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var dateRangeType = viewModel.DateTo != default ? "ByRange" : "AsOf";
                 var currencyFormatTwoDecimal = "#,##0.00";
 
+                var statusFilter = NormalizeStatusFilter(viewModel.DRStatusFilter);
+
                 if (viewModel.ReportType == "Delivered")
                 {
                     if (dateRangeType == "AsOf")
                     {
-                        if (viewModel.DRStatusFilter == "InvalidOnly")
+                        if (statusFilter == "InvalidOnly")
                         {
                             filter = i => i.Company == companyClaims
                                         && i.Date <= viewModel.DateFrom
                                         && (i.Status == nameof(DRStatus.Voided) || i.Status == nameof(DRStatus.Canceled));
                         }
-                        else if (viewModel.DRStatusFilter == "All")
+                        else if (statusFilter == "All")
                         {
                             filter = i => i.Company == companyClaims
                                         && i.Date <= viewModel.DateFrom
@@ -1060,14 +1076,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     }
                     else
                     {
-                        if (viewModel.DRStatusFilter == "InvalidOnly")
+                        if (statusFilter == "InvalidOnly")
                         {
                             filter = i => i.Company == companyClaims
                                         && i.Date >= viewModel.DateFrom
                                         && i.Date <= viewModel.DateTo
                                         && (i.Status == nameof(DRStatus.Voided) || i.Status == nameof(DRStatus.Canceled));
                         }
-                        else if (viewModel.DRStatusFilter == "All")
+                        else if (statusFilter == "All")
                         {
                             filter = i => i.Company == companyClaims
                                         && i.Date >= viewModel.DateFrom
@@ -1182,7 +1198,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["Y9"].Value = "TOTAL COST";
 
                 // Audit info columns — only for Delivered + All or InvalidOnly
-                bool showVoidCancelColumns = viewModel.ReportType == "Delivered" && viewModel.DRStatusFilter != "ValidOnly";
+                bool showVoidCancelColumns = viewModel.ReportType == "Delivered" && statusFilter != "ValidOnly";
 
                 if (showVoidCancelColumns)
                 {
@@ -2024,12 +2040,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
+                var statusFilter = NormalizeStatusFilter(model.StatusFilter);
+
                 if (dateTo.Month <= 9 && dateTo.Year == 2024)
                 {
                     return RedirectToAction(nameof(GenerateSalesInvoiceReportExcelFile), new { dateFrom = model.DateFrom, dateTo = model.DateTo, cancellationToken });
                 }
 
-                var salesReport = await _unitOfWork.FilprideReport.GetSalesReport(model.DateFrom, model.DateTo, companyClaims, model.Commissionee, model.StatusFilter, cancellationToken);
+                var salesReport = await _unitOfWork.FilprideReport.GetSalesReport(model.DateFrom, model.DateTo, companyClaims, model.Commissionee, statusFilter, cancellationToken);
 
                 if (salesReport.Count == 0)
                 {
@@ -2083,7 +2101,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["W7"].Value = "Remarks";
 
                 // Add void/cancel columns — only for All or InvalidOnly
-                bool showVoidCancelColumns = model.StatusFilter != "ValidOnly";
+                bool showVoidCancelColumns = statusFilter != "ValidOnly";
 
                 if (showVoidCancelColumns)
                 {
@@ -4049,6 +4067,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 return BadRequest();
             }
+            var statusFilter = NormalizeStatusFilter(model.StatusFilter);
 
             if (!ModelState.IsValid)
             {
@@ -4059,7 +4078,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             try
             {
                 var salesInvoice = await _unitOfWork.FilprideReport
-                    .GetARPerCustomerReport(model.DateFrom, model.DateTo, companyClaims, model.Customers, model.StatusFilter, cancellationToken);
+                    .GetARPerCustomerReport(model.DateFrom, model.DateTo, companyClaims, model.Customers, statusFilter, cancellationToken);
 
                 if (!salesInvoice.Any())
                 {
@@ -4382,8 +4401,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
+                var statusFilter = NormalizeStatusFilter(model.StatusFilter);
+
                 var salesInvoice = await _unitOfWork.FilprideReport
-                    .GetARPerCustomerReport(model.DateFrom, model.DateTo, companyClaims, model.Customers, model.StatusFilter, cancellationToken);
+                    .GetARPerCustomerReport(model.DateFrom, model.DateTo, companyClaims, model.Customers, statusFilter, cancellationToken);
 
                 if (!salesInvoice.Any())
                 {
@@ -4395,7 +4416,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 using var package = new ExcelPackage();
 
                 // Audit info columns — only for All or InvalidOnly
-                bool showVoidCancelColumns = model.StatusFilter != "ValidOnly";
+                bool showVoidCancelColumns = statusFilter != "ValidOnly";
 
                 // Add a new worksheet to the Excel package
                 var worksheet = package.Workbook.Worksheets.Add("ARPerCustomer");
@@ -4928,8 +4949,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     return BadRequest();
                 }
+                var statusFilter = NormalizeStatusFilter(model.StatusFilter);
 
-                var serviceReport = await _unitOfWork.FilprideReport.GetServiceInvoiceReport(model.DateFrom, model.DateTo, companyClaims, model.StatusFilter, cancellationToken);
+                var serviceReport = await _unitOfWork.FilprideReport.GetServiceInvoiceReport(model.DateFrom, model.DateTo, companyClaims, statusFilter, cancellationToken);
 
                 if (serviceReport.Count == 0)
                 {
@@ -4940,7 +4962,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 using var package = new ExcelPackage();
 
                 // Audit info columns — only for All or InvalidOnly
-                bool showVoidCancelColumns = model.StatusFilter != "ValidOnly";
+                bool showVoidCancelColumns = statusFilter != "ValidOnly";
 
                 // Add a new worksheet to the Excel package
                 var worksheet = package.Workbook.Worksheets.Add("ServiceReport");
@@ -5338,10 +5360,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     return BadRequest();
                 }
+                var statusFilter = NormalizeStatusFilter(model.StatusFilter);
 
                 // fetch sales report
                 var salesReport = await _unitOfWork.FilprideReport
-                    .GetSalesReport(model.DateFrom, model.DateTo, companyClaims, null, model.StatusFilter, cancellationToken);
+                    .GetSalesReport(model.DateFrom, model.DateTo, companyClaims, null, statusFilter, cancellationToken);
 
                 // check if there is no record
                 if (salesReport.Count == 0)
@@ -5354,7 +5377,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 using var package = new ExcelPackage();
 
                 // Audit info columns — only for All or InvalidOnly
-                bool showVoidCancelColumns = model.StatusFilter != "ValidOnly";
+                bool showVoidCancelColumns = statusFilter != "ValidOnly";
 
                 #region == Product worksheets ==
 
