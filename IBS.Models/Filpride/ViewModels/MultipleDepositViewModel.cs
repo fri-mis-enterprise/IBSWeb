@@ -9,5 +9,7 @@ namespace IBS.Models.Filpride.ViewModels
         public DateOnly ClearedDate { get; set; }
 
         public int CollectionReceiptId { get; set; }
+
+        public DateOnly TransactionDate { get; set; }
     }
 }
