@@ -3347,6 +3347,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Include(cr => cr.ReceiptDetails)
                     .Where(x => x.Company == companyClaims)
                     .OrderBy(x => x.TransactionDate)
+                    .ThenBy(x => x.CollectionReceiptId)
                     .ToListAsync(cancellationToken);
 
                 var invoiceNumbers = collectionReceipts
@@ -3428,16 +3429,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
                 var records = csv.GetRecords<MultipleDepositViewModel>().ToList();
 
-                foreach (var record in records)
+                foreach (var record in records.OrderBy(x => x.TransactionDate).ThenBy(x => x.CollectionReceiptId))
                 {
+                    await BatchPostingOfCollection(record.CollectionReceiptId, cancellationToken);
+
                     await Deposit(record.CollectionReceiptId,
                         record.BankId,
                         record.DepositedDate,
                         cancellationToken);
 
                     await ApplyClearingDate(record.CollectionReceiptId, record.ClearedDate, cancellationToken);
-
-                    await BatchPostingOfCollection(record.CollectionReceiptId, cancellationToken);
                 }
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
@@ -3448,7 +3449,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     "Failed to process batch deposit in collection receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Created by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
                 TempData["error"] = ex.Message;
-                return Ok();
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
             }
 
             return Ok();
@@ -3471,10 +3472,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
+            var currentTime = DateTimeHelper.GetRandomPhilippineWorkTime();
+
             try
             {
                 model.PostedBy = GetUserFullName();
-                model.PostedDate = DateTimeHelper.GetCurrentPhilippineTimeWithRandomOffset();
+                model.PostedDate = currentTime;
                 model.Status = nameof(CollectionReceiptStatus.Posted);
                 bool isMultipleSi = model.MultipleSIId?.Length > 0;
 

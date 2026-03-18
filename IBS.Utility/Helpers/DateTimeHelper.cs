@@ -7,7 +7,9 @@ namespace IBS.Utility.Helpers
     {
         private static readonly TimeZoneInfo PhilippineTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila");
 
-        private static readonly Random _random = new();
+        private static readonly Random Randomizer = new Random();
+        private static DateTime? _lastGeneratedTime;
+
 
         private static readonly HttpClient _httpClient = new();
 
@@ -16,14 +18,34 @@ namespace IBS.Utility.Helpers
             return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, PhilippineTimeZone);
         }
 
-        public static DateTime GetCurrentPhilippineTimeWithRandomOffset()
+        public static DateTime GetRandomPhilippineWorkTime()
         {
             var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, PhilippineTimeZone);
 
-            var minutesToAdd = _random.Next(1, 6);
-            var secondsToAdd = _random.Next(0, 60);
+            var workStart = now.Date.AddHours(8).AddMinutes(30);
+            var workEnd = now.Date.AddHours(17).AddMinutes(30);
 
-            return now.AddMinutes(minutesToAdd).AddSeconds(secondsToAdd);
+            if (!_lastGeneratedTime.HasValue || _lastGeneratedTime.Value < workStart)
+            {
+                _lastGeneratedTime = workStart;
+            }
+
+            int minutesToAdd = Randomizer.Next(1, 6);
+
+            int secondsToAdd = Randomizer.Next(0, 60);
+
+            var nextTime = _lastGeneratedTime.Value
+                .AddMinutes(minutesToAdd)
+                .AddSeconds(secondsToAdd);
+
+            if (nextTime > workEnd)
+            {
+                nextTime = workEnd;
+            }
+
+            _lastGeneratedTime = nextTime;
+
+            return nextTime;
         }
 
         public static string GetCurrentPhilippineTimeFormatted(DateTime dateTime = default, string format = "MM/dd/yyyy hh:mm tt")
