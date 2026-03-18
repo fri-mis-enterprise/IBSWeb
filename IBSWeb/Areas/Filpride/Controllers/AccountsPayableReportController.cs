@@ -66,6 +66,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var claims = await _userManager.GetClaimsAsync(user);
             return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
         }
+        private static string NormalizeStatusFilter(string? statusFilter) => statusFilter switch
+        {
+            "All" => "All",
+            "InvalidOnly" => "InvalidOnly",
+            _ => "ValidOnly"
+        };
+
+        private static string GetStatusFilterLabel(string statusFilter) => statusFilter switch
+        {
+            "All" => "All",
+            "InvalidOnly" => "Voided/Cancelled Only",
+            _ => "Valid Only"
+        };
 
         [HttpGet]
         public IActionResult ClearedDisbursementReport()
@@ -280,10 +293,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     return BadRequest();
                 }
+                var statusFilter = NormalizeStatusFilter(model.StatusFilter);
 
                 var clearedDisbursementReport =
                     await _unitOfWork.FilprideReport.GetClearedDisbursementReport(model.DateFrom, model.DateTo,
-                        companyClaims, model.StatusFilter, cancellationToken);
+                        companyClaims, statusFilter, cancellationToken);
 
                 if (clearedDisbursementReport.Count == 0)
                 {
@@ -310,10 +324,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["B2"].Value = $"{dateFrom} - {dateTo}";
                 worksheet.Cells["B3"].Value = $"{extractedBy}";
                 worksheet.Cells["B4"].Value = $"{companyClaims}";
-                worksheet.Cells["B5"].Value = model.StatusFilter == "ValidOnly" ? "Valid Only" : model.StatusFilter == "All" ? "All" : "Voided/Cancelled Only";
+                worksheet.Cells["B5"].Value = GetStatusFilterLabel(statusFilter);
 
                 // Determine if we need to show void/cancel columns
-                bool showVoidCancelColumns = model.StatusFilter != "ValidOnly";
+                bool showVoidCancelColumns = statusFilter != "ValidOnly";
 
                 worksheet.Cells["A7"].Value = "Category";
                 worksheet.Cells["B7"].Value = "Subcategory";
@@ -470,12 +484,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     return BadRequest();
                 }
-                 var statusFilter = model.StatusFilter switch
-                {
-                    "All" => "All",
-                    "InvalidOnly" => "InvalidOnly",
-                    _ => "ValidOnly"
-                };
+                var statusFilter = NormalizeStatusFilter(model.StatusFilter);
 
                 var nonTradeInvoiceReport =
                     await _dbContext.FilprideCheckVoucherDetails
@@ -538,10 +547,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     $"{dateFrom.ToString("MMM dd, yyyy")} - {dateTo.ToString("MMM dd, yyyy")}";
                 worksheet.Cells["B3"].Value = $"{extractedBy}";
                 worksheet.Cells["B4"].Value = $"{companyClaims}";
-                worksheet.Cells["B5"].Value = model.StatusFilter == "ValidOnly" ? "Valid Only" : model.StatusFilter == "All" ? "All" : "Voided/Cancelled Only";
+                worksheet.Cells["B5"].Value = GetStatusFilterLabel(statusFilter);
 
                 // Determine if we need to show void/cancel columns
-                bool showVoidCancelColumns = model.StatusFilter != "ValidOnly";
+                bool showVoidCancelColumns = statusFilter != "ValidOnly";
 
                 var row = 6;
                 var col = 1;
@@ -695,12 +704,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
-                var statusFilter = model.StatusFilter switch
-                {
-                    "All" => "All",
-                    "InvalidOnly" => "InvalidOnly",
-                    _ => "ValidOnly"
-                };
+                var statusFilter = NormalizeStatusFilter(model.StatusFilter);
 
                 var cvTradeHeaderReport = await _dbContext.FilprideCheckVoucherHeaders
                         .AsNoTracking()
@@ -753,10 +757,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["B2"].Value = $"{dateFrom.ToString("MMM dd, yyyy")} - {dateTo.ToString("MMM dd, yyyy")}";
                 worksheet.Cells["B3"].Value = $"{extractedBy}";
                 worksheet.Cells["B4"].Value = $"{companyClaims}";
-                worksheet.Cells["B5"].Value = model.StatusFilter == "ValidOnly" ? "Valid Only" : model.StatusFilter == "All" ? "All" : "Voided/Cancelled Only";
+                worksheet.Cells["B5"].Value = GetStatusFilterLabel(statusFilter);
 
                 // Determine if we need to show void/cancel columns
-                bool showVoidCancelColumns = model.StatusFilter != "ValidOnly";
+                bool showVoidCancelColumns = statusFilter != "ValidOnly";
 
                 int row = 6;
                 int col = 1;
@@ -968,7 +972,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
             try
             {
-                var statusFilter = string.IsNullOrWhiteSpace(model.StatusFilter) ? "ValidOnly" : model.StatusFilter;
+                var statusFilter = NormalizeStatusFilter(model.StatusFilter);
                 var purchaseOrder = await _unitOfWork.FilprideReport.GetPurchaseOrderReport(model.DateFrom, model.DateTo, companyClaims, statusFilter);
 
                 if (purchaseOrder.Count == 0)
@@ -1139,8 +1143,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
+                var statusFilter = NormalizeStatusFilter(model.StatusFilter);
+
                 var purchaseOrderReport = await _unitOfWork.FilprideReport
-                    .GetPurchaseOrderReport(model.DateFrom, model.DateTo, companyClaims, model.StatusFilter, cancellationToken);
+                    .GetPurchaseOrderReport(model.DateFrom, model.DateTo, companyClaims, statusFilter, cancellationToken);
 
                 if (purchaseOrderReport.Count == 0)
                 {
@@ -1167,10 +1173,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["B2"].Value = $"{dateFrom} - {dateTo}";
                 worksheet.Cells["B3"].Value = $"{extractedBy}";
                 worksheet.Cells["B4"].Value = $"{companyClaims}";
-                worksheet.Cells["B5"].Value = model.StatusFilter == "ValidOnly" ? "Valid Only" : model.StatusFilter == "All" ? "All" : "Voided/Cancelled Only";
+                worksheet.Cells["B5"].Value = GetStatusFilterLabel(statusFilter);
 
                 // Determine if we need to show void/cancel columns
-                bool showVoidCancelColumns = model.StatusFilter != "ValidOnly";
+                bool showVoidCancelColumns = statusFilter != "ValidOnly";
 
                 worksheet.Cells["A7"].Value = "PO #";
                 worksheet.Cells["B7"].Value = "IS PO #";
@@ -8674,9 +8680,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
+                var statusFilter = NormalizeStatusFilter(model.StatusFilter);
+
                 // Fetch journal voucher report data
                 var journalVoucherReport = await _unitOfWork.FilprideReport
-                    .GetJournalVoucherReport(model.DateFrom, model.DateTo, companyClaims, model.StatusFilter, cancellationToken);
+                    .GetJournalVoucherReport(model.DateFrom, model.DateTo, companyClaims, statusFilter, cancellationToken);
 
                 if (journalVoucherReport.Count == 0)
                 {
@@ -8702,10 +8710,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["A4"].Value = "Company: ";
                 worksheet.Cells["B4"].Value = await GetCompanyClaimAsync();
                 worksheet.Cells["A5"].Value = "Status Filter: ";
-                worksheet.Cells["B5"].Value = model.StatusFilter == "ValidOnly" ? "Valid Only" : model.StatusFilter == "All" ? "All" : "Voided/Cancelled Only";
+                worksheet.Cells["B5"].Value = GetStatusFilterLabel(statusFilter);
 
                 // Determine if we need to show void/cancel columns
-                bool showVoidCancelColumns = model.StatusFilter != "ValidOnly";
+                bool showVoidCancelColumns = statusFilter != "ValidOnly";
 
                 // Set column headers (Row 7)
                 int headerRow = 7;
