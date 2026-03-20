@@ -1,6 +1,8 @@
+using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.Models;
 using IBS.Models.Enums;
+using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.ViewModels;
 using IBS.Services;
 using IBS.Services.Attributes;
@@ -32,6 +34,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
             _userManager = userManager;
             _logger = logger;
             _cacheService = cacheService;
+        }
+
+        private string GetUserFullName()
+        {
+            return User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value
+                   ?? User.Identity?.Name!;
         }
 
         public async Task<IActionResult> Index()
@@ -118,6 +126,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 await _dbContext.PostedPeriods.AddRangeAsync(postedPeriods,  cancellationToken);
+
+                var modulesPosted = string.Join(", ", postedPeriods.Select(p => p.Module));
+
+                FilprideAuditTrail auditTrailBook = new(
+                    GetUserFullName(),
+                    $"Posted the following modules: {modulesPosted} for {request.Month}/{request.Year}",
+                    "Posted Period",
+                    request.Company!
+                );
+
+                await _dbContext.FilprideAuditTrails.AddAsync(auditTrailBook, cancellationToken);
+
+
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 await _cacheService.RemoveAsync($"coa:{request.Company}", cancellationToken);
 
@@ -139,12 +160,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var postedPeriod = await _dbContext.PostedPeriods.FindAsync(id, cancellationToken);
+                var postedPeriod = await _dbContext.PostedPeriods
+                    .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
                 if (postedPeriod == null)
                 {
                     TempData["ErrorMessage"] = "Posted period not found.";
                     return RedirectToAction(nameof(Index));
                 }
+
+                FilprideAuditTrail auditTrailBook = new(
+                    GetUserFullName(),
+                    $"Posted the following modules: {postedPeriod.Module} for {postedPeriod.Month}/{postedPeriod.Year}",
+                    "Posted Period",
+                    postedPeriod.Company
+                );
+
+                await _dbContext.FilprideAuditTrails.AddAsync(auditTrailBook, cancellationToken);
 
                 _dbContext.PostedPeriods.Remove(postedPeriod);
                 await _dbContext.SaveChangesAsync(cancellationToken);
