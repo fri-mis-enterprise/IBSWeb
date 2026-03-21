@@ -1967,17 +1967,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.Status = nameof(CollectionReceiptStatus.Posted);
                 bool isMultipleSi = model.MultipleSIId?.Length > 0;
 
-                List<FilprideOffsettings>? offset;
-
-                if (model.SalesInvoiceId != null)
-                {
-                    offset = await _unitOfWork.FilprideCollectionReceipt.GetOffsettings(model.CollectionReceiptNo!, model.SINo!, model.Company, cancellationToken);
-                }
-                else
-                {
-                    offset = await _unitOfWork.FilprideCollectionReceipt.GetOffsettings(model.CollectionReceiptNo!, model.SVNo!, model.Company, cancellationToken);
-                }
-
                 await _unitOfWork.FilprideCollectionReceipt.PostAsync(model, cancellationToken);
 
                 #region --Audit Trail Recording
