@@ -314,7 +314,7 @@ namespace IBS.DataAccess.Repository.Filpride
             return result;
         }
 
-        public async Task<List<FilprideSalesInvoice>> GetSalesInvoiceReport(DateOnly dateFrom, DateOnly dateTo, string company,
+        public async Task<List<FilprideSalesInvoice>> GetSalesInvoiceReport(DateOnly dateFrom, DateOnly dateTo, string company, string statusFilter = "ValidOnly",
             CancellationToken cancellationToken = default)
         {
             if (dateFrom > dateTo)
@@ -322,9 +322,21 @@ namespace IBS.DataAccess.Repository.Filpride
                 throw new ArgumentException("Date From must not be greater than Date To!");
             }
 
-            var salesInvoices = await _db.FilprideSalesInvoices
-                .Where(si => si.TransactionDate >= dateFrom && si.TransactionDate <= dateTo &&
-                             si.Status == nameof(Status.Posted))
+            var query = _db.FilprideSalesInvoices
+                .Where(si => si.TransactionDate >= dateFrom && si.TransactionDate <= dateTo);
+
+            // Apply status filter
+            if (statusFilter == "ValidOnly")
+            {
+                query = query.Where(si => si.Status == "Posted");
+            }
+            else if (statusFilter == "InvalidOnly")
+            {
+                query = query.Where(si => si.Status == "Voided" || si.Status == "Canceled");
+            }
+            // "All" returns Posted, Voided, and Canceled records
+
+            var salesInvoices = await query
                 .Include(si => si.Product)
                 .Include(si => si.Customer)
                 .Include(si => si.PurchaseOrder)
@@ -577,15 +589,28 @@ namespace IBS.DataAccess.Repository.Filpride
                 .ToList();
         }
 
-        public async Task<List<FilprideCollectionReceipt>> GetCollectionReceiptReport(DateOnly dateFrom, DateOnly dateTo, string company, CancellationToken cancellationToken = default)
+        public async Task<List<FilprideCollectionReceipt>> GetCollectionReceiptReport(DateOnly dateFrom, DateOnly dateTo, string company, string statusFilter = "ValidOnly", CancellationToken cancellationToken = default)
         {
             if (dateFrom > dateTo)
             {
                 throw new ArgumentException("Date From must not be greater than Date To!");
             }
 
-            var collectionReceipts = await _db.FilprideCollectionReceipts
-                .Where(cr => cr.Company == company && cr.TransactionDate >= dateFrom && cr.TransactionDate <= dateTo)
+            var query = _db.FilprideCollectionReceipts
+                .Where(cr => cr.Company == company && cr.TransactionDate >= dateFrom && cr.TransactionDate <= dateTo);
+
+            // Apply status filter
+            if (statusFilter == "ValidOnly")
+            {
+                query = query.Where(cr => cr.VoidedBy == null && cr.CanceledBy == null);
+            }
+            else if (statusFilter == "InvalidOnly")
+            {
+                query = query.Where(cr => cr.VoidedBy != null || cr.CanceledBy != null);
+            }
+            // "All" returns all records
+
+            var collectionReceipts = await query
                 .Include(cr => cr.SalesInvoice)
                 .ThenInclude(si => si!.CustomerOrderSlip)
                 .Include(cr => cr.Customer)

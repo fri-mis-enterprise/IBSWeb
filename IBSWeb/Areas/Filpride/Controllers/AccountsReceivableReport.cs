@@ -1156,60 +1156,64 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 mergedCellsA7.Merge = true;
                 mergedCellsA7.Value = viewModel.ReportType == "Delivered" ? "DELIVERED" : "IN TRANSIT";
 
+                // Add Status Filter label
+                worksheet.Cells["A8"].Value = "Status Filter:";
+                worksheet.Cells["B8"].Value = GetStatusFilterLabel(statusFilter);
+
                 // Table headers
-                worksheet.Cells["A9"].Value = "DR DATE";
-                worksheet.Cells["B9"].Value = "CUSTOMER NAME";
-                worksheet.Cells["C9"].Value = "TYPE";
-                worksheet.Cells["D9"].Value = "DR NO.";
-                worksheet.Cells["E9"].Value = "PRODUCTS";
-                worksheet.Cells["F9"].Value = "QTY.";
-                worksheet.Cells["G9"].Value = "PICK-UP POINT";
-                worksheet.Cells["H9"].Value = "PO #";
-                worksheet.Cells["I9"].Value = "ATL#";
-                worksheet.Cells["J9"].Value = "COS NO.";
-                worksheet.Cells["K9"].Value = "HAULER NAME";
-                worksheet.Cells["L9"].Value = "SUPPLIER";
-                worksheet.Cells["M9"].Value = "DELIVERY OPTION";
-                worksheet.Cells["N9"].Value = "FREIGHT CHARGE";
-                worksheet.Cells["O9"].Value = "ECC";
-                worksheet.Cells["P9"].Value = "TOTAL FREIGHT";
+                worksheet.Cells["A10"].Value = "DR DATE";
+                worksheet.Cells["B10"].Value = "CUSTOMER NAME";
+                worksheet.Cells["C10"].Value = "TYPE";
+                worksheet.Cells["D10"].Value = "DR NO.";
+                worksheet.Cells["E10"].Value = "PRODUCTS";
+                worksheet.Cells["F10"].Value = "QTY.";
+                worksheet.Cells["G10"].Value = "PICK-UP POINT";
+                worksheet.Cells["H10"].Value = "PO #";
+                worksheet.Cells["I10"].Value = "ATL#";
+                worksheet.Cells["J10"].Value = "COS NO.";
+                worksheet.Cells["K10"].Value = "HAULER NAME";
+                worksheet.Cells["L10"].Value = "SUPPLIER";
+                worksheet.Cells["M10"].Value = "DELIVERY OPTION";
+                worksheet.Cells["N10"].Value = "FREIGHT CHARGE";
+                worksheet.Cells["O10"].Value = "ECC";
+                worksheet.Cells["P10"].Value = "TOTAL FREIGHT";
 
                 #region Remove this in the future
                 //TODO Remove this in the future
-                worksheet.Cells["Q9"].Value = "OTC COS No.";
-                worksheet.Cells["R9"].Value = "OTC DR No.";
+                worksheet.Cells["Q10"].Value = "OTC COS No.";
+                worksheet.Cells["R10"].Value = "OTC DR No.";
                 #endregion
 
-                worksheet.Cells["S9"].Value = "RR NO.";
-                worksheet.Cells["T9"].Value = "UNIT COST.";
-                worksheet.Cells["U9"].Value = "SUPPLIER'S SI";
-                worksheet.Cells["V9"].Value = "SUPPLIER'S WC";
+                worksheet.Cells["S10"].Value = "RR NO.";
+                worksheet.Cells["T10"].Value = "UNIT COST.";
+                worksheet.Cells["U10"].Value = "SUPPLIER'S SI";
+                worksheet.Cells["V10"].Value = "SUPPLIER'S WC";
 
                 if (viewModel.ReportType == "Delivered")
                 {
-                    worksheet.Cells["W9"].Value = "DELIVERED DATE";
-                    worksheet.Cells["X9"].Value = "STATUS";
+                    worksheet.Cells["W10"].Value = "DELIVERED DATE";
+                    worksheet.Cells["X10"].Value = "STATUS";
                 }
                 else
                 {
-                    worksheet.Cells["W9"].Value = "LIFTING DATE";
-                    worksheet.Cells["X9"].Value = "LIFTING QUANTITY";
+                    worksheet.Cells["W10"].Value = "LIFTING DATE";
+                    worksheet.Cells["X10"].Value = "LIFTING QUANTITY";
                 }
-                worksheet.Cells["Y9"].Value = "TOTAL COST";
+                worksheet.Cells["Y10"].Value = "TOTAL COST";
 
                 // Audit info columns — only for Delivered + All or InvalidOnly
                 bool showVoidCancelColumns = viewModel.ReportType == "Delivered" && statusFilter != "ValidOnly";
 
                 if (showVoidCancelColumns)
                 {
-                    worksheet.Cells["Z9"].Value = "VOIDED BY";
-                    worksheet.Cells["AA9"].Value = "VOIDED DATE";
-                    worksheet.Cells["AB9"].Value = "CANCELLED BY";
-                    worksheet.Cells["AC9"].Value = "CANCELLED DATE";
+                    worksheet.Cells["Z10"].Value = "VOIDED BY";
+                    worksheet.Cells["AA10"].Value = "VOIDED DATE";
+                    worksheet.Cells["AB10"].Value = "CANCELLED BY";
+                    worksheet.Cells["AC10"].Value = "CANCELLED DATE";
                 }
 
-                int currentRow = 10;
-                string headerColumn = showVoidCancelColumns ? "AC9" : "Y9";
+                int currentRow = 11;
+                string headerColumn = showVoidCancelColumns ? "AC10" : "Y10";
                 int grandTotalColumn = showVoidCancelColumns ? 29 : 25;
                 decimal grandSumOfTotalFreightAmount = 0;
                 decimal grandTotalQuantity = 0;
@@ -1357,7 +1361,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["N,O,T"].Style.Numberformat.Format = "#,##0.0000";
                 worksheet.Cells["F,P"].Style.Numberformat.Format = "#,##0.00";
 
-                using (var range = worksheet.Cells[$"A9:{headerColumn}"])
+                using (var range = worksheet.Cells[$"A10:{headerColumn}"])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.Font.Color.SetColor(Color.White);
@@ -2046,7 +2050,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 if (dateTo.Month <= 9 && dateTo.Year == 2024)
                 {
-                    return RedirectToAction(nameof(GenerateSalesInvoiceReportExcelFile), new { dateFrom = model.DateFrom, dateTo = model.DateTo, cancellationToken });
+                    // Redirect to Sales Invoice Report with same parameters
+                    var redirectModel = new ViewModelBook
+                    {
+                        DateFrom = model.DateFrom,
+                        DateTo = model.DateTo,
+                        StatusFilter = model.StatusFilter
+                    };
+                    TempData["SalesInvoiceModel"] = redirectModel;
+                    return RedirectToAction(nameof(GenerateSalesInvoiceReportExcelFile), redirectModel);
                 }
 
                 var salesReport = await _unitOfWork.FilprideReport.GetSalesReport(model.DateFrom, model.DateTo, companyClaims, model.Commissionee, statusFilter, cancellationToken);
@@ -2073,10 +2085,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["A2"].Value = "Date Range:";
                 worksheet.Cells["A3"].Value = "Extracted By:";
                 worksheet.Cells["A4"].Value = "Company:";
+                worksheet.Cells["A5"].Value = "Status Filter:";
 
                 worksheet.Cells["B2"].Value = $"{dateFrom} - {dateTo}";
                 worksheet.Cells["B3"].Value = $"{extractedBy}";
                 worksheet.Cells["B4"].Value = $"{companyClaims}";
+                worksheet.Cells["B5"].Value = GetStatusFilterLabel(statusFilter);
 
                 worksheet.Cells["A7"].Value = "Date Delivered";
                 worksheet.Cells["B7"].Value = "Customer Name";
@@ -2565,16 +2579,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        public async Task<IActionResult> GenerateSalesInvoiceReportExcelFile(DateOnly dateFrom, DateOnly dateTo, CancellationToken cancellationToken)
+        [HttpPost]
+        public async Task<IActionResult> GenerateSalesInvoiceReportExcelFile(ViewModelBook model, CancellationToken cancellationToken)
         {
             if (!ModelState.IsValid)
             {
                 TempData["warning"] = "Please input date range";
-                return RedirectToAction(nameof(SalesReport));
+                return RedirectToAction(nameof(SalesInvoiceReport));
             }
 
             try
             {
+                var dateFrom = model.DateFrom;
+                var dateTo = model.DateTo;
                 var extractedBy = GetUserFullName();
                 var companyClaims = await GetCompanyClaimAsync();
                 if (companyClaims == null)
@@ -2582,11 +2599,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
-                var salesReport = await _unitOfWork.FilprideReport.GetSalesInvoiceReport(dateFrom, dateTo, companyClaims, cancellationToken);
+                var statusFilter = NormalizeStatusFilter(model.StatusFilter);
+
+                var salesReport = await _unitOfWork.FilprideReport.GetSalesInvoiceReport(dateFrom, dateTo, companyClaims, statusFilter, cancellationToken);
                 if (salesReport.Count == 0)
                 {
                     TempData["info"] = "No Record Found";
-                    return RedirectToAction(nameof(SalesReport));
+                    return RedirectToAction(nameof(SalesInvoiceReport));
                 }
                 var totalQuantity = salesReport.Sum(s => s.Quantity);
                 var totalAmount = salesReport.Sum(s => s.Amount);
@@ -2605,10 +2624,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["A2"].Value = "Date Range:";
                 worksheet.Cells["A3"].Value = "Extracted By:";
                 worksheet.Cells["A4"].Value = "Company:";
+                worksheet.Cells["A5"].Value = "Status Filter:";
 
                 worksheet.Cells["B2"].Value = $"{dateFrom} - {dateTo}";
                 worksheet.Cells["B3"].Value = $"{extractedBy}";
                 worksheet.Cells["B4"].Value = $"{companyClaims}";
+                worksheet.Cells["B5"].Value = GetStatusFilterLabel(statusFilter);
+
+                // Determine if we need to show void/cancel columns
+                bool showVoidCancelColumns = statusFilter != "ValidOnly";
 
                 worksheet.Cells["A7"].Value = "Date Delivered";
                 worksheet.Cells["B7"].Value = "Customer Name";
@@ -2633,8 +2657,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["U7"].Value = "Commissionee";
                 worksheet.Cells["V7"].Value = "Remarks";
 
+                // Add void/cancel columns — only for All or InvalidOnly
+                if (showVoidCancelColumns)
+                {
+                    worksheet.Cells["W7"].Value = "VOIDED BY";
+                    worksheet.Cells["X7"].Value = "VOIDED DATE";
+                    worksheet.Cells["Y7"].Value = "CANCELLED BY";
+                    worksheet.Cells["Z7"].Value = "CANCELLED DATE";
+                }
+
                 // Apply styling to the header row
-                using (var range = worksheet.Cells["A7:V7"])
+                string headerEndColumn = showVoidCancelColumns ? "Z7" : "V7";
+                using (var range = worksheet.Cells[$"A7:{headerEndColumn}"])
                 {
                     range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
                     range.Style.Font.Bold = true;
@@ -2688,6 +2722,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 21].Value = dr.DeliveryReceipt?.CustomerOrderSlip?.CommissioneeName;
                     worksheet.Cells[row, 22].Value = dr.Remarks;
 
+                    // Add void/cancel data — only for All or InvalidOnly
+                    if (showVoidCancelColumns)
+                    {
+                        worksheet.Cells[row, 23].Value = dr.VoidedBy;
+                        worksheet.Cells[row, 24].Value = dr.VoidedDate;
+                        if (dr.VoidedDate.HasValue)
+                        {
+                            worksheet.Cells[row, 24].Style.Numberformat.Format = "MMM/dd/yyyy";
+                        }
+                        worksheet.Cells[row, 25].Value = dr.CanceledBy;
+                        worksheet.Cells[row, 26].Value = dr.CanceledDate;
+                        if (dr.CanceledDate.HasValue)
+                        {
+                            worksheet.Cells[row, 26].Style.Numberformat.Format = "MMM/dd/yyyy";
+                        }
+                    }
+
                     worksheet.Cells[row, 1].Style.Numberformat.Format = "MMM/dd/yyyy";
                     worksheet.Cells[row, 14].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[row, 15].Style.Numberformat.Format = currencyFormatTwoDecimal;
@@ -2724,18 +2775,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 20].Style.Numberformat.Format = currencyFormat;
 
                 // Apply style to subtotal row
-                using (var range = worksheet.Cells[row, 1, row, 22])
+                int lastColumn = showVoidCancelColumns ? 26 : 22;
+                using (var range = worksheet.Cells[row, 1, row, lastColumn])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.Fill.PatternType = ExcelFillStyle.Solid;
                     range.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(172, 185, 202));
                 }
 
-                using (var range = worksheet.Cells[row, 13, row, 20])
+                using (var range = worksheet.Cells[row, 13, row, lastColumn])
                 {
                     range.Style.Font.Bold = true;
-                    range.Style.Border.Top.Style = ExcelBorderStyle.Thin; // Single top border
-                    range.Style.Border.Bottom.Style = ExcelBorderStyle.Double; // Double bottom border
+                    range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                    range.Style.Border.Bottom.Style = ExcelBorderStyle.Double;
                 }
 
                 var rowForSummary = row + 8;
@@ -3320,9 +3372,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     {
                         return BadRequest();
                     }
+                    
+                    var statusFilter = NormalizeStatusFilter(model.StatusFilter);
 
                     var collectionReceiptReport = await _unitOfWork.FilprideReport
-                        .GetCollectionReceiptReport(model.DateFrom, model.DateTo, companyClaims, cancellationToken);
+                        .GetCollectionReceiptReport(model.DateFrom, model.DateTo, companyClaims, statusFilter, cancellationToken);
 
                     using var package = new ExcelPackage();
                     var worksheet = package.Workbook.Worksheets.Add("COLLECTION");
@@ -3335,10 +3389,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells["A2"].Value = "Date Range:";
                     worksheet.Cells["A3"].Value = "Extracted By:";
                     worksheet.Cells["A4"].Value = "Company:";
+                    worksheet.Cells["A5"].Value = "Status Filter:";
 
                     worksheet.Cells["B2"].Value = $"{dateFrom} - {dateTo}";
                     worksheet.Cells["B3"].Value = $"{extractedBy}";
                     worksheet.Cells["B4"].Value = $"{companyClaims}";
+                    worksheet.Cells["B5"].Value = GetStatusFilterLabel(statusFilter);
 
                     worksheet.Cells["A7"].Value = "CUSTOMER No.";
                     worksheet.Cells["B7"].Value = "CUSTOMER NAME";
@@ -4432,10 +4488,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["A2"].Value = "Date Range:";
                 worksheet.Cells["A3"].Value = "Extracted By:";
                 worksheet.Cells["A4"].Value = "Company:";
+                worksheet.Cells["A5"].Value = "Status Filter:";
 
                 worksheet.Cells["B2"].Value = $"{dateFrom.ToString(SD.Date_Format)} - {dateTo.ToString(SD.Date_Format)}";
                 worksheet.Cells["B3"].Value = $"{extractedBy}";
                 worksheet.Cells["B4"].Value = $"{companyClaims}";
+                worksheet.Cells["B5"].Value = GetStatusFilterLabel(statusFilter);
 
                 worksheet.Cells["A7"].Value = "CUSTOMER No.";
                 worksheet.Cells["B7"].Value = "CUSTOMER NAME";
@@ -4980,10 +5038,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["A2"].Value = "Date Range:";
                 worksheet.Cells["A3"].Value = "Extracted By:";
                 worksheet.Cells["A4"].Value = "Company:";
+                worksheet.Cells["A5"].Value = "Status Filter:";
 
                 worksheet.Cells["B2"].Value = $"{dateFrom} - {dateTo}";
                 worksheet.Cells["B3"].Value = $"{extractedBy}";
                 worksheet.Cells["B4"].Value = $"{companyClaims}";
+                worksheet.Cells["B5"].Value = GetStatusFilterLabel(statusFilter);
 
                 worksheet.Cells["A7"].Value = "Transaction Date";
                 worksheet.Cells["B7"].Value = "Customer Name";
@@ -5131,10 +5191,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View();
         }
 
-        #region -- Generate Sales Invoice Report Excel File
+        #region -- Generate Sales Invoice List Excel File (Bulk Export)
 
         [HttpPost]
-        public async Task<IActionResult> GenerateSalesInvoiceReportExcelFile(CancellationToken cancellationToken)
+        public async Task<IActionResult> GenerateSalesInvoiceListExcelFile(CancellationToken cancellationToken)
         {
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
