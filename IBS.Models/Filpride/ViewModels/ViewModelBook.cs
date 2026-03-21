@@ -49,7 +49,12 @@ namespace IBS.Models.Filpride.ViewModels
 
         #endregion
 
+        #region Accounts Payable Report
 
+        [Display(Name = "Status Filter")]
+        public string StatusFilter { get; set; } = "ValidOnly";
+
+        #endregion
 
         #endregion
     }

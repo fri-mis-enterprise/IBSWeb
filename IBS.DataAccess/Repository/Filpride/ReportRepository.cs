@@ -240,20 +240,31 @@ namespace IBS.DataAccess.Repository.Filpride
                 .ToListAsync();
         }
 
-        public async Task<List<SalesReportViewModel>> GetSalesReport(DateOnly dateFrom, DateOnly dateTo, string company, List<int>? commissioneeIds = null, CancellationToken cancellationToken = default)
+        public async Task<List<SalesReportViewModel>> GetSalesReport(DateOnly dateFrom, DateOnly dateTo, string company, List<int>? commissioneeIds = null, string statusFilter = "ValidOnly", CancellationToken cancellationToken = default)
         {
             if (dateFrom > dateTo)
             {
                 throw new ArgumentException("Date From must not be greater than Date To!");
             }
 
-            // Fetch all delivery receipts within the date range
-            var deliveryReceipts = await _db.FilprideDeliveryReceipts
+            var deliveryReceiptsQuery = _db.FilprideDeliveryReceipts
                 .Where(dr => dr.Company == company &&
                              dr.DeliveredDate >= dateFrom &&
-                             dr.DeliveredDate <= dateTo &&
-                             (dr.Status == nameof(DRStatus.ForInvoicing) || dr.Status == nameof(DRStatus.Invoiced))
-                             && (commissioneeIds == null || commissioneeIds.Contains(dr.CommissioneeId!.Value)))
+                             dr.DeliveredDate <= dateTo
+                             && (commissioneeIds == null || commissioneeIds.Contains(dr.CommissioneeId!.Value)));
+
+            // Apply status filter
+            if (statusFilter == "ValidOnly")
+            {
+                deliveryReceiptsQuery = deliveryReceiptsQuery.Where(dr => dr.Status == nameof(DRStatus.ForInvoicing) || dr.Status == nameof(DRStatus.Invoiced));
+            }
+            else if (statusFilter == "InvalidOnly")
+            {
+                deliveryReceiptsQuery = deliveryReceiptsQuery.Where(dr => dr.Status == nameof(DRStatus.Voided) || dr.Status == nameof(DRStatus.Canceled));
+            }
+            // "All" returns all status records
+
+            var deliveryReceipts = await deliveryReceiptsQuery
                 .Include(dr => dr.CustomerOrderSlip!.Product)
                 .Include(dr => dr.CustomerOrderSlip).ThenInclude(cos => cos!.Commissionee)
                 .Include(dr => dr.Customer)
@@ -263,11 +274,23 @@ namespace IBS.DataAccess.Repository.Filpride
                 .ToListAsync(cancellationToken);
 
             // Fetch all sales invoices within the date range
-            var salesInvoices = _db.FilprideSalesInvoices
+            var salesInvoicesQuery = _db.FilprideSalesInvoices
                 .Where(si => si.Company == company &&
                              si.TransactionDate >= dateFrom &&
-                             si.TransactionDate <= dateTo &&
-                             si.Status == nameof(Status.Posted))
+                             si.TransactionDate <= dateTo);
+
+            // Apply status filter to sales invoices
+            if (statusFilter == "ValidOnly")
+            {
+                salesInvoicesQuery = salesInvoicesQuery.Where(si => si.Status == nameof(Status.Posted));
+            }
+            else if (statusFilter == "InvalidOnly")
+            {
+                salesInvoicesQuery = salesInvoicesQuery.Where(si => si.Status == nameof(Status.Voided) || si.Status == nameof(Status.Canceled));
+            }
+            // "All" returns all status records
+
+            var salesInvoices = salesInvoicesQuery
                 .Include(si => si.DeliveryReceipt)
                 .ToList();
 
@@ -291,7 +314,7 @@ namespace IBS.DataAccess.Repository.Filpride
             return result;
         }
 
-        public async Task<List<FilprideSalesInvoice>> GetSalesInvoiceReport(DateOnly dateFrom, DateOnly dateTo, string company,
+        public async Task<List<FilprideSalesInvoice>> GetSalesInvoiceReport(DateOnly dateFrom, DateOnly dateTo, string company, string statusFilter = "ValidOnly",
             CancellationToken cancellationToken = default)
         {
             if (dateFrom > dateTo)
@@ -299,31 +322,57 @@ namespace IBS.DataAccess.Repository.Filpride
                 throw new ArgumentException("Date From must not be greater than Date To!");
             }
 
-            var salesInvoices = await _db.FilprideSalesInvoices
-                .Where(si => si.TransactionDate >= dateFrom && si.TransactionDate <= dateTo &&
-                             si.Status == nameof(Status.Posted))
+            var query = _db.FilprideSalesInvoices
+                .Where(si => si.TransactionDate >= dateFrom && si.TransactionDate <= dateTo);
+
+            // Apply status filter
+            if (statusFilter == "ValidOnly")
+            {
+                query = query.Where(si => si.Status == "Posted");
+            }
+            else if (statusFilter == "InvalidOnly")
+            {
+                query = query.Where(si => si.Status == "Voided" || si.Status == "Canceled");
+            }
+            // "All" returns Posted, Voided, and Canceled records
+
+            var salesInvoices = await query
                 .Include(si => si.Product)
                 .Include(si => si.Customer)
                 .Include(si => si.PurchaseOrder)
+                .Include(si => si.CustomerOrderSlip)
+                .Include(si => si.DeliveryReceipt)
+                    .ThenInclude(dr => dr!.CustomerOrderSlip)
                 .OrderBy(si => si.TransactionDate)
                 .ToListAsync(cancellationToken);
 
             return salesInvoices;
         }
 
-        public async Task<List<FilprideServiceInvoice>> GetServiceInvoiceReport(DateOnly dateFrom, DateOnly dateTo, string company, CancellationToken cancellationToken = default)
+        public async Task<List<FilprideServiceInvoice>> GetServiceInvoiceReport(DateOnly dateFrom, DateOnly dateTo, string company, string statusFilter = "ValidOnly", CancellationToken cancellationToken = default)
         {
             if (dateFrom > dateTo)
             {
                 throw new ArgumentException("Date From must not be greater than Date To!");
             }
 
-            // Fetch all delivery receipts within the date range
-            var serviceInvoices = await _db.FilprideServiceInvoices
+            var query = _db.FilprideServiceInvoices
                 .Where(dr => dr.Company == company &&
                              dr.Period >= dateFrom &&
-                             dr.Period <= dateTo &&
-                             dr.Status == nameof(Status.Posted))
+                             dr.Period <= dateTo);
+
+            // Apply status filter
+            if (statusFilter == "ValidOnly")
+            {
+                query = query.Where(dr => dr.Status == nameof(Status.Posted));
+            }
+            else if (statusFilter == "InvalidOnly")
+            {
+                query = query.Where(dr => dr.Status == nameof(Status.Voided) || dr.Status == nameof(Status.Canceled));
+            }
+            // "All" returns Posted, Voided, and Canceled records
+
+            var serviceInvoices = await query
                 .Include(dr => dr.Customer)
                 .Include(dr => dr.Service)
                 .OrderBy(p => p.ServiceInvoiceNo)
@@ -332,20 +381,33 @@ namespace IBS.DataAccess.Repository.Filpride
             return serviceInvoices;
         }
 
-        public async Task<List<FilpridePurchaseOrder>> GetPurchaseOrderReport(DateOnly dateFrom, DateOnly dateTo, string company, CancellationToken cancellationToken = default)
+        public async Task<List<FilpridePurchaseOrder>> GetPurchaseOrderReport(DateOnly dateFrom, DateOnly dateTo, string company, string statusFilter = "ValidOnly", CancellationToken cancellationToken = default)
         {
             if (dateFrom > dateTo)
             {
                 throw new ArgumentException("Date From must not be greater than Date To!");
             }
 
-            var purchaseOrder = await _db.FilpridePurchaseOrders
-            .Where(p => p.Company == company && p.Date >= dateFrom && p.Date <= dateTo && p.Status == nameof(Status.Posted)) // Filter by date and company
-            .Include(p => p.Supplier)
-            .Include(p => p.Product)
-            .Include(p => p.ActualPrices)
-            .OrderBy(p => p.Date) // Order by TransactionDate
-            .ToListAsync(cancellationToken);
+            var query = _db.FilpridePurchaseOrders
+                .Where(p => p.Company == company && p.Date >= dateFrom && p.Date <= dateTo);
+
+            // Apply status filter
+            if (statusFilter == "ValidOnly")
+            {
+                query = query.Where(p => p.Status == nameof(Status.Posted));
+            }
+            else if (statusFilter == "InvalidOnly")
+            {
+                query = query.Where(p => p.Status == nameof(Status.Voided) || p.Status == nameof(Status.Canceled));
+            }
+            // "All" returns Posted, Voided, and Canceled records
+
+            var purchaseOrder = await query
+                .Include(p => p.Supplier)
+                .Include(p => p.Product)
+                .Include(p => p.ActualPrices)
+                .OrderBy(p => p.Date)
+                .ToListAsync(cancellationToken);
 
             return purchaseOrder;
         }
@@ -379,6 +441,7 @@ namespace IBS.DataAccess.Repository.Filpride
             List<int>? customerIds = null,
             List<int>? commissioneeIds = null,
             string dateSelectionType = "RRDate",
+            string statusFilter = "ValidOnly",
             CancellationToken cancellationToken = default)
         {
             if (dateFrom > dateTo)
@@ -389,9 +452,19 @@ namespace IBS.DataAccess.Repository.Filpride
             // Base query without date filter yet
             var receivingReportsQuery = _db.FilprideReceivingReports
                 .Where(rr => rr.Company == company
-                            && rr.Status == nameof(Status.Posted)
                             && (customerIds == null || customerIds.Contains(rr.DeliveryReceipt!.CustomerId))
                             && (commissioneeIds == null || commissioneeIds.Contains(rr.DeliveryReceipt!.CommissioneeId!.Value)));
+
+            // Apply status filter
+            if (statusFilter == "ValidOnly")
+            {
+                receivingReportsQuery = receivingReportsQuery.Where(rr => rr.Status == nameof(Status.Posted));
+            }
+            else if (statusFilter == "InvalidOnly")
+            {
+                receivingReportsQuery = receivingReportsQuery.Where(rr => rr.Status == nameof(Status.Voided) || rr.Status == nameof(Status.Canceled));
+            }
+            // "All" returns Posted, Voided, and Canceled records
 
             // Apply date filter based on dateSelectionType
             if (dateSelectionType == "RRDate")
@@ -429,9 +502,19 @@ namespace IBS.DataAccess.Repository.Filpride
             // For the additional delivery receipts part, apply similar date filtering logic
             var additionalDeliveryReceiptsQuery = _db.FilprideDeliveryReceipts
                 .Where(dr => dr.Date >= dateFrom && dr.Date <= dateTo
-                          && dr.Status == nameof(DRStatus.PendingDelivery)
                           && (customerIds == null || customerIds.Contains(dr.CustomerId))
                           && (commissioneeIds == null || commissioneeIds.Contains(dr.CommissioneeId!.Value)));
+
+            // Apply status filter to additional delivery receipts
+            if (statusFilter == "ValidOnly")
+            {
+                additionalDeliveryReceiptsQuery = additionalDeliveryReceiptsQuery.Where(dr => dr.Status == nameof(DRStatus.PendingDelivery));
+            }
+            else if (statusFilter == "InvalidOnly")
+            {
+                additionalDeliveryReceiptsQuery = additionalDeliveryReceiptsQuery.Where(dr => dr.Status == nameof(DRStatus.Canceled) || dr.Status == nameof(DRStatus.Voided));
+            }
+            // "All" returns PendingDelivery, Voided, and Canceled records
 
             var additionalDeliveryReceipts = await additionalDeliveryReceiptsQuery
                 .Include(dr => dr.CustomerOrderSlip)
@@ -509,15 +592,28 @@ namespace IBS.DataAccess.Repository.Filpride
                 .ToList();
         }
 
-        public async Task<List<FilprideCollectionReceipt>> GetCollectionReceiptReport(DateOnly dateFrom, DateOnly dateTo, string company, CancellationToken cancellationToken = default)
+        public async Task<List<FilprideCollectionReceipt>> GetCollectionReceiptReport(DateOnly dateFrom, DateOnly dateTo, string company, string statusFilter = "ValidOnly", CancellationToken cancellationToken = default)
         {
             if (dateFrom > dateTo)
             {
                 throw new ArgumentException("Date From must not be greater than Date To!");
             }
 
-            var collectionReceipts = await _db.FilprideCollectionReceipts
-                .Where(cr => cr.Company == company && cr.TransactionDate >= dateFrom && cr.TransactionDate <= dateTo)
+            var query = _db.FilprideCollectionReceipts
+                .Where(cr => cr.Company == company && cr.TransactionDate >= dateFrom && cr.TransactionDate <= dateTo);
+
+            // Apply status filter
+            if (statusFilter == "ValidOnly")
+            {
+                query = query.Where(cr => cr.VoidedBy == null && cr.CanceledBy == null);
+            }
+            else if (statusFilter == "InvalidOnly")
+            {
+                query = query.Where(cr => cr.VoidedBy != null || cr.CanceledBy != null);
+            }
+            // "All" returns all records
+
+            var collectionReceipts = await query
                 .Include(cr => cr.SalesInvoice)
                 .ThenInclude(si => si!.CustomerOrderSlip)
                 .Include(cr => cr.Customer)
@@ -592,19 +688,28 @@ namespace IBS.DataAccess.Repository.Filpride
             return purchaseOrders;
         }
 
-        public async Task<List<FilprideSalesInvoice>> GetARPerCustomerReport(DateOnly dateFrom, DateOnly dateTo, string company, List<int>? customerIds = null, CancellationToken cancellationToken = default)
+        public async Task<List<FilprideSalesInvoice>> GetARPerCustomerReport(DateOnly dateFrom, DateOnly dateTo, string company, List<int>? customerIds = null, string statusFilter = "ValidOnly", CancellationToken cancellationToken = default)
         {
             if (dateFrom > dateTo)
             {
                 throw new ArgumentException("Date From must not be greater than Date To!");
             }
 
-            // Base query without date filter yet
             var salesInvoiceQuery = _db.FilprideSalesInvoices
                 .Where(x => x.Company == company
-                            && x.Status == nameof(Status.Posted)
                             && (customerIds == null || customerIds.Contains(x.CustomerId))
                             && x.TransactionDate >= dateFrom && x.TransactionDate <= dateTo);
+
+            // Apply status filter
+            if (statusFilter == "ValidOnly")
+            {
+                salesInvoiceQuery = salesInvoiceQuery.Where(x => x.Status == nameof(Status.Posted));
+            }
+            else if (statusFilter == "InvalidOnly")
+            {
+                salesInvoiceQuery = salesInvoiceQuery.Where(x => x.Status == nameof(Status.Voided) || x.Status == nameof(Status.Canceled));
+            }
+            // "All" returns Posted, Voided, and Canceled records
 
             // Include necessary related entities
             var salesInvoices = await salesInvoiceQuery
@@ -619,22 +724,34 @@ namespace IBS.DataAccess.Repository.Filpride
 
 
         public async Task<List<FilprideJournalVoucherDetail>> GetJournalVoucherReport(DateOnly dateFrom,
-            DateOnly dateTo, string company, CancellationToken cancellationToken = default)
+            DateOnly dateTo, string company, string statusFilter = "ValidOnly", CancellationToken cancellationToken = default)
         {
             if (dateFrom > dateTo)
             {
                 throw new ArgumentException("Date From must not be greater than Date To!");
             }
 
-            // Base query without date filter yet
-            var journalVoucherDetails = await _db.FilprideJournalVoucherDetails
+            var query = _db.FilprideJournalVoucherDetails
                 .Include(jvd => jvd.JournalVoucherHeader)
                 .ThenInclude(jvh => jvh!.CheckVoucherHeader)
                 .Where(x => x.JournalVoucherHeader!.Company == company
                             && x.JournalVoucherHeader.Date >= dateFrom
-                            && x.JournalVoucherHeader.Date <= dateTo)
+                            && x.JournalVoucherHeader.Date <= dateTo);
+
+            // Apply status filter
+            if (statusFilter == "ValidOnly")
+            {
+                query = query.Where(x => x.JournalVoucherHeader!.VoidedBy == null && x.JournalVoucherHeader!.CanceledBy == null);
+            }
+            else if (statusFilter == "InvalidOnly")
+            {
+                query = query.Where(x => x.JournalVoucherHeader!.VoidedBy != null || x.JournalVoucherHeader!.CanceledBy != null);
+            }
+            // "All" returns all records without filtering
+
+            var journalVoucherDetails = await query
                 .OrderBy(jvd => jvd.JournalVoucherHeader!.Date)
-                .OrderBy(jvd => jvd.JournalVoucherHeader!.JournalVoucherHeaderNo)
+                .ThenBy(jvd => jvd.JournalVoucherHeader!.JournalVoucherHeaderNo)
                 .ToListAsync(cancellationToken);
 
 
