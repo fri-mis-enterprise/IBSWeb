@@ -318,6 +318,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                                 $"{po.PurchaseOrderNo}. Contact the TNS department.");
                 }
 
+                if (viewModel.Volume > customerOrderSlip.BalanceQuantity)
+                {
+                    throw new ArgumentException("The inputted balance exceeds the remaining balance of COS.");
+                }
+
                 FilprideDeliveryReceipt model = new()
                 {
                     DeliveryReceiptNo = await _unitOfWork.FilprideDeliveryReceipt.GenerateCodeAsync(companyClaims, viewModel.Type, cancellationToken),
@@ -353,7 +358,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 customerOrderSlip.DeliveredQuantity += model.Quantity;
                 customerOrderSlip.BalanceQuantity -= model.Quantity;
 
-                if (customerOrderSlip.BalanceQuantity <= 0)
+                if (customerOrderSlip.BalanceQuantity == 0)
                 {
                     customerOrderSlip.Status = nameof(CosStatus.Completed);
                 }
