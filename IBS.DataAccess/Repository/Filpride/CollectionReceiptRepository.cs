@@ -682,8 +682,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .ThenInclude(sv => sv!.Customer)
                 .Include(cr => cr.ServiceInvoice)
                 .ThenInclude(sv => sv!.Service)
-                .Include(cr => cr.BankAccount)
-                .Include(cr => cr.ReceiptDetails);
+                .Include(cr => cr.BankAccount);
 
             if (filter != null)
             {
