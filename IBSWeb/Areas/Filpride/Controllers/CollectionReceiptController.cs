@@ -3122,7 +3122,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        public async Task<IActionResult>  UploadCsvForMultipleInvoice(CancellationToken cancellationToken)
+        public async Task<IActionResult> UploadCsvForMultipleInvoice(CancellationToken cancellationToken)
         {
             var companyClaims = await GetCompanyClaimAsync();
 
@@ -3484,7 +3484,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
         public async Task<IActionResult> BatchPostingOfCollection(CancellationToken cancellationToken)
         {
             var model = (await _unitOfWork.FilprideCollectionReceipt
-                .GetAllAsync(null, cancellationToken))
+                .GetAllAsync(cr => cr.Status == nameof(CollectionReceiptStatus.Pending)
+                                   || cr.PostedBy == null, cancellationToken))
                 .OrderBy(x => x.TransactionDate)
                 .ThenBy(x => x.CollectionReceiptId);
 
@@ -3611,8 +3612,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     BatchApplyClearingDate(record.CollectionReceiptId,
                         record.ClearedDate,
-                        modelDictionary,
-                        cancellationToken);
+                        modelDictionary);
 
                     #region --Audit Trail Recording
 
@@ -3730,8 +3730,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public IActionResult BatchApplyClearingDate(int id,
             DateOnly clearingDate,
-            Dictionary<int, FilprideCollectionReceipt> collectionReceipt,
-            CancellationToken cancellationToken)
+            Dictionary<int, FilprideCollectionReceipt> collectionReceipt)
         {
             collectionReceipt.TryGetValue(id, out var model);
 
