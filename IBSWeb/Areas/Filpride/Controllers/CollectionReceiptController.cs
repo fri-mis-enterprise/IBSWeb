@@ -3473,8 +3473,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         public async Task<IActionResult> BatchPostingOfCollection(CancellationToken cancellationToken)
         {
             var model = (await _unitOfWork.FilprideCollectionReceipt
-                .GetAllAsync(cr => cr.Status == nameof(CollectionReceiptStatus.Pending)
-                                   || cr.PostedBy == null, cancellationToken))
+                .GetAllAsync(null, cancellationToken))
                 .OrderBy(x => x.TransactionDate)
                 .ThenBy(x => x.CollectionReceiptId);
 
@@ -3558,6 +3557,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .AsSplitQuery()
                     .ToDictionaryAsync(x => x.CollectionReceiptId, cancellationToken);
                 var salesInvoiceDictionary = await _dbContext.FilprideSalesInvoices
+                    .Include(si => si.Product)
+                    .Include(si => si.Customer)
+                    .Include(si => si.DeliveryReceipt)
+                    .ThenInclude(dr => dr!.Hauler)
+                    .Include(si => si.DeliveryReceipt)
+                    .ThenInclude(dr => dr!.Commissionee)
+                    .Include(si => si.CustomerOrderSlip)
                     .GroupBy(x => x.SalesInvoiceNo)
                     .Select(x => x.First())
                     .ToDictionaryAsync(x => x.SalesInvoiceNo!, cancellationToken);
