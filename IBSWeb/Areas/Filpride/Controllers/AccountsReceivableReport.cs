@@ -1592,6 +1592,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         #region -- Generated Sales Report as Quest PDF
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> GeneratedSalesReport(ViewModelBook model, CancellationToken cancellationToken)
         {
             var companyClaims = await GetCompanyClaimAsync();
@@ -5194,6 +5195,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         #region -- Generate Sales Invoice List Excel File (Bulk Export)
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> GenerateSalesInvoiceListExcelFile(CancellationToken cancellationToken)
         {
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
