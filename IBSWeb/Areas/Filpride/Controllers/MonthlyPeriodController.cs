@@ -1,4 +1,7 @@
+using System.Security.Claims;
+using IBS.DataAccess.Data;
 using IBS.Models;
+using IBS.Models.Filpride.Books;
 using IBS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -16,13 +19,24 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public MonthlyPeriodController(ILogger<MonthlyPeriodController> logger,
+        private readonly ApplicationDbContext _dbContext;
+
+        public MonthlyPeriodController(
+            ILogger<MonthlyPeriodController> logger,
             IMonthlyClosureService monthlyClosureService,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            ApplicationDbContext dbContext)
         {
             _logger = logger;
             _monthlyClosureService = monthlyClosureService;
             _userManager = userManager;
+            _dbContext = dbContext;
+        }
+
+        private string GetUserFullName()
+        {
+            return User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value
+                   ?? User.Identity?.Name!;
         }
 
         private async Task<string?> GetCompanyClaimAsync()
@@ -58,13 +72,25 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 await _monthlyClosureService.CloseAsync(monthDate, companyClaim, User.Identity!.Name!, cancellationToken);
 
+                FilprideAuditTrail auditTrailBook = new(
+                    GetUserFullName(),
+                    $"Close the book for the month of {monthDate:MMM yyyy}",
+                    "Monthly Period",
+                    companyClaim
+                );
+
+                await _dbContext.FilprideAuditTrails.AddAsync(auditTrailBook, cancellationToken);
+
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+
                 TempData["success"] = $"Month of {monthDate:MMM yyyy} closed successfully.";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
                 TempData["error"] = ex.Message;
-                _logger.LogError(ex, "Failed to close period. Posted by: {Username}", User.Identity!.Name);
+                _logger.LogError(ex, "Failed to close period. Posted by: {Username}", GetUserFullName());
                 return RedirectToAction(nameof(Index));
             }
         }
@@ -84,13 +110,25 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 await _monthlyClosureService.OpenAsync(monthDate, companyClaim, User.Identity!.Name!, cancellationToken);
 
+                FilprideAuditTrail auditTrailBook = new(
+                    GetUserFullName(),
+                    $"Open the book for the month of {monthDate:MMM yyyy}",
+                    "Monthly Period",
+                    companyClaim
+                );
+
+                await _dbContext.FilprideAuditTrails.AddAsync(auditTrailBook, cancellationToken);
+
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+
                 TempData["success"] = $"Month of {monthDate:MMM yyyy} opened successfully.";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
                 TempData["error"] = ex.Message;
-                _logger.LogError(ex, "Failed to open period. Open by: {Username}", User.Identity!.Name);
+                _logger.LogError(ex, "Failed to open period. Open by: {Username}", GetUserFullName());
                 return RedirectToAction(nameof(Index));
             }
         }
