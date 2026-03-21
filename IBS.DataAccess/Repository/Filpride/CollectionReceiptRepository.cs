@@ -1047,7 +1047,6 @@ namespace IBS.DataAccess.Repository.Filpride
             var arTradeCwv = accountTitlesDto.Find(c => c.AccountNumber == "101020300") ?? throw new ArgumentException("Account title '101020300' not found.");
             var cwt = accountTitlesDto.Find(c => c.AccountNumber == "101060400") ?? throw new ArgumentException("Account title '101060400' not found.");
             var cwv = accountTitlesDto.Find(c => c.AccountNumber == "101060600") ?? throw new ArgumentException("Account title '101060600' not found.");
-            var offsetAmount = 0m;
 
             var customerName = collectionReceipt.SalesInvoiceId != null
                 ? collectionReceipt.SalesInvoice!.Customer!.CustomerName
@@ -1123,7 +1122,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 );
             }
 
-            if (collectionReceipt.CashAmount > 0 || collectionReceipt.CheckAmount > 0 || collectionReceipt.ManagersCheckAmount > 0 || offsetAmount > 0)
+            if (collectionReceipt.CashAmount > 0 || collectionReceipt.CheckAmount > 0 || collectionReceipt.ManagersCheckAmount > 0)
             {
                 ledgers.Add(
                     new FilprideGeneralLedgerBook
@@ -1135,7 +1134,7 @@ namespace IBS.DataAccess.Repository.Filpride
                         AccountNo = arTradeTitle.AccountNumber,
                         AccountTitle = arTradeTitle.AccountName,
                         Debit = 0,
-                        Credit = collectionReceipt.CashAmount + collectionReceipt.CheckAmount + collectionReceipt.ManagersCheckAmount + offsetAmount,
+                        Credit = collectionReceipt.CashAmount + collectionReceipt.CheckAmount + collectionReceipt.ManagersCheckAmount,
                         Company = collectionReceipt.Company,
                         CreatedBy = collectionReceipt.PostedBy!,
                         CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
@@ -1265,7 +1264,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     COA = $"{arTradeTitle.AccountNumber} {arTradeTitle.AccountName}",
                     Particulars = (collectionReceipt.SalesInvoiceId != null ? collectionReceipt.SalesInvoice!.SalesInvoiceNo : collectionReceipt.MultipleSIId != null ? string.Join(", ", collectionReceipt.MultipleSI!.Select(si => si.ToString())) : collectionReceipt.ServiceInvoice!.ServiceInvoiceNo)!,
                     Debit = 0,
-                    Credit = collectionReceipt.CashAmount + collectionReceipt.CheckAmount + collectionReceipt.ManagersCheckAmount + offsetAmount,
+                    Credit = collectionReceipt.CashAmount + collectionReceipt.CheckAmount + collectionReceipt.ManagersCheckAmount,
                     Company = collectionReceipt.Company,
                     CreatedBy = collectionReceipt.PostedBy,
                     CreatedDate = collectionReceipt.PostedDate ?? DateTimeHelper.GetCurrentPhilippineTime(),
