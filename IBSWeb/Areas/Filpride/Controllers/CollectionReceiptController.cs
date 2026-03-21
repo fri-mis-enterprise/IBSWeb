@@ -23,6 +23,8 @@ using System.Globalization;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using System.Text;
+using IBS.DTOs;
+using IBS.Models.Filpride.MasterFile;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -1965,18 +1967,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.Status = nameof(CollectionReceiptStatus.Posted);
                 bool isMultipleSi = model.MultipleSIId?.Length > 0;
 
-                List<FilprideOffsettings>? offset;
-
-                if (model.SalesInvoiceId != null)
-                {
-                    offset = await _unitOfWork.FilprideCollectionReceipt.GetOffsettings(model.CollectionReceiptNo!, model.SINo!, model.Company, cancellationToken);
-                }
-                else
-                {
-                    offset = await _unitOfWork.FilprideCollectionReceipt.GetOffsettings(model.CollectionReceiptNo!, model.SVNo!, model.Company, cancellationToken);
-                }
-
-                await _unitOfWork.FilprideCollectionReceipt.PostAsync(model, offset, cancellationToken);
+                await _unitOfWork.FilprideCollectionReceipt.PostAsync(model, cancellationToken);
 
                 #region --Audit Trail Recording
 
@@ -2988,6 +2979,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     // Compute random time inside the range
                     var range = end - start;
                     var randomTime = start + TimeSpan.FromTicks((long)(range.Ticks * random.NextDouble()));
+                    var transactionDate = record.TransactionDate;
+                    var createdDate = DateTimeHelper.GetNextTransactionDateTime(transactionDate);
+                    var postedDate = DateTimeHelper.GetNextTransactionDateTime(transactionDate);
 
                     #region --Saving default value
 
@@ -2998,7 +2992,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             SalesInvoiceId = getSalesInvoice.SalesInvoiceId,
                             SINo = getSalesInvoice.SalesInvoiceNo,
                             CustomerId = getSalesInvoice.CustomerId,
-                            TransactionDate = record.TransactionDate,
+                            TransactionDate = transactionDate,
                             ReferenceNo = record.ReferenceNo,
                             Remarks = record.Remarks,
                             CashAmount = record.CashAmount,
@@ -3020,10 +3014,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             WVAT = record.WVAT,
                             Total = total,
                             CreatedBy = "JAMES MATTHEW B. CASTILLEJO",
-                            CreatedDate = record.TransactionDate.ToDateTime(TimeOnly.FromTimeSpan(randomTime)),
+                            CreatedDate = createdDate,
                             Company = companyClaims,
                             Type = record.Type,
-                            BatchNumber = record.BatchNumber
+                            BatchNumber = record.BatchNumber,
+                            PostedBy = GetUserFullName(),
+                            PostedDate = postedDate,
+                            Status = nameof(CollectionReceiptStatus.Posted),
                         });
 
                     var netDiscount = getSalesInvoice.Amount - getSalesInvoice.Discount;
@@ -3065,7 +3062,29 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 await _dbContext.FilprideCollectionReceiptDetails.AddRangeAsync(details, cancellationToken);
+
+                var auditTrail = new List<FilprideAuditTrail>();
+                foreach (var record in model)
+                {
+                    #region --Audit Trail Recording
+
+                    auditTrail.Add(
+                        new FilprideAuditTrail
+                        {
+                            Username = record.CreatedBy!,
+                            Date = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
+                                TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila")),
+                            MachineName = Environment.MachineName,
+                            Activity = $"Create new collection receipt# {record.CollectionReceiptNo}",
+                            DocumentType = "Collection Receipt",
+                            Company = record.Company
+                        });
+
+                    #endregion --Audit Trail Recording
+                }
+                await _dbContext.FilprideAuditTrails.AddRangeAsync(auditTrail, cancellationToken);
                 await _dbContext.SaveChangesAsync(cancellationToken);
+
                 TempData["success"] = "Collection receipt created successfully.";
 
                 var fileContent = new StringBuilder();
@@ -3103,7 +3122,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             using var reader = new StreamReader(@"C:\Users\Administrator\Documents\MULTI INVOICE AUGUST 2024 - NOVEMBER 2025_1.csv");
             using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
-            var records = csv.GetRecords<UploadCsvForMultipleInvoiceViewModel>().ToList();
+            var records = csv.GetRecords<UploadCsvForMultipleInvoiceViewModel>()
+                .OrderBy(x => x.TransactionDate)
+                .ToList();
 
             var salesInvoiceNo = records.Select(x => x.SalesInvoiceNo.Trim()).Distinct().ToList();
 
@@ -3235,11 +3256,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         continue;
                     }
                     seriesNumber++;
+
+                    var transactionDate = cr.Select(x => x.TransactionDate).FirstOrDefault();
+                    var createdDate = DateTimeHelper.GetNextTransactionDateTime(transactionDate);
+                    var postedDate = DateTimeHelper.GetNextTransactionDateTime(transactionDate);
+
                     model.Add(
                         new FilprideCollectionReceipt
                         {
                             CollectionReceiptNo = seriesNumber.ToString(),
-                            TransactionDate = cr.Select(x => x.TransactionDate).FirstOrDefault(),
+                            TransactionDate = transactionDate,
                             CustomerId = customerId,
                             ReferenceNo = cr.Select(x => x.ReferenceNo).FirstOrDefault() ?? string.Empty,
                             Remarks = cr.Select(x => x.Remarks).FirstOrDefault().Truncate(100),
@@ -3263,15 +3289,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             WVAT = cr.Select(x => x.WVAT).FirstOrDefault(),
                             Total = total,
                             CreatedBy = "JAMES MATTHEW B. CASTILLEJO",
-                            CreatedDate = cr.Select(x => x.TransactionDate).FirstOrDefault()
-                            .ToDateTime(TimeOnly.FromTimeSpan(randomTime)),
+                            CreatedDate = createdDate,
                             Company = companyClaims,
                             Type = cr.Select(x => x.Type).FirstOrDefault(),
                             BatchNumber = cr.Select(x => x.BatchNumber).FirstOrDefault() ?? string.Empty,
                             MultipleSIId = invoiceId.ToArray(),
                             MultipleSI = invoiceNos.ToArray(),
                             SIMultipleAmount = invoiceAmounts.ToArray(),
-                            MultipleTransactionDate = invoiceTranDate.ToArray()
+                            MultipleTransactionDate = invoiceTranDate.ToArray(),
+                            PostedBy = GetUserFullName(),
+                            PostedDate = postedDate,
+                            Status = nameof(CollectionReceiptStatus.Posted)
                         });
 
                     #endregion --Saving default value
@@ -3301,6 +3329,27 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     }
                 }
                 await _dbContext.FilprideCollectionReceiptDetails.AddRangeAsync(details, cancellationToken);
+
+                var auditTrail = new List<FilprideAuditTrail>();
+                foreach (var record in model)
+                {
+                    #region --Audit Trail Recording
+
+                    auditTrail.Add(
+                        new FilprideAuditTrail
+                        {
+                            Username = record.CreatedBy!,
+                            Date = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
+                                TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila")),
+                            MachineName = Environment.MachineName,
+                            Activity = $"Create new collection receipt# {record.CollectionReceiptNo}",
+                            DocumentType = "Collection Receipt",
+                            Company = record.Company
+                        });
+
+                    #endregion --Audit Trail Recording
+                }
+                await _dbContext.FilprideAuditTrails.AddRangeAsync(auditTrail, cancellationToken);
                 await _dbContext.SaveChangesAsync(cancellationToken);
 
                 TempData["success"] = "Collection receipt created successfully.";
@@ -3347,6 +3396,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Include(cr => cr.ReceiptDetails)
                     .Where(x => x.Company == companyClaims)
                     .OrderBy(x => x.TransactionDate)
+                    .ThenBy(x => x.CollectionReceiptId)
                     .ToListAsync(cancellationToken);
 
                 var invoiceNumbers = collectionReceipts
@@ -3417,6 +3467,298 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 await transaction.RollbackAsync(cancellationToken);
                 TempData["error"] = ex.Message;
                 return RedirectToAction(nameof(Index));
+            }
+        }
+
+        public async Task<IActionResult> BatchPostingOfCollection(CancellationToken cancellationToken)
+        {
+            var model = (await _unitOfWork.FilprideCollectionReceipt
+                .GetAllAsync(null, cancellationToken))
+                .OrderBy(x => x.TransactionDate)
+                .ThenBy(x => x.CollectionReceiptId);
+
+            if (!model.Any())
+            {
+                return NotFound();
+            }
+
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                var auditTrail = new List<FilprideAuditTrail>();
+                var accountTitlesDto = await _unitOfWork.FilprideCollectionReceipt.GetListOfAccountTitleDto(cancellationToken);
+
+                foreach (var record in model)
+                {
+                    await _unitOfWork.FilprideCollectionReceipt.BatchPostCollectionAsync(record, accountTitlesDto, cancellationToken);
+
+                    #region --Audit Trail Recording
+
+                    auditTrail.Add(
+                        new FilprideAuditTrail
+                    {
+                        Username = record.PostedBy!,
+                        Date = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
+                            TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila")),
+                        MachineName = Environment.MachineName,
+                        Activity = $"Posted collection receipt# {record.CollectionReceiptNo}",
+                        DocumentType = "Collection Receipt",
+                        Company = record.Company
+                    });
+
+                    #endregion --Audit Trail Recording
+                }
+
+                await _dbContext.AddRangeAsync(auditTrail, cancellationToken);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                TempData["success"] = "Collection Receipt has been Posted.";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to post collection receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Posted by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+                await transaction.RollbackAsync(cancellationToken);
+                TempData["error"] = ex.Message;
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        public async Task<IActionResult> BatchDepositAndApplyClearingDate(CancellationToken cancellationToken)
+        {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                using var reader = new StreamReader(@"C:\Users\Administrator\Documents\CR-Deposit-and-Clearing.csv");
+                using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+                var records = csv.GetRecords<MultipleDepositViewModel>()
+                    .OrderBy(x => x.TransactionDate)
+                    .ThenBy(x => x.CollectionReceiptId);
+                var bankAccountsDictionary = await _dbContext.FilprideBankAccounts
+                    .ToDictionaryAsync(x => x.BankAccountId, cancellationToken);
+                var modelDictionary = await _dbContext.FilprideCollectionReceipts
+                    .Include(cr => cr.Customer)
+                    .Include(cr => cr.SalesInvoice)
+                    .ThenInclude(s => s!.Customer)
+                    .Include(cr => cr.SalesInvoice)
+                    .ThenInclude(s => s!.Product)
+                    .Include(cr => cr.SalesInvoice)
+                    .ThenInclude(s => s!.CustomerOrderSlip)
+                    .Include(cr => cr.ServiceInvoice)
+                    .ThenInclude(sv => sv!.Customer)
+                    .Include(cr => cr.ServiceInvoice)
+                    .ThenInclude(sv => sv!.Service)
+                    .Include(cr => cr.BankAccount)
+                    .Include(cr => cr.ReceiptDetails)
+                    .GroupBy(x => x.CollectionReceiptId)
+                    .Select(x => x.First())
+                    .AsSplitQuery()
+                    .ToDictionaryAsync(x => x.CollectionReceiptId, cancellationToken);
+                var salesInvoiceDictionary = await _dbContext.FilprideSalesInvoices
+                    .Include(si => si.Product)
+                    .Include(si => si.Customer)
+                    .Include(si => si.DeliveryReceipt)
+                    .ThenInclude(dr => dr!.Hauler)
+                    .Include(si => si.DeliveryReceipt)
+                    .ThenInclude(dr => dr!.Commissionee)
+                    .Include(si => si.CustomerOrderSlip)
+                    .GroupBy(x => x.SalesInvoiceNo)
+                    .Select(x => x.First())
+                    .ToDictionaryAsync(x => x.SalesInvoiceNo!, cancellationToken);
+                var accountTitlesDtoDictionary = await _dbContext.FilprideChartOfAccounts
+                    .Where(coa => coa.Level == 4 || coa.Level == 5)
+                    .GroupBy(x => x.AccountNumber)
+                    .Select(x => x.First())
+                    .ToDictionaryAsync(x => x.AccountNumber!, cancellationToken);
+                var auditTrail = new List<FilprideAuditTrail>();
+
+                foreach (var record in records)
+                {
+                    if (!modelDictionary.TryGetValue(record.CollectionReceiptId, out var collectionReceipt))
+                    {
+                        throw new ArgumentException($"Collection Receipt id:{record.CollectionReceiptId} not found.");
+                    }
+                    await BatchDepositForCollection(record.CollectionReceiptId,
+                        record.BankId,
+                        record.DepositedDate,
+                        bankAccountsDictionary,
+                        modelDictionary,
+                        salesInvoiceDictionary,
+                        accountTitlesDtoDictionary,
+                        cancellationToken);
+
+                    #region --Audit Trail Recording
+
+                    auditTrail.Add(
+                        new FilprideAuditTrail
+                        {
+                            Username = GetUserFullName(),
+                            Date = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
+                                TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila")),
+                            MachineName = Environment.MachineName,
+                            Activity = $"Record deposit date of collection receipt# {collectionReceipt.CollectionReceiptNo}",
+                            DocumentType = "Collection Receipt",
+                            Company = collectionReceipt.Company
+                        });
+
+                    #endregion --Audit Trail Recording
+
+                    BatchApplyClearingDate(record.CollectionReceiptId,
+                        record.ClearedDate,
+                        modelDictionary);
+
+                    #region --Audit Trail Recording
+
+                    auditTrail.Add(
+                        new FilprideAuditTrail
+                        {
+                            Username = GetUserFullName(),
+                            Date = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
+                                TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila")),
+                            MachineName = Environment.MachineName,
+                            Activity = $"Apply clearing date for collection receipt# {collectionReceipt.CollectionReceiptNo}",
+                            DocumentType = "Collection Receipt",
+                            Company = collectionReceipt.Company
+                        });
+
+                    #endregion --Audit Trail Recording
+                }
+
+                await _dbContext.FilprideAuditTrails.AddRangeAsync(auditTrail, cancellationToken);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                _logger.LogError(ex,
+                    "Failed to process batch deposit in collection receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Created by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+                TempData["error"] = ex.Message;
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
+
+            return Ok();
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> BatchDepositForCollection(int id,
+            int bankId,
+            DateOnly depositDate,
+            Dictionary<int, FilprideBankAccount> bank,
+            Dictionary<int, FilprideCollectionReceipt> collectionReceipt,
+            Dictionary<string, FilprideSalesInvoice> invoices,
+            Dictionary<string, FilprideChartOfAccount> accountTitlesDtoDictionary,
+            CancellationToken cancellationToken)
+        {
+            bank.TryGetValue(bankId, out var bankAccount);
+            if (bankAccount == null)
+            {
+                return NotFound();
+            }
+
+            collectionReceipt.TryGetValue(id, out var model);
+            if (model == null)
+            {
+                return NotFound();
+            }
+
+            try
+            {
+                model.DepositedDate = depositDate;
+                model.BankId = bankAccount.BankAccountId;
+                model.BankAccountName = bankAccount.AccountName;
+                model.BankAccountNumber = bankAccount.AccountNo;
+                model.Status = nameof(CollectionReceiptStatus.Deposited);
+
+                await _unitOfWork.FilprideCollectionReceipt.BatchDepositAsync(model, accountTitlesDtoDictionary, cancellationToken);
+
+                foreach (var receipt in model.ReceiptDetails!)
+                {
+                    invoices.TryGetValue(receipt.InvoiceNo, out var salesInvoice);
+                    if (salesInvoice == null)
+                    {
+                        continue;
+                    }
+                    var getHolidays = await DateTimeHelper.GetNonWorkingDays(salesInvoice.DueDate, depositDate, "PH");
+                    var daysDelayed = depositDate.DayNumber - salesInvoice.DueDate.DayNumber - getHolidays.Count;
+
+                    if (daysDelayed <= 0 || salesInvoice.DeliveryReceipt == null || salesInvoice.DeliveryReceipt?.CommissionAmount <= 0)
+                    {
+                        continue;
+                    }
+
+                    var dr = salesInvoice.DeliveryReceipt!;
+
+                    //Formula: Commission Amount x 3% x Days Delayed / 360
+                    var costOfMoney = dr.CommissionAmount * .03m * daysDelayed / 360m;
+
+                    await _unitOfWork.FilprideCollectionReceipt.ApplyCostOfMoney(dr, costOfMoney,
+                        GetUserFullName(), depositDate, cancellationToken);
+                }
+
+                TempData["success"] = "Collection Receipt deposited date has been recorded successfully.";
+
+                if (model.SalesInvoiceId != null || model.MultipleSIId != null)
+                {
+                    return RedirectToAction(nameof(Index));
+                }
+                return RedirectToAction(nameof(ServiceInvoiceIndex));
+            }
+            catch (Exception ex)
+            {
+                TempData["error"] = ex.Message;
+                _logger.LogError(ex, "Failed to record deposit date. Error: {ErrorMessage}, Stack: {StackTrace}. Recorded by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+
+                if (model.SalesInvoiceId != null || model.MultipleSIId != null)
+                {
+                    return RedirectToAction(nameof(Index));
+                }
+                return RedirectToAction(nameof(ServiceInvoiceIndex));
+            }
+        }
+
+        [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
+        [HttpGet]
+        public IActionResult BatchApplyClearingDate(int id,
+            DateOnly clearingDate,
+            Dictionary<int, FilprideCollectionReceipt> collectionReceipt)
+        {
+            collectionReceipt.TryGetValue(id, out var model);
+
+            if (model == null)
+            {
+                return NotFound();
+            }
+
+            try
+            {
+                model.ClearedDate = clearingDate;
+                model.Status = nameof(CollectionReceiptStatus.Cleared);
+
+                TempData["success"] = "Collection Receipt clearing date has been applied successfully.";
+
+                if (model.SalesInvoiceId != null || model.MultipleSIId != null)
+                {
+                    return RedirectToAction(nameof(Index));
+                }
+
+                return RedirectToAction(nameof(ServiceInvoiceIndex));
+            }
+            catch (Exception ex)
+            {
+                TempData["error"] = ex.Message;
+                _logger.LogError(ex, "Failed to apply clearing date. Error: {ErrorMessage}, Stack: {StackTrace}. Recorded by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+
+                if (model.SalesInvoiceId != null || model.MultipleSIId != null)
+                {
+                    return RedirectToAction(nameof(Index));
+                }
+                return RedirectToAction(nameof(ServiceInvoiceIndex));
             }
         }
     }

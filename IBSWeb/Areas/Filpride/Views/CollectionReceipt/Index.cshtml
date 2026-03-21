@@ -496,13 +496,14 @@
 
                                 const hasDeposit = row.depositedDate && row.depositedDate !== "";
                                 const postedStatus = "@nameof(CollectionReceiptStatus.Posted)";
+                                const clearedStatus = "@nameof(CollectionReceiptStatus.Cleared)";
                                 const returnedStatus = "@nameof(CollectionReceiptStatus.Returned)";
                                 
                                 if (!hasDeposit && row.status === postedStatus) {
                                     dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="addDepositInfo(${row.collectionReceiptId})">Add Deposit Info</a></li>`;
                                 } else if (!hasDeposit && row.status === returnedStatus) {
                                     dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="redeposit(${row.collectionReceiptId})">Redeposit</a></li>`;
-                                } else if (hasDeposit && row.status !== returnedStatus) {
+                                } else if (hasDeposit && row.status !== returnedStatus && row.status !== clearedStatus) {
                                     dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="applyClearingDate(${row.collectionReceiptId})">Apply Clearing Date</a></li>`;
                                 } else{
                                     dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="returnCheck(${row.collectionReceiptId})">Return Check</a></li>`;

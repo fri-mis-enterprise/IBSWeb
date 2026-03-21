@@ -1,7 +1,9 @@
 using IBS.DataAccess.Repository.IRepository;
+using IBS.DTOs;
 using IBS.Models.Filpride;
 using IBS.Models.Filpride.AccountsReceivable;
 using IBS.Models.Filpride.Integrated;
+using IBS.Models.Filpride.MasterFile;
 
 namespace IBS.DataAccess.Repository.Filpride.IRepository
 {
@@ -27,7 +29,7 @@ namespace IBS.DataAccess.Repository.Filpride.IRepository
 
         Task<List<FilprideOffsettings>> GetOffsettings(string source, string reference, string company, CancellationToken cancellationToken = default);
 
-        Task PostAsync(FilprideCollectionReceipt collectionReceipt, List<FilprideOffsettings> offsettings, CancellationToken cancellationToken = default);
+        Task PostAsync(FilprideCollectionReceipt collectionReceipt, CancellationToken cancellationToken = default);
 
         Task DepositAsync(FilprideCollectionReceipt collectionReceipt, CancellationToken cancellationToken = default);
 
@@ -36,5 +38,10 @@ namespace IBS.DataAccess.Repository.Filpride.IRepository
         Task RedepositAsync(FilprideCollectionReceipt collectionReceipt, CancellationToken cancellationToken = default);
 
         Task ApplyCostOfMoney(FilprideDeliveryReceipt deliveryReceipt, decimal costOfMoney, string currentUser, DateOnly depositedDate, CancellationToken cancellationToken = default);
+
+        Task BatchPostCollectionAsync(FilprideCollectionReceipt collectionReceipt, List<AccountTitleDto> accountTitlesDto, CancellationToken cancellationToken = default);
+
+        Task BatchDepositAsync(FilprideCollectionReceipt collectionReceipt, Dictionary<string, FilprideChartOfAccount> accountTitlesDto,
+            CancellationToken cancellationToken = default);
     }
 }
