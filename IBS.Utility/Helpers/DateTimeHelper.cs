@@ -7,7 +7,7 @@ namespace IBS.Utility.Helpers
     {
         private static readonly TimeZoneInfo PhilippineTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila");
 
-        private static readonly Random Randomizer = new Random();
+        private static readonly object _lock = new();
         private static DateTime? _lastGeneratedTime;
 
 
@@ -18,34 +18,42 @@ namespace IBS.Utility.Helpers
             return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, PhilippineTimeZone);
         }
 
-        public static DateTime GetRandomPhilippineWorkTime()
+        public static DateTime GetNextTransactionDateTime(DateOnly date)
         {
-            var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, PhilippineTimeZone);
-
-            var workStart = now.Date.AddHours(8).AddMinutes(30);
-            var workEnd = now.Date.AddHours(17).AddMinutes(30);
-
-            if (!_lastGeneratedTime.HasValue || _lastGeneratedTime.Value < workStart)
+            lock (_lock) // ensures thread safety
             {
-                _lastGeneratedTime = workStart;
+                var baseDate = date.ToDateTime(TimeOnly.MinValue);
+
+                var workStart = baseDate.AddHours(8).AddMinutes(30); // 8:30 AM
+                var workEnd = baseDate.AddHours(17).AddMinutes(30);  // 5:30 PM
+
+                var random = Random.Shared;
+
+                // First record OR new date
+                if (_lastGeneratedTime == null || _lastGeneratedTime.Value.Date != baseDate.Date)
+                {
+                    var initial = workStart
+                        .AddMinutes(random.Next(2, 6))   // 2–5 mins
+                        .AddSeconds(random.Next(0, 60)); // 0–59 secs
+
+                    _lastGeneratedTime = initial;
+                    return initial;
+                }
+
+                // Increment from last value
+                var next = _lastGeneratedTime.Value
+                    .AddMinutes(random.Next(2, 6))
+                    .AddSeconds(random.Next(0, 60));
+
+                // Cap at end of working hours
+                if (next > workEnd)
+                {
+                    next = workEnd;
+                }
+
+                _lastGeneratedTime = next;
+                return next;
             }
-
-            int minutesToAdd = Randomizer.Next(1, 6);
-
-            int secondsToAdd = Randomizer.Next(0, 60);
-
-            var nextTime = _lastGeneratedTime.Value
-                .AddMinutes(minutesToAdd)
-                .AddSeconds(secondsToAdd);
-
-            if (nextTime > workEnd)
-            {
-                nextTime = workEnd;
-            }
-
-            _lastGeneratedTime = nextTime;
-
-            return nextTime;
         }
 
         public static string GetCurrentPhilippineTimeFormatted(DateTime dateTime = default, string format = "MM/dd/yyyy hh:mm tt")
