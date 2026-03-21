@@ -5364,11 +5364,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     return BadRequest();
                 }
-                var statusFilter = NormalizeStatusFilter(model.StatusFilter);
 
                 // fetch sales report
                 var salesReport = await _unitOfWork.FilprideReport
-                    .GetSalesReport(model.DateFrom, model.DateTo, companyClaims, null, statusFilter, cancellationToken);
+                    .GetSalesReport(model.DateFrom, model.DateTo, companyClaims, cancellationToken: cancellationToken);
 
                 // check if there is no record
                 if (salesReport.Count == 0)
@@ -5379,9 +5378,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 // Create the Excel package
                 using var package = new ExcelPackage();
-
-                // Audit info columns — only for All or InvalidOnly
-                bool showVoidCancelColumns = statusFilter != "ValidOnly";
 
                 #region == Product worksheets ==
 
@@ -5431,15 +5427,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells["I8"].Value = "VOLUME";
                     worksheet.Cells["J8"].Value = "TOTAL";
                     worksheet.Cells["K8"].Value = "REMARKS";
-
-                    // Add void/cancel columns — only for All or InvalidOnly
-                    if (showVoidCancelColumns)
-                    {
-                        worksheet.Cells["L8"].Value = "VOIDED BY";
-                        worksheet.Cells["M8"].Value = "VOIDED DATE";
-                        worksheet.Cells["N8"].Value = "CANCELLED BY";
-                        worksheet.Cells["O8"].Value = "CANCELLED DATE";
-                    }
                     #endregion == Column Names ==
 
                     #region == Initialize condition variables ==
@@ -5479,23 +5466,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             worksheet.Cells[row, 9].Value = transaction.DeliveryReceipt.Quantity; // Volume
                             worksheet.Cells[row, 10].Value = transaction.DeliveryReceipt.TotalAmount; // Total
                             worksheet.Cells[row, 11].Value = transaction.DeliveryReceipt.Remarks; // Remarks
-
-                            // Add void/cancel data — only for All or InvalidOnly
-                            if (showVoidCancelColumns)
-                            {
-                                worksheet.Cells[row, 12].Value = transaction.DeliveryReceipt.VoidedBy;
-                                worksheet.Cells[row, 13].Value = transaction.DeliveryReceipt.VoidedDate;
-                                if (transaction.DeliveryReceipt.VoidedDate.HasValue)
-                                {
-                                    worksheet.Cells[row, 13].Style.Numberformat.Format = "MMM/dd/yyyy";
-                                }
-                                worksheet.Cells[row, 14].Value = transaction.DeliveryReceipt.CanceledBy;
-                                worksheet.Cells[row, 15].Value = transaction.DeliveryReceipt.CanceledDate;
-                                if (transaction.DeliveryReceipt.CanceledDate.HasValue)
-                                {
-                                    worksheet.Cells[row, 15].Style.Numberformat.Format = "MMM/dd/yyyy";
-                                }
-                            }
 
                             #endregion -- Assign Values to Cells --
 
@@ -5564,17 +5534,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     {
                         range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
                     }
-
-                    // Update column range for void/cancel columns
-                    string lastColumn = showVoidCancelColumns ? "O" : "K";
-                    using (var range = worksheet.Cells[$"A9:{lastColumn}{row}"])
+                    using (var range = worksheet.Cells[$"A9:K{row}"])
                     {
                         range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
                     }
 
-                    // table header styling
-                    string headerEndColumn = showVoidCancelColumns ? "O8" : "K8";
-                    using (var range = worksheet.Cells[$"A8:{headerEndColumn}"])
+                    // table header
+                    using (var range = worksheet.Cells["A7:K7"])
+                    {
+                        range.Style.Font.Bold = true;
+                        range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                        range.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
+                        range.Style.Border.Top.Style = ExcelBorderStyle.Thick;
+                    }
+
+                    using (var range = worksheet.Cells["A8:K8"])
                     {
                         range.Style.Font.Bold = true;
                         range.Style.Fill.PatternType = ExcelFillStyle.Solid;
@@ -5632,27 +5606,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells["I8"].Value = "VOLUME";
                     worksheet.Cells["J8"].Value = "TOTAL";
                     worksheet.Cells["K8"].Value = "REMARKS";
-
-                    // Add void/cancel columns — only for All or InvalidOnly
-                    if (showVoidCancelColumns)
-                    {
-                        worksheet.Cells["L8"].Value = "VOIDED BY";
-                        worksheet.Cells["M8"].Value = "VOIDED DATE";
-                        worksheet.Cells["N8"].Value = "CANCELLED BY";
-                        worksheet.Cells["O8"].Value = "CANCELLED DATE";
-                    }
                     #endregion == Column Names ==
-
-                    // table header styling
-                    string comparisonHeaderEnd = showVoidCancelColumns ? "O8" : "K8";
-                    using (var range = worksheet.Cells[$"A8:{comparisonHeaderEnd}"])
-                    {
-                        range.Style.Font.Bold = true;
-                        range.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                        range.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
-                        range.Style.Border.Bottom.Style = ExcelBorderStyle.Thick;
-                        range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                    }
 
                     #region == Initialize condition variables ==
                     int row = 9;
@@ -5690,23 +5644,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             worksheet.Cells[row, 9].Value = transaction.DeliveryReceipt.Quantity; // Volume
                             worksheet.Cells[row, 10].Value = transaction.DeliveryReceipt.TotalAmount; // Total
                             worksheet.Cells[row, 11].Value = transaction.DeliveryReceipt.Remarks; // Remarks
-
-                            // Add void/cancel data — only for All or InvalidOnly
-                            if (showVoidCancelColumns)
-                            {
-                                worksheet.Cells[row, 12].Value = transaction.DeliveryReceipt.VoidedBy;
-                                worksheet.Cells[row, 13].Value = transaction.DeliveryReceipt.VoidedDate;
-                                if (transaction.DeliveryReceipt.VoidedDate.HasValue)
-                                {
-                                    worksheet.Cells[row, 13].Style.Numberformat.Format = "MMM/dd/yyyy";
-                                }
-                                worksheet.Cells[row, 14].Value = transaction.DeliveryReceipt.CanceledBy;
-                                worksheet.Cells[row, 15].Value = transaction.DeliveryReceipt.CanceledDate;
-                                if (transaction.DeliveryReceipt.CanceledDate.HasValue)
-                                {
-                                    worksheet.Cells[row, 15].Style.Numberformat.Format = "MMM/dd/yyyy";
-                                }
-                            }
 
                             #endregion -- Assign Values to Cells --
 
@@ -5767,6 +5704,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         range.Style.Font.Size = 12;
                         range.Style.Fill.PatternType = ExcelFillStyle.Solid;
                         range.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(204, 156, 252));
+                    }
+
+                    using (var range = worksheet.Cells["A7:K7"])
+                    {
+                        range.Style.Font.Bold = true;
+                        range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                        range.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
+                        range.Style.Border.Top.Style = ExcelBorderStyle.Thick;
+                    }
+
+                    using (var range = worksheet.Cells["A8:K8"])
+                    {
+                        range.Style.Font.Bold = true;
+                        range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                        range.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
+                        range.Style.Border.Bottom.Style = ExcelBorderStyle.Thick;
+                        range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
                     }
 
                     // Auto-fit columns for better readability

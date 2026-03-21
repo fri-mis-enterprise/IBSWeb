@@ -25,15 +25,6 @@
                     <input type="date" asp-for="DateTo" class="form-control" value="@DateTimeHelper.GetCurrentPhilippineTime().ToString("yyyy-MM-dd")" />
                     <span asp-validation-for="DateTo" class="text-danger"></span>
                 </div>
-                <div class="mb-3">
-                    <label asp-for="StatusFilter" class="control-label">Status Filter</label>
-                    <select asp-for="StatusFilter" class="form-control">
-                        <option value="ValidOnly">Valid Only (Exclude Voided/Cancelled)</option>
-                        <option value="All">All (Include Voided/Cancelled)</option>
-                        <option value="InvalidOnly">Voided/Cancelled Only</option>
-                    </select>
-                    <span asp-validation-for="StatusFilter" class="text-danger"></span>
-                </div>
                 <div class="row pt-2">
                     <div class="col-6 col-md-3">
                         <button type="button" class="btn btn-primary form-control" onclick="submitForm('GenerateOtcFuelSalesReportExcelFile')"><i class="bi bi-file-text"></i> Generate as Excel file</button>

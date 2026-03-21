@@ -398,32 +398,19 @@ namespace IBS.DataAccess.Repository.Filpride
         }
 
 
-        public async Task<List<FilprideCheckVoucherHeader>> GetClearedDisbursementReport(DateOnly dateFrom, DateOnly dateTo, string company, string statusFilter = "ValidOnly", CancellationToken cancellationToken = default)
+        public async Task<List<FilprideCheckVoucherHeader>> GetClearedDisbursementReport(DateOnly dateFrom, DateOnly dateTo, string company, CancellationToken cancellationToken = default)
         {
             if (dateFrom > dateTo)
             {
                 throw new ArgumentException("Date From must not be greater than Date To!");
             }
 
-            var query = _db.FilprideCheckVoucherHeaders
+            var checkVoucherHeader = await _db.FilprideCheckVoucherHeaders
                 .AsNoTracking()
                 .Where(cd =>
                     cd.Company == company && cd.DcrDate >= dateFrom && cd.DcrDate <= dateTo &&
                     cd.Status == nameof(Status.Posted) &&
-                    cd.CvType != nameof(CVType.Invoicing));
-
-            // Apply status filter
-            if (statusFilter == "ValidOnly")
-            {
-                query = query.Where(cd => cd.VoidedBy == null && cd.CanceledBy == null);
-            }
-            else if (statusFilter == "InvalidOnly")
-            {
-                query = query.Where(cd => cd.VoidedBy != null || cd.CanceledBy != null);
-            }
-            // "All" returns all records without filtering
-
-            var checkVoucherHeader = await query
+                    cd.CvType != nameof(CVType.Invoicing))
                 .Include(cd => cd.BankAccount)
                 .Include(cd => cd.Details)
                 .OrderBy(cd => cd.Date)

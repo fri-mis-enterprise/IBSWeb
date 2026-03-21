@@ -118,8 +118,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var statusFilter = string.IsNullOrWhiteSpace(model.StatusFilter) ? "ValidOnly" : model.StatusFilter;
-                var checkVoucherHeader = await _unitOfWork.FilprideReport.GetClearedDisbursementReport(model.DateFrom, model.DateTo, companyClaims, statusFilter, cancellationToken);
+                var checkVoucherHeader = await _unitOfWork.FilprideReport.GetClearedDisbursementReport(model.DateFrom, model.DateTo, companyClaims, cancellationToken);
 
                 if (checkVoucherHeader.Count == 0)
                 {
@@ -293,11 +292,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     return BadRequest();
                 }
-                var statusFilter = NormalizeStatusFilter(model.StatusFilter);
 
                 var clearedDisbursementReport =
                     await _unitOfWork.FilprideReport.GetClearedDisbursementReport(model.DateFrom, model.DateTo,
-                        companyClaims, statusFilter, cancellationToken);
+                        companyClaims, cancellationToken);
 
                 if (clearedDisbursementReport.Count == 0)
                 {
@@ -319,15 +317,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["A2"].Value = "Date Range:";
                 worksheet.Cells["A3"].Value = "Extracted By:";
                 worksheet.Cells["A4"].Value = "Company:";
-                worksheet.Cells["A5"].Value = "Status Filter:";
 
                 worksheet.Cells["B2"].Value = $"{dateFrom} - {dateTo}";
                 worksheet.Cells["B3"].Value = $"{extractedBy}";
                 worksheet.Cells["B4"].Value = $"{companyClaims}";
-                worksheet.Cells["B5"].Value = GetStatusFilterLabel(statusFilter);
-
-                // Determine if we need to show void/cancel columns
-                bool showVoidCancelColumns = statusFilter != "ValidOnly";
 
                 worksheet.Cells["A7"].Value = "Category";
                 worksheet.Cells["B7"].Value = "Subcategory";
@@ -339,22 +332,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["H7"].Value = "Particulars";
                 worksheet.Cells["I7"].Value = "Amount";
 
-                int colIndex = 10;
-                if (showVoidCancelColumns)
-                {
-                    worksheet.Cells[7, colIndex].Value = "Status"; colIndex++;
-                    worksheet.Cells[7, colIndex].Value = "Voided By"; colIndex++;
-                    worksheet.Cells[7, colIndex].Value = "Voided Date";
-                    worksheet.Cells[7, colIndex].Style.Numberformat.Format = "MMM/dd/yyyy"; colIndex++;
-                    worksheet.Cells[7, colIndex].Value = "Cancelled By"; colIndex++;
-                    worksheet.Cells[7, colIndex].Value = "Cancelled Date";
-                    worksheet.Cells[7, colIndex].Style.Numberformat.Format = "MMM/dd/yyyy";
-                }
-
-                int lastColIndex = showVoidCancelColumns ? 14 : 9;
-
                 // Apply styling to the header row
-                using (var range = worksheet.Cells["A7:" + (showVoidCancelColumns ? "N7" : "I7")])
+                using (var range = worksheet.Cells["A7:I7"])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.Fill.PatternType = ExcelFillStyle.Solid;
@@ -409,32 +388,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 4].Style.Numberformat.Format = "MMM/dd/yyyy";
                     worksheet.Cells[row, 9].Style.Numberformat.Format = currencyFormat;
 
-                    if (showVoidCancelColumns)
-                    {
-                        colIndex = 10;
-                        worksheet.Cells[row, colIndex].Value = cd.Status; colIndex++;
-                        worksheet.Cells[row, colIndex].Value = cd.VoidedBy; colIndex++;
-                        worksheet.Cells[row, colIndex].Value = cd.VoidedDate;
-                        worksheet.Cells[row, colIndex].Style.Numberformat.Format = "MMM/dd/yyyy"; colIndex++;
-                        worksheet.Cells[row, colIndex].Value = cd.CanceledBy; colIndex++;
-                        worksheet.Cells[row, colIndex].Value = cd.CanceledDate;
-                        worksheet.Cells[row, colIndex].Style.Numberformat.Format = "MMM/dd/yyyy";
-                    }
-
                     row++;
                 }
 
-                int totalRow = row;
-                int totalCol = showVoidCancelColumns ? 14 : 9;
-                worksheet.Cells[totalRow, 8].Value = "Total: ";
-                worksheet.Cells[totalRow, 9].Value = clearedDisbursementReport.Sum(cv => cv.Total);
-                using (var range = worksheet.Cells[totalRow, 1, totalRow, totalCol])
+                worksheet.Cells[row, 8].Value = "Total: ";
+                worksheet.Cells[row, 9].Value = clearedDisbursementReport.Sum(cv => cv.Total);
+                using (var range = worksheet.Cells[row, 1, row, 9])
                 {
                     range.Style.Border.Top.Style = ExcelBorderStyle.Thick; // Apply thick border at the top of the row
                 }
 
-                worksheet.Cells[totalRow, 8].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
-                worksheet.Cells[totalRow, 9].Style.Numberformat.Format = currencyFormat;
+                worksheet.Cells[row, 8].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
+                worksheet.Cells[row, 9].Style.Numberformat.Format = currencyFormat;
                 // Auto-fit columns for better readability
                 worksheet.Cells.AutoFitColumns();
                 worksheet.View.FreezePanes(8, 1);
@@ -1700,6 +1665,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return RedirectToAction(nameof(PurchaseReport));
             }
 
+            var statusFilter = NormalizeStatusFilter(model.StatusFilter);
+
             try
             {
                 var dateFrom = model.DateFrom;
@@ -1717,7 +1684,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         model.DateTo,
                         companyClaims,
                         dateSelectionType: model.DateSelectionType,
-                        statusFilter: model.StatusFilter,
+                        statusFilter: statusFilter,
                         cancellationToken: cancellationToken);
 
                 // check if there is no record
@@ -1763,10 +1730,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 purchaseReportWorksheet.Cells["B2"].Value = $"{dateFrom} - {dateTo}";
                 purchaseReportWorksheet.Cells["B3"].Value = $"{extractedBy}";
                 purchaseReportWorksheet.Cells["B4"].Value = $"{companyClaims}";
-                purchaseReportWorksheet.Cells["B5"].Value = model.StatusFilter == "ValidOnly" ? "Valid Only" : model.StatusFilter == "All" ? "All" : "Voided/Cancelled Only";
+                purchaseReportWorksheet.Cells["B5"].Value = GetStatusFilterLabel(statusFilter);
 
                 // Determine if we need to show void/cancel columns
-                bool showVoidCancelColumns = model.StatusFilter != "ValidOnly";
+                bool showVoidCancelColumns = statusFilter != "ValidOnly";
 
                 purchaseReportWorksheet.Cells["A7"].Value = "LIFTING DATE";
                 purchaseReportWorksheet.Cells["B7"].Value = "CUSTOMER RECEIVED DATE";
