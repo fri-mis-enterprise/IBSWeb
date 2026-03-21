@@ -160,7 +160,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
                     collectionReceipts = collectionReceipts
-                        .OrderBy($"{columnName} {sortDirection}") ;
+                        .OrderBy($"{columnName} {sortDirection}");
                 }
 
                 var totalFilteredRecords = await collectionReceipts.CountAsync(cancellationToken);
@@ -2000,6 +2000,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Void(int id, CancellationToken cancellationToken)
         {
@@ -2022,7 +2024,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var findOffsetting = await _dbContext.FilprideOffsettings.Where(offset => offset.Company == model.Company && offset.Source == model.CollectionReceiptNo && offset.Reference == series).ToListAsync(cancellationToken);
 
                 await _unitOfWork.FilprideCollectionReceipt.RemoveRecords<FilprideCashReceiptBook>(crb => crb.RefNo == model.CollectionReceiptNo, cancellationToken);
-                await _unitOfWork.FilprideCollectionReceipt.RemoveRecords<FilprideGeneralLedgerBook>(gl => gl.Reference == model.CollectionReceiptNo, cancellationToken);
+                await _unitOfWork.GeneralLedger.ReverseEntries(model.CollectionReceiptNo, cancellationToken);
 
                 if (findOffsetting.Any())
                 {
@@ -2054,18 +2056,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #endregion --Audit Trail Recording
 
                 await transaction.CommitAsync(cancellationToken);
-                TempData["success"] = "Collection Receipt has been Voided.";
+
+                return Json(new { success = true, message = $"Collection Receipt #{model.CollectionReceiptNo} has been voided successfully." });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to void collection receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Voided by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
-                await transaction.RollbackAsync(cancellationToken);
-                TempData["error"] = ex.Message;
+                return Json(new { success = false, message = ex.Message });
             }
-            return RedirectToAction(nameof(Index));
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
         public async Task<IActionResult> Cancel(int id, string? cancellationRemarks, CancellationToken cancellationToken)
         {
@@ -2128,16 +2131,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #endregion --Audit Trail Recording
 
                 await transaction.CommitAsync(cancellationToken);
-                TempData["success"] = "Collection Receipt has been Cancelled.";
-                return RedirectToAction(nameof(Index));
+
+                return Json(new { success = true, message = $"Collection Receipt #{model.CollectionReceiptNo} has been cancelled successfully." });
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync(cancellationToken);
                 _logger.LogError(ex, "Failed to cancel collection receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Canceled by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
-                TempData["error"] = $"Error: '{ex.Message}'";
-                return RedirectToAction(nameof(Index));
+                return Json(new { success = false, message = ex.Message });
             }
         }
 
@@ -2926,7 +2928,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 throw new ArgumentException("Company claims not found!");
             }
 
-            using var reader = new StreamReader(@"C:\Users\Administrator\Downloads\SINGLE-INVOICE-AUGUST-2024-NOVEMBER-2025_1.csv");
+            using var reader = new StreamReader(@"C:\Users\Administrator\Documents\SINGLE INVOICE AUGUST 2024 - NOVEMBER 2025_1.csv");
             using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
             var records = csv.GetRecords<UploadCsvForSingleInvoiceViewModel>().OrderBy(x => x.TransactionDate).ToList();
 
@@ -2951,6 +2953,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 List<(string salesInvoiceNo, string OrNumber, string problem, string customerName, DateOnly transactionDate)> listOfNeedToCorrect = new();
                 var model = new List<FilprideCollectionReceipt>();
                 var details = new List<FilprideCollectionReceiptDetail>();
+                var seriesNumber = 1;
 
                 foreach (var record in records)
                 {
@@ -2991,7 +2994,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     model.Add(
                         new FilprideCollectionReceipt
                         {
-                            CollectionReceiptNo = string.Empty,
+                            CollectionReceiptNo = seriesNumber.ToString(),
                             SalesInvoiceId = getSalesInvoice.SalesInvoiceId,
                             SINo = getSalesInvoice.SalesInvoiceNo,
                             CustomerId = getSalesInvoice.CustomerId,
@@ -3040,6 +3043,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     }
 
                     #endregion --Saving default value
+
+                    seriesNumber++;
                 }
                 await _dbContext.FilprideCollectionReceipts.AddRangeAsync(model, cancellationToken);
                 await _dbContext.SaveChangesAsync(cancellationToken);
@@ -3096,7 +3101,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            using var reader = new StreamReader(@"C:\Users\Administrator\Downloads\MULTI-INVOICE-AUGUST-2024-NOVEMBER-2025_1.csv");
+            using var reader = new StreamReader(@"C:\Users\Administrator\Documents\MULTI INVOICE AUGUST 2024 - NOVEMBER 2025_1.csv");
             using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
             var records = csv.GetRecords<UploadCsvForMultipleInvoiceViewModel>().ToList();
 
@@ -3114,11 +3119,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var model = new List<FilprideCollectionReceipt>();
             var details = new List<FilprideCollectionReceiptDetail>();
 
+            var lastSeries = _dbContext.FilprideCollectionReceipts
+                .OrderByDescending(x => x.CollectionReceiptId)
+                .Select(x => x.CollectionReceiptNo);
+
+            var seriesNumber = int.TryParse(lastSeries.FirstOrDefault(), out var num) ? num : 0;
+
             var timer = Stopwatch.StartNew();
+
             try
             {
                 foreach (var cr in records.GroupBy(x => x.ReferenceNo))
                 {
+
                     var total = cr.Select(x => x.CashAmount).FirstOrDefault()
                                 + cr.Select(x => x.CheckAmount).FirstOrDefault()
                                 + cr.Select(x => x.ManagersCheckAmount).FirstOrDefault()
@@ -3155,7 +3168,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     foreach (var record in cr)
                     {
-                        existingSalesInvoice.TryGetValue(record.SalesInvoiceNo!.Trim(), out var getSalesInvoice);
+                        existingSalesInvoice.TryGetValue(record.SalesInvoiceNo.Trim(), out var getSalesInvoice);
 
                         if (getSalesInvoice == null)
                         {
@@ -3166,13 +3179,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             ));
 
                             skipOuter = true;
-                            break;
+                            continue;
                         }
                         if (getSalesInvoice.CustomerId == 0)
                         {
                             listOfNeedToCorrect.Add((cr.Select(x => x.SalesInvoiceNo).FirstOrDefault(),
                                 cr.Select(x => x.ReferenceNo).FirstOrDefault(),
                                 "Customer Id not found!", record.CustomerName, record.TransactionDate));
+
                             continue;
                         }
                         if (record.SiAmount > getSalesInvoice.Balance)
@@ -3185,7 +3199,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             ));
 
                             skipOuter = true;
-                            break;
+                            continue;
                         }
 
                         invoiceId.Add(getSalesInvoice.SalesInvoiceId);
@@ -3220,11 +3234,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     {
                         continue;
                     }
-
+                    seriesNumber++;
                     model.Add(
                         new FilprideCollectionReceipt
                         {
-                            CollectionReceiptNo = string.Empty,
+                            CollectionReceiptNo = seriesNumber.ToString(),
                             TransactionDate = cr.Select(x => x.TransactionDate).FirstOrDefault(),
                             CustomerId = customerId,
                             ReferenceNo = cr.Select(x => x.ReferenceNo).FirstOrDefault() ?? string.Empty,
@@ -3276,7 +3290,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 new FilprideCollectionReceiptDetail
                                 {
                                     CollectionReceiptId = record.CollectionReceiptId,
-                                    CollectionReceiptNo = string.Empty,
+                                    CollectionReceiptNo = record.CollectionReceiptNo ?? string.Empty,
                                     InvoiceDate = getSalesInvoice.TransactionDate,
                                     InvoiceNo = getSalesInvoice.SalesInvoiceNo ?? string.Empty,
                                     Amount = record.SIMultipleAmount?[index] ?? 0

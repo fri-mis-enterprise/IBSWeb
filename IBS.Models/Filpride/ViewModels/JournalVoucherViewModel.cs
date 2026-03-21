@@ -36,23 +36,24 @@ namespace IBS.Models.Filpride.ViewModels
         [Display(Name = "JV Reason")]
         public string JVReason { get; set; }
 
-        [NotMapped]
         public List<SelectListItem>? COA { get; set; }
 
-        [Required]
-        public string[] AccountNumber { get; set; }
-
-        [Required]
-        public string[] AccountTitle { get; set; }
-
-        [Required]
-        public decimal[] Debit { get; set; }
-
-        [Required]
-        public decimal[] Credit { get; set; }
+        public List<SelectListItem>? SupplierList { get; set; }
 
         public string? Type { get; set; }
 
         public DateTime MinDate { get; set; }
+
+        public List<JournalVoucherDetailViewModel>? Details { get; set; }
+    }
+
+    public class JournalVoucherDetailViewModel
+    {
+        public string AccountNumber { get; set; }
+        public string AccountTitle { get; set; }
+        public decimal Debit { get; set; }
+        public decimal Credit { get; set; }
+        public int? SubAccountId { get; set; }
+        public string? SubAccountCodeName { get; set; }
     }
 }

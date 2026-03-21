@@ -143,21 +143,19 @@ namespace IBS.DataAccess.Repository.Filpride
 
             #region--Update COS
 
-            if (viewModel.CustomerOrderSlipId == existingRecord.CustomerOrderSlipId)
+            await DeductTheVolumeToCos(existingRecord.CustomerOrderSlipId, existingRecord.Quantity, cancellationToken);
+
+            if (viewModel.Volume > customerOrderSlip.BalanceQuantity)
             {
-                await UpdateCosRemainingVolumeAsync(existingRecord.CustomerOrderSlipId, (viewModel.Volume - existingRecord.Quantity), cancellationToken);
+                throw new ArgumentException("The inputted balance exceeds the remaining balance of COS.");
             }
-            else
+
+            customerOrderSlip.DeliveredQuantity += viewModel.Volume;
+            customerOrderSlip.BalanceQuantity -= viewModel.Volume;
+
+            if (customerOrderSlip.BalanceQuantity == 0)
             {
-                await DeductTheVolumeToCos(existingRecord.CustomerOrderSlipId, viewModel.Volume, cancellationToken);
-
-                customerOrderSlip.DeliveredQuantity += viewModel.Volume;
-                customerOrderSlip.BalanceQuantity -= viewModel.Volume;
-
-                if (customerOrderSlip.BalanceQuantity <= 0)
-                {
-                    customerOrderSlip.Status = nameof(CosStatus.Completed);
-                }
+                customerOrderSlip.Status = nameof(CosStatus.Completed);
             }
 
             #endregion

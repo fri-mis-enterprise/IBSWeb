@@ -163,7 +163,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
                     journalVoucherHeader = journalVoucherHeader
-                        .OrderBy($"{columnName} {sortDirection}") ;
+                        .OrderBy($"{columnName} {sortDirection}");
                 }
 
                 var totalFilteredRecords = await journalVoucherHeader.CountAsync(cancellationToken);
@@ -288,9 +288,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                          ?? throw new NullReferenceException($"CV id {model.CVId} not found");
 
                 var jvDetails = new List<FilprideJournalVoucherDetail>();
-                for (var i = 0; i < viewModel.AccountNumber.Length; i++)
+
+                foreach (var detail in viewModel.Details!)
                 {
-                    var currentAccountNumber = viewModel.AccountNumber[i];
+                    var currentAccountNumber = detail.AccountNumber;
                     var accountTitle = await _unitOfWork.FilprideChartOfAccount
                                            .GetAsync(coa => coa.AccountNumber == currentAccountNumber, cancellationToken)
                                        ?? throw new NullReferenceException($"Account number {currentAccountNumber} not found");
@@ -304,11 +305,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             AccountName = accountTitle.AccountName,
                             TransactionNo = generateJvNo,
                             JournalVoucherHeaderId = model.JournalVoucherHeaderId,
-                            Debit = viewModel.Debit[i],
-                            Credit = viewModel.Credit[i],
-                            SubAccountType = isAdvances ? SubAccountType.Employee : null,
-                            SubAccountId = isAdvances ? cv.EmployeeId : null,
-                            SubAccountName = isAdvances ? cv.Payee : null,
+                            Debit = detail.Debit,
+                            Credit = detail.Credit,
+                            SubAccountType = isAdvances ? SubAccountType.Employee : detail.SubAccountId != null ? SubAccountType.Supplier : null,
+                            SubAccountId = isAdvances ? cv.EmployeeId : detail.SubAccountId,
+                            SubAccountName = isAdvances ? cv.Payee : detail.SubAccountCodeName,
                         }
                     );
                 }
@@ -411,6 +412,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
 
             #endregion --Audit Trail Recording
+
             ViewBag.FilterType = await GetCurrentFilterType();
             return View(viewModel);
         }
@@ -472,6 +474,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Void(int id, CancellationToken cancellationToken)
         {
@@ -493,7 +497,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.Status = nameof(JvStatus.Voided);
 
                 await _unitOfWork.FilprideJournalVoucher.RemoveRecords<FilprideJournalBook>(crb => crb.Reference == model.JournalVoucherHeaderNo, cancellationToken);
-                await _unitOfWork.FilprideJournalVoucher.RemoveRecords<FilprideGeneralLedgerBook>(gl => gl.Reference == model.JournalVoucherHeaderNo, cancellationToken);
+                await _unitOfWork.GeneralLedger.ReverseEntries(model.JournalVoucherHeaderNo, cancellationToken);
 
                 #region --Audit Trail Recording
 
@@ -504,19 +508,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
-                TempData["success"] = "Journal Voucher has been Voided.";
-                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
+
+                return Json(new { success = true, message = $"Journal Voucher #{model.JournalVoucherHeaderNo} has been voided successfully." });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to void journal vouchers. Error: {ErrorMessage}, Stack: {StackTrace}. Created by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
                 await transaction.RollbackAsync(cancellationToken);
-                TempData["error"] = ex.Message;
-                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
+                return Json(new { success = false, message = ex.Message });
             }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancel(int id, string? cancellationRemarks, CancellationToken cancellationToken)
         {
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
@@ -551,16 +556,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
-                TempData["success"] = "Journal Voucher has been Cancelled.";
-                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
+
+                return Json(new { success = true, message = $"Journal Voucher #{model.JournalVoucherHeaderNo} has been cancelled successfully." });
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync(cancellationToken);
                 _logger.LogError(ex, "Failed to cancel journal vouchers. Error: {ErrorMessage}, Stack: {StackTrace}. Canceled by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
-                TempData["error"] = $"Error: '{ex.Message}'";
-                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
+                return Json(new { success = false, message = ex.Message });
             }
         }
 
@@ -568,7 +572,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         public async Task<IActionResult> EditLiquidation(int id, CancellationToken cancellationToken)
         {
             var companyClaims = await GetCompanyClaimAsync();
-
             try
             {
                 var existingHeaderModel = await _dbContext.FilprideJournalVoucherHeaders
@@ -581,6 +584,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 var minDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.JournalVoucher, cancellationToken);
+
                 if (await _unitOfWork.IsPeriodPostedAsync(Module.JournalVoucher, existingHeaderModel.Date, cancellationToken))
                 {
                     throw new ArgumentException(
@@ -590,11 +594,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var existingDetailsModel = await _dbContext.FilprideJournalVoucherDetails
                     .Where(cvd => cvd.JournalVoucherHeaderId == existingHeaderModel.JournalVoucherHeaderId)
                     .ToListAsync(cancellationToken);
-
-                var accountNumbers = existingDetailsModel.Select(model => model.AccountNo).ToArray();
-                var accountTitles = existingDetailsModel.Select(model => model.AccountName).ToArray();
-                var debit = existingDetailsModel.Select(model => model.Debit).ToArray();
-                var credit = existingDetailsModel.Select(model => model.Credit).ToArray();
 
                 JournalVoucherViewModel model = new()
                 {
@@ -606,10 +605,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     Particulars = existingHeaderModel.Particulars,
                     CRNo = existingHeaderModel.CRNo,
                     JVReason = existingHeaderModel.JVReason,
-                    AccountNumber = accountNumbers,
-                    AccountTitle = accountTitles,
-                    Debit = debit,
-                    Credit = credit,
+                    Details = existingDetailsModel.Select(d => new JournalVoucherDetailViewModel
+                    {
+                        AccountNumber = d.AccountNo,
+                        AccountTitle = d.AccountName,
+                        Debit = d.Debit,
+                        Credit = d.Credit,
+                        SubAccountId = d.SubAccountId,
+                        SubAccountCodeName = d.SubAccountName
+                    }).ToList(),
                     CheckVoucherHeaders = await _dbContext.FilprideCheckVoucherHeaders
                         .OrderBy(c => c.CheckVoucherHeaderNo)
                         .Where(c =>
@@ -711,9 +715,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                          ?? throw new NullReferenceException($"CV id {existingHeaderModel.CVId} not found");
 
                 var jvDetails = new List<FilprideJournalVoucherDetail>();
-                for (var i = 0; i < viewModel.AccountNumber.Length; i++)
+
+                foreach (var detail in viewModel.Details!)
                 {
-                    var currentAccountNumber = viewModel.AccountNumber[i];
+                    var currentAccountNumber = detail.AccountNumber;
                     var accountTitle = await _unitOfWork.FilprideChartOfAccount
                                            .GetAsync(coa => coa.AccountNumber == currentAccountNumber, cancellationToken)
                                        ?? throw new NullReferenceException($"Account number {currentAccountNumber} not found");
@@ -727,11 +732,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             AccountName = accountTitle.AccountName,
                             TransactionNo = existingHeaderModel.JournalVoucherHeaderNo!,
                             JournalVoucherHeaderId = existingHeaderModel.JournalVoucherHeaderId,
-                            Debit = viewModel.Debit[i],
-                            Credit = viewModel.Credit[i],
-                            SubAccountType = isAdvances ? SubAccountType.Employee : null,
-                            SubAccountId = isAdvances ? cv.EmployeeId : null,
-                            SubAccountName = isAdvances ? cv.Payee : null,
+                            Debit = detail.Debit,
+                            Credit = detail.Credit,
+                            SubAccountType = isAdvances ? SubAccountType.Employee : detail.SubAccountId != null ? SubAccountType.Supplier : null,
+                            SubAccountId = isAdvances ? cv.EmployeeId : detail.SubAccountId,
+                            SubAccountName = isAdvances ? cv.Payee : detail.SubAccountCodeName,
                         }
                     );
                 }
@@ -2716,6 +2721,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 TempData["error"] = ex.Message;
                 return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
             }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetNonTradeSupplierSelectList(CancellationToken cancellationToken = default)
+        {
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            var selectList = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(companyClaims, cancellationToken);
+            return Json(selectList);
         }
     }
 }

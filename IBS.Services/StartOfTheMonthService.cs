@@ -38,6 +38,8 @@ namespace IBS.Services
 
                 await GetTheUnliftedDrs(previousMonthDate);
                 await ProcessAmortization(today);
+                await SendNotificationToManagementAccounting(previousMonthDate);
+                await SendNotificationToCNC(previousMonthDate);
 
                 await transaction.CommitAsync();
             }
@@ -186,6 +188,30 @@ namespace IBS.Services
                 var incremented = long.Parse(numericPart) + offset;
                 return "JV" + incremented.ToString("D10");
             }
+        }
+
+        private async Task SendNotificationToManagementAccounting(DateOnly previousMonth)
+        {
+            var users = await _dbContext.ApplicationUsers
+                .Where(u => u.IsActive && u.Department == SD.Department_ManagementAccounting)
+                .Select(u => u.Id)
+                .ToListAsync();
+
+            var message = $"Kindly generate the journal voucher list for {previousMonth:MMM yyyy}.";
+
+            await _unitOfWork.Notifications.AddNotificationToMultipleUsersAsync(users, message);
+        }
+
+        private async Task SendNotificationToCNC(DateOnly previousMonth)
+        {
+            var users = await _dbContext.ApplicationUsers
+                .Where(u => u.IsActive && u.Department == SD.Department_CreditAndCollection)
+                .Select(u => u.Id)
+                .ToListAsync();
+
+            var message = $"Please ensure the transaction fee is created before the system closes the books for {previousMonth:MMM yyyy}.";
+
+            await _unitOfWork.Notifications.AddNotificationToMultipleUsersAsync(users, message);
         }
     }
 }

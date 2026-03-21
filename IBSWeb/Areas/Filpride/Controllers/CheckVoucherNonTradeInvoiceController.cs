@@ -183,7 +183,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
                     checkVoucher = checkVoucher
-                        .OrderBy($"{columnName} {sortDirection}") ;
+                        .OrderBy($"{columnName} {sortDirection}");
                 }
 
                 var totalFilteredRecords = await checkVoucher.CountAsync(cancellationToken);
@@ -1243,16 +1243,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #endregion --Audit Trail Recording
 
                 await transaction.CommitAsync(cancellationToken);
-                TempData["success"] = "Check Voucher has been Cancelled.";
-                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
+
+                return Json(new { success = true, message = $"Check Voucher #{model.CheckVoucherHeaderNo} has been cancelled successfully." });
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync(cancellationToken);
                 _logger.LogError(ex, "Failed to cancel invoice check vouchers. Error: {ErrorMessage}, Stack: {StackTrace}. Canceled by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
-                TempData["error"] = $"Error: '{ex.Message}'";
-                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
+
+                return Json(new { success = false, message = ex.Message });
             }
         }
 
@@ -1278,9 +1278,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.Status = nameof(CheckVoucherInvoiceStatus.Voided);
 
                 await _unitOfWork.FilprideCheckVoucher.RemoveRecords<FilprideDisbursementBook>(db => db.CVNo == model.CheckVoucherHeaderNo, cancellationToken);
-                await _unitOfWork.FilprideCheckVoucher.RemoveRecords<FilprideGeneralLedgerBook>(gl => gl.Reference == model.CheckVoucherHeaderNo, cancellationToken);
-
-                //re-compute amount paid in trade and payment voucher
+                await _unitOfWork.GeneralLedger.ReverseEntries(model.CheckVoucherHeaderNo, cancellationToken);
 
                 #region --Audit Trail Recording
 
@@ -1290,16 +1288,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #endregion --Audit Trail Recording
 
                 await transaction.CommitAsync(cancellationToken);
-                TempData["success"] = "Check Voucher has been Voided.";
-                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
+
+                return Json(new { success = true, message = $"Check Voucher #{model.CheckVoucherHeaderNo} has been voided successfully." });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to void invoice check vouchers. Error: {ErrorMessage}, Stack: {StackTrace}. Voided by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
                 await transaction.RollbackAsync(cancellationToken);
-                TempData["error"] = ex.Message;
-                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
+                return Json(new { success = false, message = ex.Message });
             }
         }
 

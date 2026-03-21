@@ -64,7 +64,7 @@ namespace IBS.DataAccess.Repository.IRepository
         Mobility.IRepository.IEmployeeRepository MobilityEmployee { get; }
         Mobility.IRepository.IInventoryRepository MobilityInventory { get; }
 
-        IGeneralLedgerRepository MobilityGeneralLedger { get; }
+        Mobility.IRepository.IGeneralLedgerRepository MobilityGeneralLedger { get; }
 
         Mobility.IRepository.IPurchaseOrderRepository MobilityPurchaseOrder { get; }
 
@@ -97,6 +97,7 @@ namespace IBS.DataAccess.Repository.IRepository
         Task<List<SelectListItem>> GetMobilitySupplierListAsyncById(string stationCodeClaims, CancellationToken cancellationToken = default);
 
         Task<List<SelectListItem>> GetMobilityCustomerListAsync(string stationCodeClaims, CancellationToken cancellationToken = default);
+
         Task<string> GetMobilityStationNameAsync(string stationCodeClaims, CancellationToken cancellationToken = default);
 
         Task<List<SelectListItem>> GetMobilityProductListAsyncByCode(CancellationToken cancellationToken = default);
@@ -116,6 +117,7 @@ namespace IBS.DataAccess.Repository.IRepository
         Filpride.IRepository.IEmployeeRepository FilprideEmployee { get; }
         ICustomerBranchRepository FilprideCustomerBranch { get; }
         ITermsRepository FilprideTerms { get; }
+        Filpride.IRepository.IGeneralLedgerRepository GeneralLedger { get; }
 
         Task<List<SelectListItem>> GetFilprideCustomerListAsyncById(string company, CancellationToken cancellationToken = default);
 
