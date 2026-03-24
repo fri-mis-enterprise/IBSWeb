@@ -418,12 +418,9 @@
                 <a onclick="confirmPrint(@Model.Header.CheckVoucherHeaderId)" class="btn btn-primary form-control buttons">Print</a>
             </div>
 
-            if(Model.Header.DcrDate == null)
-            {
-                <div class="col-6 col-md-3">
-                    <a id="unpostButton" class="btn btn-secondary form-control buttons" onclick="confirmUnpost(@Model.Header.CheckVoucherHeaderId)">Unpost</a>
-                </div>                
-            }
+            <div class="col-6 col-md-3">
+                <a id="unpostButton" class="btn btn-secondary form-control buttons" onclick="confirmUnpost(@Model.Header.CheckVoucherHeaderId)">Unpost</a>
+            </div>         
         }
     }
 
