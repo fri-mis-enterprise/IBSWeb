@@ -67,7 +67,8 @@ namespace IBS.Models.Enums
         South,
         North,
         Marinduque,
-        Bacolod
+        Bacolod,
+        Cdo
     }
 
     public enum DynamicView
