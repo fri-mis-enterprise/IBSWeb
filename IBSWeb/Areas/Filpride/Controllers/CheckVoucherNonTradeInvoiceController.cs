@@ -451,8 +451,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         AccountName = accountName,
                         TransactionNo = checkVoucherHeader.CheckVoucherHeaderNo,
                         CheckVoucherHeaderId = checkVoucherHeader.CheckVoucherHeaderId,
-                        Debit = accountEntry.NetOfVatAmount,
-                        Credit = 0,
+                        Debit = accountEntry.NetOfVatAmount < 0 ? 0 : accountEntry.NetOfVatAmount,
+                        Credit = accountEntry.NetOfVatAmount < 0 ? Math.Abs(accountEntry.NetOfVatAmount) : 0,
                         IsVatable = accountEntry.Vatable,
                         EwtPercent = accountEntry.TaxPercentage,
                         IsUserSelected = true,
@@ -736,11 +736,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 foreach (var details in existingDetailsModel)
                 {
+                    var isCredit = details.IsUserSelected && details.Credit != 0;
+
+                    var baseAmount = isCredit
+                        ? -details.Credit
+                        : details.Debit;
+
+                    var computedAmount = details.IsVatable
+                        ? Math.Round(baseAmount * 1.12m, 2)
+                        : Math.Round(baseAmount, 2);
+
                     viewModel.AccountingEntries.Add(new AccountingEntryViewModel
                     {
                         AccountTitle = $"{details.AccountNo} {details.AccountName}",
-                        Amount =
-                            details.IsVatable ? Math.Round(details.Debit * 1.12m, 2) : Math.Round(details.Debit, 2),
+                        Amount = computedAmount,
                         Vatable = details.IsVatable,
                         TaxPercentage = details.EwtPercent,
                         BankMasterFileId = details.SubAccountType == SubAccountType.BankAccount
@@ -897,8 +906,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         AccountName = accountName,
                         TransactionNo = existingModel.CheckVoucherHeaderNo!,
                         CheckVoucherHeaderId = existingModel.CheckVoucherHeaderId,
-                        Debit = accountEntry.NetOfVatAmount,
-                        Credit = 0,
+                        Debit = accountEntry.NetOfVatAmount < 0 ? 0 : accountEntry.NetOfVatAmount,
+                        Credit = accountEntry.NetOfVatAmount < 0 ? Math.Abs(accountEntry.NetOfVatAmount) : 0,
                         IsVatable = accountEntry.Vatable,
                         EwtPercent = accountEntry.TaxPercentage,
                         IsUserSelected = true,
@@ -1059,8 +1068,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     existingModel.ApprovedDate = null;
                 }
 
-                await _unitOfWork.SaveAsync(cancellationToken);
-
                 #region --Audit Trail Recording
 
                 var auditMessage = wasForPosting
@@ -1072,6 +1079,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #endregion --Audit Trail Recording
 
+                await _unitOfWork.SaveAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 TempData["success"] = "Non-trade invoicing edited successfully";
                 return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });

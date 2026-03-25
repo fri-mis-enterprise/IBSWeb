@@ -262,7 +262,13 @@
             netOfVatField.value = netOfVat.toFixed(4);
 
             // Add to accumulated entries without clearing previous entries
-            addToAccumulatedEntries(accountTitle, netOfVat, 0);
+            if(amount > 0){
+                addToAccumulatedEntries(accountTitle, netOfVat, 0);
+            }
+            else
+            {
+                addToAccumulatedEntries(accountTitle, 0, Math.abs(netOfVat));
+            }
             if (isVatable && vatAmount > 0) {
                 addToAccumulatedEntries(INPUT_VAT, vatAmount, 0);
             }
