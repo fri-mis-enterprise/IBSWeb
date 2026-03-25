@@ -231,9 +231,9 @@
                 : total * taxPercent;
             let netOfEwtAmount = total - ewtAmount;
 
-            $(".advances-debit").val(formatNumber(total));
-            $(".ewt-amount").val(formatNumber(ewtAmount));
-            $(".cib-credit").val(formatNumber(netOfEwtAmount));
+            $(".advances-debit").val(formatNumberToFour(total));
+            $(".ewt-amount").val(formatNumberToFour(ewtAmount));
+            $(".cib-credit").val(formatNumberToFour(netOfEwtAmount));
 
             updateTotals();
             validateDebitAndCredit();
@@ -254,8 +254,8 @@
             });
 
             // Update total displays
-            $(".totalDebit").text(formatNumber(totalDebit));
-            $(".totalCredit").text(formatNumber(totalCredit));
+            $(".totalDebit").text(formatNumberToFour(totalDebit));
+            $(".totalCredit").text(formatNumberToFour(totalCredit));
         }
 
         function validateDebitAndCredit() {
