@@ -277,11 +277,18 @@
             vatAmountField.value = vatAmount.toFixed(4);
             taxAmountField.value = taxAmount.toFixed(4);
             netOfVatField.value = netOfVat.toFixed(4);
-
-            // Add to accumulated entries
+            
             const text = accountField.options[accountField.selectedIndex]?.text || '';
             const accountTitle = text.substring(text.indexOf(')') + 1).trim();
-            addToAccumulatedEntries(accountTitle, netOfVat, 0);
+
+            if(amount > 0){
+                addToAccumulatedEntries(accountTitle, netOfVat, 0);
+            }
+            else
+            {
+                addToAccumulatedEntries(accountTitle, 0, Math.abs(netOfVat));
+            }
+            // Add to accumulated entries
 
             if (vatAmount > 0) {
                 addToAccumulatedEntries(INPUT_VAT, vatAmount, 0);
@@ -704,6 +711,7 @@
             let totalValue = parseFloat($("#totalAmount").val()) || 0;
             let totalDebit = parseNumber(document.getElementById("totalDebitCell")?.textContent || "0");
             let totalCredit = parseNumber(document.getElementById("totalCreditCell")?.textContent || "0");
+            
             let errorMessage = "";
             let isValid = true;
 
