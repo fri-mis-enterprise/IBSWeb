@@ -199,6 +199,7 @@
 
         // Object to store accumulated journal entries
         let accumulatedEntries = {};
+        let reverseAccumulatedEntries = {};
 
         // Store original chart of accounts HTML
         let originalChartOfAccountsHTML = null;
@@ -223,6 +224,7 @@
         function recalculateAllRows() {
             // Clear accumulated entries
             accumulatedEntries = {};
+            reverseAccumulatedEntries = {};
 
             // Get all rows and calculate for each
             const rows = document.querySelectorAll("#accountTable tbody tr");
@@ -284,14 +286,16 @@
             if(amount > 0){
                 addToAccumulatedEntries(accountTitle, netOfVat, 0);
             }
-            else
-            {
-                addToAccumulatedEntries(accountTitle, 0, Math.abs(netOfVat));
+            if(amount < 0) {
+                reverseAddToAccumulatedEntries(accountTitle, 0, Math.abs(netOfVat));
             }
             // Add to accumulated entries
 
             if (vatAmount > 0) {
                 addToAccumulatedEntries(INPUT_VAT, vatAmount, 0);
+            }
+            if (vatAmount < 0) {
+                reverseAddToAccumulatedEntries(INPUT_VAT, 0, Math.abs(vatAmount));
             }
 
             const netOfTaxAmount = amount - taxAmount;
@@ -302,6 +306,14 @@
                 if (payableAccount) {
                     addToAccumulatedEntries(payableAccount, 0, taxAmount);
                 }
+            }
+            if (taxAmount < 0) {
+                const payableAccount = PAYABLE_ACCOUNTS[taxPercentage];
+                if (!payableAccount) {
+                    console.error("Invalid tax percentage");
+                    return; // Exit if the percentage is invalid
+                }
+                reverseAddToAccumulatedEntries(payableAccount, Math.abs(taxAmount), 0);
             }
 
             if (updateDisplay) {
@@ -315,6 +327,13 @@
             }
             accumulatedEntries[account].debit += debit;
             accumulatedEntries[account].credit += credit;
+        }
+        function reverseAddToAccumulatedEntries(account, debit, credit) {
+            if (!reverseAccumulatedEntries[account]) {
+                reverseAccumulatedEntries[account] = { debit: 0, credit: 0 };
+            }
+            reverseAccumulatedEntries[account].debit += debit;
+            reverseAccumulatedEntries[account].credit += credit;
         }
 
         function createJournalEntriesTable() {
@@ -363,13 +382,25 @@
             const totalDebit = Object.values(accumulatedEntries).reduce((sum, amt) => sum + amt.debit, 0);
             const totalCredit = Object.values(accumulatedEntries).reduce((sum, amt) => sum + amt.credit, 0);
 
+            Object.entries(reverseAccumulatedEntries).forEach(([account, amounts]) => {
+                if (amounts.debit > 0 || amounts.credit > 0) {
+                    addJournalRow(tbody, account, amounts.debit, amounts.credit);
+                }
+            });
+
+            // Add totals row
+            const totalDebits = Object.values(reverseAccumulatedEntries).reduce((sum, amt) => sum + amt.debit, 0);
+            const totalCredits = Object.values(reverseAccumulatedEntries).reduce((sum, amt) => sum + amt.credit, 0);
+            let grandTotalDebits = totalDebit + totalDebits;
+            let grandTotalCredits = totalCredit + totalCredits;
+
             // Add separator and totals rows
             tbody.insertAdjacentHTML('beforeend', `
                 <tr><td colspan="3"><hr></td></tr>
                 <tr>
                     <td><strong>Totals</strong></td>
-                    <td id="totalDebitCell" class="text-end"><strong>${formatNumber(totalDebit)}</strong></td>
-                    <td id="totalCreditCell" class="text-end"><strong>${formatNumber(totalCredit)}</strong></td>
+                    <td id="totalDebitCell" class="text-end"><strong>${formatNumber(grandTotalDebits)}</strong></td>
+                    <td id="totalCreditCell" class="text-end"><strong>${formatNumber(grandTotalCredits)}</strong></td>
                 </tr>
                 `);
             validateDebitAndCredit();
@@ -552,6 +583,10 @@
             const totalAmount = parseFloat(document.querySelector('[name="Total"]').value) || 0;
             const totalDebit = Object.values(accumulatedEntries).reduce((sum, amt) => sum + amt.debit, 0);
             const totalCredit = Object.values(accumulatedEntries).reduce((sum, amt) => sum + amt.credit, 0);
+            const totalDebits = Object.values(reverseAccumulatedEntries).reduce((sum, amt) => sum + amt.debit, 0);
+            const totalCredits = Object.values(reverseAccumulatedEntries).reduce((sum, amt) => sum + amt.credit, 0);
+            let grandTotalDebits = totalDebit + totalDebits;
+            let grandTotalCredits = totalCredit + totalCredits;
 
             if (totalAmount <= 0) {
                 Swal.fire({
@@ -562,7 +597,7 @@
                 return false;
             }
 
-            if (Math.abs(totalDebit - totalCredit) > 0.01) {
+            if (Math.abs(grandTotalDebits - grandTotalCredits) > 0.01) {
                 Swal.fire({
                     title: 'Validation Error',
                     text: 'Debit and Credit totals must be equal.',
@@ -571,7 +606,7 @@
                 return false;
             }
 
-            if (Math.abs(totalAmount - totalDebit) > 0.01) {
+            if (Math.abs(totalAmount - grandTotalDebits) > 0.01) {
                 Swal.fire({
                     title: 'Validation Error',
                     text: 'Total amount must match the sum of accounting entries.',

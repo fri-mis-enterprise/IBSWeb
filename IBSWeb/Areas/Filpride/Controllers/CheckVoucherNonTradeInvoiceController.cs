@@ -404,6 +404,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 decimal ewtTwoPercentAmount = 0;
                 decimal ewtFivePercentAmount = 0;
                 decimal ewtTenPercentAmount = 0;
+                decimal reverseVatAmount = 0;
+                decimal reverseEwtOnePercentAmount = 0;
+                decimal reverseEwtTwoPercentAmount = 0;
+                decimal reverseEwtFivePercentAmount = 0;
+                decimal reverseEwtTenPercentAmount = 0;
 
                 var accountTitlesDto = await _unitOfWork.FilprideCheckVoucher.GetListOfAccountTitleDto(cancellationToken);
                 var apNonTradeTitle = accountTitlesDto.Find(c => c.AccountNumber == "202010200") ?? throw new ArgumentException("Account title '202010200' not found.");
@@ -461,29 +466,60 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         SubAccountName = subAccountName,
                     });
 
-                    if (accountEntry.Vatable)
+                    if (accountEntry.Vatable && accountEntry.VatAmount > 0)
                     {
                         vatAmount += accountEntry.VatAmount;
                     }
 
                     // Check EWT percentage
-                    switch (accountEntry.TaxPercentage)
+                    if (accountEntry.TaxAmount > 0)
                     {
-                        case 0.01m:
-                            ewtOnePercentAmount += accountEntry.TaxAmount;
-                            break;
+                        switch (accountEntry.TaxPercentage)
+                        {
+                            case 0.01m:
+                                ewtOnePercentAmount += accountEntry.TaxAmount;
+                                break;
 
-                        case 0.02m:
-                            ewtTwoPercentAmount += accountEntry.TaxAmount;
-                            break;
+                            case 0.02m:
+                                ewtTwoPercentAmount += accountEntry.TaxAmount;
+                                break;
 
-                        case 0.05m:
-                            ewtFivePercentAmount += accountEntry.TaxAmount;
-                            break;
+                            case 0.05m:
+                                ewtFivePercentAmount += accountEntry.TaxAmount;
+                                break;
 
-                        case 0.10m:
-                            ewtTenPercentAmount += accountEntry.TaxAmount;
-                            break;
+                            case 0.10m:
+                                ewtTenPercentAmount += accountEntry.TaxAmount;
+                                break;
+                        }
+                    }
+
+                    if (accountEntry.VatAmount < 0)
+                    {
+                        reverseVatAmount += Math.Abs(accountEntry.VatAmount);
+                    }
+
+                    // Check EWT percentage
+                    if (accountEntry.TaxAmount < 0)
+                    {
+                        switch (accountEntry.TaxPercentage)
+                        {
+                            case 0.01m:
+                                reverseEwtOnePercentAmount += Math.Abs(accountEntry.TaxAmount);
+                                break;
+
+                            case 0.02m:
+                                reverseEwtTwoPercentAmount += Math.Abs(accountEntry.TaxAmount);
+                                break;
+
+                            case 0.05m:
+                                reverseEwtFivePercentAmount += Math.Abs(accountEntry.TaxAmount);
+                                break;
+
+                            case 0.10m:
+                                reverseEwtTenPercentAmount += Math.Abs(accountEntry.TaxAmount);
+                                break;
+                        }
                     }
 
                     apNontradeAmount += accountEntry.Amount - accountEntry.TaxAmount;
@@ -501,6 +537,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         CheckVoucherHeaderId = checkVoucherHeader.CheckVoucherHeaderId,
                         Debit = vatAmount,
                         Credit = 0,
+                    });
+                }
+
+                if (reverseVatAmount > 0)
+                {
+                    checkVoucherDetails.Add(new FilprideCheckVoucherDetail
+                    {
+                        AccountNo = vatInputTitle.AccountNumber,
+                        AccountName = vatInputTitle.AccountName,
+                        TransactionNo = checkVoucherHeader.CheckVoucherHeaderNo,
+                        CheckVoucherHeaderId = checkVoucherHeader.CheckVoucherHeaderId,
+                        Debit = 0,
+                        Credit = reverseVatAmount,
                     });
                 }
 
@@ -583,6 +632,74 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         Debit = 0,
                         Credit = ewtTenPercentAmount,
                         Amount = ewtTenPercentAmount,
+                        SubAccountType = SubAccountType.Supplier,
+                        SubAccountId = bir!.SupplierId,
+                        SubAccountName = bir.SupplierName,
+                    });
+                }
+
+                if (reverseEwtOnePercentAmount > 0)
+                {
+                    checkVoucherDetails.Add(new FilprideCheckVoucherDetail
+                    {
+                        AccountNo = ewtOnePercent.AccountNumber,
+                        AccountName = ewtOnePercent.AccountName,
+                        TransactionNo = checkVoucherHeader.CheckVoucherHeaderNo,
+                        CheckVoucherHeaderId = checkVoucherHeader.CheckVoucherHeaderId,
+                        Debit = reverseEwtOnePercentAmount,
+                        Credit = 0,
+                        Amount = reverseEwtOnePercentAmount,
+                        SubAccountType = SubAccountType.Supplier,
+                        SubAccountId = bir!.SupplierId,
+                        SubAccountName = bir.SupplierName,
+                    });
+                }
+
+                if (reverseEwtTwoPercentAmount > 0)
+                {
+                    checkVoucherDetails.Add(new FilprideCheckVoucherDetail
+                    {
+                        AccountNo = ewtTwoPercent.AccountNumber,
+                        AccountName = ewtTwoPercent.AccountName,
+                        TransactionNo = checkVoucherHeader.CheckVoucherHeaderNo,
+                        CheckVoucherHeaderId = checkVoucherHeader.CheckVoucherHeaderId,
+                        Debit = reverseEwtTwoPercentAmount,
+                        Credit = 0,
+                        Amount = reverseEwtTwoPercentAmount,
+                        SubAccountType = SubAccountType.Supplier,
+                        SubAccountId = bir!.SupplierId,
+                        SubAccountName = bir.SupplierName,
+                    });
+                }
+
+                if (reverseEwtFivePercentAmount > 0)
+                {
+                    checkVoucherDetails.Add(new FilprideCheckVoucherDetail
+                    {
+                        AccountNo = ewtFivePercent.AccountNumber,
+                        AccountName = ewtFivePercent.AccountName,
+                        TransactionNo = checkVoucherHeader.CheckVoucherHeaderNo,
+                        CheckVoucherHeaderId = checkVoucherHeader.CheckVoucherHeaderId,
+                        Debit = reverseEwtFivePercentAmount,
+                        Credit = 0,
+                        Amount = reverseEwtFivePercentAmount,
+                        SubAccountType = SubAccountType.Supplier,
+                        SubAccountId = bir!.SupplierId,
+                        SubAccountName = bir.SupplierName,
+                    });
+                }
+
+                if (reverseEwtTenPercentAmount > 0)
+                {
+                    checkVoucherDetails.Add(new FilprideCheckVoucherDetail
+                    {
+                        AccountNo = ewtTenPercent.AccountNumber,
+                        AccountName = ewtTenPercent.AccountName,
+                        TransactionNo = checkVoucherHeader.CheckVoucherHeaderNo,
+                        CheckVoucherHeaderId = checkVoucherHeader.CheckVoucherHeaderId,
+                        Debit = reverseEwtTenPercentAmount,
+                        Credit = 0,
+                        Amount = reverseEwtTenPercentAmount,
                         SubAccountType = SubAccountType.Supplier,
                         SubAccountId = bir!.SupplierId,
                         SubAccountName = bir.SupplierName,
@@ -859,6 +976,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 decimal ewtTwoPercentAmount = 0;
                 decimal ewtFivePercentAmount = 0;
                 decimal ewtTenPercentAmount = 0;
+                decimal reverseVatAmount = 0;
+                decimal reverseEwtOnePercentAmount = 0;
+                decimal reverseEwtTwoPercentAmount = 0;
+                decimal reverseEwtFivePercentAmount = 0;
+                decimal reverseEwtTenPercentAmount = 0;
 
                 var accountTitlesDto = await _unitOfWork.FilprideCheckVoucher.GetListOfAccountTitleDto(cancellationToken);
                 var apNonTradeTitle = accountTitlesDto.Find(c => c.AccountNumber == "202010200") ?? throw new ArgumentException("Account title '202010200' not found.");
@@ -916,29 +1038,60 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         SubAccountName = subAccountName,
                     });
 
-                    if (accountEntry.Vatable)
+                    if (accountEntry.Vatable && accountEntry.VatAmount > 0)
                     {
                         vatAmount += accountEntry.VatAmount;
                     }
 
                     // Check EWT percentage
-                    switch (accountEntry.TaxPercentage)
+                    if (accountEntry.TaxAmount > 0)
                     {
-                        case 0.01m:
-                            ewtOnePercentAmount += accountEntry.TaxAmount;
-                            break;
+                        switch (accountEntry.TaxPercentage)
+                        {
+                            case 0.01m:
+                                ewtOnePercentAmount += accountEntry.TaxAmount;
+                                break;
 
-                        case 0.02m:
-                            ewtTwoPercentAmount += accountEntry.TaxAmount;
-                            break;
+                            case 0.02m:
+                                ewtTwoPercentAmount += accountEntry.TaxAmount;
+                                break;
 
-                        case 0.05m:
-                            ewtFivePercentAmount += accountEntry.TaxAmount;
-                            break;
+                            case 0.05m:
+                                ewtFivePercentAmount += accountEntry.TaxAmount;
+                                break;
 
-                        case 0.10m:
-                            ewtTenPercentAmount += accountEntry.TaxAmount;
-                            break;
+                            case 0.10m:
+                                ewtTenPercentAmount += accountEntry.TaxAmount;
+                                break;
+                        }
+                    }
+
+                    if (accountEntry.VatAmount < 0)
+                    {
+                        reverseVatAmount += Math.Abs(accountEntry.VatAmount);
+                    }
+
+                    // Check EWT percentage
+                    if (accountEntry.TaxAmount < 0)
+                    {
+                        switch (accountEntry.TaxPercentage)
+                        {
+                            case 0.01m:
+                                reverseEwtOnePercentAmount += Math.Abs(accountEntry.TaxAmount);
+                                break;
+
+                            case 0.02m:
+                                reverseEwtTwoPercentAmount += Math.Abs(accountEntry.TaxAmount);
+                                break;
+
+                            case 0.05m:
+                                reverseEwtFivePercentAmount += Math.Abs(accountEntry.TaxAmount);
+                                break;
+
+                            case 0.10m:
+                                reverseEwtTenPercentAmount += Math.Abs(accountEntry.TaxAmount);
+                                break;
+                        }
                     }
 
                     apNontradeAmount += accountEntry.Amount - accountEntry.TaxAmount;
@@ -956,6 +1109,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         CheckVoucherHeaderId = existingModel.CheckVoucherHeaderId,
                         Debit = vatAmount,
                         Credit = 0,
+                    });
+                }
+
+                if (reverseVatAmount > 0)
+                {
+                    checkVoucherDetails.Add(new FilprideCheckVoucherDetail
+                    {
+                        AccountNo = vatInputTitle.AccountNumber,
+                        AccountName = vatInputTitle.AccountName,
+                        TransactionNo = existingModel.CheckVoucherHeaderNo!,
+                        CheckVoucherHeaderId = existingModel.CheckVoucherHeaderId,
+                        Debit = 0,
+                        Credit = reverseVatAmount,
                     });
                 }
 
@@ -1038,6 +1204,74 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         Debit = 0,
                         Credit = ewtTenPercentAmount,
                         Amount = ewtTenPercentAmount,
+                        SubAccountType = SubAccountType.Supplier,
+                        SubAccountId = bir!.SupplierId,
+                        SubAccountName = bir.SupplierName,
+                    });
+                }
+
+                if (reverseEwtOnePercentAmount > 0)
+                {
+                    checkVoucherDetails.Add(new FilprideCheckVoucherDetail
+                    {
+                        AccountNo = ewtOnePercent.AccountNumber,
+                        AccountName = ewtOnePercent.AccountName,
+                        TransactionNo = existingModel.CheckVoucherHeaderNo!,
+                        CheckVoucherHeaderId = existingModel.CheckVoucherHeaderId,
+                        Debit = reverseEwtOnePercentAmount,
+                        Credit = 0,
+                        Amount = reverseEwtOnePercentAmount,
+                        SubAccountType = SubAccountType.Supplier,
+                        SubAccountId = bir!.SupplierId,
+                        SubAccountName = bir.SupplierName,
+                    });
+                }
+
+                if (reverseEwtTwoPercentAmount > 0)
+                {
+                    checkVoucherDetails.Add(new FilprideCheckVoucherDetail
+                    {
+                        AccountNo = ewtTwoPercent.AccountNumber,
+                        AccountName = ewtTwoPercent.AccountName,
+                        TransactionNo = existingModel.CheckVoucherHeaderNo!,
+                        CheckVoucherHeaderId = existingModel.CheckVoucherHeaderId,
+                        Debit = reverseEwtTwoPercentAmount,
+                        Credit = 0,
+                        Amount = reverseEwtTwoPercentAmount,
+                        SubAccountType = SubAccountType.Supplier,
+                        SubAccountId = bir!.SupplierId,
+                        SubAccountName = bir.SupplierName,
+                    });
+                }
+
+                if (reverseEwtFivePercentAmount > 0)
+                {
+                    checkVoucherDetails.Add(new FilprideCheckVoucherDetail
+                    {
+                        AccountNo = ewtFivePercent.AccountNumber,
+                        AccountName = ewtFivePercent.AccountName,
+                        TransactionNo = existingModel.CheckVoucherHeaderNo!,
+                        CheckVoucherHeaderId = existingModel.CheckVoucherHeaderId,
+                        Debit = reverseEwtFivePercentAmount,
+                        Credit = 0,
+                        Amount = reverseEwtFivePercentAmount,
+                        SubAccountType = SubAccountType.Supplier,
+                        SubAccountId = bir!.SupplierId,
+                        SubAccountName = bir.SupplierName,
+                    });
+                }
+
+                if (reverseEwtTenPercentAmount > 0)
+                {
+                    checkVoucherDetails.Add(new FilprideCheckVoucherDetail
+                    {
+                        AccountNo = ewtTenPercent.AccountNumber,
+                        AccountName = ewtTenPercent.AccountName,
+                        TransactionNo = existingModel.CheckVoucherHeaderNo!,
+                        CheckVoucherHeaderId = existingModel.CheckVoucherHeaderId,
+                        Debit = reverseEwtTenPercentAmount,
+                        Credit = 0,
+                        Amount = reverseEwtTenPercentAmount,
                         SubAccountType = SubAccountType.Supplier,
                         SubAccountId = bir!.SupplierId,
                         SubAccountName = bir.SupplierName,

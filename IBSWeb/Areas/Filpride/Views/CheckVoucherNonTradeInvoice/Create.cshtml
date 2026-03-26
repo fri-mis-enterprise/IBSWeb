@@ -201,6 +201,7 @@
 
         // Object to store accumulated journal entries
         let accumulatedEntries = {};
+        let reverseAccumulatedEntries = {};
         
         // Store original chart of accounts HTML
         let originalChartOfAccountsHTML = null;
@@ -209,6 +210,7 @@
         function recalculateAllRows() {
             // Clear all accumulated entries
             accumulatedEntries = {};
+            reverseAccumulatedEntries = {};
 
             // Get all rows
             const rows = document.querySelectorAll("#accountTable tbody tr");
@@ -265,12 +267,14 @@
             if(amount > 0){
                 addToAccumulatedEntries(accountTitle, netOfVat, 0);
             }
-            else
-            {
-                addToAccumulatedEntries(accountTitle, 0, Math.abs(netOfVat));
+            if(amount < 0) {
+                reverseAddToAccumulatedEntries(accountTitle, 0, Math.abs(netOfVat));
             }
             if (isVatable && vatAmount > 0) {
                 addToAccumulatedEntries(INPUT_VAT, vatAmount, 0);
+            }
+            if (vatAmount < 0) {
+                reverseAddToAccumulatedEntries(INPUT_VAT, 0, Math.abs(vatAmount));
             }
             
             addToAccumulatedEntries(AP_NON_TRADE, 0, netOfTaxAmount);
@@ -283,6 +287,14 @@
                     return; // Exit if the percentage is invalid
                 }
                 addToAccumulatedEntries(payableAccount, 0, taxAmount);
+            }
+            if (taxAmount < 0) {
+                const payableAccount = PAYABLE_ACCOUNTS[taxPercentage];
+                if (!payableAccount) {
+                    console.error("Invalid tax percentage");
+                    return; // Exit if the percentage is invalid
+                }
+                reverseAddToAccumulatedEntries(payableAccount, Math.abs(taxAmount), 0);
             }
 
             // Only update display if requested
@@ -297,6 +309,13 @@
             }
             accumulatedEntries[account].debit += debit;
             accumulatedEntries[account].credit += credit;
+        }
+        function reverseAddToAccumulatedEntries(account, debit, credit) {
+            if (!reverseAccumulatedEntries[account]) {
+                reverseAccumulatedEntries[account] = { debit: 0, credit: 0 };
+            }
+            reverseAccumulatedEntries[account].debit += debit;
+            reverseAccumulatedEntries[account].credit += credit;
         }
 
         function createJournalEntriesTable() {
@@ -348,6 +367,18 @@
             const totalDebit = Object.values(accumulatedEntries).reduce((sum, amt) => sum + amt.debit, 0);
             const totalCredit = Object.values(accumulatedEntries).reduce((sum, amt) => sum + amt.credit, 0);
 
+            Object.entries(reverseAccumulatedEntries).forEach(([account, amounts]) => {
+                if (amounts.debit > 0 || amounts.credit > 0) {
+                    addJournalRow(tbody, account, amounts.debit, amounts.credit);
+                }
+            });
+
+            // Add totals row
+            const totalDebits = Object.values(reverseAccumulatedEntries).reduce((sum, amt) => sum + amt.debit, 0);
+            const totalCredits = Object.values(reverseAccumulatedEntries).reduce((sum, amt) => sum + amt.credit, 0);
+            let grandTotalDebits = totalDebit + totalDebits;
+            let grandTotalCredits = totalCredit + totalCredits;
+
             // Add a separator row
             const separatorRow = document.createElement("tr");
             separatorRow.innerHTML = '<td colspan="3"><hr></td>';
@@ -357,8 +388,8 @@
             const totalsRow = document.createElement("tr");
             totalsRow.innerHTML = `
             <td><strong>Totals</strong></td>
-            <td id="totalDebitCell" class="text-end"><strong>${formatNumber(totalDebit)}</strong></td>
-            <td id="totalCreditCell" class="text-end"><strong>${formatNumber(totalCredit)}</strong></td>
+            <td id="totalDebitCell" class="text-end"><strong>${formatNumber(grandTotalDebits)}</strong></td>
+            <td id="totalCreditCell" class="text-end"><strong>${formatNumber(grandTotalCredits)}</strong></td>
         `;
             tbody.appendChild(totalsRow);
             validateDebitAndCredit();
@@ -407,7 +438,7 @@
                     <input type="number" name="AccountingEntries[${rowCount}].Amount" class="form-control form-control-sm text-end amount" value="0" />
                 </td>
                 <td class="text-center px-2">
-                    <input type="checkbox" name="AccountingEntries[${rowCount}].Vatable" class="form-check-input vatable" value="false" />
+                    <input type="checkbox" name="AccountingEntries[${rowCount}].Vatable" class="form-check-input vatable" value="true" />
                 </td>
                 <td class="px-2">
                     <select name="AccountingEntries[${rowCount}].TaxPercentage" class="form-select form-select-sm taxable" required>
@@ -552,6 +583,10 @@
             // Get journal entry totals
             const totalDebit = Object.values(accumulatedEntries).reduce((sum, amt) => sum + amt.debit, 0);
             const totalCredit = Object.values(accumulatedEntries).reduce((sum, amt) => sum + amt.credit, 0);
+            const totalDebits = Object.values(reverseAccumulatedEntries).reduce((sum, amt) => sum + amt.debit, 0);
+            const totalCredits = Object.values(reverseAccumulatedEntries).reduce((sum, amt) => sum + amt.credit, 0);
+            let grandTotalDebits = totalDebit + totalDebits;
+            let grandTotalCredits = totalCredit + totalCredits;
 
             // Check if total amount is zero
             if (totalAmount <= 0) {
@@ -565,7 +600,7 @@
             }
 
             // Check if debits equal credits
-            if (Math.abs(totalDebit - totalCredit) > 0.01) { // Using 0.01 to account for rounding differences
+            if (Math.abs(grandTotalDebits - grandTotalCredits) > 0.01) { // Using 0.01 to account for rounding differences
                 Swal.fire({
                     title: 'Validation Error',
                     text: 'Debit and Credit totals must be equal.',
@@ -576,7 +611,7 @@
             }
 
             // Check if accounting entries match total amount
-            if (Math.abs(totalAmount - totalDebit) > 0.01) {
+            if (Math.abs(totalAmount - grandTotalDebits) > 0.01) {
                 Swal.fire({
                     title: 'Validation Error',
                     text: 'Total amount must match the sum of accounting entries.',
