@@ -149,7 +149,7 @@
             
             function updateAccountingEntries() {
                 let total = parseNumber($("#Total").val()) || 0;
-                let formattedTotal = formatNumber(total);
+                let formattedTotal = formatNumberToFour(total);
                 
                 $(".advances-debit").val(formattedTotal);
                 
@@ -175,8 +175,8 @@
                 });
                 
                 // Update total displays
-                $(".totalDebit").text(formatNumber(totalDebit));
-                $(".totalCredit").text(formatNumber(totalCredit));
+                $(".totalDebit").text(formatNumberToFour(totalDebit));
+                $(".totalCredit").text(formatNumberToFour(totalCredit));
             }
 
             $("#EmployeeId").change(function () {
