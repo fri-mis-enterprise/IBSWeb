@@ -380,7 +380,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
 
             var employees = (await _unitOfWork.FilprideEmployee
-                .GetAllAsync(x => x. Company == company, cancellationToken))
+                .GetAllAsync(x => x.Company == company, cancellationToken))
                 .OrderBy(x => x.EmployeeNumber);
 
             if (!employees.Any())
