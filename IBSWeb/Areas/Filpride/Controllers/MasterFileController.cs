@@ -120,11 +120,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
             CancellationToken cancellationToken)
         {
             // Fetch customers
-            var customersEnumerable = await _unitOfWork.FilprideCustomer.GetAllAsync(
-                filter: c => c.Company == company,
-                cancellationToken: cancellationToken);
-
-            var customers = customersEnumerable.ToList();
+            var customers = (await _unitOfWork.FilprideCustomer
+                .GetAllAsync(c => c.Company == company, cancellationToken))
+                .OrderBy(x => x.CustomerCode);
 
             if (!customers.Any())
             {
@@ -242,11 +240,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                    string company,
                    CancellationToken cancellationToken)
         {
-            var suppliers = await _unitOfWork.FilprideSupplier.GetAllAsync(
-                filter: s => s.Company == company,
-                cancellationToken: cancellationToken);
-
-            var suppliersList = suppliers.ToList();
+            var suppliers = (await _unitOfWork.FilprideSupplier
+                    .GetAllAsync(s => s.Company == company, cancellationToken))
+                .OrderBy(x => x.SupplierCode);
 
             if (!suppliers.Any())
             {
@@ -276,7 +272,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             };
 
             return await BuildExcelFile(
-                suppliersList,
+                suppliers,
                 "Suppliers",
                 "Supplier_MasterFile",
                 extractedBy,
@@ -295,11 +291,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
             string company,
             CancellationToken cancellationToken)
         {
-            var bankAccounts = await _unitOfWork.FilprideBankAccount.GetAllAsync(
+            var bankAccounts = (await _unitOfWork.FilprideBankAccount.GetAllAsync(
                 filter: b => b.Company == company,
-                cancellationToken: cancellationToken);
-
-            var bankAccountsList = bankAccounts.ToList();
+                cancellationToken: cancellationToken))
+                .OrderBy(x => x.AccountNo);
 
             if (!bankAccounts.Any())
             {
@@ -321,7 +316,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             };
 
             return await BuildExcelFile(
-                bankAccountsList,
+                bankAccounts,
                 "Bank Accounts",
                 "BankAccount_MasterFile",
                 extractedBy,
@@ -341,9 +336,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
             string company,
             CancellationToken cancellationToken)
         {
-            var services = await _unitOfWork.FilprideService.GetAllAsync(
-                cancellationToken: cancellationToken);
-            var servicesList = services.ToList();
+            var services = (await _unitOfWork.FilprideService.GetAllAsync(
+                cancellationToken: cancellationToken))
+                .OrderBy(x => x.ServiceNo);
 
             if (!services.Any())
             {
@@ -363,7 +358,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             };
 
             return await BuildExcelFile(
-                servicesList,
+                services,
                 "Services",
                 "Service_MasterFile",
                 extractedBy,
@@ -384,14 +379,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
             CancellationToken cancellationToken)
         {
 
-            var employees = await _unitOfWork.FilprideEmployee.GetAllAsync(
-                cancellationToken: cancellationToken);
+            var employees = (await _unitOfWork.FilprideEmployee
+                .GetAllAsync(x => x. Company == company, cancellationToken))
+                .OrderBy(x => x.EmployeeNumber);
 
             if (!employees.Any())
             {
                 return (null, string.Empty);
             }
-            var employeesList = employees.ToList();
 
             var columns = new List<ColumnDefinition>
             {
@@ -423,7 +418,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             };
 
             return await BuildExcelFile(
-                employeesList,
+                employees,
                 "Employees",
                 "Employee_MasterFile",
                 extractedBy,
@@ -441,7 +436,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private void BuildWorksheet<T>(
             ExcelPackage package,
-            List<T> data,
+            IEnumerable<T> data,
             string worksheetName,
             string reportTitle,
             string extractedBy,
@@ -547,7 +542,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         private async Task<(MemoryStream stream, string fileName)> BuildExcelFile<T>(
-            List<T> data,
+            IEnumerable<T> data,
             string reportTitle,
             string fileNamePrefix,
             string extractedBy,
