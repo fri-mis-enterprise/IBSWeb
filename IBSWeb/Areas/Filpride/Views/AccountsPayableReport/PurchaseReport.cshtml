@@ -46,9 +46,9 @@
                 <div class="mb-3">
                     <label asp-for="StatusFilter" class="control-label"></label>
                     <select asp-for="StatusFilter" class="form-select">
-                        <option value="ValidOnly">Valid Only (Exclude Voided/Cancelled)</option>
-                        <option value="All">All (Include Voided/Cancelled)</option>
-                        <option value="InvalidOnly">Voided/Cancelled Only</option>
+                        <option value="ValidOnly">Valid Only (Exclude Voided)</option>
+                        <option value="All">All (Include Voided)</option>
+                        <option value="InvalidOnly">Voided Only</option>
                     </select>
                     <span asp-validation-for="StatusFilter" class="text-danger"></span>
                 </div>
