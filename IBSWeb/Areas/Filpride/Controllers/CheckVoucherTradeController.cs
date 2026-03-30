@@ -332,6 +332,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     Category = "Trade",
                     Payee = viewModel.Payee,
                     CheckDate = viewModel.CheckDate,
+                    CheckAmount = cashInBank,
                     Total = cashInBank,
                     CreatedBy = GetUserFullName(),
                     Company = companyClaims,
@@ -872,6 +873,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingHeaderModel.CheckNo = viewModel.CheckNo;
                 existingHeaderModel.Payee = viewModel.Payee;
                 existingHeaderModel.CheckDate = viewModel.CheckDate;
+                existingHeaderModel.CheckAmount = cashInBank;
                 existingHeaderModel.Total = cashInBank;
                 existingHeaderModel.EditedBy = GetUserFullName();
                 existingHeaderModel.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
@@ -2365,6 +2367,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     Category = "Trade",
                     Payee = viewModel.Payee,
                     CheckDate = viewModel.CheckDate,
+                    CheckAmount = cashInBank,
                     Total = cashInBank,
                     CreatedBy = GetUserFullName(),
                     Company = companyClaims,
@@ -2739,6 +2742,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     Category = "Trade",
                     Payee = viewModel.Payee,
                     CheckDate = viewModel.CheckDate,
+                    CheckAmount = cashInBank,
                     CvType = "Hauler",
                     Company = companyClaims,
                     CreatedBy = GetUserFullName(),
@@ -3286,6 +3290,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingHeaderModel.Category = "Trade";
                 existingHeaderModel.Payee = viewModel.Payee;
                 existingHeaderModel.CheckDate = viewModel.CheckDate;
+                existingHeaderModel.CheckAmount = cashInBank;
                 existingHeaderModel.Total = cashInBank;
                 existingHeaderModel.EditedBy = GetUserFullName();
                 existingHeaderModel.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
@@ -3698,6 +3703,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingHeaderModel.Category = "Trade";
                 existingHeaderModel.Payee = viewModel.Payee;
                 existingHeaderModel.CheckDate = viewModel.CheckDate;
+                existingHeaderModel.CheckAmount = cashInBank;
                 existingHeaderModel.EditedBy = GetUserFullName();
                 existingHeaderModel.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 existingHeaderModel.SupplierName = supplier.SupplierName;

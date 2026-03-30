@@ -2246,7 +2246,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     Tin = viewModel.PayeeTin,
                     CheckNo = viewModel.CheckNo,
                     CheckDate = viewModel.CheckDate,
-                    CheckAmount = viewModel.Total,
                     Company = companyClaims,
                     Type = viewModel.DocumentType,
                     IsAdvances = true,
@@ -2275,6 +2274,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     : viewModel.Total;
                 var ewtAmount = _unitOfWork.FilprideCheckVoucher.ComputeEwtAmount(netOfVat, supplier.WithholdingTaxPercent ?? 0);
                 var netOfEwtAmount = _unitOfWork.FilprideCheckVoucher.ComputeNetOfEwt(grossAmount, ewtAmount);
+                checkVoucherHeader.CheckAmount = netOfEwtAmount;
 
                 var checkVoucherDetails = new List<FilprideCheckVoucherDetail>();
 
@@ -2502,7 +2502,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingHeaderModel.Tin = viewModel.PayeeTin;
                 existingHeaderModel.CheckNo = viewModel.CheckNo;
                 existingHeaderModel.CheckDate = viewModel.CheckDate;
-                existingHeaderModel.CheckAmount = viewModel.Total;
                 existingHeaderModel.SupplierId = viewModel.SupplierId;
                 existingHeaderModel.SupplierName = supplier.SupplierName;
                 existingHeaderModel.BankAccountName = bank.AccountName;
@@ -2532,6 +2531,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     : viewModel.Total;
                 var ewtAmount = _unitOfWork.FilprideCheckVoucher.ComputeEwtAmount(netOfVat, supplier.WithholdingTaxPercent ?? 0);
                 var netOfEwtAmount = _unitOfWork.FilprideCheckVoucher.ComputeNetOfEwt(grossAmount, ewtAmount);
+                existingHeaderModel.CheckAmount = netOfEwtAmount;
 
                 var checkVoucherDetails = new List<FilprideCheckVoucherDetail>();
 
