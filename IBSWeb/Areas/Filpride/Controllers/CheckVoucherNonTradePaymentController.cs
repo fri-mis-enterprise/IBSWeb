@@ -1,3 +1,5 @@
+using System.Linq.Dynamic.Core;
+using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
 using IBS.Models;
@@ -14,8 +16,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Dynamic.Core;
-using System.Security.Claims;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -261,7 +261,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 modelHeader.PostedBy = GetUserFullName();
                 modelHeader.PostedDate = DateTimeHelper.GetCurrentPhilippineTime();
-                modelHeader.Status = !modelHeader.IsAdvances && modelHeader.EmployeeId == null
+                modelHeader.Status = modelHeader.EmployeeId == null
                     ? nameof(CheckVoucherPaymentStatus.Posted)
                     : nameof(CheckVoucherPaymentStatus.Unliquidated);
 
