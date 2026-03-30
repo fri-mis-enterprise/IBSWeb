@@ -1257,7 +1257,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[currentRow, 17].Value = dr.CustomerOrderSlip?.OldCosNo;
                         worksheet.Cells[currentRow, 18].Value = dr.ManualDrNo;
                         worksheet.Cells[currentRow, 19].Value = rr?.ReceivingReportNo;
-                        worksheet.Cells[currentRow, 20].Value = rr?.Amount / rr?.QuantityReceived;
+                        worksheet.Cells[currentRow, 20].Value = rr?.QuantityReceived != 0
+                            ? rr?.Amount / rr?.QuantityReceived
+                            : 0m;
                         worksheet.Cells[currentRow, 21].Value = rr?.SupplierInvoiceNumber;
                         worksheet.Cells[currentRow, 22].Value = rr?.WithdrawalCertificate;
 
@@ -2051,7 +2053,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 if (dateTo.Month <= 9 && dateTo.Year == 2024)
                 {
-                    return RedirectToAction(nameof(GenerateSalesInvoiceReportExcelFile), 
+                    return RedirectToAction(nameof(GenerateSalesInvoiceReportExcelFile),
                         new { dateFrom = model.DateFrom, dateTo = model.DateTo, statusFilter = model.StatusFilter });
                 }
 
@@ -3054,7 +3056,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
 
         #endregion -- Generate Posted Collection Excel File --
-        
+
         [HttpGet]
         public IActionResult AgingReport()
         {

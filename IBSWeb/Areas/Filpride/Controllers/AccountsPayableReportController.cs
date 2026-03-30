@@ -533,7 +533,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, col].Value = "DEBIT"; col++;
                 worksheet.Cells[row, col].Value = "CREDIT"; col++;
                 worksheet.Cells[row, col].Value = "STATUS"; col++;
-                
+
                 if (showVoidCancelColumns)
                 {
                     worksheet.Cells[row, col].Value = "VOIDED BY"; col++;
@@ -585,7 +585,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, col].Style.Numberformat.Format = currencyFormat; col++;
                     worksheet.Cells[row, col].Value = inv.Credit;
                     worksheet.Cells[row, col].Style.Numberformat.Format = currencyFormat; col++;
-                    worksheet.Cells[row, col].Value = inv.CheckVoucherHeader.Status; col++;  
+                    worksheet.Cells[row, col].Value = inv.CheckVoucherHeader.Status; col++;
 
                     if (showVoidCancelColumns)
                     {
@@ -744,7 +744,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, col].Value = "DEBIT"; col++;
                 worksheet.Cells[row, col].Value = "CREDIT"; col++;
                 worksheet.Cells[row, col].Value = "STATUS"; col++;
-                
+
                 if (showVoidCancelColumns)
                 {
                     worksheet.Cells[row, col].Value = "VOIDED BY"; col++;
@@ -845,7 +845,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[row, col].Value = details.Debit; col++;
                         worksheet.Cells[row, col].Value = details.Credit; col++;
                         worksheet.Cells[row, col].Value = header.Status; col++;
-                        
+
 
                         if (showVoidCancelColumns)
                         {
@@ -1153,7 +1153,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["H7"].Value = "Price";
                 worksheet.Cells["I7"].Value = "Amount";
                 worksheet.Cells["J7"].Value = "Remarks";
-                
+
                 if (showVoidCancelColumns)
                 {
                     worksheet.Cells[7, 11].Value = "Status";
@@ -1770,7 +1770,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 purchaseReportWorksheet.Cells["AG7"].Value = "IS PO#";
                 purchaseReportWorksheet.Cells["AH7"].Value = "IS RR#";
                 purchaseReportWorksheet.Cells["AI7"].Value = "TERMS";
-                
+
                 int lastColIndex = 35; // AI = 35
                 if (showVoidCancelColumns)
                 {
@@ -1848,7 +1848,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var whtAmount = isSupplierTaxable
                         ? _unitOfWork.FilpridePurchaseOrder.ComputeEwtAmount(netPurchases, pr.TaxPercentage)
                         : 0m; // wht total
-                    var costPerLiter = costAmount / volume; // sale price per liter
+                    var costPerLiter = volume != 0 ? costAmount / volume : 0m; // sale price per liter
                     var commission = ((pr.DeliveryReceipt?.CustomerOrderSlip?.CommissionRate ?? 0m) * volume);
 
                     if (pr.AuthorityToLoadNo != null)
@@ -8698,7 +8698,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[headerRow, 11].Value = "CV #";
                 worksheet.Cells[headerRow, 12].Value = "PAYEE";
                 worksheet.Cells[headerRow, 13].Value = "PREPARED BY";
-                
+
                 int lastColIndex = 13;
                 if (showVoidCancelColumns)
                 {
