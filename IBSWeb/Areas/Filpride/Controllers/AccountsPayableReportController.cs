@@ -458,9 +458,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                       && cvd.CheckVoucherHeader.CvType == nameof(CVType.Invoicing)
                                       && cvd.CheckVoucherHeader.Date >= dateFrom &&
                                       cvd.CheckVoucherHeader.Date <= dateTo
-                                      && (statusFilter == "ValidOnly" ? (cvd.CheckVoucherHeader.VoidedBy == null && cvd.CheckVoucherHeader.CanceledBy == null)
-                                         : statusFilter == "InvalidOnly" ? (cvd.CheckVoucherHeader.VoidedBy != null || cvd.CheckVoucherHeader.CanceledBy != null)
-                                         : true))
+                                      && (statusFilter == "ValidOnly"
+                                          ? cvd.CheckVoucherHeader.VoidedBy == null
+                                          : statusFilter == "InvalidOnly"
+                                              ? cvd.CheckVoucherHeader.VoidedBy != null
+                                              : true))
                         .Include(cvd => cvd.CheckVoucherHeader)
                         .ThenInclude(cvh => cvh!.Supplier)
                         .OrderBy(cvd => cvd.CheckVoucherHeader!.Date)
@@ -538,9 +540,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     worksheet.Cells[row, col].Value = "VOIDED BY"; col++;
                     worksheet.Cells[row, col].Value = "VOIDED DATE";
-                    worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy"; col++;
-                    worksheet.Cells[row, col].Value = "CANCELLED BY"; col++;
-                    worksheet.Cells[row, col].Value = "CANCELLED DATE";
                     worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy";
                 }
 
@@ -591,9 +590,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     {
                         worksheet.Cells[row, col].Value = inv.CheckVoucherHeader.VoidedBy; col++;
                         worksheet.Cells[row, col].Value = inv.CheckVoucherHeader.VoidedDate;
-                        worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy"; col++;
-                        worksheet.Cells[row, col].Value = inv.CheckVoucherHeader.CanceledBy; col++;
-                        worksheet.Cells[row, col].Value = inv.CheckVoucherHeader.CanceledDate;
                         worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy";
                     }
 
@@ -604,7 +600,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 int totalRow = row;
-                int lastDataCol = showVoidCancelColumns ? 17 : 13;
+                int lastDataCol = showVoidCancelColumns ? 15 : 13;
                 worksheet.Cells[totalRow, 10].Value = "TOTAL: ";
                 worksheet.Cells[totalRow, 11].Value = totalDebit;
                 worksheet.Cells[totalRow, 12].Value = totalCredit;
@@ -678,9 +674,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             cvh.CvType != nameof(CVType.Invoicing) &&
                             cvh.Date >= dateFrom &&
                             cvh.Date <= dateTo
-                            && (statusFilter == "ValidOnly" ? (cvh.VoidedBy == null && cvh.CanceledBy == null)
-                               : statusFilter == "InvalidOnly" ? (cvh.VoidedBy != null || cvh.CanceledBy != null)
-                               : true))
+                            && (statusFilter == "ValidOnly"
+                                ? cvh.VoidedBy == null
+                                : statusFilter == "InvalidOnly"
+                                    ? cvh.VoidedBy != null
+                                    : true))
                         .Include(cvh => cvh.Details!)
                         .Include(cvh => cvh.Supplier)
                         .OrderBy(cvh => cvh.Date)
@@ -748,9 +746,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (showVoidCancelColumns)
                 {
                     worksheet.Cells[row, col].Value = "VOIDED BY"; col++;
-                    worksheet.Cells[row, col].Value = "VOIDED DATE"; col++;
-                    worksheet.Cells[row, col].Value = "CANCELLED BY"; col++;
-                    worksheet.Cells[row, col].Value = "CANCELLED DATE";
+                    worksheet.Cells[row, col].Value = "VOIDED DATE";
                 }
 
                 using (var range = worksheet.Cells[row, 1, row, col])
@@ -851,9 +847,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         {
                             worksheet.Cells[row, col].Value = header.VoidedBy; col++;
                             worksheet.Cells[row, col].Value = header.VoidedDate;
-                            worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy"; col++;
-                            worksheet.Cells[row, col].Value = header.CanceledBy; col++;
-                            worksheet.Cells[row, col].Value = header.CanceledDate;
                             worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy";
                         }
 
@@ -869,7 +862,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 int totalRow = row;
-                int lastDataCol = showVoidCancelColumns ? 18 : 14;
+                int lastDataCol = showVoidCancelColumns ? 16 : 14;
                 worksheet.Cells[totalRow, 11].Value = "TOTAL: ";
                 worksheet.Cells[totalRow, 12].Value = totalDebit;
                 worksheet.Cells[totalRow, 13].Value = totalCredit;
@@ -1159,12 +1152,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[7, 11].Value = "Status";
                     worksheet.Cells[7, 12].Value = "Voided By";
                     worksheet.Cells[7, 13].Value = "Voided Date";
-                    worksheet.Cells[7, 14].Value = "Cancelled By";
-                    worksheet.Cells[7, 15].Value = "Cancelled Date";
                 }
 
                 // Apply styling to the header row
-                using (var range = worksheet.Cells["A7:" + (showVoidCancelColumns ? "O7" : "J7")])
+                using (var range = worksheet.Cells["A7:" + (showVoidCancelColumns ? "M7" : "J7")])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.Fill.PatternType = ExcelFillStyle.Solid;
@@ -1203,9 +1194,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[row, 12].Value = po.VoidedBy;
                         worksheet.Cells[row, 13].Value = po.VoidedDate;
                         worksheet.Cells[row, 13].Style.Numberformat.Format = "MMM/dd/yyyy";
-                        worksheet.Cells[row, 14].Value = po.CanceledBy;
-                        worksheet.Cells[row, 15].Value = po.CanceledDate;
-                        worksheet.Cells[row, 15].Style.Numberformat.Format = "MMM/dd/yyyy";
                     }
 
                     row++;
@@ -1777,16 +1765,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     purchaseReportWorksheet.Cells[7, 36].Value = "STATUS";
                     purchaseReportWorksheet.Cells[7, 37].Value = "VOIDED BY";
                     purchaseReportWorksheet.Cells[7, 38].Value = "VOIDED DATE";
-                    purchaseReportWorksheet.Cells[7, 39].Value = "CANCELLED BY";
-                    purchaseReportWorksheet.Cells[7, 40].Value = "CANCELLED DATE";
-                    lastColIndex = 40;
+                    lastColIndex = 38;
                 }
 
                 #endregion -- Set the column header  --
 
                 #region -- Apply styling to the header row --
 
-                using (var range = purchaseReportWorksheet.Cells["A7:" + (showVoidCancelColumns ? "AN7" : "AI7")])
+                using (var range = purchaseReportWorksheet.Cells["A7:" + (showVoidCancelColumns ? "AL7" : "AI7")])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
@@ -1906,9 +1892,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         purchaseReportWorksheet.Cells[row, 37].Value = pr.VoidedBy;
                         purchaseReportWorksheet.Cells[row, 38].Value = pr.VoidedDate;
                         purchaseReportWorksheet.Cells[row, 38].Style.Numberformat.Format = "MMM/dd/yyyy";
-                        purchaseReportWorksheet.Cells[row, 39].Value = pr.CanceledBy;
-                        purchaseReportWorksheet.Cells[row, 40].Value = pr.CanceledDate;
-                        purchaseReportWorksheet.Cells[row, 40].Style.Numberformat.Format = "MMM/dd/yyyy";
                     }
 
                     #endregion -- Assign Values to Cells --
@@ -8706,26 +8689,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     worksheet.Cells[headerRow, 14].Value = "VOIDED BY";
                     worksheet.Cells[headerRow, 15].Value = "VOIDED DATE";
-                    worksheet.Cells[headerRow, 16].Value = "CANCELLED BY";
-                    worksheet.Cells[headerRow, 17].Value = "CANCELLED DATE";
-                    lastColIndex = 17;
+                    lastColIndex = 15;
                 }
 
                 // Align all cells left
                 worksheet.Cells[worksheet.Dimension.Address].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
 
-                // Then Apply styling to the header row (only bold, border will be applied to the whole range later)
+                // Apply border to left, right of header
                 using (var range = worksheet.Cells[headerRow, 1, headerRow, lastColIndex])
                 {
                     range.Style.Fill.PatternType = ExcelFillStyle.Solid;
                     range.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
                     range.Style.Font.Bold = true;
                     range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                }
-
-                // Apply border to left, right of header
-                using (var range = worksheet.Cells[headerRow, 1, headerRow, lastColIndex])
-                {
                     range.Style.Border.Left.Style = ExcelBorderStyle.Thin;
                     range.Style.Border.Right.Style = ExcelBorderStyle.Thin;
                     range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
@@ -8761,9 +8737,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[row, 14].Value = detail.JournalVoucherHeader.VoidedBy;
                         worksheet.Cells[row, 15].Value = detail.JournalVoucherHeader.VoidedDate;
                         worksheet.Cells[row, 15].Style.Numberformat.Format = "MMM/dd/yyyy";
-                        worksheet.Cells[row, 16].Value = detail.JournalVoucherHeader.CanceledBy;
-                        worksheet.Cells[row, 17].Value = detail.JournalVoucherHeader.CanceledDate;
-                        worksheet.Cells[row, 17].Style.Numberformat.Format = "MMM/dd/yyyy";
                     }
 
                     row++;

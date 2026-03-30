@@ -260,7 +260,7 @@ namespace IBS.DataAccess.Repository.Filpride
             }
             else if (statusFilter == "InvalidOnly")
             {
-                deliveryReceiptsQuery = deliveryReceiptsQuery.Where(dr => dr.Status == nameof(DRStatus.Voided) || dr.Status == nameof(DRStatus.Canceled));
+                deliveryReceiptsQuery = deliveryReceiptsQuery.Where(dr => dr.Status == nameof(DRStatus.Voided));
             }
             // "All" returns all status records
 
@@ -275,20 +275,10 @@ namespace IBS.DataAccess.Repository.Filpride
 
             // Fetch all sales invoices within the date range
             var salesInvoicesQuery = _db.FilprideSalesInvoices
-                .Where(si => si.Company == company &&
-                             si.TransactionDate >= dateFrom &&
-                             si.TransactionDate <= dateTo);
-
-            // Apply status filter to sales invoices
-            if (statusFilter == "ValidOnly")
-            {
-                salesInvoicesQuery = salesInvoicesQuery.Where(si => si.Status == nameof(Status.Posted));
-            }
-            else if (statusFilter == "InvalidOnly")
-            {
-                salesInvoicesQuery = salesInvoicesQuery.Where(si => si.Status == nameof(Status.Voided) || si.Status == nameof(Status.Canceled));
-            }
-            // "All" returns all status records
+                .Where(si => si.Company == company
+                             && si.Status == nameof(Status.Posted)
+                             && si.TransactionDate >= dateFrom
+                             && si.TransactionDate <= dateTo);
 
             var salesInvoices = salesInvoicesQuery
                 .Include(si => si.DeliveryReceipt)
@@ -328,11 +318,11 @@ namespace IBS.DataAccess.Repository.Filpride
             // Apply status filter
             if (statusFilter == "ValidOnly")
             {
-                query = query.Where(si => si.Status == "Posted");
+                query = query.Where(si => si.Status == nameof(Status.Posted));
             }
             else if (statusFilter == "InvalidOnly")
             {
-                query = query.Where(si => si.Status == "Voided" || si.Status == "Canceled");
+                query = query.Where(si => si.Status == nameof(Status.Voided));
             }
             // "All" returns Posted, Voided, and Canceled records
 
@@ -368,7 +358,7 @@ namespace IBS.DataAccess.Repository.Filpride
             }
             else if (statusFilter == "InvalidOnly")
             {
-                query = query.Where(dr => dr.Status == nameof(Status.Voided) || dr.Status == nameof(Status.Canceled));
+                query = query.Where(dr => dr.Status == nameof(Status.Voided));
             }
             // "All" returns Posted, Voided, and Canceled records
 
@@ -398,7 +388,7 @@ namespace IBS.DataAccess.Repository.Filpride
             }
             else if (statusFilter == "InvalidOnly")
             {
-                query = query.Where(p => p.Status == nameof(Status.Voided) || p.Status == nameof(Status.Canceled));
+                query = query.Where(p => p.Status == nameof(Status.Voided));
             }
             // "All" returns Posted, Voided, and Canceled records
 
@@ -462,7 +452,7 @@ namespace IBS.DataAccess.Repository.Filpride
             }
             else if (statusFilter == "InvalidOnly")
             {
-                receivingReportsQuery = receivingReportsQuery.Where(rr => rr.Status == nameof(Status.Voided) || rr.Status == nameof(Status.Canceled));
+                receivingReportsQuery = receivingReportsQuery.Where(rr => rr.Status == nameof(Status.Voided));
             }
             // "All" returns Posted, Voided, and Canceled records
 
@@ -503,18 +493,8 @@ namespace IBS.DataAccess.Repository.Filpride
             var additionalDeliveryReceiptsQuery = _db.FilprideDeliveryReceipts
                 .Where(dr => dr.Date >= dateFrom && dr.Date <= dateTo
                           && (customerIds == null || customerIds.Contains(dr.CustomerId))
-                          && (commissioneeIds == null || commissioneeIds.Contains(dr.CommissioneeId!.Value)));
-
-            // Apply status filter to additional delivery receipts
-            if (statusFilter == "ValidOnly")
-            {
-                additionalDeliveryReceiptsQuery = additionalDeliveryReceiptsQuery.Where(dr => dr.Status == nameof(DRStatus.PendingDelivery));
-            }
-            else if (statusFilter == "InvalidOnly")
-            {
-                additionalDeliveryReceiptsQuery = additionalDeliveryReceiptsQuery.Where(dr => dr.Status == nameof(DRStatus.Canceled) || dr.Status == nameof(DRStatus.Voided));
-            }
-            // "All" returns PendingDelivery, Voided, and Canceled records
+                          && (commissioneeIds == null || commissioneeIds.Contains(dr.CommissioneeId!.Value))
+                          && dr.Status == nameof(DRStatus.PendingDelivery));
 
             var additionalDeliveryReceipts = await additionalDeliveryReceiptsQuery
                 .Include(dr => dr.CustomerOrderSlip)
@@ -605,11 +585,11 @@ namespace IBS.DataAccess.Repository.Filpride
             // Apply status filter
             if (statusFilter == "ValidOnly")
             {
-                query = query.Where(cr => cr.VoidedBy == null && cr.CanceledBy == null);
+                query = query.Where(cr => cr.PostedBy != null);
             }
             else if (statusFilter == "InvalidOnly")
             {
-                query = query.Where(cr => cr.VoidedBy != null || cr.CanceledBy != null);
+                query = query.Where(cr => cr.VoidedBy != null);
             }
             // "All" returns all records
 
@@ -707,7 +687,7 @@ namespace IBS.DataAccess.Repository.Filpride
             }
             else if (statusFilter == "InvalidOnly")
             {
-                salesInvoiceQuery = salesInvoiceQuery.Where(x => x.Status == nameof(Status.Voided) || x.Status == nameof(Status.Canceled));
+                salesInvoiceQuery = salesInvoiceQuery.Where(x => x.Status == nameof(Status.Voided));
             }
             // "All" returns Posted, Voided, and Canceled records
 
@@ -741,11 +721,11 @@ namespace IBS.DataAccess.Repository.Filpride
             // Apply status filter
             if (statusFilter == "ValidOnly")
             {
-                query = query.Where(x => x.JournalVoucherHeader!.VoidedBy == null && x.JournalVoucherHeader!.CanceledBy == null);
+                query = query.Where(x => x.JournalVoucherHeader!.PostedBy != null);
             }
             else if (statusFilter == "InvalidOnly")
             {
-                query = query.Where(x => x.JournalVoucherHeader!.VoidedBy != null || x.JournalVoucherHeader!.CanceledBy != null);
+                query = query.Where(x => x.JournalVoucherHeader!.VoidedBy != null);
             }
             // "All" returns all records without filtering
 

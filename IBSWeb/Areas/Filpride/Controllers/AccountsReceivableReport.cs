@@ -1058,14 +1058,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         {
                             filter = i => i.Company == companyClaims
                                         && i.Date <= viewModel.DateFrom
-                                        && (i.Status == nameof(DRStatus.Voided) || i.Status == nameof(DRStatus.Canceled));
+                                        && (i.Status == nameof(DRStatus.Voided));
                         }
                         else if (statusFilter == "All")
                         {
                             filter = i => i.Company == companyClaims
                                         && i.Date <= viewModel.DateFrom
                                         && (i.Status == nameof(DRStatus.Invoiced) || i.Status == nameof(DRStatus.ForInvoicing)
-                                            || i.Status == nameof(DRStatus.Voided) || i.Status == nameof(DRStatus.Canceled));
+                                            || i.Status == nameof(DRStatus.Voided));
                         }
                         else // ValidOnly
                         {
@@ -1208,13 +1208,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     worksheet.Cells["Z10"].Value = "VOIDED BY";
                     worksheet.Cells["AA10"].Value = "VOIDED DATE";
-                    worksheet.Cells["AB10"].Value = "CANCELLED BY";
-                    worksheet.Cells["AC10"].Value = "CANCELLED DATE";
                 }
 
                 int currentRow = 11;
-                string headerColumn = showVoidCancelColumns ? "AC10" : "Y10";
-                int grandTotalColumn = showVoidCancelColumns ? 29 : 25;
+                string headerColumn = showVoidCancelColumns ? "AA10" : "Y10";
+                int grandTotalColumn = showVoidCancelColumns ? 27 : 25;
                 decimal grandSumOfTotalFreightAmount = 0;
                 decimal grandTotalQuantity = 0;
                 decimal totalLiftedQuantity = 0;
@@ -1289,9 +1287,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             worksheet.Cells[currentRow, 26].Value = dr.VoidedBy;
                             worksheet.Cells[currentRow, 27].Value = dr.VoidedDate;
                             worksheet.Cells[currentRow, 27].Style.Numberformat.Format = "MMM/dd/yyyy";
-                            worksheet.Cells[currentRow, 28].Value = dr.CanceledBy;
-                            worksheet.Cells[currentRow, 29].Value = dr.CanceledDate;
-                            worksheet.Cells[currentRow, 29].Style.Numberformat.Format = "MMM/dd/yyyy";
                         }
 
                         currentRow++;
@@ -2117,14 +2112,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 if (showVoidCancelColumns)
                 {
-                    worksheet.Cells["X7"].Value = "VOIDED BY";
-                    worksheet.Cells["Y7"].Value = "VOIDED DATE";
-                    worksheet.Cells["Z7"].Value = "CANCELLED BY";
-                    worksheet.Cells["AA7"].Value = "CANCELLED DATE";
+                    worksheet.Cells["X7"].Value = "Voided By";
+                    worksheet.Cells["Y7"].Value = "Voided Date";
                 }
 
                 // Apply styling to the header row
-                string headerEndColumn = showVoidCancelColumns ? "AA7" : "W7";
+                string headerEndColumn = showVoidCancelColumns ? "Y7" : "W7";
                 using (var range = worksheet.Cells[$"A7:{headerEndColumn}"])
                 {
                     range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
@@ -2192,12 +2185,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         {
                             worksheet.Cells[row, 25].Style.Numberformat.Format = "MMM/dd/yyyy";
                         }
-                        worksheet.Cells[row, 26].Value = dr.DeliveryReceipt.CanceledBy;
-                        worksheet.Cells[row, 27].Value = dr.DeliveryReceipt.CanceledDate;
-                        if (dr.DeliveryReceipt.CanceledDate.HasValue)
-                        {
-                            worksheet.Cells[row, 27].Style.Numberformat.Format = "MMM/dd/yyyy";
-                        }
                     }
 
                     worksheet.Cells[row, 1].Style.Numberformat.Format = "MMM/dd/yyyy";
@@ -2236,7 +2223,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 21].Style.Numberformat.Format = currencyFormat;
 
                 // Apply style to subtotal row
-                int lastColumn = showVoidCancelColumns ? 27 : 23;
+                int lastColumn = showVoidCancelColumns ? 25 : 23;
                 using (var range = worksheet.Cells[row, 1, row, lastColumn])
                 {
                     range.Style.Font.Bold = true;
@@ -2873,11 +2860,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     {
                         worksheet.Cells["L7"].Value = "VOIDED BY";
                         worksheet.Cells["M7"].Value = "VOIDED DATE";
-                        worksheet.Cells["N7"].Value = "CANCELLED BY";
-                        worksheet.Cells["O7"].Value = "CANCELLED DATE";
                     }
 
-                    string headerEndColumn = showVoidCancelColumns ? "O7" : "K7";
+                    string headerEndColumn = showVoidCancelColumns ? "M7" : "K7";
                     var headerCells = worksheet.Cells[$"A7:{headerEndColumn}"];
                     headerCells.Style.Font.Size = 11;
                     headerCells.Style.Fill.PatternType = ExcelFillStyle.Solid;
@@ -2918,11 +2903,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 worksheet.Cells[row, 12].Value = cr.VoidedBy;
                                 worksheet.Cells[row, 13].Value = cr.VoidedDate;
                                 if (cr.VoidedDate.HasValue)
+                                {
                                     worksheet.Cells[row, 13].Style.Numberformat.Format = "MMM/dd/yyyy";
-                                worksheet.Cells[row, 14].Value = cr.CanceledBy;
-                                worksheet.Cells[row, 15].Value = cr.CanceledDate;
-                                if (cr.CanceledDate.HasValue)
-                                    worksheet.Cells[row, 15].Style.Numberformat.Format = "MMM/dd/yyyy";
+                                }
                             }
 
                             totalAmount += currentAmount;
@@ -2953,11 +2936,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 worksheet.Cells[row, 12].Value = cr.VoidedBy;
                                 worksheet.Cells[row, 13].Value = cr.VoidedDate;
                                 if (cr.VoidedDate.HasValue)
+                                {
                                     worksheet.Cells[row, 13].Style.Numberformat.Format = "MMM/dd/yyyy";
-                                worksheet.Cells[row, 14].Value = cr.CanceledBy;
-                                worksheet.Cells[row, 15].Value = cr.CanceledDate;
-                                if (cr.CanceledDate.HasValue)
-                                    worksheet.Cells[row, 15].Style.Numberformat.Format = "MMM/dd/yyyy";
+                                }
                             }
 
                             totalAmount += currentAmount;
@@ -3005,7 +2986,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         }
                     }
 
-                    int lastColumn = showVoidCancelColumns ? 15 : 11;
+                    int lastColumn = showVoidCancelColumns ? 13 : 11;
 
                     worksheet.Cells[row, 10].Value = "Total:";
                     worksheet.Cells[row, 11].Value = totalAmount;
@@ -4034,12 +4015,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     worksheet.Cells["Z7"].Value = "VOIDED BY";
                     worksheet.Cells["AA7"].Value = "VOIDED DATE";
-                    worksheet.Cells["AB7"].Value = "CANCELLED BY";
-                    worksheet.Cells["AC7"].Value = "CANCELLED DATE";
                 }
 
                 // Apply styling to the header row
-                string headerEndColumn = showVoidCancelColumns ? "AC7" : "Y7";
+                string headerEndColumn = showVoidCancelColumns ? "AA7" : "Y7";
                 using (var range = worksheet.Cells[$"A7:{headerEndColumn}"])
                 {
                     range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
@@ -4121,12 +4100,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             if (si.VoidedDate.HasValue)
                             {
                                 worksheet.Cells[row, 27].Style.Numberformat.Format = "MMM/dd/yyyy";
-                            }
-                            worksheet.Cells[row, 28].Value = si.CanceledBy;
-                            worksheet.Cells[row, 29].Value = si.CanceledDate;
-                            if (si.CanceledDate.HasValue)
-                            {
-                                worksheet.Cells[row, 29].Style.Numberformat.Format = "MMM/dd/yyyy";
                             }
                         }
 
@@ -4212,7 +4185,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 25].Style.Numberformat.Format = currencyFormatTwoDecimal;
 
                     // Apply style to sub total row
-                    int lastColumn = showVoidCancelColumns ? 29 : 25;
+                    int lastColumn = showVoidCancelColumns ? 27 : 25;
                     using (var range = worksheet.Cells[row, 1, row, lastColumn])
                     {
                         range.Style.Font.Bold = true;
@@ -4253,7 +4226,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 25].Style.Numberformat.Format = currencyFormatTwoDecimal;
 
                 // Apply style to grand total row
-                int grandTotalLastColumn = showVoidCancelColumns ? 29 : 25;
+                int grandTotalLastColumn = showVoidCancelColumns ? 27 : 25;
                 using (var range = worksheet.Cells[row, 1, row, grandTotalLastColumn])
                 {
                     range.Style.Font.Bold = true;
@@ -4572,12 +4545,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     worksheet.Cells["N7"].Value = "VOIDED BY";
                     worksheet.Cells["O7"].Value = "VOIDED DATE";
-                    worksheet.Cells["P7"].Value = "CANCELLED BY";
-                    worksheet.Cells["Q7"].Value = "CANCELLED DATE";
                 }
 
                 // Apply styling to the header row
-                string headerEndColumn = showVoidCancelColumns ? "Q7" : "M7";
+                string headerEndColumn = showVoidCancelColumns ? "O7" : "M7";
                 using (var range = worksheet.Cells[$"A7:{headerEndColumn}"])
                 {
                     range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
@@ -4622,12 +4593,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         {
                             worksheet.Cells[row, 15].Style.Numberformat.Format = "MMM/dd/yyyy";
                         }
-                        worksheet.Cells[row, 16].Value = sv.CanceledBy;
-                        worksheet.Cells[row, 17].Value = sv.CanceledDate;
-                        if (sv.CanceledDate.HasValue)
-                        {
-                            worksheet.Cells[row, 17].Style.Numberformat.Format = "MMM/dd/yyyy";
-                        }
                     }
 
                     worksheet.Cells[row, 1].Style.Numberformat.Format = "MMM/dd/yyyy";
@@ -4650,7 +4615,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 10].Style.Numberformat.Format = currencyFormatTwoDecimal;
 
                 // Apply style to subtotal row
-                int lastColumn = showVoidCancelColumns ? 17 : 13;
+                int lastColumn = showVoidCancelColumns ? 15 : 13;
                 using (var range = worksheet.Cells[row, 1, row, lastColumn])
                 {
                     range.Style.Font.Bold = true;
@@ -4776,11 +4741,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     worksheet.Cells["W7"].Value = "VOIDED BY";
                     worksheet.Cells["X7"].Value = "VOIDED DATE";
-                    worksheet.Cells["Y7"].Value = "CANCELLED BY";
-                    worksheet.Cells["Z7"].Value = "CANCELLED DATE";
                 }
 
-                string headerEndColumn = showVoidCancelColumns ? "Z7" : "V7";
+                string headerEndColumn = showVoidCancelColumns ? "X7" : "V7";
                 using (var range = worksheet.Cells[$"A7:{headerEndColumn}"])
                 {
                     range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
@@ -4843,12 +4806,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         {
                             worksheet.Cells[row, 24].Style.Numberformat.Format = "MMM/dd/yyyy";
                         }
-                        worksheet.Cells[row, 25].Value = dr.CanceledBy;
-                        worksheet.Cells[row, 26].Value = dr.CanceledDate;
-                        if (dr.CanceledDate.HasValue)
-                        {
-                            worksheet.Cells[row, 26].Style.Numberformat.Format = "MMM/dd/yyyy";
-                        }
                     }
 
                     worksheet.Cells[row, 1].Style.Numberformat.Format = "MMM/dd/yyyy";
@@ -4886,7 +4843,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 19].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[row, 20].Style.Numberformat.Format = currencyFormat;
 
-                int lastColumn = showVoidCancelColumns ? 26 : 22;
+                int lastColumn = showVoidCancelColumns ? 24 : 22;
                 using (var range = worksheet.Cells[row, 1, row, lastColumn])
                 {
                     range.Style.Font.Bold = true;
