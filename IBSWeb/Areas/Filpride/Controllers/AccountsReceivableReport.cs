@@ -74,7 +74,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         private static string GetStatusFilterLabel(string statusFilter) => statusFilter switch
         {
             "All" => "All",
-            "InvalidOnly" => "Voided/Cancelled Only",
+            "InvalidOnly" => "Voided Only",
             _ => "Valid Only"
         };
 
