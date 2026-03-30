@@ -1939,7 +1939,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region -- Assign values of other totals and formatting of total cells --
 
-                var totalCostPerLiter = totalCostAmount / totalVolume;
+                var totalCostPerLiter = totalVolume != 0
+                    ? totalCostAmount / totalVolume
+                    : 0m;
 
                 purchaseReportWorksheet.Cells[row, 17].Value = "Total: ";
                 purchaseReportWorksheet.Cells[row, 19].Value = totalVolume;
