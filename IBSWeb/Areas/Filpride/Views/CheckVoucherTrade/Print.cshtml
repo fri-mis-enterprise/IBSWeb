@@ -240,9 +240,9 @@
                 {
                     <td class="text-clamp-2 break-word">@Model.Supplier!.SupplierName!.ToUpper()</td>
                 }
-                @if (Model.Header.Total != 0)
+                @if (Model.Header.CheckAmount != 0)
                 {
-                    <td class="text-end">@Model.Header.Total.ToString(SD.Two_Decimal_Format)</td>
+                    <td class="text-end">@Model.Header.CheckAmount.ToString(SD.Two_Decimal_Format)</td>
                 }
                 else
                 {
@@ -252,7 +252,7 @@
             <tr>
                 <td style="padding-left:20px;">Amount in Words :</td>
                 @{
-                    decimal convertToWords = Model.Header.Total;
+                    decimal convertToWords = Model.Header.CheckAmount;
 
                     int integerPart = Convert.ToInt32(Math.Floor(convertToWords));
                     decimal decimalPart = Math.Round((convertToWords - integerPart), 4);
@@ -284,7 +284,7 @@
                     words = words.Replace(" And", "");
                     words = words.Replace("-", " ");
                 }
-                @if (Model.Header.Total != 0)
+                @if (Model.Header.CheckAmount != 0)
                 {
                     <td class="break-word">*** @words ***</td>
                 }
