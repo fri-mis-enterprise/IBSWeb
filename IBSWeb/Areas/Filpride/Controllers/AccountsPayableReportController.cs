@@ -1967,11 +1967,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 purchaseReportWorksheet.Column(20).Style.Numberformat.Format = currencyFormat;
                 purchaseReportWorksheet.Column(21).Style.Numberformat.Format = currencyFormat2;
                 purchaseReportWorksheet.Column(22).Style.Numberformat.Format = currencyFormat2;
-                purchaseReportWorksheet.Column(23).Style.Numberformat.Format = currencyFormat;
+                purchaseReportWorksheet.Column(23).Style.Numberformat.Format = currencyFormat2;
                 purchaseReportWorksheet.Column(24).Style.Numberformat.Format = currencyFormat2;
                 purchaseReportWorksheet.Column(25).Style.Numberformat.Format = currencyFormat2;
                 purchaseReportWorksheet.Column(27).Style.Numberformat.Format = currencyFormat;
-                purchaseReportWorksheet.Column(28).Style.Numberformat.Format = currencyFormat2;
+                purchaseReportWorksheet.Column(28).Style.Numberformat.Format = currencyFormat;
                 purchaseReportWorksheet.Column(29).Style.Numberformat.Format = currencyFormat2;
                 purchaseReportWorksheet.Column(30).Style.Numberformat.Format = currencyFormat2;
                 purchaseReportWorksheet.Column(31).Style.Numberformat.Format = currencyFormat2;
