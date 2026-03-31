@@ -39,6 +39,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private readonly ILogger<CheckVoucherTradeController> _logger;
         private readonly ISubAccountResolver _subAccountResolver;
+        private const string ApTradePayableAccountNo = "202010100";
+        private const string CashInBankAccountNo = "101010100";
+        private const string AdvancesToSupplierAccountNo = "101060100";
 
         public CheckVoucherTradeController(IUnitOfWork unitOfWork,
             UserManager<ApplicationUser> userManager,
@@ -59,6 +62,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             return User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value
                    ?? User.Identity?.Name!;
+        }
+
+        private static decimal GetAppliedAdvanceAmount(IEnumerable<FilprideCheckVoucherDetail> details)
+        {
+            return details
+                .Where(d => d.AccountNo == AdvancesToSupplierAccountNo && !d.IsDisplayEntry)
+                .Sum(d => d.Credit);
+        }
+
+        private async Task<decimal> GetAppliedAdvanceAmountAsync(int checkVoucherHeaderId, CancellationToken cancellationToken)
+        {
+            return await _dbContext.FilprideCheckVoucherDetails
+                .Where(d => d.CheckVoucherHeaderId == checkVoucherHeaderId &&
+                            d.AccountNo == AdvancesToSupplierAccountNo &&
+                            !d.IsDisplayEntry)
+                .SumAsync(d => (decimal?)d.Credit, cancellationToken) ?? 0m;
         }
 
         private async Task<string?> GetCompanyClaimAsync()
@@ -286,10 +305,51 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #endregion -- Get PO --
 
+                var rrTotalAmount = viewModel.RRs?.Sum(rr => rr.Amount) ?? 0m;
+                var appliedAdvanceAmount = Math.Max(0m, viewModel.AppliedAdvanceAmount);
+
+                if (appliedAdvanceAmount > rrTotalAmount)
+                {
+                    ModelState.AddModelError(nameof(viewModel.AppliedAdvanceAmount), "Applied advance amount cannot exceed the total selected RR amount.");
+                    TempData["warning"] = "The information provided was invalid.";
+                    return View(viewModel);
+                }
+
+                FilprideCheckVoucherHeader? advanceHeader = null;
+                if (!string.IsNullOrWhiteSpace(viewModel.AdvancesCVNo) && appliedAdvanceAmount > 0)
+                {
+                    advanceHeader = await _unitOfWork.FilprideCheckVoucher.GetAsync(cv =>
+                        cv.CheckVoucherHeaderNo == viewModel.AdvancesCVNo &&
+                        cv.Company == companyClaims &&
+                        cv.SupplierId == viewModel.SupplierId &&
+                        cv.IsAdvances &&
+                        cv.Status == nameof(CheckVoucherPaymentStatus.Posted), cancellationToken);
+
+                    if (advanceHeader == null)
+                    {
+                        ModelState.AddModelError(nameof(viewModel.AdvancesCVNo), "Selected advances voucher was not found or is no longer available.");
+                        TempData["warning"] = "The information provided was invalid.";
+                        return View(viewModel);
+                    }
+
+                    var availableAdvanceAmount = Math.Max(0m, advanceHeader.CheckAmount - advanceHeader.AmountPaid);
+                    if (appliedAdvanceAmount > availableAdvanceAmount)
+                    {
+                        ModelState.AddModelError(nameof(viewModel.AppliedAdvanceAmount), "Applied advance amount cannot exceed available advances.");
+                        TempData["warning"] = "The information provided was invalid.";
+                        return View(viewModel);
+                    }
+                }
+                else
+                {
+                    viewModel.AdvancesCVNo = null;
+                    appliedAdvanceAmount = 0m;
+                }
+
                 #region --Saving the default entries
 
                 var generateCvNo = await _unitOfWork.FilprideCheckVoucher.GenerateCodeAsync(companyClaims, viewModel.Type!, cancellationToken);
-                var cashInBank = viewModel.Credit[1];
+                var cashInBank = rrTotalAmount - appliedAdvanceAmount;
 
                 #region -- Get Supplier
 
@@ -323,8 +383,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     PONo = viewModel.POSeries,
                     SupplierId = viewModel.SupplierId,
                     SupplierName = supplier.SupplierName,
-                    Particulars = $"{viewModel.Particulars} {(viewModel.AdvancesCVNo != null ? "Advances#" + viewModel.AdvancesCVNo : "")}.",
-                    Reference = viewModel.AdvancesCVNo,
+                    Particulars = $"{viewModel.Particulars} {(appliedAdvanceAmount > 0 && viewModel.AdvancesCVNo != null ? "Advances#" + viewModel.AdvancesCVNo : "")}.",
+                    Reference = appliedAdvanceAmount > 0 ? viewModel.AdvancesCVNo : null,
                     BankId = viewModel.BankId,
                     BankAccountName = bank.AccountName,
                     BankAccountNumber = bank.AccountNo,
@@ -353,22 +413,42 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var cvDetails = new List<FilprideCheckVoucherDetail>();
                 for (var i = 0; i < viewModel.AccountNumber.Length; i++)
                 {
-                    if (viewModel.Debit[i] == 0 && viewModel.Credit[i] == 0)
+                    var debitAmount = viewModel.Debit[i];
+                    var creditAmount = viewModel.Credit[i];
+                    if (viewModel.AccountNumber[i] == ApTradePayableAccountNo)
+                    {
+                        debitAmount = rrTotalAmount;
+                        creditAmount = 0;
+                    }
+                    else if (viewModel.AccountNumber[i] == CashInBankAccountNo)
+                    {
+                        debitAmount = 0;
+                        creditAmount = cashInBank;
+                    }
+                    else if (viewModel.AccountNumber[i] == AdvancesToSupplierAccountNo)
+                    {
+                        debitAmount = 0;
+                        creditAmount = appliedAdvanceAmount;
+                    }
+
+                    if (debitAmount == 0 && creditAmount == 0)
                     {
                         continue;
                     }
 
-                    SubAccountType? subAccountType;
-                    int? subAccountId;
+                    SubAccountType? subAccountType = null;
+                    int? subAccountId = null;
                     string? subAccountName = null;
 
-                    if (viewModel.AccountTitle[i].Contains("Cash in Bank"))
+                    if (viewModel.AccountNumber[i] == CashInBankAccountNo)
                     {
                         subAccountType = SubAccountType.BankAccount;
                         subAccountId = viewModel.BankId!;
                         subAccountName = $"{bank.AccountNo} {bank.AccountName}";
                     }
-                    else
+                    else if (
+                        viewModel.AccountNumber[i] == ApTradePayableAccountNo ||
+                        viewModel.AccountNumber[i] == AdvancesToSupplierAccountNo)
                     {
                         subAccountType = SubAccountType.Supplier;
                         subAccountId = viewModel.SupplierId;
@@ -380,8 +460,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         {
                             AccountNo = viewModel.AccountNumber[i],
                             AccountName = viewModel.AccountTitle[i],
-                            Debit = viewModel.Debit[i],
-                            Credit = viewModel.Credit[i],
+                            Debit = debitAmount,
+                            Credit = creditAmount,
                             TransactionNo = cvh.CheckVoucherHeaderNo,
                             CheckVoucherHeaderId = cvh.CheckVoucherHeaderId,
                             SubAccountType = subAccountType,
@@ -397,7 +477,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #region -- Partial payment of RR's
 
                 var cvTradePaymentModel = new List<FilprideCVTradePayment>();
-                foreach (var item in viewModel.RRs)
+                foreach (var item in viewModel.RRs ?? [])
                 {
                     var getReceivingReport = await _unitOfWork.FilprideReceivingReport.GetAsync(x => x.ReceivingReportId == item.Id, cancellationToken);
                     if (getReceivingReport != null)
@@ -431,9 +511,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     var isVatable = cvh.VatType == SD.VatType_Vatable;
                     var isTaxable = cvh.TaxType == SD.TaxType_WithTax;
+                    var displayAppliedAdvanceAmount = Math.Max(0m, appliedAdvanceAmount);
 
-                    // Net of tax (input)
-                    var netAmount = cvh.Total;
+                    // Net of tax (input): total net payable before splitting to cash and advances
+                    var netAmount = cvh.Total + displayAppliedAdvanceAmount;
                     var baseAmount = 0m;
 
                     // Base computation (reversible correct formula)
@@ -507,13 +588,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         });
                     }
 
+                    var displayCashInBankAmount = Math.Round(netOfEwt - displayAppliedAdvanceAmount, 4);
+
                     cvDetails.Add(
                     new FilprideCheckVoucherDetail
                     {
                         AccountNo = "101010100",
                         AccountName = "Cash in Bank",
                         Debit = 0.00m,
-                        Credit = netOfEwt,
+                        Credit = displayCashInBankAmount,
                         TransactionNo = cvh.CheckVoucherHeaderNo,
                         CheckVoucherHeaderId = cvh.CheckVoucherHeaderId,
                         SubAccountType = SubAccountType.BankAccount,
@@ -521,6 +604,24 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         SubAccountName = $"{bank.AccountNo} {bank.AccountName}",
                         IsDisplayEntry = true
                     });
+
+                    if (displayAppliedAdvanceAmount > 0)
+                    {
+                        cvDetails.Add(
+                        new FilprideCheckVoucherDetail
+                        {
+                            AccountNo = AdvancesToSupplierAccountNo,
+                            AccountName = "Advances to Supplier",
+                            Debit = 0.00m,
+                            Credit = displayAppliedAdvanceAmount,
+                            TransactionNo = cvh.CheckVoucherHeaderNo,
+                            CheckVoucherHeaderId = cvh.CheckVoucherHeaderId,
+                            SubAccountType = SubAccountType.Supplier,
+                            SubAccountId = viewModel.SupplierId,
+                            SubAccountName = supplier.SupplierName,
+                            IsDisplayEntry = true
+                        });
+                    }
 
                     break;
                 }
@@ -744,6 +845,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     CVNo = existingHeaderModel.CheckVoucherHeaderNo,
                     RRs = new List<ReceivingReportList>(),
                     OldCVNo = existingHeaderModel.OldCvNo,
+                    AdvancesCVNo = existingHeaderModel.Reference,
+                    AppliedAdvanceAmount = await GetAppliedAdvanceAmountAsync(existingHeaderModel.CheckVoucherHeaderId, cancellationToken),
                     Suppliers = await _unitOfWork.GetFilprideTradeSupplierListAsyncById(companyClaims,
                         cancellationToken),
                     MinDate = minDate
@@ -858,15 +961,55 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 #endregion -- Get bank account
+                var rrTotalAmount = viewModel.RRs?.Sum(rr => rr.Amount) ?? 0m;
+                var appliedAdvanceAmount = Math.Max(0m, viewModel.AppliedAdvanceAmount);
 
-                var cashInBank = viewModel.Credit[1];
+                if (appliedAdvanceAmount > rrTotalAmount)
+                {
+                    ModelState.AddModelError(nameof(viewModel.AppliedAdvanceAmount), "Applied advance amount cannot exceed the total selected RR amount.");
+                    TempData["warning"] = "The information provided was invalid.";
+                    return View(viewModel);
+                }
+
+                FilprideCheckVoucherHeader? advanceHeader = null;
+                if (!string.IsNullOrWhiteSpace(viewModel.AdvancesCVNo) && appliedAdvanceAmount > 0)
+                {
+                    advanceHeader = await _unitOfWork.FilprideCheckVoucher.GetAsync(cv =>
+                        cv.CheckVoucherHeaderNo == viewModel.AdvancesCVNo &&
+                        cv.Company == companyClaims &&
+                        cv.SupplierId == viewModel.SupplierId &&
+                        cv.IsAdvances &&
+                        cv.Status == nameof(CheckVoucherPaymentStatus.Posted), cancellationToken);
+
+                    if (advanceHeader == null)
+                    {
+                        ModelState.AddModelError(nameof(viewModel.AdvancesCVNo), "Selected advances voucher was not found or is no longer available.");
+                        TempData["warning"] = "The information provided was invalid.";
+                        return View(viewModel);
+                    }
+
+                    var availableAdvanceAmount = Math.Max(0m, advanceHeader.Total - advanceHeader.AmountPaid);
+                    if (appliedAdvanceAmount > availableAdvanceAmount)
+                    {
+                        ModelState.AddModelError(nameof(viewModel.AppliedAdvanceAmount), "Applied advance amount cannot exceed available advances.");
+                        TempData["warning"] = "The information provided was invalid.";
+                        return View(viewModel);
+                    }
+                }
+                else
+                {
+                    viewModel.AdvancesCVNo = null;
+                    appliedAdvanceAmount = 0m;
+                }
+
+                var cashInBank = rrTotalAmount - appliedAdvanceAmount;
                 existingHeaderModel.Date = viewModel.TransactionDate;
                 existingHeaderModel.PONo = viewModel.POSeries;
                 existingHeaderModel.SupplierId = viewModel.SupplierId;
                 existingHeaderModel.SupplierName = supplier.SupplierName;
                 existingHeaderModel.Address = viewModel.SupplierAddress;
                 existingHeaderModel.Tin = viewModel.SupplierTinNo;
-                existingHeaderModel.Particulars = viewModel.Particulars;
+                existingHeaderModel.Particulars = $"{viewModel.Particulars} {(appliedAdvanceAmount > 0 && viewModel.AdvancesCVNo != null ? "Advances#" + viewModel.AdvancesCVNo : "")}.";
                 existingHeaderModel.BankId = viewModel.BankId;
                 existingHeaderModel.BankAccountName = bank.AccountName;
                 existingHeaderModel.BankAccountNumber = bank.AccountNo;
@@ -877,7 +1020,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingHeaderModel.Total = cashInBank;
                 existingHeaderModel.EditedBy = GetUserFullName();
                 existingHeaderModel.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
-                existingHeaderModel.Reference = viewModel.AdvancesCVNo;
+                existingHeaderModel.Reference = appliedAdvanceAmount > 0 ? viewModel.AdvancesCVNo : null;
                 existingHeaderModel.OldCvNo = viewModel.OldCVNo;
                 existingHeaderModel.VatType = supplier.VatType;
                 existingHeaderModel.TaxType = supplier.TaxType;
@@ -896,22 +1039,43 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var details = new List<FilprideCheckVoucherDetail>();
                 for (var i = 0; i < viewModel.AccountTitle.Length; i++)
                 {
-                    if (viewModel.Debit[i] == 0 && viewModel.Credit[i] == 0)
+                    var debitAmount = viewModel.Debit[i];
+                    var creditAmount = viewModel.Credit[i];
+
+                    if (viewModel.AccountNumber[i] == ApTradePayableAccountNo)
+                    {
+                        debitAmount = rrTotalAmount;
+                        creditAmount = 0;
+                    }
+                    else if (viewModel.AccountNumber[i] == CashInBankAccountNo)
+                    {
+                        debitAmount = 0;
+                        creditAmount = cashInBank;
+                    }
+                    else if (viewModel.AccountNumber[i] == AdvancesToSupplierAccountNo)
+                    {
+                        debitAmount = 0;
+                        creditAmount = appliedAdvanceAmount;
+                    }
+
+                    if (debitAmount == 0 && creditAmount == 0)
                     {
                         continue;
                     }
 
-                    SubAccountType? subAccountType;
-                    int? subAccountId;
-                    string? subAccountName;
+                    SubAccountType? subAccountType = null;
+                    int? subAccountId = null;
+                    string? subAccountName = null;
 
-                    if (viewModel.AccountTitle[i].Contains("Cash in Bank"))
+                    if (viewModel.AccountNumber[i] == CashInBankAccountNo)
                     {
                         subAccountType = SubAccountType.BankAccount;
                         subAccountId = viewModel.BankId!;
                         subAccountName = $"{bank.AccountNo} {bank.AccountName}";
                     }
-                    else
+                    else if (
+                        viewModel.AccountNumber[i] == ApTradePayableAccountNo ||
+                        viewModel.AccountNumber[i] == AdvancesToSupplierAccountNo)
                     {
                         subAccountType = SubAccountType.Supplier;
                         subAccountId = viewModel.SupplierId;
@@ -922,8 +1086,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     {
                         AccountNo = viewModel.AccountNumber[i],
                         AccountName = viewModel.AccountTitle[i],
-                        Debit = viewModel.Debit[i],
-                        Credit = viewModel.Credit[i],
+                        Debit = debitAmount,
+                        Credit = creditAmount,
                         TransactionNo = existingHeaderModel.CheckVoucherHeaderNo!,
                         CheckVoucherHeaderId = viewModel.CVId,
                         SubAccountType = subAccountType,
@@ -957,7 +1121,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 await _unitOfWork.SaveAsync(cancellationToken);
 
                 var cvTradePaymentModel = new List<FilprideCVTradePayment>();
-                foreach (var item in viewModel.RRs)
+                foreach (var item in viewModel.RRs ?? [])
                 {
                     var getReceivingReport = await _unitOfWork.FilprideReceivingReport
                         .GetAsync(rr => rr.ReceivingReportId == item.Id, cancellationToken);
@@ -996,9 +1160,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     var isVatable = existingHeaderModel.VatType == SD.VatType_Vatable;
                     var isTaxable = existingHeaderModel.TaxType == SD.TaxType_WithTax;
+                    var displayAppliedAdvanceAmount = Math.Max(0m, appliedAdvanceAmount);
 
-                    // Net of tax (input)
-                    var netAmount = existingHeaderModel.Total;
+                    // Net of tax (input): total net payable before splitting to cash and advances
+                    var netAmount = existingHeaderModel.Total + displayAppliedAdvanceAmount;
                     var baseAmount = 0m;
 
                     // Base computation (reversible correct formula)
@@ -1074,13 +1239,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             });
                         }
 
+                        var displayCashInBankAmount = Math.Round(netOfEwt - displayAppliedAdvanceAmount, 4);
+
                         details.Add(
                         new FilprideCheckVoucherDetail
                         {
                             AccountNo = "101010100",
                             AccountName = "Cash in Bank",
                             Debit = 0.00m,
-                            Credit = netOfEwt,
+                            Credit = displayCashInBankAmount,
                             TransactionNo = existingHeaderModel.CheckVoucherHeaderNo,
                             CheckVoucherHeaderId = existingHeaderModel.CheckVoucherHeaderId,
                             SubAccountType = SubAccountType.BankAccount,
@@ -1088,6 +1255,24 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             SubAccountName = $"{bank.AccountNo} {bank.AccountName}",
                             IsDisplayEntry = true
                         });
+
+                        if (displayAppliedAdvanceAmount > 0)
+                        {
+                            details.Add(
+                            new FilprideCheckVoucherDetail
+                            {
+                                AccountNo = AdvancesToSupplierAccountNo,
+                                AccountName = "Advances to Supplier",
+                                Debit = 0.00m,
+                                Credit = displayAppliedAdvanceAmount,
+                                TransactionNo = existingHeaderModel.CheckVoucherHeaderNo,
+                                CheckVoucherHeaderId = existingHeaderModel.CheckVoucherHeaderId,
+                                SubAccountType = SubAccountType.Supplier,
+                                SubAccountId = viewModel.SupplierId,
+                                SubAccountName = supplier.SupplierName,
+                                IsDisplayEntry = true
+                            });
+                        }
                     }
                     else
                     {
@@ -1336,7 +1521,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region Add amount paid for the advances if applicable
 
-                if (modelHeader.Reference != null)
+                var appliedAdvanceAmount = GetAppliedAdvanceAmount(modelDetails);
+                if (modelHeader.Reference != null && appliedAdvanceAmount > 0)
                 {
                     var advances = await _unitOfWork.FilprideCheckVoucher
                         .GetAsync(cv =>
@@ -1349,7 +1535,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         throw new NullReferenceException($"Advance check voucher not found. Check Voucher Header No: {modelHeader.Reference}");
                     }
 
-                    advances.AmountPaid += advances.Total;
+                    var availableAdvanceAmount = Math.Max(0m, advances.Total - advances.AmountPaid);
+                    if (appliedAdvanceAmount > availableAdvanceAmount)
+                    {
+                        throw new InvalidOperationException("Applied advance amount exceeds the available advance balance.");
+                    }
+
+                    advances.AmountPaid += appliedAdvanceAmount;
                 }
 
                 #endregion Add amount paid for the advances if applicable
@@ -1473,7 +1665,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region Revert the amount paid of advances
 
-                if (model.Reference != null)
+                var appliedAdvanceAmount = await GetAppliedAdvanceAmountAsync(model.CheckVoucherHeaderId, cancellationToken);
+                if (model.Reference != null && appliedAdvanceAmount > 0)
                 {
                     var advances = await _unitOfWork.FilprideCheckVoucher
                         .GetAsync(cv =>
@@ -1486,7 +1679,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         return NotFound();
                     }
 
-                    advances.AmountPaid -= advances.AmountPaid;
+                    advances.AmountPaid = Math.Max(0m, advances.AmountPaid - appliedAdvanceAmount);
                 }
 
                 #endregion Revert the amount paid of advances
@@ -1574,7 +1767,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region -- Revert the amount paid of advances
 
-                if (model.Reference != null)
+                var appliedAdvanceAmount = await GetAppliedAdvanceAmountAsync(model.CheckVoucherHeaderId, cancellationToken);
+                if (model.Reference != null && appliedAdvanceAmount > 0)
                 {
                     var advances = await _unitOfWork.FilprideCheckVoucher
                         .GetAsync(cv =>
@@ -1587,7 +1781,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         return NotFound();
                     }
 
-                    advances.AmountPaid -= advances.AmountPaid;
+                    advances.AmountPaid = Math.Max(0m, advances.AmountPaid - appliedAdvanceAmount);
                 }
 
                 #endregion -- Revert the amount paid of advances
@@ -1682,7 +1876,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region -- Revert the amount paid of advances
 
-                if (cvHeader.Reference != null)
+                var appliedAdvanceAmount = await GetAppliedAdvanceAmountAsync(cvHeader.CheckVoucherHeaderId, cancellationToken);
+                if (cvHeader.Reference != null && appliedAdvanceAmount > 0)
                 {
                     var advances = await _unitOfWork.FilprideCheckVoucher
                         .GetAsync(cv =>
@@ -1695,7 +1890,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         return NotFound();
                     }
 
-                    advances.AmountPaid -= advances.AmountPaid;
+                    advances.AmountPaid = Math.Max(0m, advances.AmountPaid - appliedAdvanceAmount);
                 }
 
                 #endregion -- Revert the amount paid of advances
@@ -4017,7 +4212,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return (string.Empty, 0);
             }
 
-            return (advancesVoucher.CheckVoucherHeader!.CheckVoucherHeaderNo!, advancesVoucher.CheckVoucherHeader.Total - advancesVoucher.CheckVoucherHeader.AmountPaid);
+            return (advancesVoucher.CheckVoucherHeader!.CheckVoucherHeaderNo!, advancesVoucher.CheckVoucherHeader.CheckAmount - advancesVoucher.CheckVoucherHeader.AmountPaid);
         }
 
         public IActionResult CheckNoIsExist(string checkNo, int? cvId)

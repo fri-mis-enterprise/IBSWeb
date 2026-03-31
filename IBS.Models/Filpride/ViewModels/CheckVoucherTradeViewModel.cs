@@ -79,6 +79,10 @@ namespace IBS.Models.Filpride.ViewModels
 
         public string? AdvancesCVNo { get; set; }
 
+        [Display(Name = "Applied Advance Amount")]
+        [Range(0, double.MaxValue, ErrorMessage = "Applied advance amount cannot be negative.")]
+        public decimal AppliedAdvanceAmount { get; set; }
+
         public string? Type { get; set; }
 
         public DateTime MinDate { get; set; }
