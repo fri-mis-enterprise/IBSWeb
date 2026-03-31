@@ -433,7 +433,7 @@
                             $("#advancesCredit").val(initialAdvance);
                             $("#AdvancesCVNo").val(response.advanceCVNo);
                             $("#advance-limit-message").text(`Available advance: ${formatNumberToFour(availableAdvanceAmount)}`).show();
-                            updateTotalDebitAndCredit();
+                            updateAmounts();
                         } else {
                             availableAdvanceAmount = 0;
                             $("#advancesRow").hide();
@@ -442,20 +442,30 @@
                             $("#AdvancesCVNo").val("");
                             $("#AppliedAdvanceAmount").val("0.0000");
                             $("#advance-limit-message").hide();
-                            updateTotalDebitAndCredit();
+                            updateAmounts();
                         }
                     },
                     error: function(xhr, status, error) {
                         console.error('Error checking PO payment terms:', error);
                         availableAdvanceAmount = 0;
                         $("#advancesRow").hide();
+                        $("#advancesDebit").val("0.000");
+                        $("#advancesCredit").val("0.000");
+                        $("#AdvancesCVNo").val("");
+                        $("#AppliedAdvanceAmount").val("0.0000");
                         $("#advance-limit-message").hide();
+                        updateAmounts();
                     }
                 });
             } else {
                 availableAdvanceAmount = 0;
                 $("#advancesRow").hide();
+                $("#advancesDebit").val("0.000");
+                $("#advancesCredit").val("0.000");
+                $("#AdvancesCVNo").val("");
+                $("#AppliedAdvanceAmount").val("0.0000");
                 $("#advance-limit-message").hide();
+                updateAmounts();
             }
         }
         
