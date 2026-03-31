@@ -1692,6 +1692,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var totalFreight = 0m;
                 var totalNetFreight = 0m;
                 var totalCommission = 0m;
+                var totalPurchaseNetOfWht = 0m;
+                var totalFreightWhtAmount = 0m;
+                var totalFreightNetOfWht = 0m;
 
                 #endregion -- Initialize "total" Variables for operations --
 
@@ -1744,35 +1747,38 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 purchaseReportWorksheet.Cells["S7"].Value = "VOLUME";
                 purchaseReportWorksheet.Cells["T7"].Value = "CPL G.VAT";
                 purchaseReportWorksheet.Cells["U7"].Value = "PURCHASES G.VAT";
-                purchaseReportWorksheet.Cells["V7"].Value = "VAT AMOUNT";
-                purchaseReportWorksheet.Cells["W7"].Value = "FREIGHT G.VAT";
+                purchaseReportWorksheet.Cells["V7"].Value = "PURCHASES N.VAT";
+                purchaseReportWorksheet.Cells["W7"].Value = "VAT AMOUNT";
                 purchaseReportWorksheet.Cells["X7"].Value = "WHT AMOUNT";
-                purchaseReportWorksheet.Cells["Y7"].Value = "HAULER'S NAME";
-                purchaseReportWorksheet.Cells["Z7"].Value = "PURCHASES N.VAT";
-                purchaseReportWorksheet.Cells["AA7"].Value = "FREIGHT N.VAT";
-                purchaseReportWorksheet.Cells["AB7"].Value = "FREIGHT AMT G.VAT";
-                purchaseReportWorksheet.Cells["AC7"].Value = "FREIGHT AMT N.VAT";
-                purchaseReportWorksheet.Cells["AD7"].Value = "COMMISSION";
-                purchaseReportWorksheet.Cells["AE7"].Value = "OTC COS#.";
-                purchaseReportWorksheet.Cells["AF7"].Value = "OTC DR#.";
-                purchaseReportWorksheet.Cells["AG7"].Value = "IS PO#";
-                purchaseReportWorksheet.Cells["AH7"].Value = "IS RR#";
-                purchaseReportWorksheet.Cells["AI7"].Value = "TERMS";
+                purchaseReportWorksheet.Cells["Y7"].Value = "PURC.NET OF WHT";
+                purchaseReportWorksheet.Cells["Z7"].Value = "HAULER'S NAME";
+                purchaseReportWorksheet.Cells["AA7"].Value = "FREIGHT G.VAT";
+                purchaseReportWorksheet.Cells["AB7"].Value = "FREIGHT N.VAT";
+                purchaseReportWorksheet.Cells["AC7"].Value = "FREIGHT AMT G.VAT";
+                purchaseReportWorksheet.Cells["AD7"].Value = "FREIGHT AMT N.VAT";
+                purchaseReportWorksheet.Cells["AE7"].Value = "FREIGHT WHT AMT";
+                purchaseReportWorksheet.Cells["AF7"].Value = "FREIGHT NET OF WHT";
+                purchaseReportWorksheet.Cells["AG7"].Value = "COMMISSION";
+                purchaseReportWorksheet.Cells["AH7"].Value = "OTC COS#.";
+                purchaseReportWorksheet.Cells["AI7"].Value = "OTC DR#.";
+                purchaseReportWorksheet.Cells["AJ7"].Value = "IS PO#";
+                purchaseReportWorksheet.Cells["AK7"].Value = "IS RR#";
+                purchaseReportWorksheet.Cells["AL7"].Value = "TERMS";
 
-                int lastColIndex = 35; // AI = 35
+                int lastColIndex = 38; // AL = 38
                 if (showVoidCancelColumns)
                 {
-                    purchaseReportWorksheet.Cells[7, 36].Value = "STATUS";
-                    purchaseReportWorksheet.Cells[7, 37].Value = "VOIDED BY";
-                    purchaseReportWorksheet.Cells[7, 38].Value = "VOIDED DATE";
-                    lastColIndex = 38;
+                    purchaseReportWorksheet.Cells[7, 39].Value = "STATUS";
+                    purchaseReportWorksheet.Cells[7, 40].Value = "VOIDED BY";
+                    purchaseReportWorksheet.Cells[7, 41].Value = "VOIDED DATE";
+                    lastColIndex = 41;
                 }
 
                 #endregion -- Set the column header  --
 
                 #region -- Apply styling to the header row --
 
-                using (var range = purchaseReportWorksheet.Cells["A7:" + (showVoidCancelColumns ? "AL7" : "AI7")])
+                using (var range = purchaseReportWorksheet.Cells["A7:" + (showVoidCancelColumns ? "AO7" : "AL7")])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
@@ -1836,6 +1842,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         : 0m; // wht total
                     var costPerLiter = volume != 0 ? costAmount / volume : 0m; // sale price per liter
                     var commission = ((pr.DeliveryReceipt?.CustomerOrderSlip?.CommissionRate ?? 0m) * volume);
+                    var purchaseNetOfWht = costAmount - whtAmount;
+                    var freightNetOfVatAmount = isSupplierVatable
+                        ? _unitOfWork.FilpridePurchaseOrder.ComputeNetOfVat(freightAmount)
+                        : freightAmount;
+                    var freightWhtAmount = isSupplierTaxable
+                        ? _unitOfWork.FilpridePurchaseOrder.ComputeEwtAmount(freightNetOfVatAmount, pr.DeliveryReceipt?.Hauler?.WithholdingTaxPercent ?? 0)
+                        : 0m;
+                    var freightNetOfWht = freightAmount - freightWhtAmount;
 
                     if (pr.AuthorityToLoadNo != null)
                     {
@@ -1871,27 +1885,30 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     purchaseReportWorksheet.Cells[row, 19].Value = volume; // Volume
                     purchaseReportWorksheet.Cells[row, 20].Value = costPerLiter; // Purchase price per liter
                     purchaseReportWorksheet.Cells[row, 21].Value = costAmount; // Purchase total gross
-                    purchaseReportWorksheet.Cells[row, 22].Value = vatAmount; // Vat total
-                    purchaseReportWorksheet.Cells[row, 23].Value = freight; // WHT total
+                    purchaseReportWorksheet.Cells[row, 22].Value = netPurchases; // Purchase total net ======== move to third last
+                    purchaseReportWorksheet.Cells[row, 23].Value = vatAmount; // Vat total
                     purchaseReportWorksheet.Cells[row, 24].Value = whtAmount; // freight g vat
-                    purchaseReportWorksheet.Cells[row, 25].Value = pr.DeliveryReceipt?.HaulerName; // Hauler's Name
-                    purchaseReportWorksheet.Cells[row, 26].Value = netPurchases; // Purchase total net ======== move to third last
-                    purchaseReportWorksheet.Cells[row, 27].Value = netFreight; // freight n vat ============
-                    purchaseReportWorksheet.Cells[row, 28].Value = freightAmount; // freight amount n vat ============
-                    purchaseReportWorksheet.Cells[row, 29].Value = freightAmountNet; // freight amount n vat ============
-                    purchaseReportWorksheet.Cells[row, 30].Value = commission; // commission =========
-                    purchaseReportWorksheet.Cells[row, 31].Value = pr.DeliveryReceipt?.CustomerOrderSlip?.OldCosNo; // OTC COS =========
-                    purchaseReportWorksheet.Cells[row, 32].Value = pr.DeliveryReceipt?.ManualDrNo; // OTC DR =========
-                    purchaseReportWorksheet.Cells[row, 33].Value = pr.PurchaseOrder?.OldPoNo; // IS PO =========
-                    purchaseReportWorksheet.Cells[row, 34].Value = pr.OldRRNo; // IS RR =========
-                    purchaseReportWorksheet.Cells[row, 35].Value = pr.PurchaseOrder?.Terms;
+                    purchaseReportWorksheet.Cells[row, 25].Value = purchaseNetOfWht; // Purchase Net of WHT
+                    purchaseReportWorksheet.Cells[row, 26].Value = pr.DeliveryReceipt?.HaulerName; // Hauler's Name
+                    purchaseReportWorksheet.Cells[row, 27].Value = freight; // WHT total
+                    purchaseReportWorksheet.Cells[row, 28].Value = netFreight; // freight n vat ============
+                    purchaseReportWorksheet.Cells[row, 29].Value = freightAmount; // freight amount n vat ============
+                    purchaseReportWorksheet.Cells[row, 30].Value = freightAmountNet; // freight amount n vat ============
+                    purchaseReportWorksheet.Cells[row, 31].Value = freightWhtAmount; // Freight WHT amount
+                    purchaseReportWorksheet.Cells[row, 32].Value = freightNetOfWht; // Freight Net of WHT
+                    purchaseReportWorksheet.Cells[row, 33].Value = commission; // commission =========
+                    purchaseReportWorksheet.Cells[row, 34].Value = pr.DeliveryReceipt?.CustomerOrderSlip?.OldCosNo; // OTC COS =========
+                    purchaseReportWorksheet.Cells[row, 35].Value = pr.DeliveryReceipt?.ManualDrNo; // OTC DR =========
+                    purchaseReportWorksheet.Cells[row, 36].Value = pr.PurchaseOrder?.OldPoNo; // IS PO =========
+                    purchaseReportWorksheet.Cells[row, 37].Value = pr.OldRRNo; // IS RR =========
+                    purchaseReportWorksheet.Cells[row, 38].Value = pr.PurchaseOrder?.Terms;
 
                     if (showVoidCancelColumns)
                     {
-                        purchaseReportWorksheet.Cells[row, 36].Value = pr.Status;
-                        purchaseReportWorksheet.Cells[row, 37].Value = pr.VoidedBy;
-                        purchaseReportWorksheet.Cells[row, 38].Value = pr.VoidedDate;
-                        purchaseReportWorksheet.Cells[row, 38].Style.Numberformat.Format = "MMM/dd/yyyy";
+                        purchaseReportWorksheet.Cells[row, 39].Value = pr.Status;
+                        purchaseReportWorksheet.Cells[row, 40].Value = pr.VoidedBy;
+                        purchaseReportWorksheet.Cells[row, 41].Value = pr.VoidedDate;
+                        purchaseReportWorksheet.Cells[row, 41].Style.Numberformat.Format = "MMM/dd/yyyy";
                     }
 
                     #endregion -- Assign Values to Cells --
@@ -1905,6 +1922,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     totalCommission += commission;
                     totalFreight += freightAmount;
                     totalNetFreight += freightAmountNet;
+                    totalPurchaseNetOfWht += purchaseNetOfWht;
+                    totalFreightWhtAmount += freightWhtAmount;
+                    totalFreightNetOfWht += freightNetOfWht;
 
                     #endregion -- Add the values to total --
 
@@ -1930,14 +1950,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 purchaseReportWorksheet.Cells[row, 19].Value = totalVolume;
                 purchaseReportWorksheet.Cells[row, 20].Value = totalCostPerLiter;
                 purchaseReportWorksheet.Cells[row, 21].Value = totalCostAmount;
-                purchaseReportWorksheet.Cells[row, 22].Value = totalVatAmount;
-                purchaseReportWorksheet.Cells[row, 23].Value = "";
+                purchaseReportWorksheet.Cells[row, 22].Value = totalNetPurchases;
+                purchaseReportWorksheet.Cells[row, 23].Value = totalVatAmount;
                 purchaseReportWorksheet.Cells[row, 24].Value = totalWhtAmount;
-                purchaseReportWorksheet.Cells[row, 26].Value = totalNetPurchases;
+                purchaseReportWorksheet.Cells[row, 25].Value = totalPurchaseNetOfWht;
+
                 purchaseReportWorksheet.Cells[row, 27].Value = "";
-                purchaseReportWorksheet.Cells[row, 28].Value = totalFreight;
-                purchaseReportWorksheet.Cells[row, 29].Value = totalNetFreight;
-                purchaseReportWorksheet.Cells[row, 30].Value = totalCommission;
+                purchaseReportWorksheet.Cells[row, 29].Value = totalFreight;
+                purchaseReportWorksheet.Cells[row, 30].Value = totalNetFreight;
+                purchaseReportWorksheet.Cells[row, 31].Value = totalFreightWhtAmount;
+                purchaseReportWorksheet.Cells[row, 32].Value = totalFreightNetOfWht;
+                purchaseReportWorksheet.Cells[row, 33].Value = totalCommission;
 
                 purchaseReportWorksheet.Column(19).Style.Numberformat.Format = currencyFormat2;
                 purchaseReportWorksheet.Column(20).Style.Numberformat.Format = currencyFormat;
@@ -1945,11 +1968,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 purchaseReportWorksheet.Column(22).Style.Numberformat.Format = currencyFormat2;
                 purchaseReportWorksheet.Column(23).Style.Numberformat.Format = currencyFormat;
                 purchaseReportWorksheet.Column(24).Style.Numberformat.Format = currencyFormat2;
-                purchaseReportWorksheet.Column(26).Style.Numberformat.Format = currencyFormat2;
+                purchaseReportWorksheet.Column(25).Style.Numberformat.Format = currencyFormat2;
                 purchaseReportWorksheet.Column(27).Style.Numberformat.Format = currencyFormat;
                 purchaseReportWorksheet.Column(28).Style.Numberformat.Format = currencyFormat2;
                 purchaseReportWorksheet.Column(29).Style.Numberformat.Format = currencyFormat2;
                 purchaseReportWorksheet.Column(30).Style.Numberformat.Format = currencyFormat2;
+                purchaseReportWorksheet.Column(31).Style.Numberformat.Format = currencyFormat2;
+                purchaseReportWorksheet.Column(32).Style.Numberformat.Format = currencyFormat2;
+                purchaseReportWorksheet.Column(33).Style.Numberformat.Format = currencyFormat2;
 
                 #endregion -- Assign values of other totals and formatting of total cells --
 
@@ -1962,7 +1988,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(172, 185, 202));
                 }
                 // line to subtotal values
-                using (var range = purchaseReportWorksheet.Cells[row, 17, row, 30])
+                using (var range = purchaseReportWorksheet.Cells[row, 17, row, 33])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.Border.Top.Style = ExcelBorderStyle.Thin; // Single top border
