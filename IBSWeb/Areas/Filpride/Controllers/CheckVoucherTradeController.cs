@@ -40,12 +40,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
         private readonly ILogger<CheckVoucherTradeController> _logger;
         private readonly ISubAccountResolver _subAccountResolver;
         private const string ApTradePayableAccountNo = "202010100";
+        private const string CommissionPayableAccountNo = "201010200";
+        private const string HaulingPayableAccountNo = "201010300";
         private const string CashInBankAccountNo = "101010100";
         private const string AdvancesToSupplierAccountNo = "101060100";
         private static readonly string[] ReservedTradeAccountNumbers =
         [
             "202010200",
             ApTradePayableAccountNo,
+            CommissionPayableAccountNo,
+            HaulingPayableAccountNo,
             CashInBankAccountNo,
             AdvancesToSupplierAccountNo
         ];
@@ -78,13 +82,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .Sum(d => d.Credit);
         }
 
-        private static decimal GetAccountAmount(CheckVoucherTradeViewModel viewModel, string accountNumber, bool isDebit)
+        private static decimal GetAccountAmount(
+            string[] accountNumbers,
+            string accountNumber,
+            decimal[] debits,
+            decimal[] credits,
+            bool isDebit)
         {
-            for (var i = 0; i < viewModel.AccountNumber.Length; i++)
+            for (var i = 0; i < accountNumbers.Length; i++)
             {
-                if (viewModel.AccountNumber[i] == accountNumber)
+                if (accountNumbers[i] == accountNumber)
                 {
-                    return isDebit ? viewModel.Debit[i] : viewModel.Credit[i];
+                    return isDebit ? debits[i] : credits[i];
                 }
             }
 
@@ -387,7 +396,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #region --Saving the default entries
 
                 var generateCvNo = await _unitOfWork.FilprideCheckVoucher.GenerateCodeAsync(companyClaims, viewModel.Type!, cancellationToken);
-                var cashInBank = GetAccountAmount(viewModel, CashInBankAccountNo, isDebit: false);
+                var cashInBank = GetAccountAmount(viewModel.AccountNumber, CashInBankAccountNo,viewModel.Debit,viewModel.Credit, isDebit: false);
 
                 #region -- Get Supplier
 
@@ -1081,7 +1090,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     appliedAdvanceAmount = 0m;
                 }
 
-                var cashInBank = GetAccountAmount(viewModel, CashInBankAccountNo, isDebit: false);
+                var cashInBank = GetAccountAmount(viewModel.AccountNumber, CashInBankAccountNo, viewModel.Debit, viewModel.Credit, isDebit: false);
                 existingHeaderModel.Date = viewModel.TransactionDate;
                 existingHeaderModel.PONo = viewModel.POSeries;
                 existingHeaderModel.SupplierId = viewModel.SupplierId;
@@ -2530,6 +2539,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 Suppliers = await _unitOfWork.GetFilprideCommissioneeListAsyncById(companyClaims, cancellationToken),
                 BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken),
+                COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken),
                 MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken)
             };
 
@@ -2549,6 +2559,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             viewModel.Suppliers = await _unitOfWork.GetFilprideCommissioneeListAsyncById(companyClaims, cancellationToken);
             viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+            viewModel.COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
 
             if (!ModelState.IsValid)
@@ -2572,26 +2583,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     if (cv.Any())
                     {
-                        viewModel.COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken);
-
-                        viewModel.Suppliers = (await _unitOfWork.FilprideSupplier
-                                .GetAllAsync(supp => (companyClaims == nameof(Filpride) ? supp.IsFilpride : supp.IsMobility) && supp.Category == "Trade", cancellationToken))
-                            .Select(sup => new SelectListItem
-                            {
-                                Value = sup.SupplierId.ToString(),
-                                Text = sup.SupplierName
-                            })
-                            .ToList();
-
-                        viewModel.BankAccounts = (await _unitOfWork.FilprideBankAccount
-                                .GetAllAsync(b => (companyClaims == nameof(Filpride) ? b.IsFilpride : b.IsMobility), cancellationToken))
-                            .Select(ba => new SelectListItem
-                            {
-                                Value = ba.BankAccountId.ToString(),
-                                Text = ba.AccountNo + " " + ba.AccountName
-                            })
-                            .ToList();
-
                         TempData["info"] = "Check No. Is already exist";
                         return View(viewModel);
                     }
@@ -2617,7 +2608,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 var generateCvNo = await _unitOfWork.FilprideCheckVoucher
                     .GenerateCodeAsync(companyClaims, viewModel.Type!, cancellationToken);
-                var cashInBank = viewModel.Credit[1];
+                var cashInBank = GetAccountAmount(viewModel.AccountNumber, CashInBankAccountNo, viewModel.Debit, viewModel.Credit, isDebit: false);
 
                 #region -- Get Supplier
 
@@ -2720,15 +2711,37 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await _dbContext.FilprideCheckVoucherDetails.AddRangeAsync(cvDetails, cancellationToken);
 
-                var parts = (supplier.WithholdingTaxTitle ?? string.Empty).Split(' ', 2);
+                var withholdingTaxAccountNo = GetWithholdingTaxAccountNumberByPercent(cvh.TaxPercent);
+                var getWithholdingTaxTitle = withholdingTaxAccountNo == null
+                    ? null
+                    : await _dbContext.FilprideChartOfAccounts
+                        .FirstOrDefaultAsync(x => x.AccountNumber == withholdingTaxAccountNo, cancellationToken);
+                var manualDisplayEntries = cvDetails
+                    .Where(d => !d.IsDisplayEntry &&
+                                d.AccountNo != CommissionPayableAccountNo &&
+                                d.AccountNo != CashInBankAccountNo)
+                    .Select(d => new FilprideCheckVoucherDetail
+                    {
+                        AccountNo = d.AccountNo,
+                        AccountName = d.AccountName,
+                        Debit = d.Debit,
+                        Credit = d.Credit,
+                        TransactionNo = d.TransactionNo,
+                        CheckVoucherHeaderId = d.CheckVoucherHeaderId,
+                        SubAccountType = d.SubAccountType,
+                        SubAccountId = d.SubAccountId,
+                        SubAccountName = d.SubAccountName,
+                        IsDisplayEntry = true
+                    })
+                    .ToList();
+                var commissionDetail = cvDetails.FirstOrDefault(d => !d.IsDisplayEntry && d.AccountNo == CommissionPayableAccountNo);
 
-                foreach (var cv in cvDetails.OrderBy(x => x.CheckVoucherDetailId))
+                if (commissionDetail != null)
                 {
                     var isVatable = cvh.VatType == SD.VatType_Vatable;
                     var isTaxable = cvh.TaxType == SD.TaxType_WithTax;
 
-                    // Net of tax (input)
-                    var netAmount = cvh.Total;
+                    var netAmount = commissionDetail.Debit;
                     var baseAmount = 0m;
 
                     // Base computation (reversible correct formula)
@@ -2758,10 +2771,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var netOfEwt = grossAmount - ewt;
 
                     cvDetails.Add(
-                    new FilprideCheckVoucherDetail
+                        new FilprideCheckVoucherDetail
                     {
-                        AccountNo = cv.AccountNo,
-                        AccountName = cv.AccountName,
+                        AccountNo = commissionDetail.AccountNo,
+                        AccountName = commissionDetail.AccountName,
                         Debit = baseAmount,
                         Credit = 0.00m,
                         TransactionNo = cvh.CheckVoucherHeaderNo,
@@ -2787,13 +2800,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         });
                     }
 
-                    if (ewt != 0)
+                    if (ewt != 0 && getWithholdingTaxTitle != null)
                     {
                         cvDetails.Add(
-                        new FilprideCheckVoucherDetail
+                            new FilprideCheckVoucherDetail
                         {
-                            AccountNo = parts[0],
-                            AccountName = parts[1],
+                            AccountNo = getWithholdingTaxTitle.AccountNumber ?? string.Empty,
+                            AccountName = getWithholdingTaxTitle.AccountName ?? string.Empty,
                             Debit = 0.00m,
                             Credit = ewt,
                             TransactionNo = cvh.CheckVoucherHeaderNo,
@@ -2802,13 +2815,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         });
                     }
 
+                    cvDetails.AddRange(manualDisplayEntries);
+
                     cvDetails.Add(
-                    new FilprideCheckVoucherDetail
+                        new FilprideCheckVoucherDetail
                     {
-                        AccountNo = "101010100",
+                        AccountNo = CashInBankAccountNo,
                         AccountName = "Cash in Bank",
                         Debit = 0.00m,
-                        Credit = netOfEwt,
+                        Credit = cashInBank,
                         TransactionNo = cvh.CheckVoucherHeaderNo,
                         CheckVoucherHeaderId = cvh.CheckVoucherHeaderId,
                         SubAccountType = SubAccountType.BankAccount,
@@ -2816,8 +2831,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         SubAccountName = $"{bank.AccountNo} {bank.AccountName}",
                         IsDisplayEntry = true
                     });
-
-                    break;
                 }
                 await _dbContext.FilprideCheckVoucherDetails.AddRangeAsync(cvDetails, cancellationToken);
 
@@ -2901,6 +2914,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 Suppliers = await _unitOfWork.GetFilprideHaulerListAsyncById(companyClaims, cancellationToken),
                 BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken),
+                COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken),
                 MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken)
             };
 
@@ -2920,6 +2934,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             viewModel.Suppliers = await _unitOfWork.GetFilprideHaulerListAsyncById(companyClaims, cancellationToken);
             viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+            viewModel.COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
 
             if (!ModelState.IsValid)
@@ -2941,26 +2956,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     if (cv.Any())
                     {
-                        viewModel.COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken);
-
-                        viewModel.Suppliers = (await _unitOfWork.FilprideSupplier
-                                .GetAllAsync(supp => (companyClaims == nameof(Filpride) ? supp.IsFilpride : supp.IsMobility) && supp.Category == "Trade", cancellationToken))
-                            .Select(sup => new SelectListItem
-                            {
-                                Value = sup.SupplierId.ToString(),
-                                Text = sup.SupplierName
-                            })
-                            .ToList();
-
-                        viewModel.BankAccounts = (await _unitOfWork.FilprideBankAccount
-                                .GetAllAsync(b => (companyClaims == nameof(Filpride) ? b.IsFilpride : b.IsMobility), cancellationToken))
-                            .Select(ba => new SelectListItem
-                            {
-                                Value = ba.BankAccountId.ToString(),
-                                Text = ba.AccountNo + " " + ba.AccountName
-                            })
-                            .ToList();
-
                         TempData["info"] = "Check No. Is already exist";
                         return View(viewModel);
                     }
@@ -2985,7 +2980,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 var generateCvNo = await _unitOfWork.FilprideCheckVoucher
                     .GenerateCodeAsync(companyClaims, viewModel.Type!, cancellationToken);
-                var cashInBank = viewModel.Credit[1];
+                var cashInBank = GetAccountAmount(viewModel.AccountNumber, CashInBankAccountNo, viewModel.Debit, viewModel.Credit, isDebit: false);
 
                 #region -- Get Supplier
 
@@ -3089,15 +3084,37 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await _dbContext.FilprideCheckVoucherDetails.AddRangeAsync(cvDetails, cancellationToken);
 
-                var parts = (supplier.WithholdingTaxTitle ?? string.Empty).Split(' ', 2);
+                var withholdingTaxAccountNo = GetWithholdingTaxAccountNumberByPercent(cvh.TaxPercent);
+                var getWithholdingTaxTitle = withholdingTaxAccountNo == null
+                    ? null
+                    : await _dbContext.FilprideChartOfAccounts
+                        .FirstOrDefaultAsync(x => x.AccountNumber == withholdingTaxAccountNo, cancellationToken);
+                var manualDisplayEntries = cvDetails
+                    .Where(d => !d.IsDisplayEntry &&
+                                d.AccountNo != HaulingPayableAccountNo &&
+                                d.AccountNo != CashInBankAccountNo)
+                    .Select(d => new FilprideCheckVoucherDetail
+                    {
+                        AccountNo = d.AccountNo,
+                        AccountName = d.AccountName,
+                        Debit = d.Debit,
+                        Credit = d.Credit,
+                        TransactionNo = d.TransactionNo,
+                        CheckVoucherHeaderId = d.CheckVoucherHeaderId,
+                        SubAccountType = d.SubAccountType,
+                        SubAccountId = d.SubAccountId,
+                        SubAccountName = d.SubAccountName,
+                        IsDisplayEntry = true
+                    })
+                    .ToList();
+                var haulingDetail = cvDetails.FirstOrDefault(d => !d.IsDisplayEntry && d.AccountNo == HaulingPayableAccountNo);
 
-                foreach (var cv in cvDetails.OrderBy(x => x.CheckVoucherDetailId))
+                if (haulingDetail != null)
                 {
                     var isVatable = cvh.VatType == SD.VatType_Vatable;
                     var isTaxable = cvh.TaxType == SD.TaxType_WithTax;
 
-                    // Net of tax (input)
-                    var netAmount = cvh.Total;
+                    var netAmount = haulingDetail.Debit;
                     var baseAmount = 0m;
 
                     // Base computation (reversible correct formula)
@@ -3127,10 +3144,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var netOfEwt = grossAmount - ewt;
 
                     cvDetails.Add(
-                    new FilprideCheckVoucherDetail
+                        new FilprideCheckVoucherDetail
                     {
-                        AccountNo = cv.AccountNo,
-                        AccountName = cv.AccountName,
+                        AccountNo = haulingDetail.AccountNo,
+                        AccountName = haulingDetail.AccountName,
                         Debit = baseAmount,
                         Credit = 0.00m,
                         TransactionNo = cvh.CheckVoucherHeaderNo,
@@ -3156,13 +3173,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         });
                     }
 
-                    if (ewt != 0)
+                    if (ewt != 0 && getWithholdingTaxTitle != null)
                     {
                         cvDetails.Add(
-                        new FilprideCheckVoucherDetail
+                            new FilprideCheckVoucherDetail
                         {
-                            AccountNo = parts[0],
-                            AccountName = parts[1],
+                            AccountNo = getWithholdingTaxTitle.AccountNumber ?? string.Empty,
+                            AccountName = getWithholdingTaxTitle.AccountName ?? string.Empty,
                             Debit = 0.00m,
                             Credit = ewt,
                             TransactionNo = cvh.CheckVoucherHeaderNo,
@@ -3171,13 +3188,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         });
                     }
 
+                    cvDetails.AddRange(manualDisplayEntries);
+
                     cvDetails.Add(
-                    new FilprideCheckVoucherDetail
+                        new FilprideCheckVoucherDetail
                     {
-                        AccountNo = "101010100",
+                        AccountNo = CashInBankAccountNo,
                         AccountName = "Cash in Bank",
                         Debit = 0.00m,
-                        Credit = netOfEwt,
+                        Credit = cashInBank,
                         TransactionNo = cvh.CheckVoucherHeaderNo,
                         CheckVoucherHeaderId = cvh.CheckVoucherHeaderId,
                         SubAccountType = SubAccountType.BankAccount,
@@ -3185,8 +3204,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         SubAccountName = $"{bank.AccountNo} {bank.AccountName}",
                         IsDisplayEntry = true
                     });
-
-                    break;
                 }
                 await _dbContext.FilprideCheckVoucherDetails.AddRangeAsync(cvDetails, cancellationToken);
 
@@ -3473,6 +3490,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     DRs = [],
                     Suppliers =
                         await _unitOfWork.GetFilprideCommissioneeListAsyncById(companyClaims, cancellationToken),
+                    BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken),
+                    COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken),
                     OldCVNo = existingHeaderModel.OldCvNo,
                     SiNo = existingHeaderModel.SINo?.FirstOrDefault(),
                     MinDate = minDate
@@ -3491,7 +3510,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     });
                 }
 
-                model.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+                model.AdditionalAccountingEntries = await _dbContext.FilprideCheckVoucherDetails
+                    .Where(d => d.CheckVoucherHeaderId == existingHeaderModel.CheckVoucherHeaderId &&
+                                !d.IsDisplayEntry &&
+                                d.AccountNo != CommissionPayableAccountNo &&
+                                d.AccountNo != CashInBankAccountNo)
+                    .Select(d => new CheckVoucherTradeAccountingEntryViewModel
+                    {
+                        AccountNumber = d.AccountNo,
+                        AccountTitle = d.AccountName,
+                        Debit = d.Debit,
+                        Credit = d.Credit
+                    })
+                    .ToListAsync(cancellationToken);
 
                 return View(model);
             }
@@ -3517,6 +3548,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             viewModel.Suppliers = await _unitOfWork.GetFilprideCommissioneeListAsyncById(companyClaims, cancellationToken);
             viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+            viewModel.COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
 
             if (!ModelState.IsValid)
@@ -3562,7 +3594,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #endregion -- Get bank account
 
-                var cashInBank = viewModel.Credit[1];
+                var cashInBank = GetAccountAmount(viewModel.AccountNumber, CashInBankAccountNo, viewModel.Debit, viewModel.Credit, isDebit: false);
                 existingHeaderModel.Date = viewModel.TransactionDate;
                 existingHeaderModel.SupplierId = viewModel.SupplierId;
                 existingHeaderModel.Particulars = viewModel.Particulars;
@@ -3643,15 +3675,37 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region -- Additional details entry
 
-                var parts = (supplier.WithholdingTaxTitle ?? string.Empty).Split(' ', 2);
+                var withholdingTaxAccountNo = GetWithholdingTaxAccountNumberByPercent(existingHeaderModel.TaxPercent);
+                var getWithholdingTaxTitle = withholdingTaxAccountNo == null
+                    ? null
+                    : await _dbContext.FilprideChartOfAccounts
+                        .FirstOrDefaultAsync(x => x.AccountNumber == withholdingTaxAccountNo, cancellationToken);
+                var manualDisplayEntries = details
+                    .Where(d => !d.IsDisplayEntry &&
+                                d.AccountNo != CommissionPayableAccountNo &&
+                                d.AccountNo != CashInBankAccountNo)
+                    .Select(d => new FilprideCheckVoucherDetail
+                    {
+                        AccountNo = d.AccountNo,
+                        AccountName = d.AccountName,
+                        Debit = d.Debit,
+                        Credit = d.Credit,
+                        TransactionNo = d.TransactionNo,
+                        CheckVoucherHeaderId = d.CheckVoucherHeaderId,
+                        SubAccountType = d.SubAccountType,
+                        SubAccountId = d.SubAccountId,
+                        SubAccountName = d.SubAccountName,
+                        IsDisplayEntry = true
+                    })
+                    .ToList();
+                var commissionDetail = details.FirstOrDefault(d => !d.IsDisplayEntry && d.AccountNo == CommissionPayableAccountNo);
 
-                foreach (var cv in details.OrderBy(x => x.CheckVoucherDetailId))
+                if (commissionDetail != null)
                 {
                     var isVatable = existingHeaderModel.VatType == SD.VatType_Vatable;
                     var isTaxable = existingHeaderModel.TaxType == SD.TaxType_WithTax;
 
-                    // Net of tax (input)
-                    var netAmount = existingHeaderModel.Total;
+                    var netAmount = commissionDetail.Debit;
                     var baseAmount = 0m;
 
                     // Base computation (reversible correct formula)
@@ -3683,10 +3737,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     if (existingHeaderModel.CheckVoucherHeaderNo != null)
                     {
                         details.Add(
-                        new FilprideCheckVoucherDetail
+                            new FilprideCheckVoucherDetail
                         {
-                            AccountNo = cv.AccountNo,
-                            AccountName = cv.AccountName,
+                            AccountNo = commissionDetail.AccountNo,
+                            AccountName = commissionDetail.AccountName,
                             Debit = baseAmount,
                             Credit = 0.00m,
                             TransactionNo = existingHeaderModel.CheckVoucherHeaderNo,
@@ -3712,13 +3766,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             });
                         }
 
-                        if (ewt != 0)
+                        if (ewt != 0 && getWithholdingTaxTitle != null)
                         {
                             details.Add(
-                            new FilprideCheckVoucherDetail
+                                new FilprideCheckVoucherDetail
                             {
-                                AccountNo = parts[0],
-                                AccountName = parts[1],
+                                AccountNo = getWithholdingTaxTitle.AccountNumber ?? string.Empty,
+                                AccountName = getWithholdingTaxTitle.AccountName ?? string.Empty,
                                 Debit = 0.00m,
                                 Credit = ewt,
                                 TransactionNo = existingHeaderModel.CheckVoucherHeaderNo,
@@ -3727,13 +3781,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             });
                         }
 
+                        details.AddRange(manualDisplayEntries);
+
                         details.Add(
-                        new FilprideCheckVoucherDetail
+                            new FilprideCheckVoucherDetail
                         {
-                            AccountNo = "101010100",
+                            AccountNo = CashInBankAccountNo,
                             AccountName = "Cash in Bank",
                             Debit = 0.00m,
-                            Credit = netOfEwt,
+                            Credit = cashInBank,
                             TransactionNo = existingHeaderModel.CheckVoucherHeaderNo,
                             CheckVoucherHeaderId = existingHeaderModel.CheckVoucherHeaderId,
                             SubAccountType = SubAccountType.BankAccount,
@@ -3746,8 +3802,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     {
                         throw new Exception("Check voucher header no. not found!");
                     }
-
-                    break;
                 }
                 await _dbContext.FilprideCheckVoucherDetails.AddRangeAsync(details, cancellationToken);
 
@@ -3887,6 +3941,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     DRs = [],
                     Suppliers = await _unitOfWork.GetFilprideHaulerListAsyncById(companyClaims, cancellationToken),
                     BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken),
+                    COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken),
                     OldCVNo = existingHeaderModel.OldCvNo,
                     SiNo = existingHeaderModel.SINo?.FirstOrDefault(),
                     MinDate = minDate
@@ -3904,6 +3959,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         Amount = item.AmountPaid
                     });
                 }
+
+                model.AdditionalAccountingEntries = await _dbContext.FilprideCheckVoucherDetails
+                    .Where(d => d.CheckVoucherHeaderId == existingHeaderModel.CheckVoucherHeaderId &&
+                                !d.IsDisplayEntry &&
+                                d.AccountNo != HaulingPayableAccountNo &&
+                                d.AccountNo != CashInBankAccountNo)
+                    .Select(d => new CheckVoucherTradeAccountingEntryViewModel
+                    {
+                        AccountNumber = d.AccountNo,
+                        AccountTitle = d.AccountName,
+                        Debit = d.Debit,
+                        Credit = d.Credit
+                    })
+                    .ToListAsync(cancellationToken);
 
                 return View(model);
             }
@@ -3927,8 +3996,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            viewModel.Suppliers = await _unitOfWork.GetFilprideCommissioneeListAsyncById(companyClaims, cancellationToken);
+            viewModel.Suppliers = await _unitOfWork.GetFilprideHaulerListAsyncById(companyClaims, cancellationToken);
             viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+            viewModel.COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
 
             if (!ModelState.IsValid)
@@ -3974,7 +4044,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #endregion -- Get bank account
 
-                var cashInBank = viewModel.Credit[1];
+                var cashInBank = GetAccountAmount(viewModel.AccountNumber, CashInBankAccountNo, viewModel.Debit, viewModel.Credit, isDebit: false);
                 existingHeaderModel.Date = viewModel.TransactionDate;
                 existingHeaderModel.SupplierId = viewModel.SupplierId;
                 existingHeaderModel.Total = cashInBank;
@@ -4055,15 +4125,37 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region -- Additional details entry
 
-                var parts = (supplier.WithholdingTaxTitle ?? string.Empty).Split(' ', 2);
+                var withholdingTaxAccountNo = GetWithholdingTaxAccountNumberByPercent(existingHeaderModel.TaxPercent);
+                var getWithholdingTaxTitle = withholdingTaxAccountNo == null
+                    ? null
+                    : await _dbContext.FilprideChartOfAccounts
+                        .FirstOrDefaultAsync(x => x.AccountNumber == withholdingTaxAccountNo, cancellationToken);
+                var manualDisplayEntries = details
+                    .Where(d => !d.IsDisplayEntry &&
+                                d.AccountNo != HaulingPayableAccountNo &&
+                                d.AccountNo != CashInBankAccountNo)
+                    .Select(d => new FilprideCheckVoucherDetail
+                    {
+                        AccountNo = d.AccountNo,
+                        AccountName = d.AccountName,
+                        Debit = d.Debit,
+                        Credit = d.Credit,
+                        TransactionNo = d.TransactionNo,
+                        CheckVoucherHeaderId = d.CheckVoucherHeaderId,
+                        SubAccountType = d.SubAccountType,
+                        SubAccountId = d.SubAccountId,
+                        SubAccountName = d.SubAccountName,
+                        IsDisplayEntry = true
+                    })
+                    .ToList();
+                var haulingDetail = details.FirstOrDefault(d => !d.IsDisplayEntry && d.AccountNo == HaulingPayableAccountNo);
 
-                foreach (var cv in details.OrderBy(x => x.CheckVoucherDetailId))
+                if (haulingDetail != null)
                 {
                     var isVatable = existingHeaderModel.VatType == SD.VatType_Vatable;
                     var isTaxable = existingHeaderModel.TaxType == SD.TaxType_WithTax;
 
-                    // Net of tax (input)
-                    var netAmount = existingHeaderModel.Total;
+                    var netAmount = haulingDetail.Debit;
                     var baseAmount = 0m;
 
                     // Base computation (reversible correct formula)
@@ -4095,10 +4187,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     if (existingHeaderModel.CheckVoucherHeaderNo != null)
                     {
                         details.Add(
-                        new FilprideCheckVoucherDetail
+                            new FilprideCheckVoucherDetail
                         {
-                            AccountNo = cv.AccountNo,
-                            AccountName = cv.AccountName,
+                            AccountNo = haulingDetail.AccountNo,
+                            AccountName = haulingDetail.AccountName,
                             Debit = baseAmount,
                             Credit = 0.00m,
                             TransactionNo = existingHeaderModel.CheckVoucherHeaderNo,
@@ -4124,13 +4216,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             });
                         }
 
-                        if (ewt != 0)
+                        if (ewt != 0 && getWithholdingTaxTitle != null)
                         {
                             details.Add(
-                            new FilprideCheckVoucherDetail
+                                new FilprideCheckVoucherDetail
                             {
-                                AccountNo = parts[0],
-                                AccountName = parts[1],
+                                AccountNo = getWithholdingTaxTitle.AccountNumber ?? string.Empty,
+                                AccountName = getWithholdingTaxTitle.AccountName ?? string.Empty,
                                 Debit = 0.00m,
                                 Credit = ewt,
                                 TransactionNo = existingHeaderModel.CheckVoucherHeaderNo,
@@ -4139,13 +4231,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             });
                         }
 
+                        details.AddRange(manualDisplayEntries);
+
                         details.Add(
-                        new FilprideCheckVoucherDetail
+                            new FilprideCheckVoucherDetail
                         {
-                            AccountNo = "101010100",
+                            AccountNo = CashInBankAccountNo,
                             AccountName = "Cash in Bank",
                             Debit = 0.00m,
-                            Credit = netOfEwt,
+                            Credit = cashInBank,
                             TransactionNo = existingHeaderModel.CheckVoucherHeaderNo,
                             CheckVoucherHeaderId = existingHeaderModel.CheckVoucherHeaderId,
                             SubAccountType = SubAccountType.BankAccount,
@@ -4158,8 +4252,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     {
                         throw new Exception("Check voucher header no. not found!");
                     }
-
-                    break;
                 }
                 await _dbContext.FilprideCheckVoucherDetails.AddRangeAsync(details, cancellationToken);
 

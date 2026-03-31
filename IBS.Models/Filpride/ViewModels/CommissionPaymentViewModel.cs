@@ -61,6 +61,8 @@ namespace IBS.Models.Filpride.ViewModels
         [Required]
         public decimal[] Credit { get; set; }
 
+        public List<CheckVoucherTradeAccountingEntryViewModel> AdditionalAccountingEntries { get; set; } = [];
+
         //others
         public string? CreatedBy { get; set; }
 

@@ -121,6 +121,9 @@
                 </div>
                 <br/>
                 <div class="form-group table-responsive">
+                    <button type="button" class="btn btn-info mb-3" data-bs-toggle="modal" data-bs-target="#AddAccEntry">
+                        Add Entry
+                    </button>
                     <table class="table" style="min-width: 800px">
                         <thead>
                         <tr>
@@ -143,9 +146,19 @@
                             <td><input type="text" name="AccountNumber" value="101010100" class="w-100" style='border:none' readonly/></td>
                             <td><input type='text' name="AccountTitle" value="Cash in Bank" class="w-100 accountTitle" style='border:none' readonly/></td>
                             <td><input type='text' name="Debit" value='0.000' class="w-100" style='border:none' readonly/></td>
-                            <td><input type='text' name="Credit" value="0.000" class="w-100 totalNetOfEWT" style='border:none' readonly/></td>
+                            <td><input type='text' name="Credit" value="0.000" class="w-100 totalNetOfEWT cib-credit money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' /></td>
                             <td></td>
                         </tr>
+                        @foreach (var entry in Model.AdditionalAccountingEntries)
+                        {
+                            <tr class="manual-entry-row">
+                                <td><input type="text" name="AccountNumber" value="@entry.AccountNumber" class="w-100" style='border:none' readonly /></td>
+                                <td><input type="text" name="AccountTitle" value="@entry.AccountTitle" class="w-100" style='border:none' readonly /></td>
+                                <td><input type="text" name="Debit" value="@entry.Debit.ToString("N4")" class="w-100 money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' /></td>
+                                <td><input type="text" name="Credit" value="@entry.Credit.ToString("N4")" class="w-100 money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' /></td>
+                                <td><button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">Remove</button></td>
+                            </tr>
+                        }
                         </tbody>
                         <tbody>
                         <tr>
@@ -171,14 +184,53 @@
     </div>
 </div>
 
+<div class="modal fade" id="AddAccEntry" tabindex="-1" aria-labelledby="AddAccEntryLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="AddAccEntryLabel">Add Accounting Entry</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="control-label">Account No.</label>
+                    <select id="AccountNo" asp-items="@Model.COA" class="form-select js-select2" style="width: 100%">
+                        <option></option>
+                    </select>
+                </div>
+                <div class="form-group pt-4">
+                    <label class="control-label">Debit</label>
+                    <input id="debit" value="0.0000" class="form-control moneyInput" placeholder="0.0000" />
+                </div>
+                <div class="form-group pt-4">
+                    <label class="control-label">Credit</label>
+                    <input id="credit" value="0.0000" class="form-control moneyInput" placeholder="0.0000" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="saveAccountingEntry(event)">Create</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts
 {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
     <script>
-        $('#AccountNo').select2({
-            dropdownParent: $('#AddAccEntry')
+        $(document).ready(function () {
+            $('#AccountNo').select2({
+                dropdownParent: $('#AddAccEntry'),
+                placeholder: "Select an option...",
+                allowClear: true,
+                width: 'resolve',
+                theme: 'classic'
+            });
+
+            updateTotalDebitAndCredit();
         });
     </script>
     <script>
@@ -443,6 +495,7 @@
             $(".totalCredit").text(formatNumberToFour(totalCredit));
             $("#debit").val("0.000");
             $("#credit").val("0.000");
+            validateDebitAndCredit();
         }
     </script>
     <script>
@@ -471,6 +524,57 @@
             $("button[type='submit']").prop("disabled", !isValid);
 
             return isValid;
+        }
+
+        $("#paymentForm").on("submit", function (event) {
+            if (!validateDebitAndCredit()) {
+                event.preventDefault();
+            }
+        });
+
+        function saveAccountingEntry(event) {
+            var accountNumber = $("#AccountNo").val();
+            var accountTitle = $("#AccountNo option:selected").text().replace(/^\S+\s+/, "");
+            var debit = parseNumber($("#debit").val());
+            var credit = parseNumber($("#credit").val());
+
+            if (!accountNumber || !accountTitle) {
+                event.preventDefault();
+                alert('Please select Account No.');
+                return;
+            }
+
+            if (debit === 0 && credit === 0) {
+                event.preventDefault();
+                alert('Please input amount.');
+                return;
+            }
+
+            if (debit !== 0 && credit !== 0) {
+                event.preventDefault();
+                alert('Invalid please input to debit or credit only.');
+                return;
+            }
+
+            var newRow = `<tr class="manual-entry-row">
+                <td><input type="text" name="AccountNumber" value="${accountNumber}" class="w-100" style='border:none' readonly /></td>
+                <td><input type="text" name="AccountTitle" value="${accountTitle}" class="w-100" style='border:none' readonly /></td>
+                <td><input type="text" name="Debit" value="${formatNumberToFour(debit)}" class="w-100 money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' /></td>
+                <td><input type="text" name="Credit" value="${formatNumberToFour(credit)}" class="w-100 money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' /></td>
+                <td><button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">Remove</button></td>
+            </tr>`;
+
+            $("#accountingEntriesBody").append(newRow);
+            $("#AddAccEntry").modal("hide");
+            $("#AccountNo").val("").trigger("change");
+            $("#debit").val("0.0000");
+            $("#credit").val("0.0000");
+            updateTotalDebitAndCredit();
+        }
+
+        function removeRow(button) {
+            $(button).closest("tr").remove();
+            updateTotalDebitAndCredit();
         }
 
         $('input[name="CheckNo"]').on('blur', function() {
