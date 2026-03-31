@@ -1821,6 +1821,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var isSupplierVatable = pr.PurchaseOrder!.VatType == SD.VatType_Vatable;
                     var isSupplierTaxable = pr.PurchaseOrder!.TaxType == SD.TaxType_WithTax;
                     var isHaulerVatable = pr.DeliveryReceipt!.HaulerVatType == SD.VatType_Vatable;
+                    var isHaulerTaxable = pr.DeliveryReceipt!.Hauler?.TaxType == SD.TaxType_WithTax;
 
                     // calculate values, put in variables to be displayed per cell
                     var volume = pr.QuantityReceived; // volume
@@ -1843,10 +1844,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var costPerLiter = volume != 0 ? costAmount / volume : 0m; // sale price per liter
                     var commission = ((pr.DeliveryReceipt?.CustomerOrderSlip?.CommissionRate ?? 0m) * volume);
                     var purchaseNetOfWht = costAmount - whtAmount;
-                    var freightNetOfVatAmount = isSupplierVatable
+                    var freightNetOfVatAmount = isHaulerVatable
                         ? _unitOfWork.FilpridePurchaseOrder.ComputeNetOfVat(freightAmount)
                         : freightAmount;
-                    var freightWhtAmount = isSupplierTaxable
+                    var freightWhtAmount = isHaulerTaxable
                         ? _unitOfWork.FilpridePurchaseOrder.ComputeEwtAmount(freightNetOfVatAmount, pr.DeliveryReceipt?.Hauler?.WithholdingTaxPercent ?? 0)
                         : 0m;
                     var freightNetOfWht = freightAmount - freightWhtAmount;
