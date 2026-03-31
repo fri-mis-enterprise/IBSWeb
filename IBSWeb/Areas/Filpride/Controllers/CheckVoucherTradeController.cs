@@ -1083,7 +1083,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         return View(viewModel);
                     }
 
-                    var availableAdvanceAmount = Math.Max(0m, advanceHeader.Total - advanceHeader.AmountPaid);
+                    var availableAdvanceAmount = Math.Max(0m, advanceHeader.CheckAmount - advanceHeader.AmountPaid);
                     if (appliedAdvanceAmount > availableAdvanceAmount)
                     {
                         ModelState.AddModelError(nameof(viewModel.AppliedAdvanceAmount), "Applied advance amount cannot exceed available advances.");
