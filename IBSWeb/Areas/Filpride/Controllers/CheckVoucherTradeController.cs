@@ -109,6 +109,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .SumAsync(d => (decimal?)d.Credit, cancellationToken) ?? 0m;
         }
 
+        private static decimal GetDetailAccountAmount(IEnumerable<FilprideCheckVoucherDetail> details, string accountNumber, bool isDebit)
+        {
+            return details
+                .Where(d => !d.IsDisplayEntry && d.AccountNo == accountNumber)
+                .Sum(d => isDebit ? d.Debit : d.Credit);
+        }
+
         private async Task<string?> GetCompanyClaimAsync()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -924,7 +931,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     MinDate = minDate
                 };
 
-                model.AdditionalAccountingEntries = await _dbContext.FilprideCheckVoucherDetails
+                var existingDetails = await _dbContext.FilprideCheckVoucherDetails
+                    .Where(d => d.CheckVoucherHeaderId == existingHeaderModel.CheckVoucherHeaderId)
+                    .ToListAsync(cancellationToken);
+
+                model.DefaultPayableAmount = GetDetailAccountAmount(existingDetails, ApTradePayableAccountNo, isDebit: true);
+                model.CashInBankAmount = GetDetailAccountAmount(existingDetails, CashInBankAccountNo, isDebit: false);
+
+                model.AdditionalAccountingEntries = existingDetails
                     .Where(d => d.CheckVoucherHeaderId == existingHeaderModel.CheckVoucherHeaderId &&
                                 !d.IsDisplayEntry &&
                                 d.AccountNo != ApTradePayableAccountNo &&
@@ -937,7 +951,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         Debit = d.Debit,
                         Credit = d.Credit
                     })
-                    .ToListAsync(cancellationToken);
+                    .ToList();
 
                 var getCheckVoucherTradePayment = await _dbContext.FilprideCVTradePayments
                     .Where(cv => cv.CheckVoucherId == id && cv.DocumentType == "RR")
@@ -3497,6 +3511,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     MinDate = minDate
                 };
 
+                var existingDetails = await _dbContext.FilprideCheckVoucherDetails
+                    .Where(d => d.CheckVoucherHeaderId == existingHeaderModel.CheckVoucherHeaderId)
+                    .ToListAsync(cancellationToken);
+
+                model.DefaultPayableAmount = GetDetailAccountAmount(existingDetails, CommissionPayableAccountNo, isDebit: true);
+                model.CashInBankAmount = GetDetailAccountAmount(existingDetails, CashInBankAccountNo, isDebit: false);
+
                 var getCheckVoucherTradePayment = await _dbContext.FilprideCVTradePayments
                     .Where(cv => cv.CheckVoucherId == id && cv.DocumentType == "DR")
                     .ToListAsync(cancellationToken);
@@ -3510,7 +3531,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     });
                 }
 
-                model.AdditionalAccountingEntries = await _dbContext.FilprideCheckVoucherDetails
+                model.AdditionalAccountingEntries = existingDetails
                     .Where(d => d.CheckVoucherHeaderId == existingHeaderModel.CheckVoucherHeaderId &&
                                 !d.IsDisplayEntry &&
                                 d.AccountNo != CommissionPayableAccountNo &&
@@ -3522,7 +3543,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         Debit = d.Debit,
                         Credit = d.Credit
                     })
-                    .ToListAsync(cancellationToken);
+                    .ToList();
 
                 return View(model);
             }
@@ -3947,6 +3968,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     MinDate = minDate
                 };
 
+                var existingDetails = await _dbContext.FilprideCheckVoucherDetails
+                    .Where(d => d.CheckVoucherHeaderId == existingHeaderModel.CheckVoucherHeaderId)
+                    .ToListAsync(cancellationToken);
+
+                model.DefaultPayableAmount = GetDetailAccountAmount(existingDetails, HaulingPayableAccountNo, isDebit: true);
+                model.CashInBankAmount = GetDetailAccountAmount(existingDetails, CashInBankAccountNo, isDebit: false);
+
                 var getCheckVoucherTradePayment = await _dbContext.FilprideCVTradePayments
                     .Where(cv => cv.CheckVoucherId == id && cv.DocumentType == "DR")
                     .ToListAsync(cancellationToken);
@@ -3960,7 +3988,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     });
                 }
 
-                model.AdditionalAccountingEntries = await _dbContext.FilprideCheckVoucherDetails
+                model.AdditionalAccountingEntries = existingDetails
                     .Where(d => d.CheckVoucherHeaderId == existingHeaderModel.CheckVoucherHeaderId &&
                                 !d.IsDisplayEntry &&
                                 d.AccountNo != HaulingPayableAccountNo &&
@@ -3972,7 +4000,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         Debit = d.Debit,
                         Credit = d.Credit
                     })
-                    .ToListAsync(cancellationToken);
+                    .ToList();
 
                 return View(model);
             }

@@ -63,6 +63,10 @@ namespace IBS.Models.Filpride.ViewModels
 
         public List<CheckVoucherTradeAccountingEntryViewModel> AdditionalAccountingEntries { get; set; } = [];
 
+        public decimal DefaultPayableAmount { get; set; }
+
+        public decimal CashInBankAmount { get; set; }
+
         //others
         public string? CreatedBy { get; set; }
 

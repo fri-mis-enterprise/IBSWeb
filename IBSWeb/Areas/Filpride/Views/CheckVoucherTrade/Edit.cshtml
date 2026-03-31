@@ -140,7 +140,7 @@
                         <tr>
                             <td><input type="text" name="AccountNumber" value="202010100" class="w-100" style='border:none' readonly /></td>
                             <td><input type='text' name="AccountTitle" value='AP-Trade Payable' class="w-100" style='border:none' readonly /></td>
-                            <td><input type='text' name="Debit" value='0.000' class="w-100 totalNetOfEWT" style='border:none' readonly /></td>
+                            <td><input type='text' name="Debit" value="@Model.DefaultPayableAmount.ToString("N4")" class="w-100 totalNetOfEWT" style='border:none' readonly /></td>
                             <td><input type='text' name="Credit" value='0.000' class="w-100" style='border:none' readonly /></td>
                             <td></td>
                         </tr>
@@ -148,7 +148,7 @@
                             <td><input type="text" name="AccountNumber" value="101010100" class="w-100" style='border:none' readonly /></td>
                             <td><input type='text' name="AccountTitle" value="Cash in Bank" class="w-100 accountTitle" style='border:none' readonly /></td>
                             <td><input type='text' name="Debit" value='0.000' class="w-100" style='border:none' readonly /></td>
-                            <td><input type='text' name="Credit" value="0.000" class="w-100 cib-credit money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' /></td>
+                            <td><input type='text' name="Credit" value="@Model.CashInBankAmount.ToString("N4")" class="w-100 cib-credit money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' /></td>
                             <td></td>
                         </tr>
                         <tr id="advancesRow" style="display: none;">
@@ -317,6 +317,8 @@
 
         let cvId = @Html.Raw(Json.Serialize(Model.CVId));
         
+        let preserveLoadedCashInBank = true;
+
         $(document).ready(function () {
             let poNumber = $(".GetRRList").val();
             displayRecords(poNumber, cvId)
@@ -324,6 +326,7 @@
         });
 
         $(".GetRRList").change(function () {
+            preserveLoadedCashInBank = false;
             let poNumber = $(this).val();
             displayRecords(poNumber, cvId);
             displayAdvances(poNumber);
@@ -508,6 +511,7 @@
         }
 
         $(document).on('change', '.selectCheckbox', function () {
+            preserveLoadedCashInBank = false;
             const row = $(this).closest('tr');
             const inputField = row.find('.paymentAmount');
             const initialBalance = parseNumber(row.attr('data-balance'));
@@ -548,6 +552,7 @@
         }
 
         $(document).on('input', '.inputAmount', function () {
+            preserveLoadedCashInBank = false;
             const row = $(this).closest('tr');
             const initialBalance = parseNumber(row.attr('data-balance'));
             let inputAmount = parseNumber($(this).val());
@@ -631,13 +636,16 @@
                 if (cashInBankAmount < 0) cashInBankAmount = 0;
             }
 
-            $(".cib-credit").val(formatNumberToFour(cashInBankAmount));
+            if (!preserveLoadedCashInBank) {
+                $(".cib-credit").val(formatNumberToFour(cashInBankAmount));
+            }
 
             updateTotalDebitAndCredit();
             validateDebitAndCredit();
         }
 
         $(document).on('input', '#advancesCredit', function () {
+            preserveLoadedCashInBank = false;
             updateAmounts();
         });
 
