@@ -1834,7 +1834,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var whtAmount = isSupplierTaxable
                         ? _unitOfWork.FilpridePurchaseOrder.ComputeEwtAmount(netPurchases, pr.TaxPercentage)
                         : 0m; // wht total
-                    var costPerLiter = costAmount / volume; // sale price per liter
+                    var costPerLiter = volume != 0 ? costAmount / volume : 0m; // sale price per liter
                     var commission = ((pr.DeliveryReceipt?.CustomerOrderSlip?.CommissionRate ?? 0m) * volume);
 
                     if (pr.AuthorityToLoadNo != null)
@@ -1922,7 +1922,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region -- Assign values of other totals and formatting of total cells --
 
-                var totalCostPerLiter = totalCostAmount / totalVolume;
+                var totalCostPerLiter = totalVolume != 0
+                    ? totalCostAmount / totalVolume
+                    : 0m;
 
                 purchaseReportWorksheet.Cells[row, 17].Value = "Total: ";
                 purchaseReportWorksheet.Cells[row, 19].Value = totalVolume;
