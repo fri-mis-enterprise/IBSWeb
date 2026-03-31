@@ -494,18 +494,20 @@ namespace IBS.DataAccess.Repository.Filpride
                 return ewtAmount;
             }
 
-            var advancesVoucher = await _db.FilprideCheckVoucherDetails
+            var advancesVouchers = await _db.FilprideCheckVoucherDetails
                 .Include(cv => cv.CheckVoucherHeader)
-                .OrderBy(cv => cv.CheckVoucherDetailId)
-                .FirstOrDefaultAsync(cv =>
+                .Where(cv =>
                     cv.CheckVoucherHeader!.SupplierId == model.PurchaseOrder.SupplierId &&
                     cv.CheckVoucherHeader.IsAdvances &&
                     cv.CheckVoucherHeader.Status == nameof(CheckVoucherPaymentStatus.Posted) &&
                     cv.AccountName.Contains("Expanded Withholding Tax") &&
-                    (isReversal ? cv.AmountPaid > 0 : cv.Credit > cv.AmountPaid),
-                    cancellationToken) ;
+                    (isReversal ? cv.AmountPaid > 0 : cv.Credit > cv.AmountPaid))
+                .OrderBy(cv => cv.CheckVoucherHeader!.Date)
+                .ThenBy(cv => cv.CheckVoucherHeaderId)
+                .ThenBy(cv => cv.CheckVoucherDetailId)
+                .ToListAsync(cancellationToken);
 
-            if (advancesVoucher == null)
+            if (advancesVouchers.Count == 0)
             {
                 return ewtAmount;
             }
@@ -517,12 +519,26 @@ namespace IBS.DataAccess.Repository.Filpride
                 return ewtAmount;
             }
 
-            var affectedEwt = isReversal
-                ? Math.Min(advancesVoucher.AmountPaid, remainingEwt)
-                : Math.Min(advancesVoucher.Credit - advancesVoucher.AmountPaid, remainingEwt);
+            foreach (var advancesVoucher in advancesVouchers)
+            {
+                if (remainingEwt <= 0)
+                {
+                    break;
+                }
 
-            advancesVoucher.AmountPaid += isReversal ? -affectedEwt : affectedEwt;
-            remainingEwt -= affectedEwt;
+                var availableAmount = isReversal
+                    ? advancesVoucher.AmountPaid
+                    : advancesVoucher.Credit - advancesVoucher.AmountPaid;
+
+                if (availableAmount <= 0)
+                {
+                    continue;
+                }
+
+                var affectedEwt = Math.Min(availableAmount, remainingEwt);
+                advancesVoucher.AmountPaid += isReversal ? -affectedEwt : affectedEwt;
+                remainingEwt -= affectedEwt;
+            }
 
             return isReversal ? ewtAmount : remainingEwt;
         }
