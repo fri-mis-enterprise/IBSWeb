@@ -589,12 +589,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var isTaxable = cvh.TaxType == SD.TaxType_WithTax;
                     var displayAppliedAdvanceAmount = Math.Max(0m, appliedAdvanceAmount);
 
-                    // Use the AP-Trade detail as the source amount so display entries stay aligned
-                    // even when Cash in Bank is manually adjusted for balancing.
                     var netAmount = apTradeDetail.Debit;
                     var baseAmount = 0m;
 
-                    // Base computation (reversible correct formula)
                     if (isTaxable)
                     {
                         baseAmount = isVatable
@@ -612,13 +609,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         ? Math.Round(baseAmount * 0.12m, 4)
                         : 0m;
 
-                    var grossAmount = baseAmount + inputVat;
-
                     var ewt = isTaxable
                         ? Math.Round(baseAmount * cvh.TaxPercent, 4)
                         : 0m;
-
-                    var netOfEwt = grossAmount - ewt;
 
                     cvDetails.Add(
                     new FilprideCheckVoucherDetail
@@ -650,13 +643,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         });
                     }
 
-                    if (ewt != 0)
+                    if (ewt != 0 && getWithholdingTaxTitle != null)
                     {
                         cvDetails.Add(
                         new FilprideCheckVoucherDetail
                         {
-                            AccountNo = getWithholdingTaxTitle?.AccountNumber ?? withholdingTaxAccountNo ?? string.Empty,
-                            AccountName = getWithholdingTaxTitle?.AccountName ?? supplier.WithholdingTaxTitle ?? "Expanded Withholding Tax",
+                            AccountNo = getWithholdingTaxTitle.AccountNumber!,
+                            AccountName = getWithholdingTaxTitle.AccountName,
                             Debit = 0.00m,
                             Credit = ewt,
                             TransactionNo = cvh.CheckVoucherHeaderNo,
@@ -1306,13 +1299,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         ? Math.Round(baseAmount * 0.12m, 4)
                         : 0m;
 
-                    var grossAmount = baseAmount + inputVat;
-
                     var ewt = isTaxable
                         ? Math.Round(baseAmount * existingHeaderModel.TaxPercent, 4)
                         : 0m;
-
-                    var netOfEwt = grossAmount - ewt;
 
                     if (existingHeaderModel.CheckVoucherHeaderNo != null)
                     {
@@ -1346,13 +1335,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             });
                         }
 
-                        if (ewt != 0)
+                        if (ewt != 0 && getWithholdingTaxTitle != null)
                         {
                             details.Add(
                             new FilprideCheckVoucherDetail
                             {
-                                AccountNo = getWithholdingTaxTitle?.AccountNumber ?? withholdingTaxAccountNo ?? string.Empty,
-                                AccountName = getWithholdingTaxTitle?.AccountName ?? supplier.WithholdingTaxTitle ?? "Expanded Withholding Tax",
+                                AccountNo = getWithholdingTaxTitle.AccountNumber!,
+                                AccountName = getWithholdingTaxTitle.AccountName,
                                 Debit = 0.00m,
                                 Credit = ewt,
                                 TransactionNo = existingHeaderModel.CheckVoucherHeaderNo,
@@ -2776,13 +2765,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         ? Math.Round(baseAmount * 0.12m, 4)
                         : 0m;
 
-                    var grossAmount = baseAmount + inputVat;
-
                     var ewt = isTaxable
                         ? Math.Round(baseAmount * cvh.TaxPercent, 4)
                         : 0m;
-
-                    var netOfEwt = grossAmount - ewt;
 
                     cvDetails.Add(
                         new FilprideCheckVoucherDetail
@@ -2819,8 +2804,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         cvDetails.Add(
                             new FilprideCheckVoucherDetail
                         {
-                            AccountNo = getWithholdingTaxTitle.AccountNumber ?? string.Empty,
-                            AccountName = getWithholdingTaxTitle.AccountName ?? string.Empty,
+                            AccountNo = getWithholdingTaxTitle.AccountNumber!,
+                            AccountName = getWithholdingTaxTitle.AccountName,
                             Debit = 0.00m,
                             Credit = ewt,
                             TransactionNo = cvh.CheckVoucherHeaderNo,
@@ -3149,13 +3134,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         ? Math.Round(baseAmount * 0.12m, 4)
                         : 0m;
 
-                    var grossAmount = baseAmount + inputVat;
-
                     var ewt = isTaxable
                         ? Math.Round(baseAmount * cvh.TaxPercent, 4)
                         : 0m;
-
-                    var netOfEwt = grossAmount - ewt;
 
                     cvDetails.Add(
                         new FilprideCheckVoucherDetail
@@ -3192,8 +3173,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         cvDetails.Add(
                             new FilprideCheckVoucherDetail
                         {
-                            AccountNo = getWithholdingTaxTitle.AccountNumber ?? string.Empty,
-                            AccountName = getWithholdingTaxTitle.AccountName ?? string.Empty,
+                            AccountNo = getWithholdingTaxTitle.AccountNumber!,
+                            AccountName = getWithholdingTaxTitle.AccountName,
                             Debit = 0.00m,
                             Credit = ewt,
                             TransactionNo = cvh.CheckVoucherHeaderNo,
@@ -3729,7 +3710,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var netAmount = commissionDetail.Debit;
                     var baseAmount = 0m;
 
-                    // Base computation (reversible correct formula)
                     if (isTaxable)
                     {
                         baseAmount = isVatable
@@ -3747,13 +3727,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         ? Math.Round(baseAmount * 0.12m, 4)
                         : 0m;
 
-                    var grossAmount = baseAmount + inputVat;
-
                     var ewt = isTaxable
                         ? Math.Round(baseAmount * existingHeaderModel.TaxPercent, 4)
                         : 0m;
-
-                    var netOfEwt = grossAmount - ewt;
 
                     if (existingHeaderModel.CheckVoucherHeaderNo != null)
                     {
@@ -3792,8 +3768,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             details.Add(
                                 new FilprideCheckVoucherDetail
                             {
-                                AccountNo = getWithholdingTaxTitle.AccountNumber ?? string.Empty,
-                                AccountName = getWithholdingTaxTitle.AccountName ?? string.Empty,
+                                AccountNo = getWithholdingTaxTitle.AccountNumber!,
+                                AccountName = getWithholdingTaxTitle.AccountName,
                                 Debit = 0.00m,
                                 Credit = ewt,
                                 TransactionNo = existingHeaderModel.CheckVoucherHeaderNo,
@@ -4204,13 +4180,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         ? Math.Round(baseAmount * 0.12m, 4)
                         : 0m;
 
-                    var grossAmount = baseAmount + inputVat;
-
                     var ewt = isTaxable
                         ? Math.Round(baseAmount * existingHeaderModel.TaxPercent, 4)
                         : 0m;
-
-                    var netOfEwt = grossAmount - ewt;
 
                     if (existingHeaderModel.CheckVoucherHeaderNo != null)
                     {
@@ -4249,8 +4221,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             details.Add(
                                 new FilprideCheckVoucherDetail
                             {
-                                AccountNo = getWithholdingTaxTitle.AccountNumber ?? string.Empty,
-                                AccountName = getWithholdingTaxTitle.AccountName ?? string.Empty,
+                                AccountNo = getWithholdingTaxTitle.AccountNumber!,
+                                AccountName = getWithholdingTaxTitle.AccountName,
                                 Debit = 0.00m,
                                 Credit = ewt,
                                 TransactionNo = existingHeaderModel.CheckVoucherHeaderNo,
