@@ -1775,27 +1775,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #endregion -- Recalculate payment of RR's or DR's
 
-                #region Revert the amount paid of advances
-
-                var appliedAdvanceAmount = await GetAppliedAdvanceAmountAsync(model.CheckVoucherHeaderId, cancellationToken);
-                if (model.Reference != null && appliedAdvanceAmount > 0)
-                {
-                    var advances = await _unitOfWork.FilprideCheckVoucher
-                        .GetAsync(cv =>
-                                cv.CheckVoucherHeaderNo == model.Reference &&
-                                cv.Company == model.Company,
-                            cancellationToken);
-
-                    if (advances == null)
-                    {
-                        return NotFound();
-                    }
-
-                    advances.AmountPaid = Math.Max(0m, advances.AmountPaid - appliedAdvanceAmount);
-                }
-
-                #endregion Revert the amount paid of advances
-
                 #region --Audit Trail Recording
 
                 FilprideAuditTrail auditTrailBook = new(model.CanceledBy!, $"Canceled check voucher# {model.CheckVoucherHeaderNo}", "Check Voucher", model.Company);
