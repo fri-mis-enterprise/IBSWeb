@@ -595,16 +595,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
-            var existingInventory = await _dbContext.FilprideInventories
-                .Include(i => i.Product)
-                .FirstOrDefaultAsync(i => i.Reference == model.ReceivingReportNo
-                                          && i.Company == model.Company, cancellationToken: cancellationToken);
-
-            if (existingInventory == null)
-            {
-                return NotFound();
-            }
-
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             try
