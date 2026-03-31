@@ -289,22 +289,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
             if (model.PurchaseOrder.Terms == SD.Terms_Cod || model.PurchaseOrder.Terms == SD.Terms_Prepaid)
             {
-                var advancesVoucher = await _db.FilprideCheckVoucherDetails
-                    .Include(cv => cv.CheckVoucherHeader)
-                    .FirstOrDefaultAsync(cv =>
-                        cv.CheckVoucherHeader!.SupplierId == model.PurchaseOrder.SupplierId &&
-                        cv.CheckVoucherHeader.IsAdvances &&
-                        cv.CheckVoucherHeader.Status == nameof(CheckVoucherPaymentStatus.Posted) &&
-                        cv.AccountName.Contains("Expanded Withholding Tax") &&
-                        cv.Credit > cv.AmountPaid,
-                        cancellationToken);
-
-                if (advancesVoucher != null)
-                {
-                    var affectedEwt = Math.Min(advancesVoucher.Credit, ewtAmount);
-                    ewtAmount -= affectedEwt;
-                    advancesVoucher.AmountPaid += affectedEwt;
-                }
+                ewtAmount = await ApplyAdvanceEwtOffsetAsync(model, ewtAmount, isReversal: false, cancellationToken);
             }
 
             var netOfEwtAmount = model.PurchaseOrder!.TaxType == SD.TaxType_WithTax
@@ -462,10 +447,24 @@ namespace IBS.DataAccess.Repository.Filpride
                 throw new InvalidOperationException("This record has already been utilized in a sales invoice. Voiding is not permitted.");
             }
 
-            model.PostedBy = null;
             model.VoidedBy = currentUser;
             model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
             model.Status = nameof(Status.Voided);
+            model.PostedBy = null;
+            model.DeliveryReceipt!.HasReceivingReport = false;
+
+            if (model.PurchaseOrder != null &&
+                (model.PurchaseOrder.Terms == SD.Terms_Cod || model.PurchaseOrder.Terms == SD.Terms_Prepaid))
+            {
+                var netOfVatAmount = model.PurchaseOrder.VatType == SD.VatType_Vatable
+                    ? ComputeNetOfVat(model.Amount)
+                    : model.Amount;
+                var ewtAmount = model.PurchaseOrder.TaxType == SD.TaxType_WithTax
+                    ? ComputeEwtAmount(netOfVatAmount, model.TaxPercentage)
+                    : 0m;
+
+                await ApplyAdvanceEwtOffsetAsync(model, ewtAmount, isReversal: true, cancellationToken);
+            }
 
             var unitOfWork = new UnitOfWork(_db);
             await RemoveRecords<FilpridePurchaseBook>(pb => pb.DocumentNo == model.ReceivingReportNo, cancellationToken);
@@ -482,6 +481,50 @@ namespace IBS.DataAccess.Repository.Filpride
             #endregion --Audit Trail Recording
 
             await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        private async Task<decimal> ApplyAdvanceEwtOffsetAsync(
+            FilprideReceivingReport model,
+            decimal ewtAmount,
+            bool isReversal,
+            CancellationToken cancellationToken)
+        {
+            if (ewtAmount <= 0 || model.PurchaseOrder?.SupplierId == null)
+            {
+                return ewtAmount;
+            }
+
+            var advancesVoucher = await _db.FilprideCheckVoucherDetails
+                .Include(cv => cv.CheckVoucherHeader)
+                .OrderBy(cv => cv.CheckVoucherDetailId)
+                .FirstOrDefaultAsync(cv =>
+                    cv.CheckVoucherHeader!.SupplierId == model.PurchaseOrder.SupplierId &&
+                    cv.CheckVoucherHeader.IsAdvances &&
+                    cv.CheckVoucherHeader.Status == nameof(CheckVoucherPaymentStatus.Posted) &&
+                    cv.AccountName.Contains("Expanded Withholding Tax") &&
+                    (isReversal ? cv.AmountPaid > 0 : cv.Credit > cv.AmountPaid),
+                    cancellationToken) ;
+
+            if (advancesVoucher == null)
+            {
+                return ewtAmount;
+            }
+
+            var remainingEwt = ewtAmount;
+
+            if (remainingEwt <= 0)
+            {
+                return ewtAmount;
+            }
+
+            var affectedEwt = isReversal
+                ? Math.Min(advancesVoucher.AmountPaid, remainingEwt)
+                : Math.Min(advancesVoucher.Credit - advancesVoucher.AmountPaid, remainingEwt);
+
+            advancesVoucher.AmountPaid += isReversal ? -affectedEwt : affectedEwt;
+            remainingEwt -= affectedEwt;
+
+            return isReversal ? ewtAmount : remainingEwt;
         }
 
         public async Task CreateEntriesForUpdatingCost(FilprideReceivingReport model, decimal difference, string userName, CancellationToken cancellationToken = default)

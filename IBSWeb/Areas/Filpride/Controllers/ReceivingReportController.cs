@@ -610,30 +610,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var connectedSi = await _unitOfWork.FilprideSalesInvoice
                 .GetAsync(x => x.ReceivingReportId == id, cancellationToken);
 
-            if (connectedSi != null)
-            {
-                connectedSi.ReceivingReportId = 0;
-            }
+            connectedSi?.ReceivingReportId = 0;
 
             try
             {
-                model.VoidedBy = GetUserFullName();
-                model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
-                model.Status = nameof(Status.Voided);
-                model.PostedBy = null;
-                model.DeliveryReceipt!.HasReceivingReport = false;
-
-                await _unitOfWork.FilprideReceivingReport.RemoveRecords<FilpridePurchaseBook>(pb => pb.DocumentNo == model.ReceivingReportNo, cancellationToken);
-                await _unitOfWork.GeneralLedger.ReverseEntries(model.ReceivingReportNo, cancellationToken);
-                await _unitOfWork.FilprideInventory.VoidInventory(existingInventory, cancellationToken);
-                await _unitOfWork.FilprideReceivingReport.RemoveQuantityReceived(model.POId, model.QuantityReceived, cancellationToken);
-
-                #region --Audit Trail Recording
-
-                FilprideAuditTrail auditTrailBook = new(model.VoidedBy!, $"Voided receiving report# {model.ReceivingReportNo}", "Receiving Report", model.Company);
-                await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
-
-                #endregion --Audit Trail Recording
+                await _unitOfWork.FilprideReceivingReport.VoidReceivingReportAsync(
+                    model.ReceivingReportId,
+                    GetUserFullName(), cancellationToken);
 
                 await transaction.CommitAsync(cancellationToken);
 
