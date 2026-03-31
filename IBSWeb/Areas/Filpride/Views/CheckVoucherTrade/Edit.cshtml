@@ -636,7 +636,7 @@
                     $("#advancesCredit").removeClass("is-invalid");
                 }
 
-                $("#advancesCredit").val(advancesAmount);
+                $("#advancesCredit").val(formatNumberToFour(advancesAmount));
             }
             $("#AppliedAdvanceAmount").val(formatNumberToFour(advancesAmount));
 
@@ -729,8 +729,6 @@
 
             $(".totalDebit").text(formatNumberToFour(totalDebit));
             $(".totalCredit").text(formatNumberToFour(totalCredit));
-            $("#debit").val("0.0000");
-            $("#credit").val("0.0000");
             validateDebitAndCredit();
         }
     </script>

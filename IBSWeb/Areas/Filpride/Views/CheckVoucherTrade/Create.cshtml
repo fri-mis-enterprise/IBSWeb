@@ -589,7 +589,7 @@
                     $("#advancesCredit").removeClass("is-invalid");
                 }
 
-                $("#advancesCredit").val(advancesAmount);
+                $("#advancesCredit").val(formatNumberToFour(advancesAmount));
             }
             $("#AppliedAdvanceAmount").val(formatNumberToFour(advancesAmount));
 
