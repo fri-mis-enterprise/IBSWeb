@@ -75,9 +75,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private static string GetStatusFilterLabel(string statusFilter) => statusFilter switch
         {
-            "All" => "All",
-            "InvalidOnly" => "Voided/Cancelled Only",
-            _ => "Valid Only"
+            "All" => "All (Include Voided)",
+            "InvalidOnly" => "Voided Only",
+            _ => "Valid Only (Exclude Voided)"
         };
 
         [HttpGet]
@@ -458,9 +458,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                       && cvd.CheckVoucherHeader.CvType == nameof(CVType.Invoicing)
                                       && cvd.CheckVoucherHeader.Date >= dateFrom &&
                                       cvd.CheckVoucherHeader.Date <= dateTo
-                                      && (statusFilter == "ValidOnly" ? (cvd.CheckVoucherHeader.VoidedBy == null && cvd.CheckVoucherHeader.CanceledBy == null)
-                                         : statusFilter == "InvalidOnly" ? (cvd.CheckVoucherHeader.VoidedBy != null || cvd.CheckVoucherHeader.CanceledBy != null)
-                                         : true))
+                                      && (statusFilter == "ValidOnly"
+                                          ? cvd.CheckVoucherHeader.VoidedBy == null
+                                          : statusFilter == "InvalidOnly"
+                                              ? cvd.CheckVoucherHeader.VoidedBy != null
+                                              : true))
                         .Include(cvd => cvd.CheckVoucherHeader)
                         .ThenInclude(cvh => cvh!.Supplier)
                         .OrderBy(cvd => cvd.CheckVoucherHeader!.Date)
@@ -533,14 +535,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, col].Value = "DEBIT"; col++;
                 worksheet.Cells[row, col].Value = "CREDIT"; col++;
                 worksheet.Cells[row, col].Value = "STATUS"; col++;
-                
+
                 if (showVoidCancelColumns)
                 {
                     worksheet.Cells[row, col].Value = "VOIDED BY"; col++;
                     worksheet.Cells[row, col].Value = "VOIDED DATE";
-                    worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy"; col++;
-                    worksheet.Cells[row, col].Value = "CANCELLED BY"; col++;
-                    worksheet.Cells[row, col].Value = "CANCELLED DATE";
                     worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy";
                 }
 
@@ -585,15 +584,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, col].Style.Numberformat.Format = currencyFormat; col++;
                     worksheet.Cells[row, col].Value = inv.Credit;
                     worksheet.Cells[row, col].Style.Numberformat.Format = currencyFormat; col++;
-                    worksheet.Cells[row, col].Value = inv.CheckVoucherHeader.Status; col++;  
+                    worksheet.Cells[row, col].Value = inv.CheckVoucherHeader.Status; col++;
 
                     if (showVoidCancelColumns)
                     {
                         worksheet.Cells[row, col].Value = inv.CheckVoucherHeader.VoidedBy; col++;
                         worksheet.Cells[row, col].Value = inv.CheckVoucherHeader.VoidedDate;
-                        worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy"; col++;
-                        worksheet.Cells[row, col].Value = inv.CheckVoucherHeader.CanceledBy; col++;
-                        worksheet.Cells[row, col].Value = inv.CheckVoucherHeader.CanceledDate;
                         worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy";
                     }
 
@@ -604,7 +600,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 int totalRow = row;
-                int lastDataCol = showVoidCancelColumns ? 17 : 13;
+                int lastDataCol = showVoidCancelColumns ? 15 : 13;
                 worksheet.Cells[totalRow, 10].Value = "TOTAL: ";
                 worksheet.Cells[totalRow, 11].Value = totalDebit;
                 worksheet.Cells[totalRow, 12].Value = totalCredit;
@@ -678,9 +674,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             cvh.CvType != nameof(CVType.Invoicing) &&
                             cvh.Date >= dateFrom &&
                             cvh.Date <= dateTo
-                            && (statusFilter == "ValidOnly" ? (cvh.VoidedBy == null && cvh.CanceledBy == null)
-                               : statusFilter == "InvalidOnly" ? (cvh.VoidedBy != null || cvh.CanceledBy != null)
-                               : true))
+                            && (statusFilter == "ValidOnly"
+                                ? cvh.VoidedBy == null
+                                : statusFilter == "InvalidOnly"
+                                    ? cvh.VoidedBy != null
+                                    : true))
                         .Include(cvh => cvh.Details!)
                         .Include(cvh => cvh.Supplier)
                         .OrderBy(cvh => cvh.Date)
@@ -744,13 +742,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, col].Value = "DEBIT"; col++;
                 worksheet.Cells[row, col].Value = "CREDIT"; col++;
                 worksheet.Cells[row, col].Value = "STATUS"; col++;
-                
+
                 if (showVoidCancelColumns)
                 {
                     worksheet.Cells[row, col].Value = "VOIDED BY"; col++;
-                    worksheet.Cells[row, col].Value = "VOIDED DATE"; col++;
-                    worksheet.Cells[row, col].Value = "CANCELLED BY"; col++;
-                    worksheet.Cells[row, col].Value = "CANCELLED DATE";
+                    worksheet.Cells[row, col].Value = "VOIDED DATE";
                 }
 
                 using (var range = worksheet.Cells[row, 1, row, col])
@@ -845,15 +841,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[row, col].Value = details.Debit; col++;
                         worksheet.Cells[row, col].Value = details.Credit; col++;
                         worksheet.Cells[row, col].Value = header.Status; col++;
-                        
+
 
                         if (showVoidCancelColumns)
                         {
                             worksheet.Cells[row, col].Value = header.VoidedBy; col++;
                             worksheet.Cells[row, col].Value = header.VoidedDate;
-                            worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy"; col++;
-                            worksheet.Cells[row, col].Value = header.CanceledBy; col++;
-                            worksheet.Cells[row, col].Value = header.CanceledDate;
                             worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy";
                         }
 
@@ -869,7 +862,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 int totalRow = row;
-                int lastDataCol = showVoidCancelColumns ? 18 : 14;
+                int lastDataCol = showVoidCancelColumns ? 16 : 14;
                 worksheet.Cells[totalRow, 11].Value = "TOTAL: ";
                 worksheet.Cells[totalRow, 12].Value = totalDebit;
                 worksheet.Cells[totalRow, 13].Value = totalCredit;
@@ -1153,18 +1146,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["H7"].Value = "Price";
                 worksheet.Cells["I7"].Value = "Amount";
                 worksheet.Cells["J7"].Value = "Remarks";
-                
+
                 if (showVoidCancelColumns)
                 {
                     worksheet.Cells[7, 11].Value = "Status";
                     worksheet.Cells[7, 12].Value = "Voided By";
                     worksheet.Cells[7, 13].Value = "Voided Date";
-                    worksheet.Cells[7, 14].Value = "Cancelled By";
-                    worksheet.Cells[7, 15].Value = "Cancelled Date";
                 }
 
                 // Apply styling to the header row
-                using (var range = worksheet.Cells["A7:" + (showVoidCancelColumns ? "O7" : "J7")])
+                using (var range = worksheet.Cells["A7:" + (showVoidCancelColumns ? "M7" : "J7")])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.Fill.PatternType = ExcelFillStyle.Solid;
@@ -1203,9 +1194,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[row, 12].Value = po.VoidedBy;
                         worksheet.Cells[row, 13].Value = po.VoidedDate;
                         worksheet.Cells[row, 13].Style.Numberformat.Format = "MMM/dd/yyyy";
-                        worksheet.Cells[row, 14].Value = po.CanceledBy;
-                        worksheet.Cells[row, 15].Value = po.CanceledDate;
-                        worksheet.Cells[row, 15].Style.Numberformat.Format = "MMM/dd/yyyy";
                     }
 
                     row++;
@@ -1704,6 +1692,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var totalFreight = 0m;
                 var totalNetFreight = 0m;
                 var totalCommission = 0m;
+                var totalPurchaseNetOfWht = 0m;
+                var totalFreightWhtAmount = 0m;
+                var totalFreightNetOfWht = 0m;
 
                 #endregion -- Initialize "total" Variables for operations --
 
@@ -1756,37 +1747,38 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 purchaseReportWorksheet.Cells["S7"].Value = "VOLUME";
                 purchaseReportWorksheet.Cells["T7"].Value = "CPL G.VAT";
                 purchaseReportWorksheet.Cells["U7"].Value = "PURCHASES G.VAT";
-                purchaseReportWorksheet.Cells["V7"].Value = "VAT AMOUNT";
-                purchaseReportWorksheet.Cells["W7"].Value = "FREIGHT G.VAT";
+                purchaseReportWorksheet.Cells["V7"].Value = "PURCHASES N.VAT";
+                purchaseReportWorksheet.Cells["W7"].Value = "VAT AMOUNT";
                 purchaseReportWorksheet.Cells["X7"].Value = "WHT AMOUNT";
-                purchaseReportWorksheet.Cells["Y7"].Value = "HAULER'S NAME";
-                purchaseReportWorksheet.Cells["Z7"].Value = "PURCHASES N.VAT";
-                purchaseReportWorksheet.Cells["AA7"].Value = "FREIGHT N.VAT";
-                purchaseReportWorksheet.Cells["AB7"].Value = "FREIGHT AMT G.VAT";
-                purchaseReportWorksheet.Cells["AC7"].Value = "FREIGHT AMT N.VAT";
-                purchaseReportWorksheet.Cells["AD7"].Value = "COMMISSION";
-                purchaseReportWorksheet.Cells["AE7"].Value = "OTC COS#.";
-                purchaseReportWorksheet.Cells["AF7"].Value = "OTC DR#.";
-                purchaseReportWorksheet.Cells["AG7"].Value = "IS PO#";
-                purchaseReportWorksheet.Cells["AH7"].Value = "IS RR#";
-                purchaseReportWorksheet.Cells["AI7"].Value = "TERMS";
-                
-                int lastColIndex = 35; // AI = 35
+                purchaseReportWorksheet.Cells["Y7"].Value = "PURC.NET OF WHT";
+                purchaseReportWorksheet.Cells["Z7"].Value = "HAULER'S NAME";
+                purchaseReportWorksheet.Cells["AA7"].Value = "FREIGHT G.VAT";
+                purchaseReportWorksheet.Cells["AB7"].Value = "FREIGHT N.VAT";
+                purchaseReportWorksheet.Cells["AC7"].Value = "FREIGHT AMT G.VAT";
+                purchaseReportWorksheet.Cells["AD7"].Value = "FREIGHT AMT N.VAT";
+                purchaseReportWorksheet.Cells["AE7"].Value = "FREIGHT WHT AMT";
+                purchaseReportWorksheet.Cells["AF7"].Value = "FREIGHT NET OF WHT";
+                purchaseReportWorksheet.Cells["AG7"].Value = "COMMISSION";
+                purchaseReportWorksheet.Cells["AH7"].Value = "OTC COS#.";
+                purchaseReportWorksheet.Cells["AI7"].Value = "OTC DR#.";
+                purchaseReportWorksheet.Cells["AJ7"].Value = "IS PO#";
+                purchaseReportWorksheet.Cells["AK7"].Value = "IS RR#";
+                purchaseReportWorksheet.Cells["AL7"].Value = "TERMS";
+
+                int lastColIndex = 38; // AL = 38
                 if (showVoidCancelColumns)
                 {
-                    purchaseReportWorksheet.Cells[7, 36].Value = "STATUS";
-                    purchaseReportWorksheet.Cells[7, 37].Value = "VOIDED BY";
-                    purchaseReportWorksheet.Cells[7, 38].Value = "VOIDED DATE";
-                    purchaseReportWorksheet.Cells[7, 39].Value = "CANCELLED BY";
-                    purchaseReportWorksheet.Cells[7, 40].Value = "CANCELLED DATE";
-                    lastColIndex = 40;
+                    purchaseReportWorksheet.Cells[7, 39].Value = "STATUS";
+                    purchaseReportWorksheet.Cells[7, 40].Value = "VOIDED BY";
+                    purchaseReportWorksheet.Cells[7, 41].Value = "VOIDED DATE";
+                    lastColIndex = 41;
                 }
 
                 #endregion -- Set the column header  --
 
                 #region -- Apply styling to the header row --
 
-                using (var range = purchaseReportWorksheet.Cells["A7:" + (showVoidCancelColumns ? "AN7" : "AI7")])
+                using (var range = purchaseReportWorksheet.Cells["A7:" + (showVoidCancelColumns ? "AO7" : "AL7")])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
@@ -1829,6 +1821,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var isSupplierVatable = pr.PurchaseOrder!.VatType == SD.VatType_Vatable;
                     var isSupplierTaxable = pr.PurchaseOrder!.TaxType == SD.TaxType_WithTax;
                     var isHaulerVatable = pr.DeliveryReceipt!.HaulerVatType == SD.VatType_Vatable;
+                    var isHaulerTaxable = pr.DeliveryReceipt!.Hauler?.TaxType == SD.TaxType_WithTax;
 
                     // calculate values, put in variables to be displayed per cell
                     var volume = pr.QuantityReceived; // volume
@@ -1848,8 +1841,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var whtAmount = isSupplierTaxable
                         ? _unitOfWork.FilpridePurchaseOrder.ComputeEwtAmount(netPurchases, pr.TaxPercentage)
                         : 0m; // wht total
-                    var costPerLiter = costAmount / volume; // sale price per liter
+                    var costPerLiter = volume != 0 ? costAmount / volume : 0m; // sale price per liter
                     var commission = ((pr.DeliveryReceipt?.CustomerOrderSlip?.CommissionRate ?? 0m) * volume);
+                    var purchaseNetOfWht = costAmount - whtAmount;
+                    var freightNetOfVatAmount = isHaulerVatable
+                        ? _unitOfWork.FilpridePurchaseOrder.ComputeNetOfVat(freightAmount)
+                        : freightAmount;
+                    var freightWhtAmount = isHaulerTaxable
+                        ? _unitOfWork.FilpridePurchaseOrder.ComputeEwtAmount(freightNetOfVatAmount, pr.DeliveryReceipt?.Hauler?.WithholdingTaxPercent ?? 0)
+                        : 0m;
+                    var freightNetOfWht = freightAmount - freightWhtAmount;
 
                     if (pr.AuthorityToLoadNo != null)
                     {
@@ -1885,30 +1886,30 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     purchaseReportWorksheet.Cells[row, 19].Value = volume; // Volume
                     purchaseReportWorksheet.Cells[row, 20].Value = costPerLiter; // Purchase price per liter
                     purchaseReportWorksheet.Cells[row, 21].Value = costAmount; // Purchase total gross
-                    purchaseReportWorksheet.Cells[row, 22].Value = vatAmount; // Vat total
-                    purchaseReportWorksheet.Cells[row, 23].Value = freight; // WHT total
+                    purchaseReportWorksheet.Cells[row, 22].Value = netPurchases; // Purchase total net ======== move to third last
+                    purchaseReportWorksheet.Cells[row, 23].Value = vatAmount; // Vat total
                     purchaseReportWorksheet.Cells[row, 24].Value = whtAmount; // freight g vat
-                    purchaseReportWorksheet.Cells[row, 25].Value = pr.DeliveryReceipt?.HaulerName; // Hauler's Name
-                    purchaseReportWorksheet.Cells[row, 26].Value = netPurchases; // Purchase total net ======== move to third last
-                    purchaseReportWorksheet.Cells[row, 27].Value = netFreight; // freight n vat ============
-                    purchaseReportWorksheet.Cells[row, 28].Value = freightAmount; // freight amount n vat ============
-                    purchaseReportWorksheet.Cells[row, 29].Value = freightAmountNet; // freight amount n vat ============
-                    purchaseReportWorksheet.Cells[row, 30].Value = commission; // commission =========
-                    purchaseReportWorksheet.Cells[row, 31].Value = pr.DeliveryReceipt?.CustomerOrderSlip?.OldCosNo; // OTC COS =========
-                    purchaseReportWorksheet.Cells[row, 32].Value = pr.DeliveryReceipt?.ManualDrNo; // OTC DR =========
-                    purchaseReportWorksheet.Cells[row, 33].Value = pr.PurchaseOrder?.OldPoNo; // IS PO =========
-                    purchaseReportWorksheet.Cells[row, 34].Value = pr.OldRRNo; // IS RR =========
-                    purchaseReportWorksheet.Cells[row, 35].Value = pr.PurchaseOrder?.Terms;
+                    purchaseReportWorksheet.Cells[row, 25].Value = purchaseNetOfWht; // Purchase Net of WHT
+                    purchaseReportWorksheet.Cells[row, 26].Value = pr.DeliveryReceipt?.HaulerName; // Hauler's Name
+                    purchaseReportWorksheet.Cells[row, 27].Value = freight; // WHT total
+                    purchaseReportWorksheet.Cells[row, 28].Value = netFreight; // freight n vat ============
+                    purchaseReportWorksheet.Cells[row, 29].Value = freightAmount; // freight amount n vat ============
+                    purchaseReportWorksheet.Cells[row, 30].Value = freightAmountNet; // freight amount n vat ============
+                    purchaseReportWorksheet.Cells[row, 31].Value = freightWhtAmount; // Freight WHT amount
+                    purchaseReportWorksheet.Cells[row, 32].Value = freightNetOfWht; // Freight Net of WHT
+                    purchaseReportWorksheet.Cells[row, 33].Value = commission; // commission =========
+                    purchaseReportWorksheet.Cells[row, 34].Value = pr.DeliveryReceipt?.CustomerOrderSlip?.OldCosNo; // OTC COS =========
+                    purchaseReportWorksheet.Cells[row, 35].Value = pr.DeliveryReceipt?.ManualDrNo; // OTC DR =========
+                    purchaseReportWorksheet.Cells[row, 36].Value = pr.PurchaseOrder?.OldPoNo; // IS PO =========
+                    purchaseReportWorksheet.Cells[row, 37].Value = pr.OldRRNo; // IS RR =========
+                    purchaseReportWorksheet.Cells[row, 38].Value = pr.PurchaseOrder?.Terms;
 
                     if (showVoidCancelColumns)
                     {
-                        purchaseReportWorksheet.Cells[row, 36].Value = pr.Status;
-                        purchaseReportWorksheet.Cells[row, 37].Value = pr.VoidedBy;
-                        purchaseReportWorksheet.Cells[row, 38].Value = pr.VoidedDate;
-                        purchaseReportWorksheet.Cells[row, 38].Style.Numberformat.Format = "MMM/dd/yyyy";
-                        purchaseReportWorksheet.Cells[row, 39].Value = pr.CanceledBy;
-                        purchaseReportWorksheet.Cells[row, 40].Value = pr.CanceledDate;
-                        purchaseReportWorksheet.Cells[row, 40].Style.Numberformat.Format = "MMM/dd/yyyy";
+                        purchaseReportWorksheet.Cells[row, 39].Value = pr.Status;
+                        purchaseReportWorksheet.Cells[row, 40].Value = pr.VoidedBy;
+                        purchaseReportWorksheet.Cells[row, 41].Value = pr.VoidedDate;
+                        purchaseReportWorksheet.Cells[row, 41].Style.Numberformat.Format = "MMM/dd/yyyy";
                     }
 
                     #endregion -- Assign Values to Cells --
@@ -1922,6 +1923,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     totalCommission += commission;
                     totalFreight += freightAmount;
                     totalNetFreight += freightAmountNet;
+                    totalPurchaseNetOfWht += purchaseNetOfWht;
+                    totalFreightWhtAmount += freightWhtAmount;
+                    totalFreightNetOfWht += freightNetOfWht;
 
                     #endregion -- Add the values to total --
 
@@ -1939,32 +1943,40 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region -- Assign values of other totals and formatting of total cells --
 
-                var totalCostPerLiter = totalCostAmount / totalVolume;
+                var totalCostPerLiter = totalVolume != 0
+                    ? totalCostAmount / totalVolume
+                    : 0m;
 
                 purchaseReportWorksheet.Cells[row, 17].Value = "Total: ";
                 purchaseReportWorksheet.Cells[row, 19].Value = totalVolume;
                 purchaseReportWorksheet.Cells[row, 20].Value = totalCostPerLiter;
                 purchaseReportWorksheet.Cells[row, 21].Value = totalCostAmount;
-                purchaseReportWorksheet.Cells[row, 22].Value = totalVatAmount;
-                purchaseReportWorksheet.Cells[row, 23].Value = "";
+                purchaseReportWorksheet.Cells[row, 22].Value = totalNetPurchases;
+                purchaseReportWorksheet.Cells[row, 23].Value = totalVatAmount;
                 purchaseReportWorksheet.Cells[row, 24].Value = totalWhtAmount;
-                purchaseReportWorksheet.Cells[row, 26].Value = totalNetPurchases;
+                purchaseReportWorksheet.Cells[row, 25].Value = totalPurchaseNetOfWht;
+
                 purchaseReportWorksheet.Cells[row, 27].Value = "";
-                purchaseReportWorksheet.Cells[row, 28].Value = totalFreight;
-                purchaseReportWorksheet.Cells[row, 29].Value = totalNetFreight;
-                purchaseReportWorksheet.Cells[row, 30].Value = totalCommission;
+                purchaseReportWorksheet.Cells[row, 29].Value = totalFreight;
+                purchaseReportWorksheet.Cells[row, 30].Value = totalNetFreight;
+                purchaseReportWorksheet.Cells[row, 31].Value = totalFreightWhtAmount;
+                purchaseReportWorksheet.Cells[row, 32].Value = totalFreightNetOfWht;
+                purchaseReportWorksheet.Cells[row, 33].Value = totalCommission;
 
                 purchaseReportWorksheet.Column(19).Style.Numberformat.Format = currencyFormat2;
                 purchaseReportWorksheet.Column(20).Style.Numberformat.Format = currencyFormat;
                 purchaseReportWorksheet.Column(21).Style.Numberformat.Format = currencyFormat2;
                 purchaseReportWorksheet.Column(22).Style.Numberformat.Format = currencyFormat2;
-                purchaseReportWorksheet.Column(23).Style.Numberformat.Format = currencyFormat;
+                purchaseReportWorksheet.Column(23).Style.Numberformat.Format = currencyFormat2;
                 purchaseReportWorksheet.Column(24).Style.Numberformat.Format = currencyFormat2;
-                purchaseReportWorksheet.Column(26).Style.Numberformat.Format = currencyFormat2;
+                purchaseReportWorksheet.Column(25).Style.Numberformat.Format = currencyFormat2;
                 purchaseReportWorksheet.Column(27).Style.Numberformat.Format = currencyFormat;
-                purchaseReportWorksheet.Column(28).Style.Numberformat.Format = currencyFormat2;
+                purchaseReportWorksheet.Column(28).Style.Numberformat.Format = currencyFormat;
                 purchaseReportWorksheet.Column(29).Style.Numberformat.Format = currencyFormat2;
                 purchaseReportWorksheet.Column(30).Style.Numberformat.Format = currencyFormat2;
+                purchaseReportWorksheet.Column(31).Style.Numberformat.Format = currencyFormat2;
+                purchaseReportWorksheet.Column(32).Style.Numberformat.Format = currencyFormat2;
+                purchaseReportWorksheet.Column(33).Style.Numberformat.Format = currencyFormat2;
 
                 #endregion -- Assign values of other totals and formatting of total cells --
 
@@ -1977,7 +1989,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(172, 185, 202));
                 }
                 // line to subtotal values
-                using (var range = purchaseReportWorksheet.Cells[row, 17, row, 30])
+                using (var range = purchaseReportWorksheet.Cells[row, 17, row, 33])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.Border.Top.Style = ExcelBorderStyle.Thin; // Single top border
@@ -8698,32 +8710,25 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[headerRow, 11].Value = "CV #";
                 worksheet.Cells[headerRow, 12].Value = "PAYEE";
                 worksheet.Cells[headerRow, 13].Value = "PREPARED BY";
-                
+
                 int lastColIndex = 13;
                 if (showVoidCancelColumns)
                 {
                     worksheet.Cells[headerRow, 14].Value = "VOIDED BY";
                     worksheet.Cells[headerRow, 15].Value = "VOIDED DATE";
-                    worksheet.Cells[headerRow, 16].Value = "CANCELLED BY";
-                    worksheet.Cells[headerRow, 17].Value = "CANCELLED DATE";
-                    lastColIndex = 17;
+                    lastColIndex = 15;
                 }
 
                 // Align all cells left
                 worksheet.Cells[worksheet.Dimension.Address].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
 
-                // Then Apply styling to the header row (only bold, border will be applied to the whole range later)
+                // Apply border to left, right of header
                 using (var range = worksheet.Cells[headerRow, 1, headerRow, lastColIndex])
                 {
                     range.Style.Fill.PatternType = ExcelFillStyle.Solid;
                     range.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
                     range.Style.Font.Bold = true;
                     range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                }
-
-                // Apply border to left, right of header
-                using (var range = worksheet.Cells[headerRow, 1, headerRow, lastColIndex])
-                {
                     range.Style.Border.Left.Style = ExcelBorderStyle.Thin;
                     range.Style.Border.Right.Style = ExcelBorderStyle.Thin;
                     range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
@@ -8759,9 +8764,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[row, 14].Value = detail.JournalVoucherHeader.VoidedBy;
                         worksheet.Cells[row, 15].Value = detail.JournalVoucherHeader.VoidedDate;
                         worksheet.Cells[row, 15].Style.Numberformat.Format = "MMM/dd/yyyy";
-                        worksheet.Cells[row, 16].Value = detail.JournalVoucherHeader.CanceledBy;
-                        worksheet.Cells[row, 17].Value = detail.JournalVoucherHeader.CanceledDate;
-                        worksheet.Cells[row, 17].Style.Numberformat.Format = "MMM/dd/yyyy";
                     }
 
                     row++;
