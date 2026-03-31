@@ -56,8 +56,7 @@
                         url: '@Url.Action("Void", "ReceivingReport", new { area = "Filpride" })',
                         type: 'POST',
                         data: {
-                            id: id,
-                            cancellationRemarks: $("#cancellationRemarks").val()
+                            id: id
                         },
                         headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
                         success: function(response) {
