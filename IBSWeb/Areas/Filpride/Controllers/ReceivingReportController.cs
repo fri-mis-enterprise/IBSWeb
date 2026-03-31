@@ -607,11 +607,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
-            var connectedSi = await _unitOfWork.FilprideSalesInvoice
-                .GetAsync(x => x.ReceivingReportId == id, cancellationToken);
-
-            connectedSi?.ReceivingReportId = 0;
-
             try
             {
                 await _unitOfWork.FilprideReceivingReport.VoidReceivingReportAsync(

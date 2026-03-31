@@ -710,7 +710,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             int receivingReportId = 0;
 
             if (automatedRr != null)
-
             {
                 receivingReportId = automatedRr.ReceivingReportId;
             }
