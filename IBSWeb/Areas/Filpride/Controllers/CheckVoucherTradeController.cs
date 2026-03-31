@@ -42,6 +42,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
         private const string ApTradePayableAccountNo = "202010100";
         private const string CashInBankAccountNo = "101010100";
         private const string AdvancesToSupplierAccountNo = "101060100";
+        private static readonly string[] ReservedTradeAccountNumbers =
+        [
+            "202010200",
+            ApTradePayableAccountNo,
+            CashInBankAccountNo,
+            AdvancesToSupplierAccountNo
+        ];
 
         public CheckVoucherTradeController(IUnitOfWork unitOfWork,
             UserManager<ApplicationUser> userManager,
@@ -98,6 +105,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var fileName = Path.GetFileNameWithoutExtension(incomingFileName);
             var extension = Path.GetExtension(incomingFileName);
             return $"{fileName}-{DateTimeHelper.GetCurrentPhilippineTime():yyyyMMddHHmmss}{extension}";
+        }
+
+        private async Task<List<SelectListItem>> GetTradeAccountingEntryOptionsAsync(CancellationToken cancellationToken)
+        {
+            return (await _unitOfWork.FilprideChartOfAccount
+                    .GetAllAsync(coa => !ReservedTradeAccountNumbers.Any(excludedNumber => coa.AccountNumber!.Contains(excludedNumber)) && !coa.HasChildren, cancellationToken))
+                .Select(s => new SelectListItem
+                {
+                    Value = s.AccountNumber,
+                    Text = s.AccountNumber + " " + s.AccountName
+                })
+                .ToList();
         }
 
         public IActionResult Index(string? view)
@@ -200,6 +219,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 Suppliers = await _unitOfWork.GetFilprideTradeSupplierListAsyncById(companyClaims, cancellationToken),
                 BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken),
+                COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken),
                 MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken)
             };
 
@@ -250,14 +270,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     if (cv.Any())
                     {
-                        viewModel.COA = (await _unitOfWork.FilprideChartOfAccount
-                                .GetAllAsync(coa => !new[] { "202010200", "202010100", "101010100" }.Any(excludedNumber => coa.AccountNumber!.Contains(excludedNumber)) && !coa.HasChildren, cancellationToken))
-                            .Select(s => new SelectListItem
-                            {
-                                Value = s.AccountNumber,
-                                Text = s.AccountNumber + " " + s.AccountName
-                            })
-                            .ToList();
+                        viewModel.COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken);
 
                         viewModel.Suppliers = (await _unitOfWork.FilprideSupplier
                                 .GetAllAsync(supp => (companyClaims == nameof(Filpride) ? supp.IsFilpride : supp.IsMobility) && supp.Category == "Trade", cancellationToken))
@@ -506,6 +519,25 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 var getWithholdingTaxTitle = await _dbContext.FilprideChartOfAccounts
                     .FirstOrDefaultAsync(x => x.AccountNumber == ewtTitle.FirstOrDefault(), cancellationToken);
+                var manualDisplayEntries = cvDetails
+                    .Where(d => !d.IsDisplayEntry &&
+                                d.AccountNo != ApTradePayableAccountNo &&
+                                d.AccountNo != CashInBankAccountNo &&
+                                d.AccountNo != AdvancesToSupplierAccountNo)
+                    .Select(d => new FilprideCheckVoucherDetail
+                    {
+                        AccountNo = d.AccountNo,
+                        AccountName = d.AccountName,
+                        Debit = d.Debit,
+                        Credit = d.Credit,
+                        TransactionNo = cvh.CheckVoucherHeaderNo,
+                        CheckVoucherHeaderId = cvh.CheckVoucherHeaderId,
+                        SubAccountType = d.SubAccountType,
+                        SubAccountId = d.SubAccountId,
+                        SubAccountName = d.SubAccountName,
+                        IsDisplayEntry = true
+                    })
+                    .ToList();
 
                 foreach (var cv in cvDetails.OrderBy(x => x.CheckVoucherDetailId))
                 {
@@ -625,6 +657,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     break;
                 }
+
+                cvDetails.AddRange(manualDisplayEntries);
                 await _dbContext.FilprideCheckVoucherDetails.AddRangeAsync(cvDetails, cancellationToken);
 
                 #endregion -- Additional journal entry in details
@@ -849,8 +883,24 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     AppliedAdvanceAmount = await GetAppliedAdvanceAmountAsync(existingHeaderModel.CheckVoucherHeaderId, cancellationToken),
                     Suppliers = await _unitOfWork.GetFilprideTradeSupplierListAsyncById(companyClaims,
                         cancellationToken),
+                    COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken),
                     MinDate = minDate
                 };
+
+                model.AdditionalAccountingEntries = await _dbContext.FilprideCheckVoucherDetails
+                    .Where(d => d.CheckVoucherHeaderId == existingHeaderModel.CheckVoucherHeaderId &&
+                                !d.IsDisplayEntry &&
+                                d.AccountNo != ApTradePayableAccountNo &&
+                                d.AccountNo != CashInBankAccountNo &&
+                                d.AccountNo != AdvancesToSupplierAccountNo)
+                    .Select(d => new CheckVoucherTradeAccountingEntryViewModel
+                    {
+                        AccountNumber = d.AccountNo,
+                        AccountTitle = d.AccountName,
+                        Debit = d.Debit,
+                        Credit = d.Credit
+                    })
+                    .ToListAsync(cancellationToken);
 
                 var getCheckVoucherTradePayment = await _dbContext.FilprideCVTradePayments
                     .Where(cv => cv.CheckVoucherId == id && cv.DocumentType == "RR")
@@ -915,6 +965,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .ToList();
             viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
             viewModel.Suppliers = await _unitOfWork.GetFilprideTradeSupplierListAsyncById(companyClaims, cancellationToken);
+            viewModel.COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
 
             if (!ModelState.IsValid)
@@ -1155,6 +1206,25 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 var getWithholdingTaxTitle = await _dbContext.FilprideChartOfAccounts
                     .FirstOrDefaultAsync(x => x.AccountNumber == ewtTitle.FirstOrDefault(), cancellationToken);
+                var manualDisplayEntries = details
+                    .Where(d => !d.IsDisplayEntry &&
+                                d.AccountNo != ApTradePayableAccountNo &&
+                                d.AccountNo != CashInBankAccountNo &&
+                                d.AccountNo != AdvancesToSupplierAccountNo)
+                    .Select(d => new FilprideCheckVoucherDetail
+                    {
+                        AccountNo = d.AccountNo,
+                        AccountName = d.AccountName,
+                        Debit = d.Debit,
+                        Credit = d.Credit,
+                        TransactionNo = existingHeaderModel.CheckVoucherHeaderNo!,
+                        CheckVoucherHeaderId = existingHeaderModel.CheckVoucherHeaderId,
+                        SubAccountType = d.SubAccountType,
+                        SubAccountId = d.SubAccountId,
+                        SubAccountName = d.SubAccountName,
+                        IsDisplayEntry = true
+                    })
+                    .ToList();
 
                 foreach (var cv in details.OrderBy(x => x.CheckVoucherDetailId))
                 {
@@ -1281,6 +1351,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     break;
                 }
+
+                details.AddRange(manualDisplayEntries);
                 await _dbContext.FilprideCheckVoucherDetails.AddRangeAsync(details, cancellationToken);
 
                 #endregion -- Additional details entry
@@ -2472,14 +2544,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     if (cv.Any())
                     {
-                        viewModel.COA = (await _unitOfWork.FilprideChartOfAccount
-                                .GetAllAsync(coa => !new[] { "202010200", "202010100", "101010100" }.Any(excludedNumber => coa.AccountNumber!.Contains(excludedNumber)) && !coa.HasChildren, cancellationToken))
-                            .Select(s => new SelectListItem
-                            {
-                                Value = s.AccountNumber,
-                                Text = s.AccountNumber + " " + s.AccountName
-                            })
-                            .ToList();
+                        viewModel.COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken);
 
                         viewModel.Suppliers = (await _unitOfWork.FilprideSupplier
                                 .GetAllAsync(supp => (companyClaims == nameof(Filpride) ? supp.IsFilpride : supp.IsMobility) && supp.Category == "Trade", cancellationToken))
@@ -2848,14 +2913,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     if (cv.Any())
                     {
-                        viewModel.COA = (await _unitOfWork.FilprideChartOfAccount
-                                .GetAllAsync(coa => !new[] { "202010200", "202010100", "101010100" }.Any(excludedNumber => coa.AccountNumber!.Contains(excludedNumber)) && !coa.HasChildren, cancellationToken))
-                            .Select(s => new SelectListItem
-                            {
-                                Value = s.AccountNumber,
-                                Text = s.AccountNumber + " " + s.AccountName
-                            })
-                            .ToList();
+                        viewModel.COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken);
 
                         viewModel.Suppliers = (await _unitOfWork.FilprideSupplier
                                 .GetAllAsync(supp => (companyClaims == nameof(Filpride) ? supp.IsFilpride : supp.IsMobility) && supp.Category == "Trade", cancellationToken))
