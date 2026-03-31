@@ -78,6 +78,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .Sum(d => d.Credit);
         }
 
+        private static decimal GetAccountAmount(CheckVoucherTradeViewModel viewModel, string accountNumber, bool isDebit)
+        {
+            for (var i = 0; i < viewModel.AccountNumber.Length; i++)
+            {
+                if (viewModel.AccountNumber[i] == accountNumber)
+                {
+                    return isDebit ? viewModel.Debit[i] : viewModel.Credit[i];
+                }
+            }
+
+            return 0m;
+        }
+
         private async Task<decimal> GetAppliedAdvanceAmountAsync(int checkVoucherHeaderId, CancellationToken cancellationToken)
         {
             return await _dbContext.FilprideCheckVoucherDetails
@@ -117,6 +130,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     Text = s.AccountNumber + " " + s.AccountName
                 })
                 .ToList();
+        }
+
+        private static string? GetWithholdingTaxAccountNumberByPercent(decimal taxPercent)
+        {
+            return taxPercent switch
+            {
+                0.01m => "201030210",
+                0.02m => "201030220",
+                0.05m => "201030230",
+                0.10m => "201030240",
+                _ => null
+            };
         }
 
         public IActionResult Index(string? view)
@@ -362,7 +387,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #region --Saving the default entries
 
                 var generateCvNo = await _unitOfWork.FilprideCheckVoucher.GenerateCodeAsync(companyClaims, viewModel.Type!, cancellationToken);
-                var cashInBank = rrTotalAmount - appliedAdvanceAmount;
+                var cashInBank = GetAccountAmount(viewModel, CashInBankAccountNo, isDebit: false);
 
                 #region -- Get Supplier
 
@@ -515,10 +540,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region -- Additional journal entry in details
 
-                var ewtTitle = supplier.WithholdingTaxTitle?.Split(' ', 2) ?? [];
-
-                var getWithholdingTaxTitle = await _dbContext.FilprideChartOfAccounts
-                    .FirstOrDefaultAsync(x => x.AccountNumber == ewtTitle.FirstOrDefault(), cancellationToken);
+                var withholdingTaxAccountNo = GetWithholdingTaxAccountNumberByPercent(cvh.TaxPercent);
+                var getWithholdingTaxTitle = withholdingTaxAccountNo == null
+                    ? null
+                    : await _dbContext.FilprideChartOfAccounts
+                        .FirstOrDefaultAsync(x => x.AccountNumber == withholdingTaxAccountNo, cancellationToken);
                 var manualDisplayEntries = cvDetails
                     .Where(d => !d.IsDisplayEntry &&
                                 d.AccountNo != ApTradePayableAccountNo &&
@@ -539,14 +565,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToList();
 
-                foreach (var cv in cvDetails.OrderBy(x => x.CheckVoucherDetailId))
+                var apTradeDetail = cvDetails.FirstOrDefault(x => !x.IsDisplayEntry && x.AccountNo == ApTradePayableAccountNo);
+
+                if (apTradeDetail != null)
                 {
                     var isVatable = cvh.VatType == SD.VatType_Vatable;
                     var isTaxable = cvh.TaxType == SD.TaxType_WithTax;
                     var displayAppliedAdvanceAmount = Math.Max(0m, appliedAdvanceAmount);
 
-                    // Net of tax (input): total net payable before splitting to cash and advances
-                    var netAmount = cvh.Total + displayAppliedAdvanceAmount;
+                    // Use the AP-Trade detail as the source amount so display entries stay aligned
+                    // even when Cash in Bank is manually adjusted for balancing.
+                    var netAmount = apTradeDetail.Debit;
                     var baseAmount = 0m;
 
                     // Base computation (reversible correct formula)
@@ -578,8 +607,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     cvDetails.Add(
                     new FilprideCheckVoucherDetail
                     {
-                        AccountNo = cv.AccountNo,
-                        AccountName = cv.AccountName,
+                        AccountNo = apTradeDetail.AccountNo,
+                        AccountName = apTradeDetail.AccountName,
                         Debit = baseAmount,
                         Credit = 0.00m,
                         TransactionNo = cvh.CheckVoucherHeaderNo,
@@ -610,8 +639,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         cvDetails.Add(
                         new FilprideCheckVoucherDetail
                         {
-                            AccountNo = getWithholdingTaxTitle!.AccountNumber!,
-                            AccountName = getWithholdingTaxTitle.AccountName,
+                            AccountNo = getWithholdingTaxTitle?.AccountNumber ?? withholdingTaxAccountNo ?? string.Empty,
+                            AccountName = getWithholdingTaxTitle?.AccountName ?? supplier.WithholdingTaxTitle ?? "Expanded Withholding Tax",
                             Debit = 0.00m,
                             Credit = ewt,
                             TransactionNo = cvh.CheckVoucherHeaderNo,
@@ -620,7 +649,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         });
                     }
 
-                    var displayCashInBankAmount = Math.Round(netOfEwt - displayAppliedAdvanceAmount, 4);
+                    var displayCashInBankAmount = Math.Round(cashInBank, 4);
 
                     cvDetails.Add(
                     new FilprideCheckVoucherDetail
@@ -655,7 +684,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         });
                     }
 
-                    break;
                 }
 
                 cvDetails.AddRange(manualDisplayEntries);
@@ -1053,7 +1081,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     appliedAdvanceAmount = 0m;
                 }
 
-                var cashInBank = rrTotalAmount - appliedAdvanceAmount;
+                var cashInBank = GetAccountAmount(viewModel, CashInBankAccountNo, isDebit: false);
                 existingHeaderModel.Date = viewModel.TransactionDate;
                 existingHeaderModel.PONo = viewModel.POSeries;
                 existingHeaderModel.SupplierId = viewModel.SupplierId;
@@ -1202,10 +1230,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region -- Additional details entry
 
-                var ewtTitle = supplier.WithholdingTaxTitle?.Split(' ', 2) ?? [];
-
-                var getWithholdingTaxTitle = await _dbContext.FilprideChartOfAccounts
-                    .FirstOrDefaultAsync(x => x.AccountNumber == ewtTitle.FirstOrDefault(), cancellationToken);
+                var withholdingTaxAccountNo = GetWithholdingTaxAccountNumberByPercent(existingHeaderModel.TaxPercent);
+                var getWithholdingTaxTitle = withholdingTaxAccountNo == null
+                    ? null
+                    : await _dbContext.FilprideChartOfAccounts
+                        .FirstOrDefaultAsync(x => x.AccountNumber == withholdingTaxAccountNo, cancellationToken);
                 var manualDisplayEntries = details
                     .Where(d => !d.IsDisplayEntry &&
                                 d.AccountNo != ApTradePayableAccountNo &&
@@ -1226,17 +1255,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToList();
 
-                foreach (var cv in details.OrderBy(x => x.CheckVoucherDetailId))
+                var apTradeDetail = details.FirstOrDefault(x => !x.IsDisplayEntry && x.AccountNo == ApTradePayableAccountNo);
+
+                if (apTradeDetail != null)
                 {
                     var isVatable = existingHeaderModel.VatType == SD.VatType_Vatable;
                     var isTaxable = existingHeaderModel.TaxType == SD.TaxType_WithTax;
                     var displayAppliedAdvanceAmount = Math.Max(0m, appliedAdvanceAmount);
 
-                    // Net of tax (input): total net payable before splitting to cash and advances
-                    var netAmount = existingHeaderModel.Total + displayAppliedAdvanceAmount;
+                    var netAmount = apTradeDetail.Debit;
                     var baseAmount = 0m;
 
-                    // Base computation (reversible correct formula)
                     if (isTaxable)
                     {
                         baseAmount = isVatable
@@ -1267,8 +1296,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         details.Add(
                         new FilprideCheckVoucherDetail
                         {
-                            AccountNo = cv.AccountNo,
-                            AccountName = cv.AccountName,
+                            AccountNo = apTradeDetail.AccountNo,
+                            AccountName = apTradeDetail.AccountName,
                             Debit = baseAmount,
                             Credit = 0.00m,
                             TransactionNo = existingHeaderModel.CheckVoucherHeaderNo,
@@ -1299,8 +1328,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             details.Add(
                             new FilprideCheckVoucherDetail
                             {
-                                AccountNo = getWithholdingTaxTitle!.AccountNumber!,
-                                AccountName = getWithholdingTaxTitle.AccountName,
+                                AccountNo = getWithholdingTaxTitle?.AccountNumber ?? withholdingTaxAccountNo ?? string.Empty,
+                                AccountName = getWithholdingTaxTitle?.AccountName ?? supplier.WithholdingTaxTitle ?? "Expanded Withholding Tax",
                                 Debit = 0.00m,
                                 Credit = ewt,
                                 TransactionNo = existingHeaderModel.CheckVoucherHeaderNo,
@@ -1309,7 +1338,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             });
                         }
 
-                        var displayCashInBankAmount = Math.Round(netOfEwt - displayAppliedAdvanceAmount, 4);
+                        var displayCashInBankAmount = Math.Round(cashInBank, 4);
 
                         details.Add(
                         new FilprideCheckVoucherDetail
@@ -1349,7 +1378,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         throw new Exception("Check voucher header no. not found!");
                     }
 
-                    break;
                 }
 
                 details.AddRange(manualDisplayEntries);
