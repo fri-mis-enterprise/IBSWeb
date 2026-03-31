@@ -566,9 +566,9 @@
             var advancesAmount = 0;
             if (hasAdvances) {
                 var maxAdvanceAmount = Math.max(0, Math.min(availableAdvanceAmount, totalNetOfEWT));
-                advancesAmount = $("#advancesCredit").val();
+                advancesAmount = parseNumber($("#advancesCredit").val());
 
-                if (advancesAmount < 0 || Number.isNaN(advancesAmount)) {
+                if (advancesAmount < 0 || isNaN(advancesAmount)) {
                     advancesAmount = 0;
                 }
 
