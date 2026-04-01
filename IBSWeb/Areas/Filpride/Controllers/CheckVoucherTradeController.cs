@@ -1647,7 +1647,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         throw new NullReferenceException($"Advance check voucher not found. Check Voucher Header No: {modelHeader.Reference}");
                     }
 
-                    var availableAdvanceAmount = Math.Max(0m, advances.Total - advances.AmountPaid);
+                    var availableAdvanceAmount = Math.Max(0m, advances.CheckAmount - advances.AmountPaid);
                     if (appliedAdvanceAmount > availableAdvanceAmount)
                     {
                         throw new InvalidOperationException("Applied advance amount exceeds the available advance balance.");
