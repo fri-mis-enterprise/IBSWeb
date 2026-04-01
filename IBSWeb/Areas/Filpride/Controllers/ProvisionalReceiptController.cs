@@ -517,15 +517,30 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
-            if (!model.IsPrinted)
-            {
-                model.IsPrinted = true;
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
-                var printedBy = GetUserFullName();
-                var auditTrail = new FilprideAuditTrail(printedBy,
-                    $"Printed original copy of provisional receipt# {model.SeriesNumber}", "Provisional Receipt", companyClaims);
-                await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
-                await _dbContext.SaveChangesAsync(cancellationToken);
+            try
+            {
+                if (!model.IsPrinted)
+                {
+                    model.IsPrinted = true;
+
+                    var printedBy = GetUserFullName();
+                    var auditTrail = new FilprideAuditTrail(printedBy,
+                        $"Printed original copy of provisional receipt# {model.SeriesNumber}", "Provisional Receipt", companyClaims);
+                    await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                }
+
+                await transaction.CommitAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                TempData["error"] = ex.Message;
+                _logger.LogError(ex, "Failed to tag provisional receipt as printed. Error: {ErrorMessage}, Stack: {StackTrace}. Printed by: {UserName}",
+                    ex.Message, ex.StackTrace, GetUserFullName());
+                return RedirectToAction(nameof(Index));
             }
 
             return RedirectToAction(nameof(Print), new { id });
@@ -548,16 +563,30 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
-            model.PostedBy = GetUserFullName();
-            model.PostedDate = DateTimeHelper.GetCurrentPhilippineTime();
-            model.Status = nameof(CollectionReceiptStatus.Posted);
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
-            var auditTrail = new FilprideAuditTrail(model.PostedBy,
-                $"Posted provisional receipt# {model.SeriesNumber}", "Provisional Receipt", companyClaims);
-            await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
+            try
+            {
+                model.PostedBy = GetUserFullName();
+                model.PostedDate = DateTimeHelper.GetCurrentPhilippineTime();
+                model.Status = nameof(CollectionReceiptStatus.Posted);
 
-            await _dbContext.SaveChangesAsync(cancellationToken);
-            TempData["success"] = "Provisional receipt has been posted.";
+                var auditTrail = new FilprideAuditTrail(model.PostedBy,
+                    $"Posted provisional receipt# {model.SeriesNumber}", "Provisional Receipt", companyClaims);
+                await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                TempData["success"] = "Provisional receipt has been posted.";
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                TempData["error"] = ex.Message;
+                _logger.LogError(ex, "Failed to post provisional receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Posted by: {UserName}",
+                    ex.Message, ex.StackTrace, GetUserFullName());
+                return RedirectToAction(nameof(Index));
+            }
 
             return RedirectToAction(nameof(Print), new { id });
         }
@@ -580,18 +609,31 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
-            model.PostedBy = null;
-            model.PostedDate = null;
-            model.VoidedBy = GetUserFullName();
-            model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
-            model.Status = nameof(CollectionReceiptStatus.Voided);
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
-            var auditTrail = new FilprideAuditTrail(model.VoidedBy,
-                $"Voided provisional receipt# {model.SeriesNumber}", "Provisional Receipt", companyClaims);
-            await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
+            try
+            {
+                model.PostedBy = null;
+                model.PostedDate = null;
+                model.VoidedBy = GetUserFullName();
+                model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
+                model.Status = nameof(CollectionReceiptStatus.Voided);
 
-            await _dbContext.SaveChangesAsync(cancellationToken);
-            TempData["success"] = "Provisional receipt has been voided.";
+                var auditTrail = new FilprideAuditTrail(model.VoidedBy,
+                    $"Voided provisional receipt# {model.SeriesNumber}", "Provisional Receipt", companyClaims);
+                await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                TempData["success"] = "Provisional receipt has been voided.";
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                TempData["error"] = ex.Message;
+                _logger.LogError(ex, "Failed to void provisional receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Voided by: {UserName}",
+                    ex.Message, ex.StackTrace, GetUserFullName());
+            }
 
             return RedirectToAction(nameof(Index));
         }
@@ -613,17 +655,30 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
-            model.CanceledBy = GetUserFullName();
-            model.CanceledDate = DateTimeHelper.GetCurrentPhilippineTime();
-            model.CancellationRemarks = cancellationRemarks;
-            model.Status = nameof(CollectionReceiptStatus.Canceled);
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
-            var auditTrail = new FilprideAuditTrail(model.CanceledBy,
-                $"Canceled provisional receipt# {model.SeriesNumber}", "Provisional Receipt", companyClaims);
-            await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
+            try
+            {
+                model.CanceledBy = GetUserFullName();
+                model.CanceledDate = DateTimeHelper.GetCurrentPhilippineTime();
+                model.CancellationRemarks = cancellationRemarks;
+                model.Status = nameof(CollectionReceiptStatus.Canceled);
 
-            await _dbContext.SaveChangesAsync(cancellationToken);
-            TempData["success"] = "Provisional receipt has been canceled.";
+                var auditTrail = new FilprideAuditTrail(model.CanceledBy,
+                    $"Canceled provisional receipt# {model.SeriesNumber}", "Provisional Receipt", companyClaims);
+                await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                TempData["success"] = "Provisional receipt has been canceled.";
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                TempData["error"] = ex.Message;
+                _logger.LogError(ex, "Failed to cancel provisional receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Canceled by: {UserName}",
+                    ex.Message, ex.StackTrace, GetUserFullName());
+            }
 
             return RedirectToAction(nameof(Index));
         }
@@ -647,6 +702,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
             try
             {
                 model.BankId = bank.BankAccountId;
@@ -661,10 +718,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
                 TempData["success"] = "Provisional receipt deposit date has been recorded successfully.";
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync(cancellationToken);
                 TempData["error"] = ex.Message;
                 _logger.LogError(ex, "Failed to record provisional receipt deposit date. Error: {ErrorMessage}, Stack: {StackTrace}. Recorded by: {UserName}",
                     ex.Message, ex.StackTrace, GetUserFullName());
@@ -691,6 +750,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
             try
             {
                 model.DepositedDate = null;
@@ -702,10 +763,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
                 TempData["success"] = "Provisional receipt has been returned successfully.";
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync(cancellationToken);
                 TempData["error"] = ex.Message;
                 _logger.LogError(ex, "Failed to return provisional receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Returned by: {UserName}",
                     ex.Message, ex.StackTrace, GetUserFullName());
@@ -732,6 +795,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
             try
             {
                 model.DepositedDate = redepositDate;
@@ -743,10 +808,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
                 TempData["success"] = "Provisional receipt has been redeposited successfully.";
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync(cancellationToken);
                 TempData["error"] = ex.Message;
                 _logger.LogError(ex, "Failed to redeposit provisional receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Redeposited by: {UserName}",
                     ex.Message, ex.StackTrace, GetUserFullName());
@@ -773,6 +840,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
             try
             {
                 model.ClearedDate = clearingDate;
@@ -783,10 +852,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
                 TempData["success"] = "Provisional receipt clearing date has been applied successfully.";
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync(cancellationToken);
                 TempData["error"] = ex.Message;
                 _logger.LogError(ex, "Failed to apply provisional receipt clearing date. Error: {ErrorMessage}, Stack: {StackTrace}. Recorded by: {UserName}",
                     ex.Message, ex.StackTrace, GetUserFullName());
