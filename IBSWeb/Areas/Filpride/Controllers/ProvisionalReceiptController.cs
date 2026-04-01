@@ -293,7 +293,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            var viewModel = new PRCreateViewModel()
+            var viewModel = new PRCreateViewModel
             {
                 TransactionDate = DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime())
             };
