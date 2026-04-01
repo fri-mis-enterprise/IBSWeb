@@ -36,6 +36,15 @@
     words = words.Replace(" And", "").Replace("-", " ");
 }
 
+<style>
+    @@media print {
+        /* Reduce spacing for compact layout */
+        .compact-section {
+            margin-top: 10px !important;
+        }
+    }
+</style>
+
 <br />
 <table class="w-100">
     <tbody>
@@ -88,7 +97,7 @@
         </tr>
         <tr>
             <td style="padding-left:10px;">TIN: @employeeTin</td>
-            <td style="padding-left:10px;">Position: @Model.Employee.Position.ToUpper()</td>
+            <td style="padding-left:10px;">Buss. Style: </td>
         </tr>
         <tr>
             <td colspan="2" style="padding-left:10px;">The sum of Pesos:<br /> @words</td>
@@ -99,9 +108,6 @@
         </tr>
         <tr>
             <td colspan="2" style="padding-left:10px;">Reference Receipt No. @Model.ReferenceNo.ToUpper()</td>
-        </tr>
-        <tr>
-            <td colspan="2" style="padding-left:10px;">Remarks: @Model.Remarks.ToUpper()</td>
         </tr>
         </tbody>
     </table>
@@ -208,6 +214,7 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/disable-dev-tools-in-print.js" asp-append-version="true"></script>
     <script>
         function confirmPost(id) {
             Swal.fire({
