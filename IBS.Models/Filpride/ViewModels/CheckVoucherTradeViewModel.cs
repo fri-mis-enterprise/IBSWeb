@@ -72,6 +72,12 @@ namespace IBS.Models.Filpride.ViewModels
         [Required]
         public decimal[] Credit { get; set; }
 
+        public List<CheckVoucherTradeAccountingEntryViewModel> AdditionalAccountingEntries { get; set; } = [];
+
+        public decimal DefaultPayableAmount { get; set; }
+
+        public decimal CashInBankAmount { get; set; }
+
         //others
         public string? CreatedBy { get; set; }
 
@@ -79,9 +85,24 @@ namespace IBS.Models.Filpride.ViewModels
 
         public string? AdvancesCVNo { get; set; }
 
+        [Display(Name = "Applied Advance Amount")]
+        [Range(0, double.MaxValue, ErrorMessage = "Applied advance amount cannot be negative.")]
+        public decimal AppliedAdvanceAmount { get; set; }
+
         public string? Type { get; set; }
 
         public DateTime MinDate { get; set; }
+    }
+
+    public class CheckVoucherTradeAccountingEntryViewModel
+    {
+        public string AccountNumber { get; set; } = string.Empty;
+
+        public string AccountTitle { get; set; } = string.Empty;
+
+        public decimal Debit { get; set; }
+
+        public decimal Credit { get; set; }
     }
 
     public class ReceivingReportList

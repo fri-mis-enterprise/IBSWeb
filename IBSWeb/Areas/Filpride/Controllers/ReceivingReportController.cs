@@ -595,45 +595,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
-            var existingInventory = await _dbContext.FilprideInventories
-                .Include(i => i.Product)
-                .FirstOrDefaultAsync(i => i.Reference == model.ReceivingReportNo
-                                          && i.Company == model.Company, cancellationToken: cancellationToken);
-
-            if (existingInventory == null)
-            {
-                return NotFound();
-            }
-
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-
-            var connectedSi = await _unitOfWork.FilprideSalesInvoice
-                .GetAsync(x => x.ReceivingReportId == id, cancellationToken);
-
-            if (connectedSi != null)
-            {
-                connectedSi.ReceivingReportId = 0;
-            }
 
             try
             {
-                model.VoidedBy = GetUserFullName();
-                model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
-                model.Status = nameof(Status.Voided);
-                model.PostedBy = null;
-                model.DeliveryReceipt!.HasReceivingReport = false;
-
-                await _unitOfWork.FilprideReceivingReport.RemoveRecords<FilpridePurchaseBook>(pb => pb.DocumentNo == model.ReceivingReportNo, cancellationToken);
-                await _unitOfWork.GeneralLedger.ReverseEntries(model.ReceivingReportNo, cancellationToken);
-                await _unitOfWork.FilprideInventory.VoidInventory(existingInventory, cancellationToken);
-                await _unitOfWork.FilprideReceivingReport.RemoveQuantityReceived(model.POId, model.QuantityReceived, cancellationToken);
-
-                #region --Audit Trail Recording
-
-                FilprideAuditTrail auditTrailBook = new(model.VoidedBy!, $"Voided receiving report# {model.ReceivingReportNo}", "Receiving Report", model.Company);
-                await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
-
-                #endregion --Audit Trail Recording
+                await _unitOfWork.FilprideReceivingReport.VoidReceivingReportAsync(
+                    model.ReceivingReportId,
+                    GetUserFullName(), cancellationToken);
 
                 await transaction.CommitAsync(cancellationToken);
 
