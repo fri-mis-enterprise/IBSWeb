@@ -7636,17 +7636,27 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 var quantityServed = receivingReport.QuantityReceived;
                                 var salesAmount = receivingReport.DeliveryReceipt!.TotalAmount;
                                 var salesAmountVatEx = salesAmount / 1.12m;
-                                var salesPerLiterVatEx = salesAmountVatEx / quantityServed;
+                                var salesPerLiterVatEx = quantityServed > 0
+                                    ? salesAmountVatEx / quantityServed
+                                    : 0m;
                                 var costAmount = receivingReport.Amount;
                                 var costAmountVatEx = costAmount / 1.12m;
-                                var costPerLiterVatEx = costAmountVatEx / quantityServed;
+                                var costPerLiterVatEx = quantityServed > 0
+                                    ? costAmountVatEx / quantityServed
+                                    : 0m;
                                 var freightAmount = receivingReport.DeliveryReceipt!.FreightAmount;
                                 var freightAmountEx = freightAmount / 1.12m;
-                                var freightPerLiterEx = freightAmountEx / quantityServed;
+                                var freightPerLiterEx = quantityServed > 0
+                                    ? freightAmountEx / quantityServed
+                                    : 0m;
                                 var commissionAmount = receivingReport.DeliveryReceipt!.CommissionAmount;
-                                var commissionPerLiter = commissionAmount / quantityServed;
+                                var commissionPerLiter = quantityServed > 0
+                                    ? commissionAmount / quantityServed
+                                    : 0m;
                                 var gmAmount = salesAmountVatEx - costAmountVatEx - freightAmountEx - commissionAmount;
-                                var gmPerLiter = gmAmount / quantityServed;
+                                var gmPerLiter = quantityServed > 0
+                                    ? gmAmount / quantityServed
+                                    : 0m;
 
                                 // SUBTOTAL BY SEGMENT
                                 worksheet.Cells[row, 2].Value = receivingReport.Date.ToString("MM/dd/yyyy");
