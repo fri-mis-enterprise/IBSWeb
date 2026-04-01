@@ -57,7 +57,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
         }
 
-        private async Task PopulateDropdownsAsync(PREditViewModel viewModel, CancellationToken cancellationToken)
+        private async Task PopulateFormDependenciesAsync(ProvisionalReceiptViewModel viewModel, CancellationToken cancellationToken)
         {
             viewModel.Employees = await _unitOfWork.GetFilprideEmployeeListById(cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.ProvisionalReceipt, cancellationToken);
@@ -90,35 +90,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             };
         }
 
-        private static void MapCreateToEntity(PRCreateViewModel viewModel, FilprideProvisionalReceipt model)
-        {
-            model.TransactionDate = viewModel.TransactionDate;
-            model.EmployeeId = viewModel.EmployeeId;
-            model.ReferenceNo = viewModel.ReferenceNo.Trim();
-            model.Remarks = viewModel.Remarks.Trim();
-            model.CashAmount = viewModel.CashAmount;
-            model.CheckAmount = viewModel.CheckAmount;
-            model.CheckDate = viewModel.CheckDate;
-            model.CheckNo = viewModel.CheckNo?.Trim();
-            model.CheckBank = viewModel.CheckBank?.Trim();
-            model.CheckBranch = viewModel.CheckBranch?.Trim();
-            model.ManagersCheckAmount = viewModel.ManagersCheckAmount;
-            model.ManagersCheckDate = viewModel.ManagersCheckDate;
-            model.ManagersCheckNo = viewModel.ManagersCheckNo?.Trim();
-            model.ManagersCheckBank = viewModel.ManagersCheckBank?.Trim();
-            model.ManagersCheckBranch = viewModel.ManagersCheckBranch?.Trim();
-            model.EWT = viewModel.EWT;
-            model.WVAT = viewModel.WVAT;
-            model.Total = viewModel.CashAmount
-                          + viewModel.CheckAmount
-                          + viewModel.ManagersCheckAmount
-                          + viewModel.EWT
-                          + viewModel.WVAT;
-            model.Type = viewModel.Type;
-            model.BatchNumber = viewModel.BatchNumber;
-        }
-
-        private static void MapEditToEntity(PREditViewModel viewModel, FilprideProvisionalReceipt model)
+        private static void MapFormToEntity(ProvisionalReceiptViewModel viewModel, FilprideProvisionalReceipt model)
         {
             model.TransactionDate = viewModel.TransactionDate;
             model.EmployeeId = viewModel.EmployeeId;
@@ -298,7 +270,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 TransactionDate = DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime())
             };
 
-            await PopulateDropdownsAsync(viewModel, cancellationToken);
+            await PopulateFormDependenciesAsync(viewModel, cancellationToken);
             return View(viewModel);
         }
 
@@ -315,7 +287,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             if (!ModelState.IsValid)
             {
-                await PopulateDropdownsAsync(viewModel, cancellationToken);
+                await PopulateFormDependenciesAsync(viewModel, cancellationToken);
                 TempData["warning"] = "The submitted information is invalid.";
                 return View(viewModel);
             }
@@ -324,7 +296,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             if (total <= 0)
             {
-                await PopulateDropdownsAsync(viewModel, cancellationToken);
+                await PopulateFormDependenciesAsync(viewModel, cancellationToken);
                 TempData["warning"] = "Please input at least one form of payment.";
                 return View(viewModel);
             }
@@ -340,10 +312,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .GenerateSeriesNumberAsync(companyClaims, viewModel.Type, cancellationToken),
                     CreatedBy = userFullName,
                     CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
-                    Status = nameof(CollectionReceiptStatus.Pending)
+                    Status = nameof(CollectionReceiptStatus.Pending),
+                    Company = companyClaims
                 };
 
-                MapCreateToEntity(viewModel, model);
+                MapFormToEntity(viewModel, model);
+                model.Type = viewModel.Type;
 
                 await _dbContext.FilprideProvisionalReceipts.AddAsync(model, cancellationToken);
 
@@ -359,7 +333,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             catch (Exception ex)
             {
                 await transaction.RollbackAsync(cancellationToken);
-                await PopulateDropdownsAsync(viewModel, cancellationToken);
+                await PopulateFormDependenciesAsync(viewModel, cancellationToken);
                 TempData["error"] = ex.Message;
                 _logger.LogError(ex, "Failed to create provisional receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Created by: {UserName}",
                     ex.Message, ex.StackTrace, GetUserFullName());
@@ -398,7 +372,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
 
             var viewModel = MapToEditViewModel(model);
-            await PopulateDropdownsAsync(viewModel, cancellationToken);
+            await PopulateFormDependenciesAsync(viewModel, cancellationToken);
             return View(viewModel);
         }
 
@@ -415,7 +389,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             if (!ModelState.IsValid)
             {
-                await PopulateDropdownsAsync(viewModel, cancellationToken);
+                await PopulateFormDependenciesAsync(viewModel, cancellationToken);
                 TempData["warning"] = "The submitted information is invalid.";
                 return View(viewModel);
             }
@@ -432,7 +406,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             if (total <= 0)
             {
-                await PopulateDropdownsAsync(viewModel, cancellationToken);
+                await PopulateFormDependenciesAsync(viewModel, cancellationToken);
                 TempData["warning"] = "Please input at least one form of payment.";
                 return View(viewModel);
             }
@@ -441,7 +415,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                MapEditToEntity(viewModel, model);
+                MapFormToEntity(viewModel, model);
                 model.EditedBy = GetUserFullName();
                 model.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
 
@@ -457,7 +431,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             catch (Exception ex)
             {
                 await transaction.RollbackAsync(cancellationToken);
-                await PopulateDropdownsAsync(viewModel, cancellationToken);
+                await PopulateFormDependenciesAsync(viewModel, cancellationToken);
                 TempData["error"] = ex.Message;
                 _logger.LogError(ex, "Failed to edit provisional receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Edited by: {UserName}",
                     ex.Message, ex.StackTrace, GetUserFullName());
