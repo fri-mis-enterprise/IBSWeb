@@ -120,6 +120,7 @@ namespace IBS.Models.Enums
         JournalVoucher,
         DebitMemo,
         CreditMemo,
+        ProvisionalReceipt
     }
 
     public enum SubAccountType

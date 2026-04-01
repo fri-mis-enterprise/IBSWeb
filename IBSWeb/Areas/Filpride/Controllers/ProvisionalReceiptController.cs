@@ -1,0 +1,798 @@
+using System.Globalization;
+using System.Security.Claims;
+using IBS.DataAccess.Data;
+using IBS.DataAccess.Repository.IRepository;
+using IBS.Models;
+using IBS.Models.Enums;
+using IBS.Models.Filpride.AccountsReceivable;
+using IBS.Models.Filpride.Books;
+using IBS.Models.Filpride.MasterFile;
+using IBS.Models.Filpride.ViewModels;
+using IBS.Services.Attributes;
+using IBS.Utility.Constants;
+using IBS.Utility.Helpers;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace IBSWeb.Areas.Filpride.Controllers
+{
+    [Area(nameof(Filpride))]
+    [CompanyAuthorize(nameof(Filpride))]
+    [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_Finance, SD.Department_RCD)]
+    public class ProvisionalReceiptController : Controller
+    {
+        private readonly ApplicationDbContext _dbContext;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<ProvisionalReceiptController> _logger;
+
+        public ProvisionalReceiptController(
+            ApplicationDbContext dbContext,
+            UserManager<ApplicationUser> userManager,
+            IUnitOfWork unitOfWork,
+            ILogger<ProvisionalReceiptController> logger)
+        {
+            _dbContext = dbContext;
+            _userManager = userManager;
+            _unitOfWork = unitOfWork;
+            _logger = logger;
+        }
+
+        private string GetUserFullName()
+        {
+            return User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value
+                   ?? User.Identity?.Name!;
+        }
+
+        private async Task<string?> GetCompanyClaimAsync()
+        {
+            var user = await _userManager.GetUserAsync(User);
+
+            if (user == null)
+            {
+                return null;
+            }
+
+            var claims = await _userManager.GetClaimsAsync(user);
+            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
+        }
+
+        private async Task PopulateDropdownsAsync(ProvisionalReceiptViewModel viewModel, string companyClaims, CancellationToken cancellationToken)
+        {
+            viewModel.Employees = await _unitOfWork.GetFilprideEmployeeListById(cancellationToken);
+            viewModel.Banks = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+            viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.ProvisionalReceipt, cancellationToken);
+        }
+
+        private static ProvisionalReceiptViewModel MapToViewModel(FilprideProvisionalReceipt model)
+        {
+            return new ProvisionalReceiptViewModel
+            {
+                Id = model.Id,
+                SeriesNumber = model.SeriesNumber,
+                TransactionDate = model.TransactionDate,
+                EmployeeId = model.EmployeeId,
+                ReferenceNo = model.ReferenceNo,
+                Remarks = model.Remarks,
+                CashAmount = model.CashAmount,
+                CheckAmount = model.CheckAmount,
+                CheckDate = model.CheckDate,
+                CheckNo = model.CheckNo,
+                CheckBank = model.CheckBank,
+                CheckBranch = model.CheckBranch,
+                ManagersCheckAmount = model.ManagersCheckAmount,
+                ManagersCheckDate = model.ManagersCheckDate,
+                ManagersCheckNo = model.ManagersCheckNo,
+                ManagersCheckBank = model.ManagersCheckBank,
+                ManagersCheckBranch = model.ManagersCheckBranch,
+                BankId = model.BankId,
+                EWT = model.EWT,
+                WVAT = model.WVAT,
+                Total = model.Total,
+                DepositedDate = model.DepositedDate,
+                ClearedDate = model.ClearedDate,
+                IsPrinted = model.IsPrinted,
+                Status = model.Status,
+                BatchNumber = model.BatchNumber
+            };
+        }
+
+        private static void MapToEntity(ProvisionalReceiptViewModel viewModel, FilprideProvisionalReceipt model, FilprideBankAccount? bankAccount, string companyClaims, string userFullName)
+        {
+            model.TransactionDate = viewModel.TransactionDate;
+            model.EmployeeId = viewModel.EmployeeId;
+            model.ReferenceNo = viewModel.ReferenceNo.Trim();
+            model.Remarks = viewModel.Remarks?.Trim() ?? string.Empty;
+            model.CashAmount = viewModel.CashAmount;
+            model.CheckAmount = viewModel.CheckAmount;
+            model.CheckDate = viewModel.CheckDate;
+            model.CheckNo = viewModel.CheckNo?.Trim();
+            model.CheckBank = viewModel.CheckBank?.Trim();
+            model.CheckBranch = viewModel.CheckBranch?.Trim();
+            model.ManagersCheckAmount = viewModel.ManagersCheckAmount;
+            model.ManagersCheckDate = viewModel.ManagersCheckDate;
+            model.ManagersCheckNo = viewModel.ManagersCheckNo?.Trim();
+            model.ManagersCheckBank = viewModel.ManagersCheckBank?.Trim();
+            model.ManagersCheckBranch = viewModel.ManagersCheckBranch?.Trim();
+            model.BankId = bankAccount?.BankAccountId;
+            model.BankAccountNo = bankAccount?.AccountNo;
+            model.BankAccountName = bankAccount?.AccountName;
+            model.EWT = viewModel.EWT;
+            model.WVAT = viewModel.WVAT;
+            model.Total = viewModel.CashAmount
+                          + viewModel.CheckAmount
+                          + viewModel.ManagersCheckAmount
+                          + viewModel.EWT
+                          + viewModel.WVAT;
+            model.Company = companyClaims;
+            model.Type = nameof(DocumentType.Documented);
+            model.Status ??= nameof(CollectionReceiptStatus.Pending);
+            model.EditedBy = userFullName;
+            model.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
+            model.BatchNumber = viewModel.BatchNumber;
+        }
+
+        private async Task<string> GenerateSeriesNumberAsync(string companyClaims, CancellationToken cancellationToken)
+        {
+            var lastSeries = await _dbContext.FilprideProvisionalReceipts
+                .Where(x => x.Company == companyClaims)
+                .OrderByDescending(x => x.Id)
+                .Select(x => x.SeriesNumber)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            var numericPart = 0;
+
+            if (!string.IsNullOrWhiteSpace(lastSeries))
+            {
+                var digits = new string(lastSeries.Where(char.IsDigit).ToArray());
+                numericPart = int.TryParse(digits, out var parsed) ? parsed : 0;
+            }
+
+            return $"PR{(numericPart + 1).ToString("D10", CultureInfo.InvariantCulture)}";
+        }
+
+        public async Task<IActionResult> Index(CancellationToken cancellationToken)
+        {
+            ViewBag.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.ProvisionalReceipt, cancellationToken);
+            return View();
+        }
+
+        public async Task<IActionResult> GetBanks(CancellationToken cancellationToken = default)
+        {
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            return Json(await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GetProvisionalReceipts([FromForm] DataTablesParameters parameters, DateOnly filterDate, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var companyClaims = await GetCompanyClaimAsync();
+
+                if (companyClaims == null)
+                {
+                    return BadRequest();
+                }
+
+                var query = _dbContext.FilprideProvisionalReceipts
+                    .Include(pr => pr.Employee)
+                    .Where(pr => pr.Company == companyClaims)
+                    .AsQueryable();
+
+                var totalRecords = await query.CountAsync(cancellationToken);
+
+                if (!string.IsNullOrWhiteSpace(parameters.Search?.Value))
+                {
+                    var searchValue = parameters.Search.Value.ToLower();
+                    var hasTransactionDate = DateOnly.TryParse(searchValue, out var transactionDate);
+
+                    query = query.Where(pr =>
+                        pr.SeriesNumber.ToLower().Contains(searchValue) ||
+                        pr.ReferenceNo.ToLower().Contains(searchValue) ||
+                        pr.Remarks.ToLower().Contains(searchValue) ||
+                        pr.Employee.FirstName.ToLower().Contains(searchValue) ||
+                        pr.Employee.LastName.ToLower().Contains(searchValue) ||
+                        (pr.CreatedBy ?? string.Empty).ToLower().Contains(searchValue) ||
+                        pr.Status.ToLower().Contains(searchValue) ||
+                        (hasTransactionDate && pr.TransactionDate == transactionDate));
+                }
+
+                if (filterDate != DateOnly.MinValue && filterDate != default)
+                {
+                    query = query.Where(pr => pr.TransactionDate == filterDate);
+                }
+
+                if (parameters.Order?.Count > 0)
+                {
+                    var orderColumn = parameters.Order[0];
+                    var columnName = parameters.Columns[orderColumn.Column].Data;
+                    var ascending = orderColumn.Dir.ToLower() == "asc";
+                    query = columnName switch
+                    {
+                        "seriesNumber" => ascending
+                            ? query.OrderBy(pr => pr.SeriesNumber)
+                            : query.OrderByDescending(pr => pr.SeriesNumber),
+                        "transactionDate" => ascending
+                            ? query.OrderBy(pr => pr.TransactionDate)
+                            : query.OrderByDescending(pr => pr.TransactionDate),
+                        "referenceNo" => ascending
+                            ? query.OrderBy(pr => pr.ReferenceNo)
+                            : query.OrderByDescending(pr => pr.ReferenceNo),
+                        "total" => ascending
+                            ? query.OrderBy(pr => pr.Total)
+                            : query.OrderByDescending(pr => pr.Total),
+                        "createdBy" => ascending
+                            ? query.OrderBy(pr => pr.CreatedBy)
+                            : query.OrderByDescending(pr => pr.CreatedBy),
+                        "status" => ascending
+                            ? query.OrderBy(pr => pr.Status)
+                            : query.OrderByDescending(pr => pr.Status),
+                        "employeeName" => ascending
+                            ? query.OrderBy(pr => pr.Employee.LastName).ThenBy(pr => pr.Employee.FirstName)
+                            : query.OrderByDescending(pr => pr.Employee.LastName).ThenByDescending(pr => pr.Employee.FirstName),
+                        _ => query.OrderByDescending(pr => pr.Id)
+                    };
+                }
+                else
+                {
+                    query = query.OrderByDescending(pr => pr.Id);
+                }
+
+                var totalFilteredRecords = await query.CountAsync(cancellationToken);
+
+                var pagedData = await query
+                    .Skip(parameters.Start)
+                    .Take(parameters.Length)
+                    .Select(pr => new
+                    {
+                        pr.Id,
+                        pr.SeriesNumber,
+                        pr.TransactionDate,
+                        EmployeeName = pr.Employee.FirstName
+                                       + (pr.Employee.MiddleName != null ? " " + pr.Employee.MiddleName : string.Empty)
+                                       + " " + pr.Employee.LastName
+                                       + (pr.Employee.Suffix != null ? " " + pr.Employee.Suffix : string.Empty),
+                        pr.ReferenceNo,
+                        pr.Total,
+                        pr.DepositedDate,
+                        pr.ClearedDate,
+                        pr.CreatedBy,
+                        pr.Status,
+                        pr.PostedBy,
+                        pr.VoidedBy,
+                        pr.CanceledBy
+                    })
+                    .ToListAsync(cancellationToken);
+
+                return Json(new
+                {
+                    draw = parameters.Draw,
+                    recordsTotal = totalRecords,
+                    recordsFiltered = totalFilteredRecords,
+                    data = pagedData
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get provisional receipts. Error: {ErrorMessage}, Stack: {StackTrace}.",
+                    ex.Message, ex.StackTrace);
+                TempData["error"] = ex.Message;
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Create(CancellationToken cancellationToken)
+        {
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            var viewModel = new ProvisionalReceiptViewModel
+            {
+                TransactionDate = DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime())
+            };
+
+            await PopulateDropdownsAsync(viewModel, companyClaims, cancellationToken);
+            return View(viewModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(ProvisionalReceiptViewModel viewModel, CancellationToken cancellationToken)
+        {
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            if (!ModelState.IsValid)
+            {
+                await PopulateDropdownsAsync(viewModel, companyClaims, cancellationToken);
+                TempData["warning"] = "The submitted information is invalid.";
+                return View(viewModel);
+            }
+
+            var total = viewModel.CashAmount + viewModel.CheckAmount + viewModel.ManagersCheckAmount + viewModel.EWT + viewModel.WVAT;
+
+            if (total <= 0)
+            {
+                await PopulateDropdownsAsync(viewModel, companyClaims, cancellationToken);
+                TempData["warning"] = "Please input at least one form of payment.";
+                return View(viewModel);
+            }
+
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                var bankAccount = viewModel.BankId.HasValue
+                    ? await _unitOfWork.FilprideBankAccount.GetAsync(b => b.BankAccountId == viewModel.BankId.Value, cancellationToken)
+                    : null;
+
+                var userFullName = GetUserFullName();
+                var model = new FilprideProvisionalReceipt
+                {
+                    SeriesNumber = await GenerateSeriesNumberAsync(companyClaims, cancellationToken),
+                    CreatedBy = userFullName,
+                    CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
+                    Status = nameof(CollectionReceiptStatus.Pending)
+                };
+
+                MapToEntity(viewModel, model, bankAccount, companyClaims, userFullName);
+
+                await _dbContext.FilprideProvisionalReceipts.AddAsync(model, cancellationToken);
+
+                var auditTrail = new FilprideAuditTrail(userFullName,
+                    $"Create new provisional receipt# {model.SeriesNumber}", "Provisional Receipt", companyClaims);
+                await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                TempData["success"] = $"Provisional receipt #{model.SeriesNumber} created successfully.";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                await PopulateDropdownsAsync(viewModel, companyClaims, cancellationToken);
+                TempData["error"] = ex.Message;
+                _logger.LogError(ex, "Failed to create provisional receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Created by: {UserName}",
+                    ex.Message, ex.StackTrace, GetUserFullName());
+                return View(viewModel);
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Edit(int? id, CancellationToken cancellationToken)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            var model = await _dbContext.FilprideProvisionalReceipts
+                .Include(pr => pr.Employee)
+                .FirstOrDefaultAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
+
+            if (model == null)
+            {
+                return NotFound();
+            }
+
+            if (await _unitOfWork.IsPeriodPostedAsync(Module.ProvisionalReceipt, model.TransactionDate, cancellationToken))
+            {
+                TempData["error"] = $"Cannot edit this record because the period {model.TransactionDate:MMM yyyy} is already closed.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var viewModel = MapToViewModel(model);
+            await PopulateDropdownsAsync(viewModel, companyClaims, cancellationToken);
+            return View(viewModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(ProvisionalReceiptViewModel viewModel, CancellationToken cancellationToken)
+        {
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            if (!ModelState.IsValid)
+            {
+                await PopulateDropdownsAsync(viewModel, companyClaims, cancellationToken);
+                TempData["warning"] = "The submitted information is invalid.";
+                return View(viewModel);
+            }
+
+            var model = await _dbContext.FilprideProvisionalReceipts
+                .FirstOrDefaultAsync(pr => pr.Id == viewModel.Id && pr.Company == companyClaims, cancellationToken);
+
+            if (model == null)
+            {
+                return NotFound();
+            }
+
+            var total = viewModel.CashAmount + viewModel.CheckAmount + viewModel.ManagersCheckAmount + viewModel.EWT + viewModel.WVAT;
+
+            if (total <= 0)
+            {
+                await PopulateDropdownsAsync(viewModel, companyClaims, cancellationToken);
+                TempData["warning"] = "Please input at least one form of payment.";
+                return View(viewModel);
+            }
+
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                var bankAccount = viewModel.BankId.HasValue
+                    ? await _unitOfWork.FilprideBankAccount.GetAsync(b => b.BankAccountId == viewModel.BankId.Value, cancellationToken)
+                    : null;
+
+                MapToEntity(viewModel, model, bankAccount, companyClaims, GetUserFullName());
+
+                var auditTrail = new FilprideAuditTrail(GetUserFullName(),
+                    $"Edited provisional receipt# {model.SeriesNumber}", "Provisional Receipt", companyClaims);
+                await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                TempData["success"] = "Provisional receipt updated successfully.";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                await PopulateDropdownsAsync(viewModel, companyClaims, cancellationToken);
+                TempData["error"] = ex.Message;
+                _logger.LogError(ex, "Failed to edit provisional receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Edited by: {UserName}",
+                    ex.Message, ex.StackTrace, GetUserFullName());
+                return View(viewModel);
+            }
+        }
+
+        public async Task<IActionResult> Print(int id, CancellationToken cancellationToken)
+        {
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            var model = await _dbContext.FilprideProvisionalReceipts
+                .Include(pr => pr.Employee)
+                .Include(pr => pr.BankAccount)
+                .FirstOrDefaultAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
+
+            if (model == null)
+            {
+                return NotFound();
+            }
+
+            return View(model);
+        }
+
+        public async Task<IActionResult> Printed(int id, CancellationToken cancellationToken)
+        {
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            var model = await _dbContext.FilprideProvisionalReceipts
+                .FirstOrDefaultAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
+
+            if (model == null)
+            {
+                return NotFound();
+            }
+
+            if (!model.IsPrinted)
+            {
+                model.IsPrinted = true;
+
+                var printedBy = GetUserFullName();
+                var auditTrail = new FilprideAuditTrail(printedBy,
+                    $"Printed original copy of provisional receipt# {model.SeriesNumber}", "Provisional Receipt", companyClaims);
+                await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            return RedirectToAction(nameof(Print), new { id });
+        }
+
+        public async Task<IActionResult> Post(int id, CancellationToken cancellationToken)
+        {
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            var model = await _dbContext.FilprideProvisionalReceipts
+                .FirstOrDefaultAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
+
+            if (model == null)
+            {
+                return NotFound();
+            }
+
+            model.PostedBy = GetUserFullName();
+            model.PostedDate = DateTimeHelper.GetCurrentPhilippineTime();
+            model.Status = nameof(CollectionReceiptStatus.Posted);
+
+            var auditTrail = new FilprideAuditTrail(model.PostedBy,
+                $"Posted provisional receipt# {model.SeriesNumber}", "Provisional Receipt", companyClaims);
+            await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            TempData["success"] = "Provisional receipt has been posted.";
+
+            return RedirectToAction(nameof(Print), new { id });
+        }
+
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Void(int id, CancellationToken cancellationToken)
+        {
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            var model = await _dbContext.FilprideProvisionalReceipts
+                .FirstOrDefaultAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
+
+            if (model == null)
+            {
+                return NotFound();
+            }
+
+            model.PostedBy = null;
+            model.PostedDate = null;
+            model.VoidedBy = GetUserFullName();
+            model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
+            model.Status = nameof(CollectionReceiptStatus.Voided);
+
+            var auditTrail = new FilprideAuditTrail(model.VoidedBy,
+                $"Voided provisional receipt# {model.SeriesNumber}", "Provisional Receipt", companyClaims);
+            await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            TempData["success"] = "Provisional receipt has been voided.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        public async Task<IActionResult> Cancel(int id, string? cancellationRemarks, CancellationToken cancellationToken)
+        {
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            var model = await _dbContext.FilprideProvisionalReceipts
+                .FirstOrDefaultAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
+
+            if (model == null)
+            {
+                return NotFound();
+            }
+
+            model.CanceledBy = GetUserFullName();
+            model.CanceledDate = DateTimeHelper.GetCurrentPhilippineTime();
+            model.CancellationRemarks = cancellationRemarks;
+            model.Status = nameof(CollectionReceiptStatus.Canceled);
+
+            var auditTrail = new FilprideAuditTrail(model.CanceledBy,
+                $"Canceled provisional receipt# {model.SeriesNumber}", "Provisional Receipt", companyClaims);
+            await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            TempData["success"] = "Provisional receipt has been canceled.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Deposit(int id, int bankId, DateOnly depositDate, CancellationToken cancellationToken)
+        {
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            var bank = await _unitOfWork.FilprideBankAccount.GetAsync(b => b.BankAccountId == bankId, cancellationToken);
+            var model = await _dbContext.FilprideProvisionalReceipts
+                .FirstOrDefaultAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
+
+            if (bank == null || model == null)
+            {
+                return NotFound();
+            }
+
+            try
+            {
+                model.BankId = bank.BankAccountId;
+                model.BankAccountName = bank.AccountName;
+                model.BankAccountNo = bank.AccountNo;
+                model.DepositedDate = depositDate;
+                model.ClearedDate = null;
+                model.Status = nameof(CollectionReceiptStatus.Deposited);
+
+                var auditTrail = new FilprideAuditTrail(GetUserFullName(),
+                    $"Record deposit date of provisional receipt#{model.SeriesNumber}", "Provisional Receipt", model.Company);
+                await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                TempData["success"] = "Provisional receipt deposit date has been recorded successfully.";
+            }
+            catch (Exception ex)
+            {
+                TempData["error"] = ex.Message;
+                _logger.LogError(ex, "Failed to record provisional receipt deposit date. Error: {ErrorMessage}, Stack: {StackTrace}. Recorded by: {UserName}",
+                    ex.Message, ex.StackTrace, GetUserFullName());
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Return(int id, CancellationToken cancellationToken)
+        {
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            var model = await _dbContext.FilprideProvisionalReceipts
+                .FirstOrDefaultAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
+
+            if (model == null)
+            {
+                return NotFound();
+            }
+
+            try
+            {
+                model.DepositedDate = null;
+                model.ClearedDate = null;
+                model.Status = nameof(CollectionReceiptStatus.Returned);
+
+                var auditTrail = new FilprideAuditTrail(GetUserFullName(),
+                    $"Return checks of provisional receipt#{model.SeriesNumber}", "Provisional Receipt", model.Company);
+                await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                TempData["success"] = "Provisional receipt has been returned successfully.";
+            }
+            catch (Exception ex)
+            {
+                TempData["error"] = ex.Message;
+                _logger.LogError(ex, "Failed to return provisional receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Returned by: {UserName}",
+                    ex.Message, ex.StackTrace, GetUserFullName());
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Redeposit(int id, DateOnly redepositDate, CancellationToken cancellationToken)
+        {
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            var model = await _dbContext.FilprideProvisionalReceipts
+                .FirstOrDefaultAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
+
+            if (model == null)
+            {
+                return NotFound();
+            }
+
+            try
+            {
+                model.DepositedDate = redepositDate;
+                model.ClearedDate = null;
+                model.Status = nameof(CollectionReceiptStatus.Redeposited);
+
+                var auditTrail = new FilprideAuditTrail(GetUserFullName(),
+                    $"Redeposit provisional receipt#{model.SeriesNumber}", "Provisional Receipt", model.Company);
+                await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                TempData["success"] = "Provisional receipt has been redeposited successfully.";
+            }
+            catch (Exception ex)
+            {
+                TempData["error"] = ex.Message;
+                _logger.LogError(ex, "Failed to redeposit provisional receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Redeposited by: {UserName}",
+                    ex.Message, ex.StackTrace, GetUserFullName());
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ApplyClearingDate(int id, DateOnly clearingDate, CancellationToken cancellationToken)
+        {
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            var model = await _dbContext.FilprideProvisionalReceipts
+                .FirstOrDefaultAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
+
+            if (model == null)
+            {
+                return NotFound();
+            }
+
+            try
+            {
+                model.ClearedDate = clearingDate;
+                model.Status = nameof(CollectionReceiptStatus.Cleared);
+
+                var auditTrail = new FilprideAuditTrail(GetUserFullName(),
+                    $"Apply clearing date for provisional receipt#{model.SeriesNumber}", "Provisional Receipt", model.Company);
+                await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                TempData["success"] = "Provisional receipt clearing date has been applied successfully.";
+            }
+            catch (Exception ex)
+            {
+                TempData["error"] = ex.Message;
+                _logger.LogError(ex, "Failed to apply provisional receipt clearing date. Error: {ErrorMessage}, Stack: {StackTrace}. Recorded by: {UserName}",
+                    ex.Message, ex.StackTrace, GetUserFullName());
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+    }
+}
