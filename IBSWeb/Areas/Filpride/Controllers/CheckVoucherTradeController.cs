@@ -437,7 +437,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     PONo = viewModel.POSeries,
                     SupplierId = viewModel.SupplierId,
                     SupplierName = supplier.SupplierName,
-                    Particulars = $"{viewModel.Particulars} {(appliedAdvanceAmount > 0 && viewModel.AdvancesCVNo != null ? "Advances#" + viewModel.AdvancesCVNo : "")}.",
+                    Particulars = viewModel.Particulars,
                     Reference = appliedAdvanceAmount > 0 ? viewModel.AdvancesCVNo : null,
                     BankId = viewModel.BankId,
                     BankAccountName = bank.AccountName,
@@ -1104,7 +1104,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingHeaderModel.SupplierName = supplier.SupplierName;
                 existingHeaderModel.Address = viewModel.SupplierAddress;
                 existingHeaderModel.Tin = viewModel.SupplierTinNo;
-                existingHeaderModel.Particulars = $"{viewModel.Particulars} {(appliedAdvanceAmount > 0 && viewModel.AdvancesCVNo != null ? "Advances#" + viewModel.AdvancesCVNo : "")}.";
+                existingHeaderModel.Particulars = viewModel.Particulars;
                 existingHeaderModel.BankId = viewModel.BankId;
                 existingHeaderModel.BankAccountName = bank.AccountName;
                 existingHeaderModel.BankAccountNumber = bank.AccountNo;

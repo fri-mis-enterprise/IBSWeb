@@ -20,6 +20,10 @@
     {
         selectedCompany = User.Claims.FirstOrDefault(c => c.Type == "Company")?.Value;
     }
+    
+    var displayParticulars = !string.IsNullOrWhiteSpace(Model.Header?.Reference)
+        ? $"{Model.Header?.Particulars} Advances#{Model.Header?.Reference}"
+        : $"{Model.Header?.Particulars}";
 }
 
 <style>
@@ -186,7 +190,7 @@
                 }
                 else
                 {
-                    <td class="text-clamp-2 break-word">@Model.Supplier!.SupplierName!.ToUpper()</td>
+                    <td class="text-clamp-2 break-word">@Model.Supplier!.SupplierName.ToUpper()</td>
                 }
                 <td style="width:50%;" colspan="2" class="text-nowrap">Other References</td>
             </tr>
@@ -296,7 +300,7 @@
             </tr>
             <tr>
                 <td style="padding-left:20px;">Particulars :</td>
-                <td><p style="margin: 0; padding: 0; text-align: justify" class="text-clamp-3 break-word small-if-long">@Model.Header!.Particulars?.ToUpper()</p></td>
+                <td><p style="margin: 0; padding: 0; text-align: justify" class="text-clamp-3 break-word small-if-long">@displayParticulars.ToUpper()</p></td>
                 <td></td>
             </tr>
             <tr>
