@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
@@ -6,7 +5,6 @@ using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsReceivable;
 using IBS.Models.Filpride.Books;
-using IBS.Models.Filpride.MasterFile;
 using IBS.Models.Filpride.ViewModels;
 using IBS.Services.Attributes;
 using IBS.Utility.Constants;
@@ -59,19 +57,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
         }
 
-        private async Task PopulateDropdownsAsync(ProvisionalReceiptViewModel viewModel, string companyClaims, CancellationToken cancellationToken)
+        private async Task PopulateDropdownsAsync(PREditViewModel viewModel, CancellationToken cancellationToken)
         {
             viewModel.Employees = await _unitOfWork.GetFilprideEmployeeListById(cancellationToken);
-            viewModel.Banks = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.ProvisionalReceipt, cancellationToken);
         }
 
-        private static ProvisionalReceiptViewModel MapToViewModel(FilprideProvisionalReceipt model)
+        private static PREditViewModel MapToEditViewModel(FilprideProvisionalReceipt model)
         {
-            return new ProvisionalReceiptViewModel
+            return new PREditViewModel
             {
                 Id = model.Id,
-                SeriesNumber = model.SeriesNumber,
                 TransactionDate = model.TransactionDate,
                 EmployeeId = model.EmployeeId,
                 ReferenceNo = model.ReferenceNo,
@@ -87,19 +83,42 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 ManagersCheckNo = model.ManagersCheckNo,
                 ManagersCheckBank = model.ManagersCheckBank,
                 ManagersCheckBranch = model.ManagersCheckBranch,
-                BankId = model.BankId,
                 EWT = model.EWT,
                 WVAT = model.WVAT,
                 Total = model.Total,
-                DepositedDate = model.DepositedDate,
-                ClearedDate = model.ClearedDate,
-                IsPrinted = model.IsPrinted,
-                Status = model.Status,
                 BatchNumber = model.BatchNumber
             };
         }
 
-        private static void MapToEntity(ProvisionalReceiptViewModel viewModel, FilprideProvisionalReceipt model, FilprideBankAccount? bankAccount, string companyClaims, string userFullName)
+        private static void MapCreateToEntity(PRCreateViewModel viewModel, FilprideProvisionalReceipt model)
+        {
+            model.TransactionDate = viewModel.TransactionDate;
+            model.EmployeeId = viewModel.EmployeeId;
+            model.ReferenceNo = viewModel.ReferenceNo.Trim();
+            model.Remarks = viewModel.Remarks.Trim();
+            model.CashAmount = viewModel.CashAmount;
+            model.CheckAmount = viewModel.CheckAmount;
+            model.CheckDate = viewModel.CheckDate;
+            model.CheckNo = viewModel.CheckNo?.Trim();
+            model.CheckBank = viewModel.CheckBank?.Trim();
+            model.CheckBranch = viewModel.CheckBranch?.Trim();
+            model.ManagersCheckAmount = viewModel.ManagersCheckAmount;
+            model.ManagersCheckDate = viewModel.ManagersCheckDate;
+            model.ManagersCheckNo = viewModel.ManagersCheckNo?.Trim();
+            model.ManagersCheckBank = viewModel.ManagersCheckBank?.Trim();
+            model.ManagersCheckBranch = viewModel.ManagersCheckBranch?.Trim();
+            model.EWT = viewModel.EWT;
+            model.WVAT = viewModel.WVAT;
+            model.Total = viewModel.CashAmount
+                          + viewModel.CheckAmount
+                          + viewModel.ManagersCheckAmount
+                          + viewModel.EWT
+                          + viewModel.WVAT;
+            model.Type = viewModel.Type;
+            model.BatchNumber = viewModel.BatchNumber;
+        }
+
+        private static void MapEditToEntity(PREditViewModel viewModel, FilprideProvisionalReceipt model)
         {
             model.TransactionDate = viewModel.TransactionDate;
             model.EmployeeId = viewModel.EmployeeId;
@@ -116,9 +135,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             model.ManagersCheckNo = viewModel.ManagersCheckNo?.Trim();
             model.ManagersCheckBank = viewModel.ManagersCheckBank?.Trim();
             model.ManagersCheckBranch = viewModel.ManagersCheckBranch?.Trim();
-            model.BankId = bankAccount?.BankAccountId;
-            model.BankAccountNo = bankAccount?.AccountNo;
-            model.BankAccountName = bankAccount?.AccountName;
             model.EWT = viewModel.EWT;
             model.WVAT = viewModel.WVAT;
             model.Total = viewModel.CashAmount
@@ -126,31 +142,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                           + viewModel.ManagersCheckAmount
                           + viewModel.EWT
                           + viewModel.WVAT;
-            model.Company = companyClaims;
-            model.Type = nameof(DocumentType.Documented);
-            model.Status ??= nameof(CollectionReceiptStatus.Pending);
-            model.EditedBy = userFullName;
-            model.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
             model.BatchNumber = viewModel.BatchNumber;
-        }
-
-        private async Task<string> GenerateSeriesNumberAsync(string companyClaims, CancellationToken cancellationToken)
-        {
-            var lastSeries = await _dbContext.FilprideProvisionalReceipts
-                .Where(x => x.Company == companyClaims)
-                .OrderByDescending(x => x.Id)
-                .Select(x => x.SeriesNumber)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            var numericPart = 0;
-
-            if (!string.IsNullOrWhiteSpace(lastSeries))
-            {
-                var digits = new string(lastSeries.Where(char.IsDigit).ToArray());
-                numericPart = int.TryParse(digits, out var parsed) ? parsed : 0;
-            }
-
-            return $"PR{(numericPart + 1).ToString("D10", CultureInfo.InvariantCulture)}";
         }
 
         public async Task<IActionResult> Index(CancellationToken cancellationToken)
@@ -301,18 +293,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            var viewModel = new ProvisionalReceiptViewModel
+            var viewModel = new PRCreateViewModel()
             {
                 TransactionDate = DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime())
             };
 
-            await PopulateDropdownsAsync(viewModel, companyClaims, cancellationToken);
+            await PopulateDropdownsAsync(viewModel, cancellationToken);
             return View(viewModel);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(ProvisionalReceiptViewModel viewModel, CancellationToken cancellationToken)
+        public async Task<IActionResult> Create(PRCreateViewModel viewModel, CancellationToken cancellationToken)
         {
             var companyClaims = await GetCompanyClaimAsync();
 
@@ -323,7 +315,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             if (!ModelState.IsValid)
             {
-                await PopulateDropdownsAsync(viewModel, companyClaims, cancellationToken);
+                await PopulateDropdownsAsync(viewModel, cancellationToken);
                 TempData["warning"] = "The submitted information is invalid.";
                 return View(viewModel);
             }
@@ -332,7 +324,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             if (total <= 0)
             {
-                await PopulateDropdownsAsync(viewModel, companyClaims, cancellationToken);
+                await PopulateDropdownsAsync(viewModel, cancellationToken);
                 TempData["warning"] = "Please input at least one form of payment.";
                 return View(viewModel);
             }
@@ -341,20 +333,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var bankAccount = viewModel.BankId.HasValue
-                    ? await _unitOfWork.FilprideBankAccount.GetAsync(b => b.BankAccountId == viewModel.BankId.Value, cancellationToken)
-                    : null;
-
                 var userFullName = GetUserFullName();
                 var model = new FilprideProvisionalReceipt
                 {
-                    SeriesNumber = await GenerateSeriesNumberAsync(companyClaims, cancellationToken),
+                    SeriesNumber = await _unitOfWork.ProvisionalReceipt
+                        .GenerateSeriesNumberAsync(companyClaims, viewModel.Type, cancellationToken),
                     CreatedBy = userFullName,
                     CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
                     Status = nameof(CollectionReceiptStatus.Pending)
                 };
 
-                MapToEntity(viewModel, model, bankAccount, companyClaims, userFullName);
+                MapCreateToEntity(viewModel, model);
 
                 await _dbContext.FilprideProvisionalReceipts.AddAsync(model, cancellationToken);
 
@@ -370,7 +359,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             catch (Exception ex)
             {
                 await transaction.RollbackAsync(cancellationToken);
-                await PopulateDropdownsAsync(viewModel, companyClaims, cancellationToken);
+                await PopulateDropdownsAsync(viewModel, cancellationToken);
                 TempData["error"] = ex.Message;
                 _logger.LogError(ex, "Failed to create provisional receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Created by: {UserName}",
                     ex.Message, ex.StackTrace, GetUserFullName());
@@ -408,14 +397,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            var viewModel = MapToViewModel(model);
-            await PopulateDropdownsAsync(viewModel, companyClaims, cancellationToken);
+            var viewModel = MapToEditViewModel(model);
+            await PopulateDropdownsAsync(viewModel, cancellationToken);
             return View(viewModel);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(ProvisionalReceiptViewModel viewModel, CancellationToken cancellationToken)
+        public async Task<IActionResult> Edit(PREditViewModel viewModel, CancellationToken cancellationToken)
         {
             var companyClaims = await GetCompanyClaimAsync();
 
@@ -426,7 +415,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             if (!ModelState.IsValid)
             {
-                await PopulateDropdownsAsync(viewModel, companyClaims, cancellationToken);
+                await PopulateDropdownsAsync(viewModel, cancellationToken);
                 TempData["warning"] = "The submitted information is invalid.";
                 return View(viewModel);
             }
@@ -443,7 +432,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             if (total <= 0)
             {
-                await PopulateDropdownsAsync(viewModel, companyClaims, cancellationToken);
+                await PopulateDropdownsAsync(viewModel, cancellationToken);
                 TempData["warning"] = "Please input at least one form of payment.";
                 return View(viewModel);
             }
@@ -452,11 +441,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var bankAccount = viewModel.BankId.HasValue
-                    ? await _unitOfWork.FilprideBankAccount.GetAsync(b => b.BankAccountId == viewModel.BankId.Value, cancellationToken)
-                    : null;
-
-                MapToEntity(viewModel, model, bankAccount, companyClaims, GetUserFullName());
+                MapEditToEntity(viewModel, model);
+                model.EditedBy = GetUserFullName();
+                model.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
 
                 var auditTrail = new FilprideAuditTrail(GetUserFullName(),
                     $"Edited provisional receipt# {model.SeriesNumber}", "Provisional Receipt", companyClaims);
@@ -470,7 +457,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             catch (Exception ex)
             {
                 await transaction.RollbackAsync(cancellationToken);
-                await PopulateDropdownsAsync(viewModel, companyClaims, cancellationToken);
+                await PopulateDropdownsAsync(viewModel, cancellationToken);
                 TempData["error"] = ex.Message;
                 _logger.LogError(ex, "Failed to edit provisional receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Edited by: {UserName}",
                     ex.Message, ex.StackTrace, GetUserFullName());
@@ -619,6 +606,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.Status = nameof(CollectionReceiptStatus.Voided);
 
+                await _unitOfWork.GeneralLedger.ReverseEntries(model.SeriesNumber, cancellationToken);
+
                 var auditTrail = new FilprideAuditTrail(model.VoidedBy,
                     $"Voided provisional receipt# {model.SeriesNumber}", "Provisional Receipt", companyClaims);
                 await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
@@ -713,6 +702,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.ClearedDate = null;
                 model.Status = nameof(CollectionReceiptStatus.Deposited);
 
+                await _unitOfWork.ProvisionalReceipt.DepositAsync(model, cancellationToken);
+
                 var auditTrail = new FilprideAuditTrail(GetUserFullName(),
                     $"Record deposit date of provisional receipt#{model.SeriesNumber}", "Provisional Receipt", model.Company);
                 await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
@@ -758,6 +749,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.ClearedDate = null;
                 model.Status = nameof(CollectionReceiptStatus.Returned);
 
+                await _unitOfWork.ProvisionalReceipt.ReturnedCheck(
+                    model.SeriesNumber,
+                    model.Company,
+                    GetUserFullName(),
+                    cancellationToken);
+
                 var auditTrail = new FilprideAuditTrail(GetUserFullName(),
                     $"Return checks of provisional receipt#{model.SeriesNumber}", "Provisional Receipt", model.Company);
                 await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
@@ -802,6 +799,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.DepositedDate = redepositDate;
                 model.ClearedDate = null;
                 model.Status = nameof(CollectionReceiptStatus.Redeposited);
+
+                await _unitOfWork.ProvisionalReceipt.DepositAsync(model, cancellationToken);
 
                 var auditTrail = new FilprideAuditTrail(GetUserFullName(),
                     $"Redeposit provisional receipt#{model.SeriesNumber}", "Provisional Receipt", model.Company);

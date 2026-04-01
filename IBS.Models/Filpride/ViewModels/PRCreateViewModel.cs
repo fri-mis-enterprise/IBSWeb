@@ -3,12 +3,10 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace IBS.Models.Filpride.ViewModels
 {
-    public class ProvisionalReceiptViewModel
+    public class PRCreateViewModel
     {
-        public int? Id { get; set; }
-
-        [Display(Name = "PR No.")]
-        public string? SeriesNumber { get; set; }
+        [Required]
+        public string Type { get; set; }
 
         [Required]
         [Display(Name = "Transaction Date")]
@@ -67,26 +65,11 @@ namespace IBS.Models.Filpride.ViewModels
         [Display(Name = "Manager's Check Branch")]
         public string? ManagersCheckBranch { get; set; }
 
-        [Display(Name = "Bank Account")]
-        public int? BankId { get; set; }
-
-        public List<SelectListItem>? Banks { get; set; }
-
         public decimal EWT { get; set; }
 
         public decimal WVAT { get; set; }
 
         public decimal Total { get; set; }
-
-        [Display(Name = "Deposited Date")]
-        public DateOnly? DepositedDate { get; set; }
-
-        [Display(Name = "Cleared Date")]
-        public DateOnly? ClearedDate { get; set; }
-
-        public bool IsPrinted { get; set; }
-
-        public string? Status { get; set; }
 
         public DateTime MinDate { get; set; }
 

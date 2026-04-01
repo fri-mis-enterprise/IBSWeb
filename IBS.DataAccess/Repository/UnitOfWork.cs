@@ -159,8 +159,8 @@ namespace IBS.DataAccess.Repository
         public Filpride.IRepository.IEmployeeRepository FilprideEmployee { get; private set; }
         public ICustomerBranchRepository FilprideCustomerBranch { get; private set; }
         public ITermsRepository FilprideTerms { get; private set; }
-
         public Filpride.IRepository.IGeneralLedgerRepository GeneralLedger { get; private set; }
+        public IProvisionalReceiptRepository ProvisionalReceipt { get; private set; }
 
         #endregion
 
@@ -266,6 +266,7 @@ namespace IBS.DataAccess.Repository
             FilprideCustomerBranch = new CustomerBranchRepository(_db);
             FilprideTerms = new TermsRepository(_db);
             GeneralLedger = new Filpride.GeneralLedgerRepository(_db);
+            ProvisionalReceipt = new ProvisionalReceiptRepository(_db);
 
             #endregion
 
