@@ -3,6 +3,7 @@ using System;
 using IBS.DataAccess.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IBS.DataAccess.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260401025929_AddProvisionalReceipts")]
+    partial class AddProvisionalReceipts
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2253,12 +2256,14 @@ namespace IBS.DataAccess.Migrations
                     b.HasIndex("BankId")
                         .HasDatabaseName("ix_filpride_provisional_receipts_bank_id");
 
+                    b.HasIndex("Company")
+                        .HasDatabaseName("ix_filpride_provisional_receipts_company");
+
                     b.HasIndex("EmployeeId")
                         .HasDatabaseName("ix_filpride_provisional_receipts_employee_id");
 
-                    b.HasIndex("SeriesNumber", "Company")
-                        .IsUnique()
-                        .HasDatabaseName("ix_filpride_provisional_receipts_series_number_company");
+                    b.HasIndex("SeriesNumber")
+                        .HasDatabaseName("ix_filpride_provisional_receipts_series_number");
 
                     b.ToTable("filpride_provisional_receipts", (string)null);
                 });

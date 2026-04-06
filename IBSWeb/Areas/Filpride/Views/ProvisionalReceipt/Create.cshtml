@@ -1,0 +1,197 @@
+@using IBS.Models.Enums
+@model IBS.Models.Filpride.ViewModels.PRCreateViewModel
+
+@{
+    ViewData["Title"] = "Provisional Receipt - Create";
+    var today = DateTimeHelper.GetCurrentPhilippineTime();
+}
+
+<style>
+    .table-bordered tbody tr:last-child,
+    .table-bordered tbody tr:last-child td {
+        border-left: none !important;
+        border-right: none !important;
+        border-bottom: none !important;
+    }
+    .table-bordered tbody tr:last-child,
+    .table-bordered tbody tr:last-child td {
+        border-bottom: none !important;
+    }
+</style>
+
+<link rel="stylesheet" href="~/css/form-style.css">
+
+<div class="loader-container">
+    <div class="loader"></div>
+    <div class="loader-text">Loading...</div>
+</div>
+
+<div class="card shadow border-0 mt-4">
+    <div class="card-header bg-secondary bg-gradient py-3">
+        <div class="text-center">
+            <h2 class="text-white py-2">@ViewData["Title"]</h2>
+        </div>
+    </div>
+    <div class="card-body p-4">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="row">
+                <div class="col">
+                    <div class="form-group mb-3">
+                        <label class="control-label">Type<span class="required">*</span></label>
+                        <select asp-for="Type" class="form-select js-select2 border-0 shadow" style="width:100%;" required>
+                            <option value="" selected disabled>Select DR type</option>
+                            @foreach (var documentType in Enum.GetValues<DocumentType>())
+                            {
+                                <option value="@documentType">@documentType.ToString()</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Type" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label asp-for="EmployeeId" class="control-label"></label><span class="required">*</span>
+                        <select asp-for="EmployeeId" asp-items="@Model.Employees" class="form-select js-select2" style="width:100%">
+                            <option value=""></option>
+                        </select>
+                        <span asp-validation-for="EmployeeId" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label asp-for="TransactionDate" class="control-label"></label><span class="required">*</span>
+                        <input asp-for="TransactionDate" type="date" class="form-control" 
+                               value="@today.ToString("yyyy-MM-dd")"
+                               min="@Model.MinDate.ToString("yyyy-MM-dd")" />
+                        <span asp-validation-for="TransactionDate" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-floating mb-3">
+                        <input asp-for="ReferenceNo" class="form-control" placeholder="Reference #"/>
+                        <label asp-for="ReferenceNo"></label>
+                        <span asp-validation-for="ReferenceNo" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-floating mb-3">
+                        <input asp-for="Remarks" class="form-control" placeholder="Remarks"/>
+                        <label asp-for="Remarks"></label>
+                        <span asp-validation-for="Remarks" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-floating mb-3">
+                        <input asp-for="BatchNumber" class="form-control" placeholder="Remarks"/>
+                        <label asp-for="BatchNumber"></label>
+                        <span asp-validation-for="BatchNumber" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <table class="table-bordered w-100">
+                <tbody>
+                <tr>
+                    <td colspan="6" style="padding-left:20px;">FORM OF PAYMENT<span class="required">*</span></td>
+                </tr>
+                <tr>
+                    <td class="text-center" style="width:25%"></td>
+                    <td class="text-center" style="width:15%">DATE</td>
+                    <td class="text-center" style="width:15%">CHK #</td>
+                    <td class="text-center" style="width:15%">BANK</td>
+                    <td class="text-center" style="width:15%">BRANCH</td>
+                    <td class="text-center" style="width:15%">AMOUNT</td>
+                </tr>
+                <tr>
+                    <td style="padding-left:20px;">Cash</td>
+                    <td><input style="border: none" class="form-control" disabled /></td>
+                    <td><input style="border: none" class="form-control" disabled /></td>
+                    <td><input style="border: none" class="form-control" disabled /></td>
+                    <td><input style="border: none" class="form-control" disabled /></td>
+                    <td><input style="border: none" asp-for="CashAmount" class="form-control moneyInput" /></td>
+                </tr>
+                <tr>
+                    <td style="padding-left:20px;">Check</td>
+                    <td><input style="border: none" asp-for="CheckDate" type="date" class="form-control" /></td>
+                    <td><input style="border: none" asp-for="CheckNo" class="form-control" /></td>
+                    <td><input style="border: none" asp-for="CheckBank" class="form-control" /></td>
+                    <td><input style="border: none" asp-for="CheckBranch" class="form-control" /></td>
+                    <td><input style="border: none" asp-for="CheckAmount" class="form-control moneyInput" /></td>
+                </tr>
+                <tr>
+                    <td style="padding-left:20px;">Manager's Check</td>
+                    <td><input style="border: none" asp-for="ManagersCheckDate" type="date" class="form-control" /></td>
+                    <td><input style="border: none" asp-for="ManagersCheckNo" class="form-control" /></td>
+                    <td><input style="border: none" asp-for="ManagersCheckBank" class="form-control" /></td>
+                    <td><input style="border: none" asp-for="ManagersCheckBranch" class="form-control" /></td>
+                    <td><input style="border: none" asp-for="ManagersCheckAmount" class="form-control moneyInput" /></td>
+                </tr>
+                <tr>
+                    <td style="padding-left:20px;">EWT</td>
+                    <td><input style="border: none" class="form-control" disabled /></td>
+                    <td><input style="border: none" class="form-control" disabled /></td>
+                    <td><input style="border: none" class="form-control" disabled /></td>
+                    <td><input style="border: none" class="form-control" disabled /></td>
+                    <td><input style="border: none" asp-for="EWT" class="form-control moneyInput" /></td>
+                </tr>
+                <tr>
+                    <td style="padding-left:20px;">WVAT</td>
+                    <td><input style="border: none" class="form-control" disabled /></td>
+                    <td><input style="border: none" class="form-control" disabled /></td>
+                    <td><input style="border: none" class="form-control" disabled /></td>
+                    <td><input style="border: none" class="form-control" disabled /></td>
+                    <td><input style="border: none" asp-for="WVAT" class="form-control moneyInput" /></td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td style="padding-left:20px; padding-top: 5px; padding-bottom: 5px;">TOTAL: </td>
+                    <td id="checkTotal" style="padding-left:15px; padding-top: 5px; padding-bottom: 5px;"></td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div class="row pt-3">
+                <div class="col-6 col-md-3">
+                    <button type="submit" class="btn btn-primary form-control">Create</button>
+                </div>
+                <div class="col-6 col-md-3">
+                    <a asp-area="Filpride" asp-controller="ProvisionalReceipt" asp-action="Index" class="btn btn-outline-primary border form-control">Back to List</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            $("#submitButton").on("click");
+            let inputs = document.querySelectorAll(".moneyInput");
+            let totalCell = document.getElementById("checkTotal");
+
+            function updateTotal() {
+                let total = 0;
+                inputs.forEach(input => {
+                    const value = parseFloat(input.value.replace(/,/g, "")) || 0;
+                    total += value;
+                });
+                totalCell.textContent = total.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
+
+            inputs.forEach(input => {
+                input.addEventListener("input", updateTotal);
+                input.addEventListener("change", updateTotal);
+            });
+
+            updateTotal();
+        });
+    </script>
+}

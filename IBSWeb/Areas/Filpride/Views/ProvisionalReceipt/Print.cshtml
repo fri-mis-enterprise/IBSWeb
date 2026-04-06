@@ -1,0 +1,235 @@
+@using Humanizer
+@using IBS.Models
+@using IBS.Models.Enums
+@using IBS.Utility.Constants
+@using IBS.Utility.Helpers
+@using Microsoft.AspNetCore.Identity
+@model IBS.Models.Filpride.AccountsReceivable.FilprideProvisionalReceipt
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    ViewData["Title"] = "Provisional Receipt - Preview";
+
+    var selectedCompany = string.Empty;
+
+    if (SignInManager.IsSignedIn(User))
+    {
+        selectedCompany = User.Claims.FirstOrDefault(c => c.Type == "Company")?.Value ?? string.Empty;
+    }
+
+    var amountReceived = Model.CashAmount + Model.CheckAmount + Model.ManagersCheckAmount;
+    var employeeName = Model.Employee.GetFullName().ToUpper();
+    var employeeAddress = (Model.Employee.Address ?? string.Empty).ToUpper();
+    var employeeTin = Model.Employee.TinNo ?? string.Empty;
+
+    int integerPart = Convert.ToInt32(Math.Floor(amountReceived));
+    decimal decimalPart = Math.Round((amountReceived - integerPart), 4);
+    string integerWords = integerPart.ToWords();
+    integerWords = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(integerWords.ToLower());
+    int cents = Convert.ToInt32(decimalPart * 100) % 100;
+    string centsWords = cents.ToWords();
+    centsWords = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(centsWords.ToLower());
+    var words = cents > 0
+        ? $"{integerWords} Pesos and {centsWords} Centavos Only"
+        : $"{integerWords} Pesos Only";
+    words = words.Replace(" And", "").Replace("-", " ");
+}
+
+<style>
+    @@media print {
+        /* Reduce spacing for compact layout */
+        .compact-section {
+            margin-top: 10px !important;
+        }
+    }
+</style>
+
+<br />
+<table class="w-100">
+    <tbody>
+    <tr>
+        <td class="text-end">
+            @if (selectedCompany == "Filpride")
+            {
+                <img src="~/img/Filpride.jpg" width="130px" />
+            }
+        </td>
+    </tr>
+    <tr>
+        <td class="text-center">
+            <h2 style="margin:0;"><u><b>&nbsp;FILPRIDE RESOURCES INC.&nbsp;</b></u></h2>
+            <p style="margin:0; line-height:1;">
+                57 Westgate Office, Sampson Road, CBD, Subic Bay Freeport Zone,<br />
+                Kalaklan, Olongapo City, 2200 Zambales, Philippines<br />
+                VAT Reg. TIN: 000-216-589-00000
+            </p>
+        </td>
+    </tr>
+    </tbody>
+</table>
+
+<br />
+
+<table class="table-borderless w-100">
+    <tr>
+        <td style="width:65%;">
+            <h3><b>PROVISIONAL RECEIPT</b></h3>
+        </td>
+        <td style="width:35%; text-align:right;">
+            <h6><b>No.&nbsp;@Model.SeriesNumber</b></h6>
+            <h6>
+                <b>Date:</b>
+                <span class="underline d-inline-block text-center">@Model.TransactionDate.ToString(SD.Date_Format)</span>
+            </h6>
+        </td>
+    </tr>
+</table>
+
+<div>
+    <table class="table-bordered w-100">
+        <tbody>
+        <tr>
+            <td colspan="2" style="padding-left:10px;">Received from: @employeeName</td>
+        </tr>
+        <tr>
+            <td colspan="2" style="padding-left:10px;">Address: @employeeAddress</td>
+        </tr>
+        <tr>
+            <td style="padding-left:10px;">TIN: @employeeTin</td>
+            <td style="padding-left:10px;">Buss. Style: </td>
+        </tr>
+        <tr>
+            <td colspan="2" style="padding-left:10px;">The sum of Pesos:<br /> @words</td>
+        </tr>
+        <tr>
+            <td>&nbsp;</td>
+            <td style="padding-left:10px;">(&#8369; @amountReceived.ToString(SD.Two_Decimal_Format))</td>
+        </tr>
+        <tr>
+            <td colspan="2" style="padding-left:10px;">Reference Receipt No. @Model.ReferenceNo.ToUpper()</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<div style="margin-top:10px;">
+    <table class="table-bordered w-100">
+        <tbody>
+        <tr>
+            <td colspan="6" style="padding-left:20px;">FORM OF PAYMENT</td>
+        </tr>
+        <tr>
+            <td class="text-center" style="width:25%"></td>
+            <td class="text-center" style="width:15%">DATE</td>
+            <td class="text-center" style="width:15%">CHK #</td>
+            <td class="text-center" style="width:15%">BANK</td>
+            <td class="text-center" style="width:15%">BRANCH</td>
+            <td class="text-center" style="width:15%">AMOUNT</td>
+        </tr>
+        <tr>
+            <td style="padding-left:20px;">Cash</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="text-center">@(Model.CashAmount > 0 ? Model.CashAmount.ToString(SD.Two_Decimal_Format) : "")</td>
+        </tr>
+        <tr>
+            <td style="padding-left:20px;">Check</td>
+            <td class="text-center">@Model.CheckDate?.ToString(SD.Date_Format)</td>
+            <td class="text-center">@Model.CheckNo</td>
+            <td class="text-center">@Model.CheckBank</td>
+            <td class="text-center">@Model.CheckBranch</td>
+            <td class="text-center">@(Model.CheckAmount > 0 ? Model.CheckAmount.ToString(SD.Two_Decimal_Format) : "")</td>
+        </tr>
+        <tr>
+            <td style="padding-left:20px;">Manager's Check</td>
+            <td class="text-center">@Model.ManagersCheckDate?.ToString(SD.Date_Format)</td>
+            <td class="text-center">@Model.ManagersCheckNo</td>
+            <td class="text-center">@Model.ManagersCheckBank</td>
+            <td class="text-center">@Model.ManagersCheckBranch</td>
+            <td class="text-center">@(Model.ManagersCheckAmount > 0 ? Model.ManagersCheckAmount.ToString(SD.Two_Decimal_Format) : "")</td>
+        </tr>
+        <tr>
+            <td style="padding-left:20px;">EWT</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="text-center">@(Model.EWT > 0 ? Model.EWT.ToString(SD.Two_Decimal_Format) : "")</td>
+        </tr>
+        <tr>
+            <td style="padding-left:20px;">WVAT</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="text-center">@(Model.WVAT > 0 ? Model.WVAT.ToString(SD.Two_Decimal_Format) : "")</td>
+        </tr>
+        <tr>
+            <td style="padding-left:20px;">TOTAL</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="text-center">@Model.Total.ToString(SD.Two_Decimal_Format)</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+@if (Model.Type == nameof(DocumentType.Documented))
+{
+    <div class="text-center w-100" style="margin-top:10px;">
+        <em class="p-4"><strong>"THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX"</strong><br /></em>
+    </div>
+
+    if (!Model.IsPrinted)
+    {
+        <div class="text-end">ORIGINAL COPY</div>
+    }
+    else
+    {
+        <div class="text-end">REPRINT COPY</div>
+    }
+}
+
+<div class="row pt-2">
+    @if (Model.PostedBy == null)
+    {
+        <div class="col-6 col-md-3">
+            <a class="btn btn-primary form-control buttons" onclick="confirmPost(@Model.Id)">Post</a>
+        </div>
+    }
+    else
+    {
+        <div class="col-6 col-md-3">
+            <a asp-area="Filpride" asp-controller="ProvisionalReceipt" asp-action="Printed" asp-route-id="@Model.Id" onclick="window.print()" class="btn btn-primary form-control buttons">Print</a>
+        </div>
+    }
+    <div class="col-6 col-md-3">
+        <a asp-area="Filpride" asp-controller="ProvisionalReceipt" asp-action="Index" class="btn btn-outline-primary border form-control buttons">Back to List</a>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/disable-dev-tools-in-print.js" asp-append-version="true"></script>
+    <script>
+        function confirmPost(id) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = `@Url.Action("Post", "ProvisionalReceipt", new { area = "Filpride" })/${id}`;
+                }
+            });
+        }
+    </script>
+}

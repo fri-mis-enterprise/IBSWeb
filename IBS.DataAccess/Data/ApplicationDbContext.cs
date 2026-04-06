@@ -153,6 +153,8 @@ namespace IBS.DataAccess.Data
 
         public DbSet<FilprideGLSubAccountBalance> FilprideGlSubAccountBalances { get; set; }
 
+        public DbSet<FilprideProvisionalReceipt> FilprideProvisionalReceipts { get; set; }
+
         #region--Master File
 
         public DbSet<FilprideCustomer> FilprideCustomers { get; set; }
@@ -967,6 +969,25 @@ namespace IBS.DataAccess.Data
                 crd.HasIndex(d => d.InvoiceNo);
 
                 crd.HasIndex(d => d.CollectionReceiptNo);
+            });
+
+            builder.Entity<FilprideProvisionalReceipt>(pr =>
+            {
+                pr.HasOne(p => p.Employee)
+                    .WithMany()
+                    .HasForeignKey(p => p.EmployeeId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                pr.HasOne(p => p.BankAccount)
+                    .WithMany()
+                    .HasForeignKey(p => p.BankId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                pr.HasIndex(d => new
+                {
+                    d.SeriesNumber,
+                    d.Company
+                }).IsUnique();
             });
 
             #endregion -- Collection Receipt --
