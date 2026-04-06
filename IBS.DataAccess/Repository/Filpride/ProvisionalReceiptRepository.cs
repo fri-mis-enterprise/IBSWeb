@@ -148,7 +148,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 var reversalEntry = new FilprideGeneralLedgerBook
                 {
                     Reference = originalEntry.Reference,
-                    Date = DateOnly.FromDateTime(dateToday);
+                    Date = DateOnly.FromDateTime(dateToday),
                     AccountNo = originalEntry.AccountNo,
                     AccountTitle = originalEntry.AccountTitle,
                     Description = "Reversal of entries due to returned checks.",
