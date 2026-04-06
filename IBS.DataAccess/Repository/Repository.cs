@@ -40,9 +40,15 @@ namespace IBS.DataAccess.Repository
             return await dbSet.Where(filter).FirstOrDefaultAsync(cancellationToken);
         }
 
-        public virtual IQueryable<T> GetAllQuery(CancellationToken cancellationToken = default)
+        public virtual IQueryable<T> GetAllQuery(Expression<Func<T, bool>>? filter)
         {
-            return dbSet.AsNoTracking();
+            IQueryable<T> query = dbSet;
+            if (filter != null)
+            {
+                query = query.Where(filter);
+            }
+
+            return query.AsNoTracking();
         }
 
         public async Task AddAsync(T entity, CancellationToken cancellationToken = default)

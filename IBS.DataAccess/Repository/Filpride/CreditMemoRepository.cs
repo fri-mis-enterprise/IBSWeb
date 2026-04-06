@@ -109,9 +109,9 @@ namespace IBS.DataAccess.Repository.Filpride
             return await query.ToListAsync(cancellationToken);
         }
 
-        public override IQueryable<FilprideCreditMemo> GetAllQuery(CancellationToken cancellationToken = default)
+        public override IQueryable<FilprideCreditMemo> GetAllQuery(Expression<Func<FilprideCreditMemo, bool>>? filter)
         {
-            return dbSet
+            IQueryable<FilprideCreditMemo> query = dbSet
                 .Include(c => c.SalesInvoice)
                 .ThenInclude(s => s!.Product)
                 .Include(c => c.SalesInvoice)
@@ -122,6 +122,13 @@ namespace IBS.DataAccess.Repository.Filpride
                 .ThenInclude(sv => sv!.Service)
                 .AsSplitQuery()
                 .AsNoTracking();
+
+            if (filter != null)
+            {
+                query = query.Where(filter);
+            }
+
+            return query;
         }
     }
 }

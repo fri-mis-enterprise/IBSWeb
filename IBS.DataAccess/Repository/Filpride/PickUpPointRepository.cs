@@ -29,12 +29,19 @@ namespace IBS.DataAccess.Repository.Filpride
                 .ToListAsync(cancellationToken);
         }
 
-        public override IQueryable<FilpridePickUpPoint> GetAllQuery(CancellationToken cancellationToken = default)
+        public override IQueryable<FilpridePickUpPoint> GetAllQuery(Expression<Func<FilpridePickUpPoint, bool>>? filter)
         {
-            return dbSet
+            IQueryable<FilpridePickUpPoint> query = dbSet
                 .Include(p => p.Supplier)
                 .AsSplitQuery()
                 .AsNoTracking();
+
+            if (filter != null)
+            {
+                query = query.Where(filter);
+            }
+
+            return query;
         }
 
         public async Task<List<SelectListItem>> GetPickUpPointListBasedOnSupplier(string companyClaims, int supplierId, CancellationToken cancellationToken = default)

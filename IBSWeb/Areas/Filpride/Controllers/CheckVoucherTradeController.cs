@@ -178,8 +178,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
 
                 var checkVoucherHeaders = _unitOfWork.FilprideCheckVoucher
-                    .GetAllQuery(cancellationToken)
-                    .Where(cv => cv.Company == companyClaims && cv.Category == "Trade");
+                    .GetAllQuery(cv => cv.Company == companyClaims && cv.Category == "Trade");
 
                 var totalRecords = await checkVoucherHeaders.CountAsync(cancellationToken);
 

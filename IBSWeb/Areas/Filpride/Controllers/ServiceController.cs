@@ -182,7 +182,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             try
             {
                 var query = _unitOfWork.FilprideService
-                    .GetAllQuery(cancellationToken);
+                    .GetAllQuery();
 
                 var totalRecords = await query.CountAsync(cancellationToken);
 

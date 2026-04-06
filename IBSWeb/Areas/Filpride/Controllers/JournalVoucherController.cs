@@ -116,8 +116,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var filterTypeClaim = await GetCurrentFilterType();
 
                 var journalVoucherHeader = _unitOfWork.FilprideJournalVoucher
-                    .GetAllQuery(cancellationToken)
-                    .Where(x => x.Company == companyClaims);
+                    .GetAllQuery(x => x.Company == companyClaims);
 
                 var totalRecords = await journalVoucherHeader.CountAsync(cancellationToken);
 

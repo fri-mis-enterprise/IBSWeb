@@ -148,11 +148,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
-                var baseQuery = _unitOfWork.ProvisionalReceipt
-                    .GetAllQuery(cancellationToken);
-
-                var query = baseQuery
-                    .Where(pr => pr.Company == companyClaims);
+                var query = _unitOfWork.ProvisionalReceipt
+                    .GetAllQuery(pr => pr.Company == companyClaims);
 
                 var totalRecords = await query.CountAsync(cancellationToken);
 

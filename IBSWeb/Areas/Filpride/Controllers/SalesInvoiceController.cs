@@ -76,8 +76,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
 
                 var salesInvoices = _unitOfWork.FilprideSalesInvoice
-                    .GetAllQuery(cancellationToken)
-                    .Where(x => x.Company == companyClaims);
+                    .GetAllQuery(x => x.Company == companyClaims);
 
                 var totalRecords = await salesInvoices.CountAsync(cancellationToken);
 
