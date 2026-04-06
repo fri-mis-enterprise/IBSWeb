@@ -710,7 +710,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
-        public override IQueryable<FilprideCollectionReceipt> GetAllQuery(Expression<Func<FilprideCollectionReceipt, bool>>? filter)
+        public override IQueryable<FilprideCollectionReceipt> GetAllQuery(Expression<Func<FilprideCollectionReceipt, bool>>? filter = null)
         {
             IQueryable<FilprideCollectionReceipt> query = dbSet
                 .Include(cr => cr.Customer)

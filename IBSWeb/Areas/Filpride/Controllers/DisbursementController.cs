@@ -93,8 +93,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         (hasDate && s.Date == date) ||
                         (hasDcpDate && s.DcpDate == dcpDate) == true ||
                         (hasDcrDate && s.DcrDate == dcrDate) == true
-                        )
-                    .Where(cv => cv.Company == companyClaims);
+                        );
                 }
 
                 // Column-specific search

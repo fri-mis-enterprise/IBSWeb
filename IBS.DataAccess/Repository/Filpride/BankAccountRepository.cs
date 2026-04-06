@@ -40,7 +40,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .AnyAsync(b => b.AccountNo == accountNo, cancellationToken);
         }
 
-        public override IQueryable<FilprideBankAccount> GetAllQuery(Expression<Func<FilprideBankAccount, bool>>? filter)
+        public override IQueryable<FilprideBankAccount> GetAllQuery(Expression<Func<FilprideBankAccount, bool>>? filter = null)
         {
             IQueryable<FilprideBankAccount> query = dbSet.AsNoTracking();
 

@@ -71,7 +71,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
-        public override IQueryable<FilprideAuthorityToLoad> GetAllQuery(Expression<Func<FilprideAuthorityToLoad, bool>>? filter)
+        public override IQueryable<FilprideAuthorityToLoad> GetAllQuery(Expression<Func<FilprideAuthorityToLoad, bool>>? filter = null)
         {
             IQueryable<FilprideAuthorityToLoad> query = dbSet
                 .Include(atl => atl.Supplier)

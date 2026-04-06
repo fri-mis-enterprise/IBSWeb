@@ -140,7 +140,7 @@ namespace IBS.DataAccess.Repository.Filpride
             return await query.ToListAsync(cancellationToken);
         }
 
-        public override IQueryable<FilprideCheckVoucherHeader> GetAllQuery(Expression<Func<FilprideCheckVoucherHeader, bool>>? filter)
+        public override IQueryable<FilprideCheckVoucherHeader> GetAllQuery(Expression<Func<FilprideCheckVoucherHeader, bool>>? filter = null)
         {
             IQueryable<FilprideCheckVoucherHeader> query = dbSet
                 .Include(cv => cv.BankAccount)

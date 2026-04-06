@@ -29,7 +29,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .ToListAsync(cancellationToken);
         }
 
-        public override IQueryable<FilpridePickUpPoint> GetAllQuery(Expression<Func<FilpridePickUpPoint, bool>>? filter)
+        public override IQueryable<FilpridePickUpPoint> GetAllQuery(Expression<Func<FilpridePickUpPoint, bool>>? filter = null)
         {
             IQueryable<FilpridePickUpPoint> query = dbSet
                 .Include(p => p.Supplier)

@@ -73,7 +73,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
-        public override IQueryable<FilprideCustomerOrderSlip> GetAllQuery(Expression<Func<FilprideCustomerOrderSlip, bool>>? filter)
+        public override IQueryable<FilprideCustomerOrderSlip> GetAllQuery(Expression<Func<FilprideCustomerOrderSlip, bool>>? filter = null)
         {
             IQueryable<FilprideCustomerOrderSlip> query = dbSet
                 .Include(cos => cos.Customer)

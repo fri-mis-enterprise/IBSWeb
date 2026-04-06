@@ -97,7 +97,7 @@ namespace IBS.DataAccess.Repository.Filpride
             return await query.ToListAsync(cancellationToken);
         }
 
-        public override IQueryable<FilprideJournalVoucherHeader> GetAllQuery(Expression<Func<FilprideJournalVoucherHeader, bool>>? filter)
+        public override IQueryable<FilprideJournalVoucherHeader> GetAllQuery(Expression<Func<FilprideJournalVoucherHeader, bool>>? filter = null)
         {
             IQueryable<FilprideJournalVoucherHeader> query =
                 dbSet
