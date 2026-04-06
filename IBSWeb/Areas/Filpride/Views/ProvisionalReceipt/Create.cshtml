@@ -3,6 +3,7 @@
 
 @{
     ViewData["Title"] = "Provisional Receipt - Create";
+    var today = DateTimeHelper.GetCurrentPhilippineTime();
 }
 
 <style>
@@ -60,7 +61,9 @@
 
                     <div class="form-group mb-3">
                         <label asp-for="TransactionDate" class="control-label"></label><span class="required">*</span>
-                        <input asp-for="TransactionDate" type="date" class="form-control"/>
+                        <input asp-for="TransactionDate" type="date" class="form-control" 
+                               value="@today.ToString("yyyy-MM-dd")"
+                               min="@Model.MinDate.ToString("yyyy-MM-dd")" />
                         <span asp-validation-for="TransactionDate" class="text-danger"></span>
                     </div>
 
