@@ -46,7 +46,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .ToListAsync(cancellationToken);
         }
 
-        public override IQueryable<FilprideCustomerBranch> GetAllQuery(Expression<Func<FilprideCustomerBranch, bool>>? filter)
+        public override IQueryable<FilprideCustomerBranch> GetAllQuery(Expression<Func<FilprideCustomerBranch, bool>>? filter = null)
         {
             IQueryable<FilprideCustomerBranch> query = dbSet
                 .Include(b => b.Customer)

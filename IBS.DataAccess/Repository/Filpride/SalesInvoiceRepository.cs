@@ -152,7 +152,7 @@ namespace IBS.DataAccess.Repository.Filpride
             return await query.ToListAsync(cancellationToken);
         }
 
-        public override IQueryable<FilprideSalesInvoice> GetAllQuery(Expression<Func<FilprideSalesInvoice, bool>>? filter)
+        public override IQueryable<FilprideSalesInvoice> GetAllQuery(Expression<Func<FilprideSalesInvoice, bool>>? filter = null)
         {
             IQueryable<FilprideSalesInvoice> query = dbSet
                 .Include(si => si.Product)

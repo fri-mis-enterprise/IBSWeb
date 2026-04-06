@@ -159,7 +159,7 @@ namespace IBS.DataAccess.Repository.Filpride
             return await query.ToListAsync(cancellationToken);
         }
 
-        public override IQueryable<FilprideChartOfAccount> GetAllQuery(Expression<Func<FilprideChartOfAccount, bool>>? filter)
+        public override IQueryable<FilprideChartOfAccount> GetAllQuery(Expression<Func<FilprideChartOfAccount, bool>>? filter = null)
         {
             IQueryable<FilprideChartOfAccount> query = dbSet
                 .Include(c => c.Children)

@@ -40,7 +40,7 @@ namespace IBS.DataAccess.Repository
             return await dbSet.Where(filter).FirstOrDefaultAsync(cancellationToken);
         }
 
-        public virtual IQueryable<T> GetAllQuery(Expression<Func<T, bool>>? filter)
+        public virtual IQueryable<T> GetAllQuery(Expression<Func<T, bool>>? filter = null)
         {
             IQueryable<T> query = dbSet;
             if (filter != null)

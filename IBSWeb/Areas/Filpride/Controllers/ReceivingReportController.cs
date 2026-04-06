@@ -142,8 +142,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                               || rr.WithdrawalCertificate == null
                                               || rr.CostBasedOnSoa == 0)
                                              && rr.CanceledBy == null
-                                             && rr.VoidedBy == null
-                                             && rr.Company == companyClaims);
+                                             && rr.VoidedBy == null);
                             break;
                             // Add other cases as needed
                     }
