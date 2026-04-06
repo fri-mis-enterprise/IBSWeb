@@ -983,9 +983,11 @@ namespace IBS.DataAccess.Data
                     .HasForeignKey(p => p.BankId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                pr.HasIndex(d => d.SeriesNumber);
-                pr.HasIndex(d => d.Company);
-
+                pr.HasIndex(d => new
+                {
+                    d.SeriesNumber,
+                    d.Company
+                }).IsUnique();
             });
 
             #endregion -- Collection Receipt --
