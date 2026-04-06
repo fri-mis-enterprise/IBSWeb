@@ -71,9 +71,9 @@ namespace IBS.DataAccess.Repository.Filpride
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
-        public override IQueryable<FilprideAuthorityToLoad> GetAllQuery(CancellationToken cancellationToken = default)
+        public override IQueryable<FilprideAuthorityToLoad> GetAllQuery(Expression<Func<FilprideAuthorityToLoad, bool>>? filter)
         {
-            return dbSet
+            IQueryable<FilprideAuthorityToLoad> query = dbSet
                 .Include(atl => atl.Supplier)
                 .Include(a => a.Details).ThenInclude(d => d.CustomerOrderSlip)
                 .Include(atl => atl.CustomerOrderSlip).ThenInclude(po => po!.Product)
@@ -82,6 +82,13 @@ namespace IBS.DataAccess.Repository.Filpride
                 .Include(atl => atl.CustomerOrderSlip).ThenInclude(cos => cos!.PickUpPoint)
                 .AsSplitQuery()
                 .AsNoTracking();
+
+            if (filter != null)
+            {
+                query = query.Where(filter);
+            }
+
+            return query;
         }
     }
 }

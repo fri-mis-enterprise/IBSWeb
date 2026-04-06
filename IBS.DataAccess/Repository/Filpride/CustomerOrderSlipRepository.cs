@@ -73,9 +73,9 @@ namespace IBS.DataAccess.Repository.Filpride
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
-        public override IQueryable<FilprideCustomerOrderSlip> GetAllQuery(CancellationToken cancellationToken = default)
+        public override IQueryable<FilprideCustomerOrderSlip> GetAllQuery(Expression<Func<FilprideCustomerOrderSlip, bool>>? filter)
         {
-            return dbSet
+            IQueryable<FilprideCustomerOrderSlip> query = dbSet
                 .Include(cos => cos.Customer)
                 .Include(cos => cos.Hauler)
                 .Include(cos => cos.Product)
@@ -86,6 +86,13 @@ namespace IBS.DataAccess.Repository.Filpride
                 .Include(cos => cos.AppointedSuppliers)
                 .AsSplitQuery()
                 .AsNoTracking();
+
+            if (filter != null)
+            {
+                query = query.Where(filter);
+            }
+
+            return query;
         }
 
         public async Task UpdateAsync(CustomerOrderSlipViewModel viewModel, bool thereIsNewFile, CancellationToken cancellationToken = default)

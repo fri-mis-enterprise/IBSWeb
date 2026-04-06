@@ -114,8 +114,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 var collectionReceipts = _unitOfWork.FilprideCollectionReceipt
-                    .GetAllQuery()
-                    .Where(c => c.Company == companyClaims);
+                    .GetAllQuery(c => c.Company == companyClaims) ;
 
                 var totalRecords = await collectionReceipts.CountAsync(cancellationToken);
 

@@ -77,8 +77,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
 
                 var debitMemos = _unitOfWork.FilprideDebitMemo
-                    .GetAllQuery(cancellationToken)
-                    .Where(x => x.Company == companyClaims);
+                    .GetAllQuery(x => x.Company == companyClaims);
 
                 var totalRecords = await debitMemos.CountAsync(cancellationToken);
 

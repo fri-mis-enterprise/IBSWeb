@@ -101,9 +101,9 @@ namespace IBS.DataAccess.Repository.Filpride
             return await query.ToListAsync(cancellationToken);
         }
 
-        public override IQueryable<FilprideDeliveryReceipt> GetAllQuery(CancellationToken cancellationToken = default)
+        public override IQueryable<FilprideDeliveryReceipt> GetAllQuery(Expression<Func<FilprideDeliveryReceipt, bool>>? filter)
         {
-            return dbSet
+            IQueryable<FilprideDeliveryReceipt> query = dbSet
                 .Include(dr => dr.CustomerOrderSlip).ThenInclude(po => po!.Product)
                 .Include(cos => cos.PurchaseOrder).ThenInclude(po => po!.Supplier)
                 .Include(dr => dr.Hauler)
@@ -114,6 +114,13 @@ namespace IBS.DataAccess.Repository.Filpride
                 .Include(dr => dr.AuthorityToLoad)
                 .AsSplitQuery()
                 .AsNoTracking();
+
+            if (filter != null)
+            {
+                query = query.Where(filter);
+            }
+
+            return query;
         }
 
         public override async Task<FilprideDeliveryReceipt?> GetAsync(Expression<Func<FilprideDeliveryReceipt, bool>> filter, CancellationToken cancellationToken = default)

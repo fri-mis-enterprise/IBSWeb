@@ -97,13 +97,21 @@ namespace IBS.DataAccess.Repository.Filpride
             return await query.ToListAsync(cancellationToken);
         }
 
-        public override IQueryable<FilprideJournalVoucherHeader> GetAllQuery(CancellationToken cancellationToken = default)
+        public override IQueryable<FilprideJournalVoucherHeader> GetAllQuery(Expression<Func<FilprideJournalVoucherHeader, bool>>? filter)
         {
-            return dbSet
+            IQueryable<FilprideJournalVoucherHeader> query =
+                dbSet
                 .Include(cv => cv.CheckVoucherHeader)
                 .ThenInclude(supplier => supplier!.Supplier)
                 .AsSplitQuery()
                 .AsNoTracking();
+
+            if (filter != null)
+            {
+                query = query.Where(filter);
+            }
+
+            return query;
         }
 
         public async Task PostAsync(FilprideJournalVoucherHeader header,

@@ -710,9 +710,9 @@ namespace IBS.DataAccess.Repository.Filpride
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
-        public override IQueryable<FilprideCollectionReceipt> GetAllQuery(CancellationToken cancellationToken = default)
+        public override IQueryable<FilprideCollectionReceipt> GetAllQuery(Expression<Func<FilprideCollectionReceipt, bool>>? filter)
         {
-            return dbSet
+            IQueryable<FilprideCollectionReceipt> query = dbSet
                 .Include(cr => cr.Customer)
                 .Include(cr => cr.SalesInvoice)
                 .ThenInclude(s => s!.Customer)
@@ -728,6 +728,13 @@ namespace IBS.DataAccess.Repository.Filpride
                 .Include(c => c.ReceiptDetails)
                 .AsSplitQuery()
                 .AsNoTracking();
+
+            if (filter != null)
+            {
+                query = query.Where(filter);
+            }
+
+            return query;
         }
 
         public async Task ReturnedCheck(string crNo, string company, string userName, CancellationToken cancellationToken = default)

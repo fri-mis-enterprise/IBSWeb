@@ -132,12 +132,19 @@ namespace IBS.DataAccess.Repository.Filpride
             return await query.ToListAsync(cancellationToken);
         }
 
-        public override IQueryable<FilprideCustomer> GetAllQuery(CancellationToken cancellationToken = default)
+        public override IQueryable<FilprideCustomer> GetAllQuery(Expression<Func<FilprideCustomer, bool>>? filter)
         {
-            return dbSet
+            IQueryable<FilprideCustomer> query = dbSet
                 .Include(dr => dr.Commissionee)
                 .AsSplitQuery()
                 .AsNoTracking();
+
+            if (filter != null)
+            {
+                query = query.Where(filter);
+            }
+
+            return query;
         }
     }
 }

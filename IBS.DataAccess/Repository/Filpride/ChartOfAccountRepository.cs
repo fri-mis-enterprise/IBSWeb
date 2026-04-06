@@ -159,12 +159,19 @@ namespace IBS.DataAccess.Repository.Filpride
             return await query.ToListAsync(cancellationToken);
         }
 
-        public override IQueryable<FilprideChartOfAccount> GetAllQuery(CancellationToken cancellationToken = default)
+        public override IQueryable<FilprideChartOfAccount> GetAllQuery(Expression<Func<FilprideChartOfAccount, bool>>? filter)
         {
-            return dbSet
+            IQueryable<FilprideChartOfAccount> query = dbSet
                 .Include(c => c.Children)
                 .AsSplitQuery()
                 .AsNoTracking();
+
+            if (filter != null)
+            {
+                query = query.Where(filter);
+            }
+
+            return query;
         }
     }
 }

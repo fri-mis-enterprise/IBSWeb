@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Filpride.IRepository;
 using IBS.Models.Filpride.MasterFile;
@@ -39,9 +40,16 @@ namespace IBS.DataAccess.Repository.Filpride
                 .AnyAsync(b => b.AccountNo == accountNo, cancellationToken);
         }
 
-        public override IQueryable<FilprideBankAccount> GetAllQuery(CancellationToken cancellationToken = default)
+        public override IQueryable<FilprideBankAccount> GetAllQuery(Expression<Func<FilprideBankAccount, bool>>? filter)
         {
-            return dbSet.AsNoTracking();
+            IQueryable<FilprideBankAccount> query = dbSet.AsNoTracking();
+
+            if (filter != null)
+            {
+                query = query.Where(filter);
+            }
+
+            return query;
         }
     }
 }

@@ -180,13 +180,20 @@ namespace IBS.DataAccess.Repository.Filpride
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
-        public override IQueryable<FilprideProvisionalReceipt> GetAllQuery(CancellationToken cancellationToken = default)
+        public override IQueryable<FilprideProvisionalReceipt> GetAllQuery(Expression<Func<FilprideProvisionalReceipt, bool>>? filter)
         {
-            return dbSet
+            IQueryable<FilprideProvisionalReceipt> query = dbSet
                 .Include(x => x.Employee)
                 .Include(x => x.BankAccount)
                 .AsSplitQuery()
                 .AsNoTracking();
+
+            if (filter != null)
+            {
+                query = query.Where(filter);
+            }
+
+            return query;
         }
 
         public override async Task<IEnumerable<FilprideProvisionalReceipt>> GetAllAsync(Expression<Func<FilprideProvisionalReceipt, bool>>? filter, CancellationToken cancellationToken = default)

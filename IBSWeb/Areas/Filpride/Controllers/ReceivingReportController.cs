@@ -125,8 +125,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var filterTypeClaim = await GetCurrentFilterType();
 
                 var receivingReports = _unitOfWork.FilprideReceivingReport
-                    .GetAllQuery(cancellationToken)
-                    .Where(x => x.Company == companyClaims);
+                    .GetAllQuery(x => x.Company == companyClaims);
 
                 var totalRecords = await receivingReports.CountAsync(cancellationToken);
 

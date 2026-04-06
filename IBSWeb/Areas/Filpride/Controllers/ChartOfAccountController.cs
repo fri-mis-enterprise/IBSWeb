@@ -194,7 +194,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             try
             {
                 var chartOfAccounts = _unitOfWork.FilprideChartOfAccount
-                    .GetAllQuery(cancellationToken: cancellationToken);
+                    .GetAllQuery();
 
                 var totalRecords = await chartOfAccounts.CountAsync(cancellationToken);
 

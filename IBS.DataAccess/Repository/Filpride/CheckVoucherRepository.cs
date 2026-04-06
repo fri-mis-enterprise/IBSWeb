@@ -140,14 +140,21 @@ namespace IBS.DataAccess.Repository.Filpride
             return await query.ToListAsync(cancellationToken);
         }
 
-        public override IQueryable<FilprideCheckVoucherHeader> GetAllQuery(CancellationToken cancellationToken = default)
+        public override IQueryable<FilprideCheckVoucherHeader> GetAllQuery(Expression<Func<FilprideCheckVoucherHeader, bool>>? filter)
         {
-            return dbSet
+            IQueryable<FilprideCheckVoucherHeader> query = dbSet
                 .Include(cv => cv.BankAccount)
                 .Include(cv => cv.Employee)
                 .Include(cv => cv.Supplier)
                 .AsSplitQuery()
                 .AsNoTracking();
+
+            if (filter != null)
+            {
+                query = query.Where(filter);
+            }
+
+            return query;
         }
 
         public async Task<string> GenerateCodeMultipleInvoiceAsync(string company, string type, CancellationToken cancellationToken = default)

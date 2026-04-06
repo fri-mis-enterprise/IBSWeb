@@ -113,8 +113,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var filterTypeClaim = await GetCurrentFilterType();
 
                 var purchaseOrders = _unitOfWork.FilpridePurchaseOrder
-                    .GetAllQuery(cancellationToken)
-                    .Where(po => po.Company == companyClaims);
+                    .GetAllQuery(po => po.Company == companyClaims);
 
                 var totalRecords = await purchaseOrders.CountAsync(cancellationToken);
 

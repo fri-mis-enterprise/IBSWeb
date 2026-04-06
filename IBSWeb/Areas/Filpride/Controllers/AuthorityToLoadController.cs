@@ -72,8 +72,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var companyClaims = await GetCompanyClaimAsync();
 
                 var atlList = _unitOfWork.FilprideAuthorityToLoad
-                    .GetAllQuery()
-                    .Where(x => x.Company == companyClaims);
+                    .GetAllQuery(x => x.Company == companyClaims);
 
                 var totalRecords = await atlList.CountAsync(cancellationToken);
 

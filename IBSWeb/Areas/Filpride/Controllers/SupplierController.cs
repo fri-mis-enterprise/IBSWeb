@@ -209,7 +209,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             try
             {
                 var queried = _unitOfWork.FilprideSupplier
-                    .GetAllQuery(cancellationToken);
+                    .GetAllQuery();
 
                 var totalRecords = await queried.CountAsync(cancellationToken);
 
