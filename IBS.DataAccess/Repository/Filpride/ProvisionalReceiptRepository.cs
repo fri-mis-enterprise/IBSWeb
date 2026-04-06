@@ -141,19 +141,21 @@ namespace IBS.DataAccess.Repository.Filpride
                 .ToListAsync(cancellationToken);
 
             var reversalEntries = new List<FilprideGeneralLedgerBook>();
+            var dateToday = DateTimeHelper.GetCurrentPhilippineTime();
 
             foreach (var originalEntry in originalEntries)
             {
                 var reversalEntry = new FilprideGeneralLedgerBook
                 {
                     Reference = originalEntry.Reference,
+                    Date = DateOnly.FromDateTime(dateToday);
                     AccountNo = originalEntry.AccountNo,
                     AccountTitle = originalEntry.AccountTitle,
                     Description = "Reversal of entries due to returned checks.",
                     Debit = originalEntry.Credit,
                     Credit = originalEntry.Debit,
                     CreatedBy = userName,
-                    CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
+                    CreatedDate = dateToday,
                     IsPosted = true,
                     Company = originalEntry.Company,
                     AccountId = originalEntry.AccountId,
