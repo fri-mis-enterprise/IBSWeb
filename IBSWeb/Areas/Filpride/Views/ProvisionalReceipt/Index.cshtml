@@ -245,13 +245,13 @@
                         orderable: false,
                         render: function (data, type, row) {
                             let dropdownHtml = `
-                                <div class="dropdown">
+                                <div class="dropdown" style="${row.voidedBy !== null || row.canceledBy !== null ? 'display:none;' : ''}">
                                     <button class="btn btn-light btn-sm dropdown-toggle w-100" type="button" data-bs-toggle="dropdown">
                                         <i class="bi bi-three-dots"></i>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end shadow-sm">`;
 
-                            if (row.postedBy == null && row.canceledBy == null && row.voidedBy == null) {
+                            if (row.postedBy == null) {
                                 dropdownHtml += `<li><a href="@Url.Action("Edit", "ProvisionalReceipt", new { area = "Filpride" })/${row.id}" class="dropdown-item">Edit</a></li>`;
                                 dropdownHtml += `<li><a class="dropdown-item" onclick="confirmCancel(${row.id})">Cancel</a></li>`;
                             } else {
@@ -269,11 +269,8 @@
                                 } else {
                                     dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="returnCheck(${row.id})">Return Check</a></li>`;
                                 }
-                            }
 
-                            dropdownHtml += `<li><a href="@Url.Action("Print", "ProvisionalReceipt", new { area = "Filpride" })/${row.id}" class="dropdown-item">Preview</a></li>`;
-
-                            if (row.postedBy != null && row.voidedBy == null && row.canceledBy == null) {
+                                dropdownHtml += `<li><a href="@Url.Action("Print", "ProvisionalReceipt", new { area = "Filpride" })/${row.id}" class="dropdown-item">Preview</a></li>`;
                                 dropdownHtml += `<li><a class="dropdown-item" onclick="confirmVoid(${row.id})">Void</a></li>`;
                             }
 
