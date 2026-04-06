@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Linq.Expressions;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Filpride.IRepository;
 using IBS.Models.Enums;
@@ -167,6 +168,37 @@ namespace IBS.DataAccess.Repository.Filpride
 
             await _db.FilprideGeneralLedgerBooks.AddRangeAsync(reversalEntries, cancellationToken);
             await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        public override async Task<FilprideProvisionalReceipt?> GetAsync(Expression<Func<FilprideProvisionalReceipt, bool>> filter, CancellationToken cancellationToken = default)
+        {
+            return await dbSet.Where(filter)
+                .Include(x => x.Employee)
+                .Include(x => x.BankAccount)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        public override IQueryable<FilprideProvisionalReceipt> GetAllQuery(CancellationToken cancellationToken = default)
+        {
+            return dbSet
+                .Include(x => x.Employee)
+                .Include(x => x.BankAccount)
+                .AsSplitQuery()
+                .AsNoTracking();
+        }
+
+        public override async Task<IEnumerable<FilprideProvisionalReceipt>> GetAllAsync(Expression<Func<FilprideProvisionalReceipt, bool>>? filter, CancellationToken cancellationToken = default)
+        {
+            IQueryable<FilprideProvisionalReceipt> query = dbSet
+                .Include(x => x.Employee)
+                .Include(x => x.BankAccount);
+
+            if (filter != null)
+            {
+                query = query.Where(filter);
+            }
+
+            return await query.ToListAsync(cancellationToken);
         }
     }
 }

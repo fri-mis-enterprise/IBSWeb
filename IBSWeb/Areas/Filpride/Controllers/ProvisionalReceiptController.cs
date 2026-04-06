@@ -148,14 +148,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
-                var query = _dbContext.FilprideProvisionalReceipts
-                    .Include(pr => pr.Employee)
-                    .Where(pr => pr.Company == companyClaims)
-                    .AsQueryable();
+                var baseQuery = _unitOfWork.ProvisionalReceipt
+                    .GetAllQuery(cancellationToken);
+
+                var query = baseQuery
+                    .Where(pr => pr.Company == companyClaims);
 
                 var totalRecords = await query.CountAsync(cancellationToken);
 
-                if (!string.IsNullOrWhiteSpace(parameters.Search?.Value))
+                if (!string.IsNullOrWhiteSpace(parameters.Search.Value))
                 {
                     var searchValue = parameters.Search.Value.ToLower();
                     var hasTransactionDate = DateOnly.TryParse(searchValue, out var transactionDate);
@@ -356,9 +357,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            var model = await _dbContext.FilprideProvisionalReceipts
-                .Include(pr => pr.Employee)
-                .FirstOrDefaultAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
+            var model = await _unitOfWork.ProvisionalReceipt
+                .GetAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
 
             if (model == null)
             {
@@ -394,8 +394,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return View(viewModel);
             }
 
-            var model = await _dbContext.FilprideProvisionalReceipts
-                .FirstOrDefaultAsync(pr => pr.Id == viewModel.Id && pr.Company == companyClaims, cancellationToken);
+            var model = await _unitOfWork.ProvisionalReceipt
+                .GetAsync(pr => pr.Id == viewModel.Id && pr.Company == companyClaims, cancellationToken);
 
             if (model == null)
             {
@@ -448,10 +448,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            var model = await _dbContext.FilprideProvisionalReceipts
-                .Include(pr => pr.Employee)
-                .Include(pr => pr.BankAccount)
-                .FirstOrDefaultAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
+            var model = await _unitOfWork.ProvisionalReceipt
+                .GetAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
 
             if (model == null)
             {
@@ -470,8 +468,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            var model = await _dbContext.FilprideProvisionalReceipts
-                .FirstOrDefaultAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
+            var model = await _unitOfWork.ProvisionalReceipt
+                .GetAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
 
             if (model == null)
             {
@@ -516,8 +514,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            var model = await _dbContext.FilprideProvisionalReceipts
-                .FirstOrDefaultAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
+            var model = await _unitOfWork.ProvisionalReceipt
+                .GetAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
 
             if (model == null)
             {
@@ -562,8 +560,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            var model = await _dbContext.FilprideProvisionalReceipts
-                .FirstOrDefaultAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
+            var model = await _unitOfWork.ProvisionalReceipt
+                .GetAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
 
             if (model == null)
             {
@@ -610,8 +608,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            var model = await _dbContext.FilprideProvisionalReceipts
-                .FirstOrDefaultAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
+            var model = await _unitOfWork.ProvisionalReceipt
+                .GetAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
 
             if (model == null)
             {
@@ -657,8 +655,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
 
             var bank = await _unitOfWork.FilprideBankAccount.GetAsync(b => b.BankAccountId == bankId, cancellationToken);
-            var model = await _dbContext.FilprideProvisionalReceipts
-                .FirstOrDefaultAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
+            var model = await _unitOfWork.ProvisionalReceipt
+                .GetAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
 
             if (bank == null || model == null)
             {
@@ -707,8 +705,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            var model = await _dbContext.FilprideProvisionalReceipts
-                .FirstOrDefaultAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
+            var model = await _unitOfWork.ProvisionalReceipt
+                .GetAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
 
             if (model == null)
             {
@@ -758,8 +756,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            var model = await _dbContext.FilprideProvisionalReceipts
-                .FirstOrDefaultAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
+            var model = await _unitOfWork.ProvisionalReceipt
+                .GetAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
 
             if (model == null)
             {
@@ -805,8 +803,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            var model = await _dbContext.FilprideProvisionalReceipts
-                .FirstOrDefaultAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
+            var model = await _unitOfWork.ProvisionalReceipt
+                .GetAsync(pr => pr.Id == id && pr.Company == companyClaims, cancellationToken);
 
             if (model == null)
             {

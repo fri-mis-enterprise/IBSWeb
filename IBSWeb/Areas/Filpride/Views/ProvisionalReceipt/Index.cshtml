@@ -254,6 +254,7 @@
                             if (row.postedBy == null) {
                                 dropdownHtml += `<li><a href="@Url.Action("Edit", "ProvisionalReceipt", new { area = "Filpride" })/${row.id}" class="dropdown-item">Edit</a></li>`;
                                 dropdownHtml += `<li><a class="dropdown-item" onclick="confirmCancel(${row.id})">Cancel</a></li>`;
+                                dropdownHtml += `<li><a href="@Url.Action("Print", "ProvisionalReceipt", new { area = "Filpride" })/${row.id}" class="dropdown-item">Preview</a></li>`;
                             } else {
                                 const hasDeposit = row.depositedDate && row.depositedDate !== "";
                                 const postedStatus = "@nameof(CollectionReceiptStatus.Posted)";
