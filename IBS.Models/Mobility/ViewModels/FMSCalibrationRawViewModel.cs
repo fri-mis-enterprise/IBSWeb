@@ -2,13 +2,13 @@ namespace IBS.Models.Mobility.ViewModels
 {
     public class FMSCalibrationRawViewModel
     {
-        public string stncode { get; set; }
+        public string stncode { get; set; } = null!;
 
-        public string shiftrecid { get; set; }
+        public string shiftrecid { get; set; } = null!;
 
         public int pumpnumber { get; set; }
 
-        public string productcode { get; set; }
+        public string productcode { get; set; } = null!;
 
         public decimal quantity { get; set; }
 

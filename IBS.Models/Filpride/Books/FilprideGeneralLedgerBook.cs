@@ -15,17 +15,17 @@ namespace IBS.Models.Filpride.Books
         public DateOnly Date { get; set; }
 
         [Column(TypeName = "varchar(20)")]
-        public string Reference { get; set; }
+        public string Reference { get; set; } = null!;
 
         [Display(Name = "Account Number")]
         [Column(TypeName = "varchar(50)")]
-        public string AccountNo { get; set; }
+        public string AccountNo { get; set; } = null!;
 
         [Display(Name = "Account Title")]
         [Column(TypeName = "varchar(200)")]
-        public string AccountTitle { get; set; }
+        public string AccountTitle { get; set; } = null!;
 
-        public string Description { get; set; }
+        public string Description { get; set; } = null!;
 
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
         [Column(TypeName = "numeric(18,4)")]
@@ -37,7 +37,7 @@ namespace IBS.Models.Filpride.Books
 
         [Display(Name = "Created By")]
         [Column(TypeName = "varchar(100)")]
-        public string CreatedBy { get; set; }
+        public string CreatedBy { get; set; } = null!;
 
         [Display(Name = "Created Date")]
         [Column(TypeName = "timestamp without time zone")]
@@ -47,7 +47,7 @@ namespace IBS.Models.Filpride.Books
         public bool IsPosted { get; set; } = true;
 
         [Column(TypeName = "varchar(50)")]
-        public string Company { get; set; }
+        public string Company { get; set; } = null!;
 
         [Column(TypeName = "varchar(50)")]
         public string ModuleType { get; set; } = string.Empty;
@@ -57,7 +57,7 @@ namespace IBS.Models.Filpride.Books
         public int AccountId { get; set; }
 
         [ForeignKey(nameof(AccountId))]
-        public FilprideChartOfAccount Account { get; set; }
+        public FilprideChartOfAccount Account { get; set; } = null!;
 
         #endregion
 

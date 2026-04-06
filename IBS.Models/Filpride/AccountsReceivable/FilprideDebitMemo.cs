@@ -49,7 +49,7 @@ namespace IBS.Models.Filpride.AccountsReceivable
             set => _description = value.Trim();
         }
 
-        private string _description;
+        private string _description = null!;
 
         [Display(Name = "Price Adjustment")]
         [DisplayFormat(DataFormatString = "{0:N4}", ApplyFormatInEditMode = false)]
@@ -60,7 +60,7 @@ namespace IBS.Models.Filpride.AccountsReceivable
         public decimal? Quantity { get; set; }
 
         [StringLength(20)]
-        public string Source { get; set; }
+        public string Source { get; set; } = null!;
 
         [Required]
         [StringLength(1000)]

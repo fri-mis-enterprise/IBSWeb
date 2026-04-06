@@ -13,7 +13,7 @@ namespace IBS.Models.Filpride
         public int JvId { get; set; }
 
         [ForeignKey(nameof(JvId))]
-        public FilprideJournalVoucherHeader JvHeader { get; set; }
+        public FilprideJournalVoucherHeader JvHeader { get; set; } = null!;
 
         public JvFrequency JvFrequency { get; set; } = JvFrequency.Monthly;
 

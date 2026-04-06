@@ -4,10 +4,10 @@ namespace IBS.DTOs
     {
         public int StationId { get; set; }
 
-        public string StationCode { get; set; }
+        public string StationCode { get; set; } = null!;
 
-        public string StationName { get; set; }
+        public string StationName { get; set; } = null!;
 
-        public string StationPOSCode { get; set; }
+        public string StationPOSCode { get; set; } = null!;
     }
 }

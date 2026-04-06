@@ -2,21 +2,21 @@ namespace IBS.Models.Mobility.ViewModels
 {
     public class FMSPoSalesRawViewModel
     {
-        public string stncode { get; set; }
+        public string stncode { get; set; } = null!;
 
-        public string shiftrecid { get; set; }
+        public string shiftrecid { get; set; } = null!;
 
-        public string customercode { get; set; }
+        public string customercode { get; set; } = null!;
 
-        public string tripticket { get; set; }
+        public string tripticket { get; set; } = null!;
 
-        public string drno { get; set; }
+        public string drno { get; set; } = null!;
 
-        public string driver { get; set; }
+        public string driver { get; set; } = null!;
 
-        public string plateno { get; set; }
+        public string plateno { get; set; } = null!;
 
-        public string productcode { get; set; }
+        public string productcode { get; set; } = null!;
 
         public decimal quantity { get; set; }
 
@@ -24,7 +24,7 @@ namespace IBS.Models.Mobility.ViewModels
 
         public decimal contractprice { get; set; }
 
-        public string time { get; set; }
+        public string time { get; set; } = null!;
 
         public DateOnly date { get; set; }
 

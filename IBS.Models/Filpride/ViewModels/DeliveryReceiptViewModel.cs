@@ -51,12 +51,12 @@ namespace IBS.Models.Filpride.ViewModels
         public decimal TotalAmount { get; set; }
 
         [StringLength(1000)]
-        public string Remarks { get; set; }
+        public string Remarks { get; set; } = null!;
 
         public string? CurrentUser { get; set; }
 
         [StringLength(50)]
-        public string ManualDrNo { get; set; }
+        public string ManualDrNo { get; set; } = null!;
 
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
         public decimal Freight { get; set; }
@@ -73,10 +73,10 @@ namespace IBS.Models.Filpride.ViewModels
         public List<SelectListItem>? Haulers { get; set; }
 
         [StringLength(200)]
-        public string Driver { get; set; }
+        public string Driver { get; set; } = null!;
 
         [StringLength(200)]
-        public string PlateNo { get; set; }
+        public string PlateNo { get; set; } = null!;
 
         public bool IsECCEdited => ECC > 0;
 

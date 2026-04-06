@@ -37,7 +37,7 @@ namespace IBS.Models.Mobility
             set => _description = value.Trim();
         }
 
-        private string _description;
+        private string _description = null!;
 
         [Required]
         public string? Remarks

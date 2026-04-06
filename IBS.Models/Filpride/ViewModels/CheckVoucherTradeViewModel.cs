@@ -16,15 +16,15 @@ namespace IBS.Models.Filpride.ViewModels
 
         [Required]
         [StringLength(150)]
-        public string Payee { get; set; }
+        public string Payee { get; set; } = null!;
 
         [Required]
         [Display(Name = "Supplier Address")]
-        public string SupplierAddress { get; set; }
+        public string SupplierAddress { get; set; } = null!;
 
         [Required]
         [Display(Name = "Supplier Tin Number")]
-        public string SupplierTinNo { get; set; }
+        public string SupplierTinNo { get; set; } = null!;
 
         [Required]
         [Display(Name = "Supplier No")]
@@ -49,28 +49,28 @@ namespace IBS.Models.Filpride.ViewModels
         [StringLength(50)]
         [Display(Name = "Check #")]
         [RegularExpression(@"^(?:\d{7,}|)$", ErrorMessage = "Invalid format. Please enter CV number minimum 7 digits.")]
-        public string CheckNo { get; set; }
+        public string CheckNo { get; set; } = null!;
 
         [Required]
         [Display(Name = "Check Date")]
         public DateOnly CheckDate { get; set; }
 
         [StringLength(1000)]
-        public string Particulars { get; set; }
+        public string Particulars { get; set; } = null!;
 
         public List<SelectListItem>? COA { get; set; }
 
         [Required]
-        public string[] AccountNumber { get; set; }
+        public string[] AccountNumber { get; set; } = null!;
 
         [Required]
-        public string[] AccountTitle { get; set; }
+        public string[] AccountTitle { get; set; } = null!;
 
         [Required]
-        public decimal[] Debit { get; set; }
+        public decimal[] Debit { get; set; } = null!;
 
         [Required]
-        public decimal[] Credit { get; set; }
+        public decimal[] Credit { get; set; } = null!;
 
         public List<CheckVoucherTradeAccountingEntryViewModel> AdditionalAccountingEntries { get; set; } = [];
 
@@ -81,7 +81,7 @@ namespace IBS.Models.Filpride.ViewModels
         //others
         public string? CreatedBy { get; set; }
 
-        public List<ReceivingReportList> RRs { get; set; }
+        public List<ReceivingReportList> RRs { get; set; } = null!;
 
         public string? AdvancesCVNo { get; set; }
 

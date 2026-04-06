@@ -10,16 +10,16 @@ namespace IBS.Models.Mobility
         public int LubePurchaseHeaderId { get; set; }
 
         [Column(TypeName = "varchar(50)")]
-        public string LubePurchaseHeaderNo { get; set; }
+        public string LubePurchaseHeaderNo { get; set; } = null!;
 
         public int PageNumber { get; set; }
 
         [Column(TypeName = "varchar(5)")]
         [Display(Name = "Station Code")]
-        public string StationCode { get; set; }
+        public string StationCode { get; set; } = null!;
 
         [Column(TypeName = "varchar(5)")]
-        public string CashierCode { get; set; }
+        public string CashierCode { get; set; } = null!;
 
         [Display(Name = "Shift No")]
         public int ShiftNo { get; set; }
@@ -31,19 +31,19 @@ namespace IBS.Models.Mobility
 
         [Column(TypeName = "varchar(50)")]
         [Display(Name = "Sales Invoice")]
-        public string SalesInvoice { get; set; }
+        public string SalesInvoice { get; set; } = null!;
 
         [Column(TypeName = "varchar(10)")]
         [Display(Name = "Supplier Code")]
-        public string SupplierCode { get; set; }
+        public string SupplierCode { get; set; } = null!;
 
         [Column(TypeName = "varchar(50)")]
         [Display(Name = "DR#")]
-        public string DrNo { get; set; }
+        public string DrNo { get; set; } = null!;
 
         [Column(TypeName = "varchar(50)")]
         [Display(Name = "PO#")]
-        public string PoNo { get; set; }
+        public string PoNo { get; set; } = null!;
 
         [Column(TypeName = "numeric(18,4)")]
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
@@ -59,8 +59,8 @@ namespace IBS.Models.Mobility
 
         [Column(TypeName = "varchar(50)")]
         [Display(Name = "Received By")]
-        public string ReceivedBy { get; set; }
+        public string ReceivedBy { get; set; } = null!;
 
-        public ICollection<MobilityLubePurchaseDetail> LubePurchaseDetails { get; set; }
+        public ICollection<MobilityLubePurchaseDetail> LubePurchaseDetails { get; set; } = null!;
     }
 }

@@ -13,15 +13,15 @@ namespace IBS.Models.Mobility.ViewModels
         [DisplayFormat(DataFormatString = "{0:MMM dd, yyyy}")]
         public DateOnly TransactionDate { get; set; }
 
-        public string StationCode { get; set; }
+        public string StationCode { get; set; } = null!;
 
-        public string StationName { get; set; }
+        public string StationName { get; set; } = null!;
 
-        public string Particular { get; set; }
+        public string Particular { get; set; } = null!;
 
-        public string AccountNumber { get; set; }
+        public string AccountNumber { get; set; } = null!;
 
-        public string AccountTitle { get; set; }
+        public string AccountTitle { get; set; } = null!;
 
         public string? ProductCode { get; set; }
 
@@ -43,8 +43,8 @@ namespace IBS.Models.Mobility.ViewModels
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
         public decimal Credit { get; set; }
 
-        public string JournalReference { get; set; }
+        public string JournalReference { get; set; } = null!;
 
-        public string NormalBalance { get; set; }
+        public string NormalBalance { get; set; } = null!;
     }
 }

@@ -13,13 +13,13 @@ namespace IBS.Models.Mobility.ViewModels
         public int[]? MultipleCvId { get; set; }
 
         [Display(Name = "Payee")]
-        public string Payee { get; set; }
+        public string Payee { get; set; } = null!;
 
         [Display(Name = "Payee's Address")]
-        public string PayeeAddress { get; set; }
+        public string PayeeAddress { get; set; } = null!;
 
         [Display(Name = "Payee's Tin")]
-        public string PayeeTin { get; set; }
+        public string PayeeTin { get; set; } = null!;
 
         [Display(Name = "Transaction Date")]
         public DateOnly TransactionDate { get; set; }
@@ -33,22 +33,22 @@ namespace IBS.Models.Mobility.ViewModels
         public int BankId { get; set; }
 
         [Display(Name = "Check No.")]
-        public string CheckNo { get; set; }
+        public string CheckNo { get; set; } = null!;
 
         [Display(Name = "Check Date")]
         public DateOnly CheckDate { get; set; }
 
-        public string Particulars { get; set; }
+        public string Particulars { get; set; } = null!;
 
         public List<SelectListItem>? ChartOfAccounts { get; set; }
 
-        public string[] AccountNumber { get; set; }
+        public string[] AccountNumber { get; set; } = null!;
 
-        public string[] AccountTitle { get; set; }
+        public string[] AccountTitle { get; set; } = null!;
 
-        public decimal[] Debit { get; set; }
+        public decimal[] Debit { get; set; } = null!;
 
-        public decimal[] Credit { get; set; }
+        public decimal[] Credit { get; set; } = null!;
 
         public string? Type { get; set; }
 

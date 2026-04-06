@@ -10,10 +10,10 @@ namespace IBS.Models.Mobility
         public int PumpId { get; set; }
 
         [Column(TypeName = "varchar(15)")]
-        public string StationCode { get; set; }
+        public string StationCode { get; set; } = null!;
 
         [Column(TypeName = "varchar(15)")]
-        public string ProductCode { get; set; }
+        public string ProductCode { get; set; } = null!;
 
         public int PosPump { get; set; }
 

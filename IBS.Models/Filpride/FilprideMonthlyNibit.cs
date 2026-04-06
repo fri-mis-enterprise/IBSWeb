@@ -26,7 +26,7 @@ namespace IBS.Models.Filpride
         public decimal EndingBalance { get; set; }
 
         [StringLength(50)]
-        public string Company { get; set; }
+        public string Company { get; set; } = null!;
 
         public bool IsValid { get; set; } = true;
     }

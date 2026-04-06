@@ -28,11 +28,11 @@ namespace IBS.Models.Mobility
         [Display(Name = "Total Amount")]
         public decimal Amount { get; set; }
         [Display(Name = "Customer Address")]
-        public string Address { get; set; }
+        public string Address { get; set; } = null!;
 
         #region Stations properties
         public int StationId { get; set; }
-        public string StationCode { get; set; }
+        public string StationCode { get; set; } = null!;
 
         [ForeignKey(nameof(StationCode))]
         public MobilityStation? MobilityStation { get; set; }

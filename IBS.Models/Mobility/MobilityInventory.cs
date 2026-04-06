@@ -11,17 +11,17 @@ namespace IBS.Models.Mobility
         public int InventoryId { get; set; }
 
         [Column(TypeName = "varchar(50)")]
-        public string Particulars { get; set; }
+        public string Particulars { get; set; } = null!;
 
         [Column(TypeName = "date")]
         [DisplayFormat(DataFormatString = "{0:MMM dd, yyyy}")]
         public DateOnly Date { get; set; }
 
         [Column(TypeName = "varchar(200)")]
-        public string Reference { get; set; }
+        public string Reference { get; set; } = null!;
 
         [Column(TypeName = "varchar(10)")]
-        public string ProductCode { get; set; }
+        public string ProductCode { get; set; } = null!;
 
         [Column(TypeName = "varchar(10)")]
         public string? StationCode { get; set; }
@@ -85,7 +85,7 @@ namespace IBS.Models.Mobility
         // This property handle
         // the transaction No which table this comes from.
         [Column(TypeName = "varchar(50)")]
-        public string TransactionNo { get; set; }
+        public string TransactionNo { get; set; } = null!;
 
         #region-- Select List
 

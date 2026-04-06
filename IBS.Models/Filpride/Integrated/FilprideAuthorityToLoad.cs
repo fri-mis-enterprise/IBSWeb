@@ -36,15 +36,15 @@ namespace IBS.Models.Filpride.Integrated
         private string? _uppiAtlNo;
 
         [StringLength(255)]
-        public string Remarks { get; set; }
+        public string Remarks { get; set; } = null!;
 
         [StringLength(100)]
-        public string CreatedBy { get; set; }
+        public string CreatedBy { get; set; } = null!;
 
         [Column(TypeName = "timestamp without time zone")]
         public DateTime CreatedDate { get; set; }
 
-        public ICollection<FilprideBookAtlDetail> Details { get; set; }
+        public ICollection<FilprideBookAtlDetail> Details { get; set; } = null!;
 
         public int SupplierId { get; set; }
 
@@ -52,7 +52,7 @@ namespace IBS.Models.Filpride.Integrated
         public FilprideSupplier? Supplier { get; set; }
 
         [StringLength(20)]
-        public string Company { get; set; }
+        public string Company { get; set; } = null!;
 
         [StringLength(100)]
         public string? HaulerName { get; set; }
@@ -67,7 +67,7 @@ namespace IBS.Models.Filpride.Integrated
         public string? SupplierName { get; set; }
 
         [StringLength(50)]
-        public string Depot { get; set; }
+        public string Depot { get; set; } = null!;
 
         public int LoadPortId { get; set; }
 

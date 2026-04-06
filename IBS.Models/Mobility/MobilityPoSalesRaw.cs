@@ -10,12 +10,12 @@ namespace IBS.Models.Mobility
         public Guid POSalesRawId { get; set; }
 
         [Column(TypeName = "varchar(20)")]
-        public string shiftrecid { get; set; }
+        public string shiftrecid { get; set; } = null!;
 
         [Column(TypeName = "varchar(5)")]
-        public string stncode { get; set; }
+        public string stncode { get; set; } = null!;
 
-        public string cashiercode { get; set; } //remove the "E" when saving in actual database
+        public string cashiercode { get; set; } = null!; //remove the "E" when saving in actual database
 
         public int shiftnumber { get; set; }
 
@@ -26,21 +26,21 @@ namespace IBS.Models.Mobility
         public TimeOnly? potime { get; set; }
 
         [Column(TypeName = "varchar(20)")]
-        public string customercode { get; set; }
+        public string customercode { get; set; } = null!;
 
         [Column(TypeName = "varchar(50)")]
-        public string driver { get; set; }
+        public string driver { get; set; } = null!;
 
         [Column(TypeName = "varchar(50)")]
-        public string plateno { get; set; }
+        public string plateno { get; set; } = null!;
 
         [Column(TypeName = "varchar(50)")]
-        public string drnumber { get; set; } //remove the "DR" when saving in actual database
+        public string drnumber { get; set; } = null!; //remove the "DR" when saving in actual database
 
-        public string tripticket { get; set; }
+        public string tripticket { get; set; } = null!;
 
         [Column(TypeName = "varchar(10)")]
-        public string productcode { get; set; }
+        public string productcode { get; set; } = null!;
 
         [Column(TypeName = "numeric(18,4)")]
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
@@ -55,7 +55,7 @@ namespace IBS.Models.Mobility
         public decimal contractprice { get; set; }
 
         [Column(TypeName = "varchar(50)")]
-        public string createdby { get; set; } //remove the "E" when saving in actual database
+        public string createdby { get; set; } = null!; //remove the "E" when saving in actual database
 
         [Column(TypeName = "timestamp with time zone")]
         public DateTime createddate { get; set; }

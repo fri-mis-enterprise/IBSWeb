@@ -23,28 +23,28 @@ namespace IBS.Models.Mobility.ViewModels
         [NotMapped]
         public List<SelectListItem>? CheckVoucherHeaders { get; set; }
 
-        public string Particulars { get; set; }
+        public string Particulars { get; set; } = null!;
 
         [Display(Name = "CR No")]
         public string? CRNo { get; set; }
 
         [Display(Name = "JV Reason")]
-        public string JVReason { get; set; }
+        public string JVReason { get; set; } = null!;
 
         [NotMapped]
         public List<SelectListItem>? COA { get; set; }
 
         [Required]
-        public string[] AccountNumber { get; set; }
+        public string[] AccountNumber { get; set; } = null!;
 
         [Required]
-        public string[] AccountTitle { get; set; }
+        public string[] AccountTitle { get; set; } = null!;
 
         [Required]
-        public decimal[] Debit { get; set; }
+        public decimal[] Debit { get; set; } = null!;
 
         [Required]
-        public decimal[] Credit { get; set; }
+        public decimal[] Credit { get; set; } = null!;
 
         public string? Type { get; set; }
 

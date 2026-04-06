@@ -9,7 +9,7 @@ namespace IBS.Models.Filpride.ViewModels
         public int DebitMemoId { get; set; }
 
         [StringLength(20)]
-        public string Source { get; set; }
+        public string Source { get; set; } = null!;
 
         [Column(TypeName = "date")]
         [DisplayFormat(DataFormatString = "{0:MMM dd, yyyy}")]
@@ -50,7 +50,7 @@ namespace IBS.Models.Filpride.ViewModels
             set => _description = value.Trim();
         }
 
-        private string _description;
+        private string _description = null!;
 
         [NotMapped]
         public List<SelectListItem>? SalesInvoices { get; set; }

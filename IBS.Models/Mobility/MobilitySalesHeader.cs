@@ -11,14 +11,14 @@ namespace IBS.Models.Mobility
 
         [Column(TypeName = "varchar(15)")]
         [Display(Name = "Sales No.")]
-        public string SalesNo { get; set; }
+        public string SalesNo { get; set; } = null!;
 
         [Column(TypeName = "date")]
         [DisplayFormat(DataFormatString = "{0:MMM dd, yyyy}")]
         public DateOnly Date { get; set; }
 
         [Column(TypeName = "varchar(20)")]
-        public string Cashier { get; set; }
+        public string Cashier { get; set; } = null!;
 
         public int Shift { get; set; }
 
@@ -44,10 +44,10 @@ namespace IBS.Models.Mobility
 
         [Column(TypeName = "numeric(18,4)[]")]
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
-        public decimal[] POSalesAmount { get; set; }
+        public decimal[] POSalesAmount { get; set; } = null!;
 
         [Column(TypeName = "varchar[]")]
-        public string?[] Customers { get; set; }
+        public string?[] Customers { get; set; } = null!;
 
         [Column(TypeName = "numeric(18,4)")]
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
@@ -65,10 +65,10 @@ namespace IBS.Models.Mobility
 
         [Column(TypeName = "varchar(3)")]
         [Display(Name = "Station Code")]
-        public string StationCode { get; set; }
+        public string StationCode { get; set; } = null!;
 
         [Column(TypeName = "varchar(10)")]
-        public string Source { get; set; }
+        public string Source { get; set; } = null!;
 
         #region --Added properties for editing purposes
 
@@ -83,7 +83,7 @@ namespace IBS.Models.Mobility
 
         #endregion --Added properties for editing purposes
 
-        public List<MobilitySalesDetail> SalesDetails { get; set; }
+        public List<MobilitySalesDetail> SalesDetails { get; set; } = null!;
 
         public int PageNumber { get; set; } = 1;
     }

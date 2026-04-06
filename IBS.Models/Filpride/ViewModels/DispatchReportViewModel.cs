@@ -4,7 +4,7 @@ namespace IBS.Models.Filpride.ViewModels
 {
     public class DispatchReportViewModel
     {
-        public string ReportType { get; set; }
+        public string ReportType { get; set; } = null!;
 
         public DateOnly DateFrom { get; set; }
 

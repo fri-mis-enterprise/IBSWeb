@@ -14,18 +14,18 @@ namespace IBS.Models.Mobility
 
         [Display(Name = "RR No")]
         [Column(TypeName = "varchar(15)")]
-        public string ReceivingReportNo { get; set; } //StationCode-RR00001
+        public string ReceivingReportNo { get; set; } = null!;
 
         [Column(TypeName = "date")]
         [DisplayFormat(DataFormatString = "{0:MMM dd, yyyy}")]
         public DateOnly Date { get; set; }
 
         [Column(TypeName = "varchar(200)")]
-        public string Remarks { get; set; }
+        public string Remarks { get; set; } = null!;
 
         [Display(Name = "Station Code")]
         [Column(TypeName = "varchar(3)")]
-        public string StationCode { get; set; }
+        public string StationCode { get; set; } = null!;
 
         [Column(TypeName = "date")]
         [DisplayFormat(DataFormatString = "{0:MMM dd, yyyy}")]
@@ -59,7 +59,7 @@ namespace IBS.Models.Mobility
         [Required]
         [Display(Name = "Truck/Vessels")]
         [Column(TypeName = "varchar(100)")]
-        public string TruckOrVessels { get; set; }
+        public string TruckOrVessels { get; set; } = null!;
 
         [Required]
         [Display(Name = "Qty Delivered")]

@@ -44,7 +44,7 @@ namespace IBS.Models.Filpride.AccountsPayable
             set => _particulars = value.Trim();
         }
 
-        private string _particulars;
+        private string _particulars = null!;
 
         [StringLength(100)]
         [Display(Name = "CR No")]
@@ -64,7 +64,7 @@ namespace IBS.Models.Filpride.AccountsPayable
             set => _jvReason = value.Trim();
         }
 
-        private string _jvReason;
+        private string _jvReason = null!;
 
         [NotMapped]
         public List<SelectListItem>? COA { get; set; }

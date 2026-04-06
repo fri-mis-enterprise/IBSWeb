@@ -318,7 +318,7 @@ namespace IBSWeb.Areas.Admin.Controllers
                     var safeUsername = (user.UserName ?? string.Empty)
                         .Replace("\r", string.Empty)
                         .Replace("\n", string.Empty);
-                        
+
                     _logger.LogInformation("User {safeUsername} {Action} by {CurrentUser}", safeUsername, action, currentUser);
                     return Json(new { success = true, message = $"User {action} successfully" });
                 }
@@ -441,14 +441,14 @@ namespace IBSWeb.Areas.Admin.Controllers
     {
         public string? Id { get; set; }
         [Required]
-        public string Username { get; set; }
+        public string Username { get; set; } = null!;
         [Required]
-        public string Name { get; set; }
+        public string Name { get; set; } = null!;
         [Required]
-        public string Department { get; set; }
+        public string Department { get; set; } = null!;
         public string? StationAccess { get; set; }
         [Required]
-        public string Role { get; set; }
+        public string Role { get; set; } = null!;
         public string? Password { get; set; }
         public bool IsActive { get; set; }
     }
@@ -456,9 +456,9 @@ namespace IBSWeb.Areas.Admin.Controllers
     public class PasswordResetModel
     {
         [Required]
-        public string UserId { get; set; }
+        public string UserId { get; set; } = null!;
         [Required]
-        public string NewPassword { get; set; }
+        public string NewPassword { get; set; } = null!;
     }
 
     #endregion

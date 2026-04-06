@@ -16,15 +16,15 @@ namespace IBS.Models.Bienes.ViewModels
 
         public List<SelectListItem>? BankAccounts { get; set; }
 
-        public string Bank { get; set; }
+        public string Bank { get; set; } = null!;
 
-        public string Branch { get; set; }
-
-        [Required]
-        public string TDAccountNumber { get; set; }
+        public string Branch { get; set; } = null!;
 
         [Required]
-        public string AccountName { get; set; }
+        public string TDAccountNumber { get; set; } = null!;
+
+        [Required]
+        public string AccountName { get; set; } = null!;
 
         public List<SelectListItem>? SettlementAccounts { get; set; }
 
@@ -40,11 +40,11 @@ namespace IBS.Models.Bienes.ViewModels
         public int Term { get; set; }
 
         [Required]
-        public string Remarks { get; set; }
+        public string Remarks { get; set; } = null!;
 
-        public string ChequeNumber { get; set; }
+        public string ChequeNumber { get; set; } = null!;
 
-        public string CVNo { get; set; }
+        public string CVNo { get; set; } = null!;
 
         [Required]
         public decimal PrincipalAmount { get; set; }

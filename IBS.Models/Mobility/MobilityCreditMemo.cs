@@ -32,7 +32,7 @@ namespace IBS.Models.Mobility
             set => _description = value.Trim();
         }
 
-        private string _description;
+        private string _description = null!;
 
         [Display(Name = "Credit Amount")]
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]

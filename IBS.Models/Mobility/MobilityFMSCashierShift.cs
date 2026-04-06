@@ -9,13 +9,13 @@ namespace IBS.Models.Mobility
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public Guid Id { get; set; }
 
-        public string StationCode { get; set; }
+        public string StationCode { get; set; } = null!;
 
-        public string ShiftRecordId { get; set; }
+        public string ShiftRecordId { get; set; } = null!;
 
         public DateOnly Date { get; set; }
 
-        public string EmployeeNumber { get; set; }
+        public string EmployeeNumber { get; set; } = null!;
 
         public int ShiftNumber { get; set; }
 

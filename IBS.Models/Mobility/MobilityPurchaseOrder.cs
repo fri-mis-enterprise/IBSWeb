@@ -16,7 +16,7 @@ namespace IBS.Models.Mobility
 
         [Display(Name = "PO No")]
         [Column(TypeName = "varchar(15)")]
-        public string PurchaseOrderNo { get; set; } //StationCode-PO00001
+        public string PurchaseOrderNo { get; set; } = null!;
 
         [Required]
         [Column(TypeName = "date")]
@@ -70,10 +70,10 @@ namespace IBS.Models.Mobility
             set => _remarks = value.Trim();
         }
 
-        private string _remarks;
+        private string _remarks = null!;
 
         [Column(TypeName = "varchar(10)")]
-        public string Terms { get; set; }
+        public string Terms { get; set; } = null!;
 
         [Column(TypeName = "numeric(18,4)")]
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
@@ -99,7 +99,7 @@ namespace IBS.Models.Mobility
 
         public string Status { get; set; } = nameof(Enums.Status.Pending);
 
-        public string Type { get; set; }
+        public string Type { get; set; } = null!;
 
         public int PickUpPointId { get; set; }
 

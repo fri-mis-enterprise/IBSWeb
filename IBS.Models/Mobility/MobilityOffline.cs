@@ -50,9 +50,9 @@ namespace IBS.Models.Mobility
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
         public decimal Balance { get; set; } //Remaining Balance
 
-        public string FirstDsrNo { get; set; }
+        public string FirstDsrNo { get; set; } = null!;
 
-        public string SecondDsrNo { get; set; }
+        public string SecondDsrNo { get; set; } = null!;
 
         public bool IsResolve { get; set; }
 

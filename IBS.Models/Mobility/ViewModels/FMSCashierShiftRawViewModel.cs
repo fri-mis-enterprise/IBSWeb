@@ -2,13 +2,13 @@ namespace IBS.Models.Mobility.ViewModels
 {
     public class FMSCashierShiftRawViewModel
     {
-        public string stncode { get; set; }
+        public string stncode { get; set; } = null!;
 
-        public string recid { get; set; }
+        public string recid { get; set; } = null!;
 
         public DateOnly date { get; set; }
 
-        public string empno { get; set; }
+        public string empno { get; set; } = null!;
 
         public int shiftnumber { get; set; }
 
@@ -18,7 +18,7 @@ namespace IBS.Models.Mobility.ViewModels
 
         public TimeOnly timeout { get; set; }
 
-        public string nextday { get; set; }
+        public string nextday { get; set; } = null!;
 
         public decimal cashonhand { get; set; }
 

@@ -18,18 +18,18 @@ namespace IBS.Models.Filpride.MasterFile
         [Required]
         [Display(Name = "Customer Name")]
         [StringLength(100)]
-        public string CustomerName { get; set; }
+        public string CustomerName { get; set; } = null!;
 
         [Required]
         [Display(Name = "Customer Address")]
         [StringLength(200)]
-        public string CustomerAddress { get; set; }
+        public string CustomerAddress { get; set; } = null!;
 
         [Required]
         [Display(Name = "TIN No")]
         [RegularExpression(@"\d{3}-\d{3}-\d{3}-\d{5}", ErrorMessage = "Invalid TIN number format.")]
         [StringLength(20)]
-        public string CustomerTin { get; set; }
+        public string CustomerTin { get; set; } = null!;
 
         [Display(Name = "Business Style")]
         [StringLength(100)]
@@ -38,17 +38,17 @@ namespace IBS.Models.Filpride.MasterFile
         [Required]
         [Display(Name = "Payment Terms")]
         [StringLength(10)]
-        public string CustomerTerms { get; set; }
+        public string CustomerTerms { get; set; } = null!;
 
         [Required]
         [Display(Name = "Customer Type")]
         [StringLength(20)]
-        public string CustomerType { get; set; }
+        public string CustomerType { get; set; } = null!;
 
         [Required]
         [Display(Name = "Vat Type")]
         [StringLength(10)]
-        public string VatType { get; set; }
+        public string VatType { get; set; } = null!;
 
         [Required]
         [Display(Name = "Creditable Withholding VAT 2306 ")]

@@ -68,7 +68,7 @@ namespace IBS.Models.Filpride.AccountsPayable
         public decimal Amount { get; set; }
 
 
-        private string _remarks;
+        private string _remarks = null!;
 
         [StringLength(1000)]
         public string Remarks
@@ -78,7 +78,7 @@ namespace IBS.Models.Filpride.AccountsPayable
         }
 
         [StringLength(10)]
-        public string Terms { get; set; }
+        public string Terms { get; set; } = null!;
 
         [Column(TypeName = "numeric(18,4)")]
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = false)]
@@ -122,7 +122,7 @@ namespace IBS.Models.Filpride.AccountsPayable
 
         #endregion
 
-        private string _oldPoNo;
+        private string _oldPoNo = null!;
 
         [StringLength(50)]
         public string OldPoNo

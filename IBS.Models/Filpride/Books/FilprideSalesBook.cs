@@ -14,17 +14,17 @@ namespace IBS.Models.Filpride.Books
         public DateOnly TransactionDate { get; set; }
 
         [Display(Name = "Serial Number")]
-        public string SerialNo { get; set; }
+        public string SerialNo { get; set; } = null!;
 
         [Display(Name = "Customer Name")]
-        public string SoldTo { get; set; }
+        public string SoldTo { get; set; } = null!;
 
         [Display(Name = "Tin#")]
-        public string TinNo { get; set; }
+        public string TinNo { get; set; } = null!;
 
-        public string Address { get; set; }
+        public string Address { get; set; } = null!;
 
-        public string Description { get; set; }
+        public string Description { get; set; } = null!;
 
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
         [Column(TypeName = "numeric(18,4)")]

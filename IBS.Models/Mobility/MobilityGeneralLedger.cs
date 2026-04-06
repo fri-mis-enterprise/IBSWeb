@@ -16,18 +16,18 @@ namespace IBS.Models.Mobility
         public DateOnly TransactionDate { get; set; }
 
         [Column(TypeName = "varchar(100)")]
-        public string Reference { get; set; }
+        public string Reference { get; set; } = null!;
 
         [Column(TypeName = "varchar(200)")]
-        public string Particular { get; set; }
+        public string Particular { get; set; } = null!;
 
         [Column(TypeName = "varchar(15)")]
         [Display(Name = "Account Number")]
-        public string AccountNumber { get; set; }
+        public string AccountNumber { get; set; } = null!;
 
         [Column(TypeName = "varchar(200)")]
         [Display(Name = "Account Title")]
-        public string AccountTitle { get; set; }
+        public string AccountTitle { get; set; } = null!;
 
         [Column(TypeName = "numeric(18,4)")]
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
@@ -38,7 +38,7 @@ namespace IBS.Models.Mobility
         public decimal Credit { get; set; }
 
         [Column(TypeName = "varchar(5)")]
-        public string StationCode { get; set; }
+        public string StationCode { get; set; } = null!;
 
         [Column(TypeName = "varchar(20)")]
         public string? ProductCode { get; set; }
@@ -50,7 +50,7 @@ namespace IBS.Models.Mobility
         public string? CustomerCode { get; set; }
 
         [Column(TypeName = "varchar(50)")]
-        public string JournalReference { get; set; }
+        public string JournalReference { get; set; } = null!;
 
         public bool IsValidated { get; set; }
 

@@ -48,7 +48,7 @@ namespace IBS.Models.Filpride.AccountsReceivable
 
         [StringLength(100)]
         [Display(Name = "Other Ref No")]
-        public string OtherRefNo { get; set; }
+        public string OtherRefNo { get; set; } = null!;
 
         [Required]
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
@@ -73,7 +73,7 @@ namespace IBS.Models.Filpride.AccountsReceivable
             set => _remarks = value.Trim();
         }
 
-        private string _remarks;
+        private string _remarks = null!;
 
         [StringLength(20)]
         public string PaymentStatus { get; set; } = "Pending";
@@ -154,7 +154,7 @@ namespace IBS.Models.Filpride.AccountsReceivable
         public List<SelectListItem>? COS { get; set; }
 
         [StringLength(15)]
-        public string Terms { get; set; }
+        public string Terms { get; set; } = null!;
 
         #endregion
     }

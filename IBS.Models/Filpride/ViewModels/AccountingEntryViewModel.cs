@@ -2,7 +2,7 @@ namespace IBS.Models.Filpride.ViewModels
 {
     public class AccountingEntryViewModel
     {
-        public string AccountTitle { get; set; }
+        public string AccountTitle { get; set; } = null!;
 
         public decimal Amount { get; set; }
 

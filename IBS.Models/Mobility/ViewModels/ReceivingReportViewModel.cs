@@ -42,7 +42,7 @@ namespace IBS.Models.Mobility.ViewModels
 
         [Required]
         [Display(Name = "Truck/Vessels")]
-        public string TruckOrVessels { get; set; }
+        public string TruckOrVessels { get; set; } = null!;
 
         [Required]
         [Display(Name = "Qty Delivered")]
@@ -65,7 +65,7 @@ namespace IBS.Models.Mobility.ViewModels
         public string? AuthorityToLoadNo { get; set; }
 
         [Required]
-        public string Remarks { get; set; }
+        public string Remarks { get; set; } = null!;
 
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
         public decimal AmountPaid { get; set; }

@@ -10,7 +10,7 @@ namespace IBS.Models
         public int Id { get; set; }
 
         [StringLength(50)]
-        public string Company { get; set; }
+        public string Company { get; set; } = null!;
 
         public int Month { get; set; }
 
@@ -22,9 +22,9 @@ namespace IBS.Models
         public DateTime PostedOn { get; set; }
 
         [StringLength(50)]
-        public string PostedBy { get; set; }
+        public string PostedBy { get; set; } = null!;
 
         [StringLength(20)]
-        public string Module { get; set; }
+        public string Module { get; set; } = null!;
     }
 }

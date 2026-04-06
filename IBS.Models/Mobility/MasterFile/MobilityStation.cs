@@ -9,19 +9,19 @@ namespace IBS.Models.Mobility.MasterFile
         public int StationId { get; set; }
 
         [Display(Name = "POS Code")]
-        public string PosCode { get; set; }
+        public string PosCode { get; set; } = null!;
 
         [Key]
         [Display(Name = "Station Code")]
         [Column(TypeName = "varchar(5)")]
-        public string StationCode { get; set; }
+        public string StationCode { get; set; } = null!;
 
         [Display(Name = "Station Name")]
         [Column(TypeName = "varchar(50)")]
-        public string StationName { get; set; }
+        public string StationName { get; set; } = null!;
 
         [Column(TypeName = "varchar(5)")]
-        public string Initial { get; set; }
+        public string Initial { get; set; } = null!;
 
         public bool IsActive { get; set; } = true;
 

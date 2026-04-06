@@ -11,31 +11,31 @@ namespace IBS.Models.Filpride.ViewModels
         public DateOnly Date { get; set; }
 
         [Display(Name = "Supplier Name")]
-        public string SupplierName { get; set; }
+        public string SupplierName { get; set; } = null!;
 
         [Display(Name = "Supplier TIN")]
-        public string SupplierTin { get; set; }
+        public string SupplierTin { get; set; } = null!;
 
         [Display(Name = "Supplier Address")]
-        public string SupplierAddress { get; set; }
+        public string SupplierAddress { get; set; } = null!;
 
         [Display(Name = "PO No.")]
-        public string PurchaseOrderNo { get; set; }
+        public string PurchaseOrderNo { get; set; } = null!;
 
         [Display(Name = "Filpride RR")]
-        public string FilprideRR { get; set; }
+        public string FilprideRR { get; set; } = null!;
 
         [Display(Name = "Filpride DR")]
-        public string FilprideDR { get; set; }
+        public string FilprideDR { get; set; } = null!;
 
         [Display(Name = "ATL No")]
-        public string ATLNo { get; set; }
+        public string ATLNo { get; set; } = null!;
 
         [Display(Name = "Customer Name")]
-        public string CustomerName { get; set; }
+        public string CustomerName { get; set; } = null!;
 
         [Display(Name = "Product")]
-        public string Product { get; set; }
+        public string Product { get; set; } = null!;
 
         [Display(Name = "Volume")]
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = false)]
@@ -66,7 +66,7 @@ namespace IBS.Models.Filpride.ViewModels
         public decimal? NetPurchases { get; set; }
 
         [Display(Name = "Account Specialist")]
-        public string AccountSpecialist { get; set; }
+        public string AccountSpecialist { get; set; } = null!;
 
         [Display(Name = "COS Price")]
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = false)]
@@ -116,13 +116,13 @@ namespace IBS.Models.Filpride.ViewModels
         public decimal? NetMarginAmount { get; set; }
 
         [Display(Name = "Supplier Sales Invoice")]
-        public string SupplierSalesInvoice { get; set; }
+        public string SupplierSalesInvoice { get; set; } = null!;
 
         [Display(Name = "Supplier DR")]
-        public string SupplierDR { get; set; }
+        public string SupplierDR { get; set; } = null!;
 
         [Display(Name = "Supplier WC")]
-        public string SupplierWC { get; set; }
+        public string SupplierWC { get; set; } = null!;
     }
 
 }

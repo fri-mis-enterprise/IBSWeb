@@ -15,13 +15,13 @@ namespace IBS.Models.Mobility
         public MobilitySalesHeader? SalesHeader { get; set; }
 
         [Column(TypeName = "varchar(15)")]
-        public string SalesNo { get; set; }
+        public string SalesNo { get; set; } = null!;
 
         [Column(TypeName = "varchar(20)")]
-        public string Product { get; set; }
+        public string Product { get; set; } = null!;
 
         [Column(TypeName = "varchar(50)")]
-        public string Particular { get; set; }
+        public string Particular { get; set; } = null!;
 
         [Column(TypeName = "numeric(18,4)")]
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
@@ -62,7 +62,7 @@ namespace IBS.Models.Mobility
 
         [Column(TypeName = "varchar(3)")]
         [Display(Name = "Station Code")]
-        public string StationCode { get; set; }
+        public string StationCode { get; set; } = null!;
 
         [Column(TypeName = "numeric(18,4)")]
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]

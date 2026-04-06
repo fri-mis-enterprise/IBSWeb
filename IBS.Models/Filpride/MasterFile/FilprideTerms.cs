@@ -7,7 +7,7 @@ namespace IBS.Models.Filpride.MasterFile
     {
         [Key]
         [StringLength(10)]
-        public string TermsCode { get; set; }
+        public string TermsCode { get; set; } = null!;
 
         public int NumberOfDays { get; set; }
 

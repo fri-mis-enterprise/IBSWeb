@@ -30,7 +30,7 @@ namespace IBS.Models.Filpride.ViewModels
         public DateOnly TransactionDate { get; set; }
 
         [StringLength(1000)]
-        public string Particulars { get; set; }
+        public string Particulars { get; set; } = null!;
 
         public decimal Total { get; set; }
 

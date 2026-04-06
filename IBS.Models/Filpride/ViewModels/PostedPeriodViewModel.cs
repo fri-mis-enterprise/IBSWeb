@@ -9,8 +9,8 @@ namespace IBS.Models.Filpride.ViewModels
 
     public class ModuleSelectItem
     {
-        public string Value { get; set; }
-        public string Text { get; set; }
+        public string Value { get; set; } = null!;
+        public string Text { get; set; } = null!;
     }
 
     public class PostPeriodRequest

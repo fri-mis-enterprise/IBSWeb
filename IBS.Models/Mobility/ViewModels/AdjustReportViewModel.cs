@@ -33,6 +33,6 @@ namespace IBS.Models.Mobility.ViewModels
         [Display(Name = "Second Opening")]
         public decimal SecondDsrOpeningAfter { get; set; }
 
-        public string AffectedDSRNo { get; set; }
+        public string AffectedDSRNo { get; set; } = null!;
     }
 }

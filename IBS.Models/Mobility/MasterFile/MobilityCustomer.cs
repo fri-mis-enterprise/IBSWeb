@@ -14,20 +14,20 @@ namespace IBS.Models.Mobility.MasterFile
         [Display(Name = "Customer Name")]
         [Column(TypeName = "varchar(50)")]
         [StringLength(50)]
-        public string CustomerName { get; set; }
+        public string CustomerName { get; set; } = null!;
 
         [Display(Name = "Code Name")]
         [Column(TypeName = "varchar(10)")]
         [StringLength(10)]
-        public string CustomerCodeName { get; set; }
+        public string CustomerCodeName { get; set; } = null!;
 
         [Display(Name = "Station Code")]
         [Column(TypeName = "varchar(3)")]
         [StringLength(3)]
-        public string StationCode { get; set; }
+        public string StationCode { get; set; } = null!;
 
         [Column(TypeName = "varchar(200)")]
-        public string CustomerAddress { get; set; }
+        public string CustomerAddress { get; set; } = null!;
 
         public bool IsActive { get; set; } = true;
 
@@ -56,14 +56,14 @@ namespace IBS.Models.Mobility.MasterFile
         [Required]
         [Display(Name = "Payment Terms")]
         [Column(TypeName = "varchar(10)")]
-        public string CustomerTerms { get; set; }
+        public string CustomerTerms { get; set; } = null!;
 
         [Display(Name = "Customer TIN")]
-        public string CustomerTin { get; set; }
+        public string CustomerTin { get; set; } = null!;
 
         [Display(Name = "Customer Type")]
         [Column(TypeName = "varchar(10)")]
-        public string CustomerType { get; set; }
+        public string CustomerType { get; set; } = null!;
 
         #region --Select List--
 
@@ -85,7 +85,7 @@ namespace IBS.Models.Mobility.MasterFile
         [Required]
         [Display(Name = "Vat Type")]
         [Column(TypeName = "varchar(10)")]
-        public string VatType { get; set; }
+        public string VatType { get; set; } = null!;
 
         [Required]
         [Display(Name = "Creditable Withholding VAT 2306 ")]

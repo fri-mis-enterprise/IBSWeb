@@ -8,13 +8,13 @@ namespace IBS.Models.Mobility
         [Key]
         public Guid Id { get; set; }
 
-        public string Reference { get; set; }
+        public string Reference { get; set; } = null!;
 
         public int ReferenceId { get; set; }
 
-        public string Module { get; set; }
+        public string Module { get; set; } = null!;
 
-        public string Description { get; set; }
+        public string Description { get; set; } = null!;
 
         public string? OriginalValue { get; set; }
 
@@ -23,6 +23,6 @@ namespace IBS.Models.Mobility
         [Column(TypeName = "timestamp without time zone")]
         public DateTime TimeStamp { get; set; }
 
-        public string ModifiedBy { get; set; }
+        public string ModifiedBy { get; set; } = null!;
     }
 }

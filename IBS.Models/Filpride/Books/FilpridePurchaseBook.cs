@@ -13,18 +13,18 @@ namespace IBS.Models.Filpride.Books
         public DateOnly Date { get; set; }
 
         [Display(Name = "Supplier Name")]
-        public string SupplierName { get; set; }
+        public string SupplierName { get; set; } = null!;
 
         [Display(Name = "Supplier TIN")]
-        public string SupplierTin { get; set; }
+        public string SupplierTin { get; set; } = null!;
 
         [Display(Name = "Supplier Address")]
-        public string SupplierAddress { get; set; }
+        public string SupplierAddress { get; set; } = null!;
 
         [Display(Name = "Document No")]
-        public string DocumentNo { get; set; }
+        public string DocumentNo { get; set; } = null!;
 
-        public string Description { get; set; }
+        public string Description { get; set; } = null!;
 
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
         [Column(TypeName = "numeric(18,4)")]
@@ -60,7 +60,7 @@ namespace IBS.Models.Filpride.Books
 
         [Display(Name = "PO No.")]
         [Column(TypeName = "varchar(12)")]
-        public string PONo { get; set; }
+        public string PONo { get; set; } = null!;
 
         [Display(Name = "Due Date")]
         [Column(TypeName = "date")]

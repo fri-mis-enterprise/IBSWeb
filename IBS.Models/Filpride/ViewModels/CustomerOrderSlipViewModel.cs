@@ -31,7 +31,7 @@ namespace IBS.Models.Filpride.ViewModels
 
         [StringLength(100)]
         [Required(ErrorMessage = "Customer PO No field is required.")]
-        public string CustomerPoNo { get; set; }
+        public string CustomerPoNo { get; set; } = null!;
 
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = false)]
         public decimal Quantity { get; set; }
@@ -55,9 +55,9 @@ namespace IBS.Models.Filpride.ViewModels
         public decimal CommissionRate { get; set; }
 
         [StringLength(1000)]
-        public string Remarks { get; set; }
+        public string Remarks { get; set; } = null!;
 
-        public string AccountSpecialist { get; set; }
+        public string AccountSpecialist { get; set; } = null!;
 
         public int ProductId { get; set; }
 
@@ -94,13 +94,13 @@ namespace IBS.Models.Filpride.ViewModels
 
     public class COSFileInfo
     {
-        public string FileName { get; set; }
-        public string SignedUrl { get; set; }
+        public string FileName { get; set; } = null!;
+        public string SignedUrl { get; set; } = null!;
     }
 
     public class FilesToUpload
     {
-        public IFormFile File { get; set; }
-        public string FileName { get; set; }
+        public IFormFile File { get; set; } = null!;
+        public string FileName { get; set; } = null!;
     }
 }

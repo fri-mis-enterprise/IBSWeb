@@ -40,13 +40,13 @@ namespace IBS.Models.Filpride.ViewModels
 
         public List<SelectListItem>? COA { get; set; }
 
-        public string[] AccountNumber { get; set; }
+        public string[] AccountNumber { get; set; } = null!;
 
-        public string[] AccountTitle { get; set; }
+        public string[] AccountTitle { get; set; } = null!;
 
-        public decimal[] Debit { get; set; }
+        public decimal[] Debit { get; set; } = null!;
 
-        public decimal[] Credit { get; set; }
+        public decimal[] Credit { get; set; } = null!;
 
         public string CurrentUser { get; set; } = string.Empty;
     }

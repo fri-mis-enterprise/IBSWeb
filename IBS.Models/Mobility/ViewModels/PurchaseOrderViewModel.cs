@@ -34,10 +34,10 @@ namespace IBS.Models.Mobility.ViewModels
 
         [Display(Name = "Note/Remarks")]
         [Column(TypeName = "varchar(200)")]
-        public string Remarks { get; set; }
+        public string Remarks { get; set; } = null!;
 
         [Column(TypeName = "varchar(10)")]
-        public string Terms { get; set; }
+        public string Terms { get; set; } = null!;
 
         [Column(TypeName = "varchar(100)")]
         public string? SupplierSalesOrderNo { get; set; }

@@ -15,15 +15,15 @@ namespace IBS.Models.Mobility
         public MobilityLubePurchaseHeader? LubePurchaseHeader { get; set; }
 
         [Column(TypeName = "varchar(50)")]
-        public string LubePurchaseHeaderNo { get; set; }
+        public string LubePurchaseHeaderNo { get; set; } = null!;
 
         public int Quantity { get; set; }
 
         [Column(TypeName = "varchar(10)")]
-        public string Unit { get; set; }
+        public string Unit { get; set; } = null!;
 
         [Column(TypeName = "varchar(200)")]
-        public string Description { get; set; }
+        public string Description { get; set; } = null!;
 
         [Column(TypeName = "numeric(18,4)")]
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
@@ -34,7 +34,7 @@ namespace IBS.Models.Mobility
         public decimal CostPerPiece { get; set; }
 
         [Column(TypeName = "varchar(10)")]
-        public string ProductCode { get; set; }
+        public string ProductCode { get; set; } = null!;
 
         public int Piece { get; set; }
 
@@ -43,6 +43,6 @@ namespace IBS.Models.Mobility
         public decimal Amount { get; set; }
 
         [Column(TypeName = "varchar(3)")]
-        public string StationCode { get; set; }
+        public string StationCode { get; set; } = null!;
     }
 }

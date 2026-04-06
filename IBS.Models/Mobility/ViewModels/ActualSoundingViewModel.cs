@@ -6,7 +6,7 @@ namespace IBS.Models.Mobility.ViewModels
     {
         public DateOnly Date { get; set; }
 
-        public string ProductCode { get; set; }
+        public string ProductCode { get; set; } = null!;
 
         public IEnumerable<SelectListItem>? Products { get; set; }
 

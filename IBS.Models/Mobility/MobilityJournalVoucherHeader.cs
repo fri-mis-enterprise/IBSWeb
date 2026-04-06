@@ -38,7 +38,7 @@ namespace IBS.Models.Mobility
             set => _particulars = value.Trim();
         }
 
-        private string _particulars;
+        private string _particulars = null!;
 
         [Display(Name = "CR No")]
         public string? CRNo
@@ -56,7 +56,7 @@ namespace IBS.Models.Mobility
             set => _jvReason = value.Trim();
         }
 
-        private string _jvReason;
+        private string _jvReason = null!;
 
         public string StationCode { get; set; } = string.Empty;
 

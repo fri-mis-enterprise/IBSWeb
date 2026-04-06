@@ -13,26 +13,26 @@ namespace IBS.Models.Filpride.Books
         public DateOnly Date { get; set; }
 
         [Display(Name = "CV No")]
-        public string CVNo { get; set; }
+        public string CVNo { get; set; } = null!;
 
-        public string Payee { get; set; }
+        public string Payee { get; set; } = null!;
 
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
         [Column(TypeName = "numeric(18,4)")]
         public decimal Amount { get; set; }
 
-        public string Particulars { get; set; }
+        public string Particulars { get; set; } = null!;
 
-        public string Bank { get; set; }
+        public string Bank { get; set; } = null!;
 
         [Display(Name = "Check No")]
-        public string CheckNo { get; set; }
+        public string CheckNo { get; set; } = null!;
 
         [Display(Name = "Check Date")]
-        public string CheckDate { get; set; }
+        public string CheckDate { get; set; } = null!;
 
         [Display(Name = "Chart Of Account")]
-        public string ChartOfAccount { get; set; }
+        public string ChartOfAccount { get; set; } = null!;
 
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
         [Column(TypeName = "numeric(18,4)")]

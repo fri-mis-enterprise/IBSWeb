@@ -4,12 +4,12 @@ namespace IBS.DTOs
     {
         public int SupplierId { get; set; }
 
-        public string SupplierCode { get; set; }
+        public string SupplierCode { get; set; } = null!;
 
-        public string SupplierName { get; set; }
+        public string SupplierName { get; set; } = null!;
 
-        public string SupplierAddress { get; set; }
+        public string SupplierAddress { get; set; } = null!;
 
-        public string SupplierTin { get; set; }
+        public string SupplierTin { get; set; } = null!;
     }
 }

@@ -60,7 +60,7 @@ namespace IBS.Models.Filpride.AccountsReceivable
             set => _referenceNo = value.Trim();
         }
 
-        private string _referenceNo;
+        private string _referenceNo = null!;
 
         [StringLength(100)]
         public string? Remarks

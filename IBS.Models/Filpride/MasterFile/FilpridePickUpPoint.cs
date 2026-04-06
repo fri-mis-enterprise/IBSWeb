@@ -10,7 +10,7 @@ namespace IBS.Models.Filpride.MasterFile
         public int PickUpPointId { get; set; }
 
         [StringLength(50)]
-        public string Depot { get; set; }
+        public string Depot { get; set; } = null!;
 
         [StringLength(100)]
         public string CreatedBy { get; set; } = string.Empty;
@@ -24,7 +24,7 @@ namespace IBS.Models.Filpride.MasterFile
         public FilprideSupplier? Supplier { get; set; }
 
         [StringLength(50)]
-        public string Company { get; set; }
+        public string Company { get; set; } = null!;
 
         [NotMapped]
         public List<SelectListItem>? Suppliers { get; set; }

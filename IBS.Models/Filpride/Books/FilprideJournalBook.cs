@@ -12,12 +12,12 @@ namespace IBS.Models.Filpride.Books
         [Column(TypeName = "date")]
         public DateOnly Date { get; set; }
 
-        public string Reference { get; set; }
+        public string Reference { get; set; } = null!;
 
-        public string Description { get; set; }
+        public string Description { get; set; } = null!;
 
         [Display(Name = "Account Title")]
-        public string AccountTitle { get; set; }
+        public string AccountTitle { get; set; } = null!;
 
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
         [Column(TypeName = "numeric(18,4)")]

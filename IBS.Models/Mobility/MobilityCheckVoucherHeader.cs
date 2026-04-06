@@ -76,7 +76,7 @@ namespace IBS.Models.Mobility
 
         private string? _checkNo;
 
-        public string Category { get; set; }
+        public string Category { get; set; } = null!;
 
         [Display(Name = "Payee")]
         public string? Payee
@@ -165,8 +165,8 @@ namespace IBS.Models.Mobility
         [ForeignKey(nameof(EmployeeId))]
         public MobilityStationEmployee? Employee { get; set; }
 
-        public string Address { get; set; }
+        public string Address { get; set; } = null!;
 
-        public string Tin { get; set; }
+        public string Tin { get; set; } = null!;
     }
 }

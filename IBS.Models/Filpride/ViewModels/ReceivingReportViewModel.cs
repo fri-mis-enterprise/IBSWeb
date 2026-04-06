@@ -37,7 +37,7 @@ namespace IBS.Models.Filpride.ViewModels
 
         [Required]
         [StringLength(100)]
-        public string TruckOrVessels { get; set; }
+        public string TruckOrVessels { get; set; } = null!;
 
         [Required]
         public decimal QuantityDelivered { get; set; }
@@ -49,7 +49,7 @@ namespace IBS.Models.Filpride.ViewModels
         public string? AuthorityToLoadNo { get; set; }
 
         [StringLength(1000)]
-        public string Remarks { get; set; }
+        public string Remarks { get; set; } = null!;
 
         public string? PostedBy { get; set; }
 

@@ -17,7 +17,7 @@ namespace IBS.Models.Filpride.ViewModels
 
         public List<SelectListItem>? PurchaseOrders { get; set; }
 
-        public string DeliveryOption { get; set; }
+        public string DeliveryOption { get; set; } = null!;
 
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
         public decimal Freight { get; set; }

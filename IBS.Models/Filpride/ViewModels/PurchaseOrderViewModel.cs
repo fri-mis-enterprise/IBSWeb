@@ -21,7 +21,7 @@ namespace IBS.Models.Filpride.ViewModels
         public List<SelectListItem>? Products { get; set; }
 
         [Required]
-        public string Terms { get; set; }
+        public string Terms { get; set; } = null!;
 
         [Required]
         public decimal Quantity { get; set; }
@@ -31,7 +31,7 @@ namespace IBS.Models.Filpride.ViewModels
 
         [Required]
         [StringLength(1000)]
-        public string Remarks { get; set; }
+        public string Remarks { get; set; } = null!;
 
         public string? CurrentUser { get; set; }
 

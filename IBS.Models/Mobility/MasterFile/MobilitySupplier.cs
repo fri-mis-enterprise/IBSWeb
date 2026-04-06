@@ -16,28 +16,28 @@ namespace IBS.Models.Mobility.MasterFile
 
         [Display(Name = "Supplier Name")]
         [Column(TypeName = "varchar(50)")]
-        public string SupplierName { get; set; }
+        public string SupplierName { get; set; } = null!;
 
         [Display(Name = "Supplier Address")]
         [Column(TypeName = "varchar(200)")]
-        public string SupplierAddress { get; set; }
+        public string SupplierAddress { get; set; } = null!;
 
         [Column(TypeName = "varchar(20)")]
         [RegularExpression(@"\d{3}-\d{3}-\d{3}-\d{5}", ErrorMessage = "Invalid TIN number format.")]
         [Display(Name = "Tin No")]
-        public string SupplierTin { get; set; }
+        public string SupplierTin { get; set; } = null!;
 
         [Column(TypeName = "varchar(10)")]
         [Display(Name = "Supplier Terms")]
-        public string SupplierTerms { get; set; }
+        public string SupplierTerms { get; set; } = null!;
 
         [Column(TypeName = "varchar(10)")]
         [Display(Name = "VAT Type")]
-        public string VatType { get; set; }
+        public string VatType { get; set; } = null!;
 
         [Column(TypeName = "varchar(20)")]
         [Display(Name = "TAX Type")]
-        public string TaxType { get; set; }
+        public string TaxType { get; set; } = null!;
 
         [Column(TypeName = "varchar(1024)")]
         public string? ProofOfRegistrationFilePath { get; set; }
@@ -69,7 +69,7 @@ namespace IBS.Models.Mobility.MasterFile
         public DateTime? EditedDate { get; set; }
 
         [Column(TypeName = "varchar(20)")]
-        public string Category { get; set; }
+        public string Category { get; set; } = null!;
 
         [Column(TypeName = "varchar(255)")]
         [Display(Name = "Trade Name")]

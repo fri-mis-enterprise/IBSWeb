@@ -19,13 +19,13 @@ namespace IBS.Models.Filpride.ViewModels
         public List<SelectListItem>? Suppliers { get; set; }
 
         [Display(Name = "Payee")]
-        public string Payee { get; set; }
+        public string Payee { get; set; } = null!;
 
         [Display(Name = "Payee's Address")]
-        public string PayeeAddress { get; set; }
+        public string PayeeAddress { get; set; } = null!;
 
         [Display(Name = "Payee's Tin")]
-        public string PayeeTin { get; set; }
+        public string PayeeTin { get; set; } = null!;
 
         public decimal Total { get; set; }
 
@@ -36,13 +36,13 @@ namespace IBS.Models.Filpride.ViewModels
 
         [StringLength(50)]
         [Display(Name = "Check No.")]
-        public string CheckNo { get; set; }
+        public string CheckNo { get; set; } = null!;
 
         [Display(Name = "Check Date")]
         public DateOnly CheckDate { get; set; }
 
         [StringLength(1000)]
-        public string Particulars { get; set; }
+        public string Particulars { get; set; } = null!;
 
         public IFormFile? SupportingFile { get; set; }
 

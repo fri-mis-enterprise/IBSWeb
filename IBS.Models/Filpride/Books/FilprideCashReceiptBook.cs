@@ -13,10 +13,10 @@ namespace IBS.Models.Filpride.Books
         public DateOnly Date { get; set; }
 
         [Display(Name = "Ref No")]
-        public string RefNo { get; set; }
+        public string RefNo { get; set; } = null!;
 
         [Display(Name = "Customer Name")]
-        public string CustomerName { get; set; }
+        public string CustomerName { get; set; } = null!;
 
         public string? Bank { get; set; }
 
@@ -24,9 +24,9 @@ namespace IBS.Models.Filpride.Books
         public string? CheckNo { get; set; }
 
         [Display(Name = "Chart of Account")]
-        public string COA { get; set; }
+        public string COA { get; set; } = null!;
 
-        public string Particulars { get; set; }
+        public string Particulars { get; set; } = null!;
 
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
         [Column(TypeName = "numeric(18,4)")]

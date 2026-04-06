@@ -17,10 +17,10 @@ namespace IBS.Models.Filpride.Books
         public int ProductId { get; set; }
 
         [ForeignKey(nameof(ProductId))]
-        public Product Product { get; set; }
+        public Product Product { get; set; } = null!;
 
         [Column(TypeName = "varchar(200)")]
-        public string Particular { get; set; } // Beginning Inventory, Sales, Purchases
+        public string Particular { get; set; } = null!; // Beginning Inventory, Sales, Purchases
 
         [Column(TypeName = "varchar(12)")]
         public string? Reference { get; set; }

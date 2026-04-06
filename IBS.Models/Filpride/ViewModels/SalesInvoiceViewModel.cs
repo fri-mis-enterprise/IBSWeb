@@ -13,13 +13,13 @@ namespace IBS.Models.Filpride.ViewModels
         public List<SelectListItem>? Customers { get; set; }
 
         [StringLength(20)]
-        public string CustomerTin { get; set; }
+        public string CustomerTin { get; set; } = null!;
 
         [StringLength(200)]
-        public string CustomerAddress { get; set; }
+        public string CustomerAddress { get; set; } = null!;
 
         [StringLength(15)]
-        public string Terms { get; set; }
+        public string Terms { get; set; } = null!;
 
         public int ProductId { get; set; }
 
@@ -48,7 +48,7 @@ namespace IBS.Models.Filpride.ViewModels
         public List<SelectListItem>? DR { get; set; }
 
         [StringLength(100)]
-        public string OtherRefNo { get; set; }
+        public string OtherRefNo { get; set; } = null!;
 
         [StringLength(1000)]
         public string Remarks { get; set; } = string.Empty;

@@ -16,9 +16,6 @@ insert_final_newline = true
 
 #### C# Style Rules ####
 
-# Nullability diagnostics
-dotnet_diagnostic.CS8618.severity = silent
-
 # Code style preferences
 csharp_indent_labels = one_less_than_current
 csharp_using_directive_placement = outside_namespace:silent

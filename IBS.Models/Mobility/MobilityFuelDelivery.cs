@@ -12,9 +12,9 @@ namespace IBS.Models.Mobility
         public int pagenumber { get; set; }
 
         [Column(TypeName = "varchar(5)")]
-        public string stncode { get; set; }
+        public string stncode { get; set; } = null!;
 
-        public string cashiercode { get; set; } //remove the "E" when saving in actual database
+        public string cashiercode { get; set; } = null!; //remove the "E" when saving in actual database
 
         public int shiftnumber { get; set; }
 
@@ -28,24 +28,24 @@ namespace IBS.Models.Mobility
         public TimeOnly timeout { get; set; }
 
         [Column(TypeName = "varchar(100)")]
-        public string driver { get; set; }
+        public string driver { get; set; } = null!;
 
         [Column(TypeName = "varchar(100)")]
-        public string hauler { get; set; }
+        public string hauler { get; set; } = null!;
 
         [Column(TypeName = "varchar(50)")]
-        public string platenumber { get; set; }
+        public string platenumber { get; set; } = null!;
 
         [Column(TypeName = "varchar(50)")]
-        public string drnumber { get; set; } //it should be int in actual database so remove the "DR"
+        public string drnumber { get; set; } = null!; //it should be int in actual database so remove the "DR"
 
         [Column(TypeName = "varchar(50)")]
-        public string wcnumber { get; set; }
+        public string wcnumber { get; set; } = null!;
 
         public int tanknumber { get; set; }
 
         [Column(TypeName = "varchar(10)")]
-        public string productcode { get; set; }
+        public string productcode { get; set; } = null!;
 
         [Column(TypeName = "numeric(18,4)")]
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
@@ -68,10 +68,10 @@ namespace IBS.Models.Mobility
         public decimal volumeafter { get; set; }
 
         [Column(TypeName = "varchar(50)")]
-        public string receivedby { get; set; }
+        public string receivedby { get; set; } = null!;
 
         [Column(TypeName = "varchar(50)")]
-        public string createdby { get; set; } //remove the "E" when saving in actual database
+        public string createdby { get; set; } = null!; //remove the "E" when saving in actual database
 
         [Column(TypeName = "timestamp without time zone")]
         public DateTime createddate { get; set; }

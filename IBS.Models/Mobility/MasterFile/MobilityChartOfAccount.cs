@@ -18,7 +18,7 @@ namespace IBS.Models.Mobility.MasterFile
 
         [Display(Name = "Account Name")]
         [Column(TypeName = "varchar(100)")]
-        public string AccountName { get; set; }
+        public string AccountName { get; set; } = null!;
 
         [Column(TypeName = "varchar(25)")]
         public string? AccountType { get; set; }

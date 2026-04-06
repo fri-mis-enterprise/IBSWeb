@@ -28,7 +28,7 @@ namespace IBS.Models.Mobility.ViewModels
         [Display(Name = "Transaction Date")]
         public DateOnly TransactionDate { get; set; }
 
-        public string Particulars { get; set; }
+        public string Particulars { get; set; } = null!;
 
         public decimal Total { get; set; }
 

@@ -11,7 +11,7 @@ namespace IBS.Models.Mobility.MasterFile
         public int PickUpPointId { get; set; }
 
         [Column(TypeName = "varchar(50)")]
-        public string Depot { get; set; }
+        public string Depot { get; set; } = null!;
 
         [Column(TypeName = "varchar(50)")]
         public string CreatedBy { get; set; } = string.Empty;
@@ -25,7 +25,7 @@ namespace IBS.Models.Mobility.MasterFile
         public MobilitySupplier? Supplier { get; set; }
 
         [Column(TypeName = "varchar(50)")]
-        public string StationCode { get; set; }
+        public string StationCode { get; set; } = null!;
 
         [NotMapped]
         public List<SelectListItem>? Suppliers { get; set; }

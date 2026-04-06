@@ -40,12 +40,12 @@ namespace IBS.Models.Mobility
         [Display(Name = "Plate Number")]
         [Column(TypeName = "varchar(10)")]
         [MaxLength(10, ErrorMessage = "The field cannot exceed 10 characters.")]
-        public string PlateNo { get; set; }
+        public string PlateNo { get; set; } = null!;
 
         [Display(Name = "Driver Name")]
         [Column(TypeName = "varchar(50)")]
         [MaxLength(50, ErrorMessage = "The field cannot exceed 50 characters.")]
-        public string Driver { get; set; }
+        public string Driver { get; set; } = null!;
 
         [Display(Name = "Status")]
         [Column(TypeName = "varchar(20)")]
@@ -57,7 +57,7 @@ namespace IBS.Models.Mobility
 
         [Display(Name = "Station")]
         [Column(TypeName = "varchar(3)")]
-        public string StationCode { get; set; }
+        public string StationCode { get; set; } = null!;
 
         [Display(Name = "Payment Terms")]
         [Column(TypeName = "varchar(10)")]

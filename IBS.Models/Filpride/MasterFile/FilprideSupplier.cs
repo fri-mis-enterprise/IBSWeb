@@ -16,28 +16,28 @@ namespace IBS.Models.Filpride.MasterFile
 
         [Display(Name = "Supplier Name")]
         [StringLength(200)]
-        public string SupplierName { get; set; }
+        public string SupplierName { get; set; } = null!;
 
         [Display(Name = "Supplier Address")]
         [StringLength(200)]
-        public string SupplierAddress { get; set; }
+        public string SupplierAddress { get; set; } = null!;
 
         [StringLength(20)]
         [RegularExpression(@"\d{3}-\d{3}-\d{3}-\d{5}", ErrorMessage = "Invalid TIN number format.")]
         [Display(Name = "Tin No")]
-        public string SupplierTin { get; set; }
+        public string SupplierTin { get; set; } = null!;
 
         [StringLength(10)]
         [Display(Name = "Supplier Terms")]
-        public string SupplierTerms { get; set; }
+        public string SupplierTerms { get; set; } = null!;
 
         [StringLength(10)]
         [Display(Name = "VAT Type")]
-        public string VatType { get; set; }
+        public string VatType { get; set; } = null!;
 
         [StringLength(20)]
         [Display(Name = "TAX Type")]
-        public string TaxType { get; set; }
+        public string TaxType { get; set; } = null!;
 
         [StringLength(1024)]
         public string? ProofOfRegistrationFilePath { get; set; }
@@ -71,7 +71,7 @@ namespace IBS.Models.Filpride.MasterFile
         public DateTime? EditedDate { get; set; }
 
         [StringLength(20)]
-        public string Category { get; set; }
+        public string Category { get; set; } = null!;
 
         [StringLength(255)]
         [Display(Name = "Trade Name")]

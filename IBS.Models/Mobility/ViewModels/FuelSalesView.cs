@@ -4,17 +4,17 @@ namespace IBS.Models.Mobility.ViewModels
     {
         public int xSITECODE { get; set; }
 
-        public string StationCode { get; set; }
+        public string StationCode { get; set; } = null!;
 
-        public string xONAME { get; set; }
+        public string xONAME { get; set; } = null!;
 
         public DateOnly BusinessDate { get; set; }
 
         public int xPUMP { get; set; }
 
-        public string Particulars { get; set; }
+        public string Particulars { get; set; } = null!;
 
-        public string ItemCode { get; set; }
+        public string ItemCode { get; set; } = null!;
 
         public decimal Price { get; set; }
 

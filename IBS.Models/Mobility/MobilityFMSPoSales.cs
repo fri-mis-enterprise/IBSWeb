@@ -9,21 +9,21 @@ namespace IBS.Models.Mobility
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public Guid Id { get; set; }
 
-        public string StationCode { get; set; }
+        public string StationCode { get; set; } = null!;
 
-        public string ShiftRecordId { get; set; }
+        public string ShiftRecordId { get; set; } = null!;
 
-        public string ProductCode { get; set; }
+        public string ProductCode { get; set; } = null!;
 
-        public string CustomerCode { get; set; }
+        public string CustomerCode { get; set; } = null!;
 
-        public string TripTicket { get; set; }
+        public string TripTicket { get; set; } = null!;
 
-        public string DrNumber { get; set; }
+        public string DrNumber { get; set; } = null!;
 
-        public string Driver { get; set; }
+        public string Driver { get; set; } = null!;
 
-        public string PlateNo { get; set; }
+        public string PlateNo { get; set; } = null!;
 
         public decimal Quantity { get; set; }
 

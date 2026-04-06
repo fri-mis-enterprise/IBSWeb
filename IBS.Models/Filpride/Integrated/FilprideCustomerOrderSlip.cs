@@ -16,7 +16,7 @@ namespace IBS.Models.Filpride.Integrated
 
         [Display(Name = "COS No.")]
         [StringLength(13)]
-        public string CustomerOrderSlipNo { get; set; }
+        public string CustomerOrderSlipNo { get; set; } = null!;
 
         [Column(TypeName = "date")]
         [DisplayFormat(DataFormatString = "{0:MMM dd, yyyy}")]
@@ -30,13 +30,13 @@ namespace IBS.Models.Filpride.Integrated
         public FilprideCustomer? Customer { get; set; }
 
         [StringLength(20)]
-        public string CustomerType { get; set; }
+        public string CustomerType { get; set; } = null!;
 
         [StringLength(200)]
-        public string CustomerAddress { get; set; }
+        public string CustomerAddress { get; set; } = null!;
 
         [StringLength(20)]
-        public string CustomerTin { get; set; }
+        public string CustomerTin { get; set; } = null!;
 
         #endregion Preparation of COS
 
@@ -52,7 +52,7 @@ namespace IBS.Models.Filpride.Integrated
             set => _remarks = value.Trim();
         }
 
-        private string _remarks;
+        private string _remarks = null!;
 
         [StringLength(100)]
         [Display(Name = "Customer PO No.")]
@@ -62,7 +62,7 @@ namespace IBS.Models.Filpride.Integrated
             set => _customerPoNo = value.Trim();
         }
 
-        private string _customerPoNo;
+        private string _customerPoNo = null!;
 
         [Column(TypeName = "numeric(18,4)")]
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = false)]
@@ -95,7 +95,7 @@ namespace IBS.Models.Filpride.Integrated
         #endregion Commissionee's Properties
 
         [StringLength(100)]
-        public string AccountSpecialist { get; set; }
+        public string AccountSpecialist { get; set; } = null!;
 
         #region Product's Properties
 
@@ -244,7 +244,7 @@ namespace IBS.Models.Filpride.Integrated
         public string Company { get; set; } = string.Empty;
 
         [StringLength(50)]
-        public string Status { get; set; } //Created, Supplier Appointed, Approved by Ops Manager, Approved by Finance, Hauler Appointed, Approved
+        public string Status { get; set; }  = null!; //Created, Supplier Appointed, Approved by Ops Manager, Approved by Finance, Hauler Appointed, Approved
 
         [StringLength(50)]
         public string OldCosNo
@@ -253,7 +253,7 @@ namespace IBS.Models.Filpride.Integrated
             set => _oldCosNo = value.Trim();
         }
 
-        private string _oldCosNo;
+        private string _oldCosNo = null!;
 
         public bool HasMultiplePO { get; set; }
 
@@ -271,16 +271,16 @@ namespace IBS.Models.Filpride.Integrated
         public ICollection<FilprideDeliveryReceipt>? DeliveryReceipts { get; set; }
 
         [StringLength(200)]
-        public string CustomerName { get; set; }
+        public string CustomerName { get; set; } = null!;
 
         [StringLength(50)]
-        public string ProductName { get; set; }
+        public string ProductName { get; set; } = null!;
 
         [Column(TypeName = "numeric(18,4)")]
         public decimal AvailableCreditLimit { get; set; }
 
         [StringLength(20)]
-        public string VatType { get; set; }
+        public string VatType { get; set; } = null!;
 
         public bool HasEWT { get; set; }
 

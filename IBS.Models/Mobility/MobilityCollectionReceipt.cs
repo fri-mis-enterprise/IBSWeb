@@ -51,7 +51,7 @@ namespace IBS.Models.Mobility
             set => _referenceNo = value.Trim();
         }
 
-        private string _referenceNo;
+        private string _referenceNo = null!;
 
         [Column(TypeName = "varchar(100)")]
         public string? Remarks

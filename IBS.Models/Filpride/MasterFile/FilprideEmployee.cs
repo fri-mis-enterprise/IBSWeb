@@ -10,7 +10,7 @@ namespace IBS.Models.Filpride.MasterFile
         public int EmployeeId { get; set; }
 
         [StringLength(10)]
-        public string EmployeeNumber { get; set; }
+        public string EmployeeNumber { get; set; } = null!;
 
         [StringLength(5)]
         public string? Initial { get; set; }
@@ -62,15 +62,15 @@ namespace IBS.Models.Filpride.MasterFile
         public DateOnly? DateResigned { get; set; }
 
         [StringLength(50)]
-        public string Position { get; set; }
+        public string Position { get; set; } = null!;
 
         public bool IsManagerial { get; set; }
 
         [StringLength(20)]
-        public string Supervisor { get; set; }
+        public string Supervisor { get; set; } = null!;
 
         [StringLength(50)]
-        public string Status { get; set; }
+        public string Status { get; set; } = null!;
 
         [StringLength(20)]
         public string? Paygrade { get; set; } = string.Empty;

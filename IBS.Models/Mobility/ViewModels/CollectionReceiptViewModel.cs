@@ -36,7 +36,7 @@ namespace IBS.Models.Mobility.ViewModels
 
         [Display(Name = "Reference No")]
         [Required]
-        public string ReferenceNo { get; set; }
+        public string ReferenceNo { get; set; } = null!;
 
         public string? Remarks { get; set; }
 

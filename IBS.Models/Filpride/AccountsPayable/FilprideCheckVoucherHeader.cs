@@ -98,7 +98,7 @@ namespace IBS.Models.Filpride.AccountsPayable
         private string? _checkNo;
 
         [StringLength(20)]
-        public string Category { get; set; }
+        public string Category { get; set; } = null!;
 
         [Display(Name = "Payee")]
         [StringLength(150)]
@@ -166,18 +166,18 @@ namespace IBS.Models.Filpride.AccountsPayable
         public FilprideEmployee? Employee { get; set; }
 
         [StringLength(200)]
-        public string Address { get; set; }
+        public string Address { get; set; } = null!;
 
         [StringLength(20)]
-        public string Tin { get; set; }
+        public string Tin { get; set; } = null!;
 
         public ICollection<FilprideCheckVoucherDetail>? Details { get; set; }
 
         [StringLength(20)]
-        public string VatType { get; set; }
+        public string VatType { get; set; } = null!;
 
         [StringLength(20)]
-        public string TaxType { get; set; }
+        public string TaxType { get; set; } = null!;
 
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = false)]
         [Column(TypeName = "numeric(18,4)")]
@@ -188,7 +188,7 @@ namespace IBS.Models.Filpride.AccountsPayable
         public DateOnly? LiquidationDate { get; set; }
 
         public string? ApprovedBy { get; set; }
-        
+
         [Column(TypeName = "timestamp without time zone")]
         public DateTime? ApprovedDate { get; set; }
     }

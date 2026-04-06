@@ -17,7 +17,7 @@ namespace IBS.Models.Filpride
         public int ReceivingReportId { get; set; }
 
         [ForeignKey(nameof(ReceivingReportId))]
-        public FilprideReceivingReport ReceivingReport { get; set; }
+        public FilprideReceivingReport ReceivingReport { get; set; } = null!;
 
         [Column(TypeName = "numeric(18,4)")]
         public decimal Quantity { get; set; }

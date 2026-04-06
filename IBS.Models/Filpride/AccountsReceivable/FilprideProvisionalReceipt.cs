@@ -18,7 +18,7 @@ namespace IBS.Models.Filpride.AccountsReceivable
         public int EmployeeId { get; set; }
 
         [ForeignKey(nameof(EmployeeId))]
-        public FilprideEmployee Employee { get; set; }
+        public FilprideEmployee Employee { get; set; } = null!;
 
         public string ReferenceNo { get; set; } = string.Empty;
 

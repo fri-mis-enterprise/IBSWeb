@@ -18,7 +18,7 @@ namespace IBS.Models.Filpride.MasterFile
 
         [Display(Name = "Account Name")]
         [StringLength(200)]
-        public string AccountName { get; set; }
+        public string AccountName { get; set; } = null!;
 
         [StringLength(25)]
         [Display(Name = "Account Type")]
@@ -56,7 +56,7 @@ namespace IBS.Models.Filpride.MasterFile
         public bool HasChildren { get; set; }
 
         [StringLength(20)]
-        public string FinancialStatementType { get; set; }
+        public string FinancialStatementType { get; set; } = null!;
 
         // Select List
 

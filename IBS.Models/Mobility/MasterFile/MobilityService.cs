@@ -41,7 +41,7 @@ namespace IBS.Models.Mobility.MasterFile
         [Required]
         [Display(Name = "Service Name")]
         [Column(TypeName = "varchar(50)")]
-        public string Name { get; set; }
+        public string Name { get; set; } = null!;
 
         [Required]
         public int Percent { get; set; }

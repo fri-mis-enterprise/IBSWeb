@@ -11,12 +11,12 @@ namespace IBS.Models.Mobility
 
         public int DocumentId { get; set; }
 
-        public string DocumentType { get; set; }
+        public string DocumentType { get; set; } = null!;
 
         public int CheckVoucherId { get; set; }
 
         [ForeignKey(nameof(CheckVoucherId))]
-        public MobilityCheckVoucherHeader CV { get; set; }
+        public MobilityCheckVoucherHeader CV { get; set; } = null!;
 
         [Column(TypeName = "numeric(18,4)")]
         public decimal AmountPaid { get; set; }

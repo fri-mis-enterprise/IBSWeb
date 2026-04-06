@@ -9,11 +9,11 @@ namespace IBS.Models.Filpride
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int OffSettingId { get; set; }
 
-        public string AccountNo { get; set; }
+        public string AccountNo { get; set; } = null!;
 
-        public string AccountTitle { get; set; }
+        public string AccountTitle { get; set; } = null!;
 
-        public string Source { get; set; }
+        public string Source { get; set; } = null!;
 
         public string? Reference { get; set; }
 

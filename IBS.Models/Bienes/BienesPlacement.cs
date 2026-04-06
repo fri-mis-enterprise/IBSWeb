@@ -13,12 +13,12 @@ namespace IBS.Models.Bienes
         public int PlacementId { get; set; }
 
         [Column(TypeName = "varchar(20)")]
-        public string ControlNumber { get; set; }
+        public string ControlNumber { get; set; } = null!;
 
         public int CompanyId { get; set; }
 
         [ForeignKey(nameof(CompanyId))]
-        public Company Company { get; set; }
+        public Company Company { get; set; } = null!;
 
         public int BankId { get; set; }
 
@@ -26,14 +26,14 @@ namespace IBS.Models.Bienes
         public FilprideBankAccount? BankAccount { get; set; }
 
         [Column(TypeName = "varchar(20)")]
-        public string Bank { get; set; }
+        public string Bank { get; set; } = null!;
 
         [Column(TypeName = "varchar(100)")]
 
-        public string Branch { get; set; }
+        public string Branch { get; set; } = null!;
 
         [Column(TypeName = "varchar(100)")]
-        public string AccountName { get; set; }
+        public string AccountName { get; set; } = null!;
 
         [Column(TypeName = "varchar(10)")]
         public string Class { get; set; } = "STP";
@@ -50,7 +50,7 @@ namespace IBS.Models.Bienes
         public DateOnly DateTo { get; set; }
 
         [Column(TypeName = "varchar(255)")]
-        public string Remarks { get; set; }
+        public string Remarks { get; set; } = null!;
 
         [Column(TypeName = "varchar(100)")]
         public string ChequeNumber { get; set; } = string.Empty;
@@ -97,7 +97,7 @@ namespace IBS.Models.Bienes
         public string? FrequencyOfPayment { get; set; }
 
         [Column(TypeName = "varchar(100)")]
-        public string CreatedBy { get; set; }
+        public string CreatedBy { get; set; } = null!;
 
         [Column(TypeName = "timestamp without time zone")]
         public DateTime CreatedDate { get; set; } = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
@@ -127,7 +127,7 @@ namespace IBS.Models.Bienes
         public string? InterestStatus { get; set; }
 
         [Column(TypeName = "varchar(50)")]
-        public string TDAccountNumber { get; set; }
+        public string TDAccountNumber { get; set; } = null!;
 
         public bool IsPosted { get; set; }
 
@@ -148,13 +148,13 @@ namespace IBS.Models.Bienes
         public int? RolledFromId { get; set; }
 
         [ForeignKey(nameof(RolledFromId))]
-        public BienesPlacement RolledFrom { get; set; }
+        public BienesPlacement RolledFrom { get; set; } = null!;
 
         public bool IsSwapped { get; set; }
 
         public int? SwappedFromId { get; set; }
 
         [ForeignKey(nameof(SwappedFromId))]
-        public BienesPlacement SwappedFrom { get; set; }
+        public BienesPlacement SwappedFrom { get; set; } = null!;
     }
 }

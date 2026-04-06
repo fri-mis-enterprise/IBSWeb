@@ -16,22 +16,22 @@ namespace IBS.Models.MasterFile
         [Required]
         [Display(Name = "Company Name")]
         [Column(TypeName = "varchar(50)")]
-        public string CompanyName { get; set; }
+        public string CompanyName { get; set; } = null!;
 
         [Required]
         [Display(Name = "Company Address")]
         [Column(TypeName = "varchar(200)")]
-        public string CompanyAddress { get; set; }
+        public string CompanyAddress { get; set; } = null!;
 
         [Required]
         [Display(Name = "TIN No")]
         [Column(TypeName = "varchar(20)")]
-        public string CompanyTin { get; set; }
+        public string CompanyTin { get; set; } = null!;
 
         [Required]
         [Display(Name = "Business Style")]
         [Column(TypeName = "varchar(20)")]
-        public string BusinessStyle { get; set; }
+        public string BusinessStyle { get; set; } = null!;
 
         public bool IsActive { get; set; } = true;
 

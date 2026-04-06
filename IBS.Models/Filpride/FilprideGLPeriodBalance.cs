@@ -13,7 +13,7 @@ namespace IBS.Models.Filpride
         public int AccountId { get; set; }
 
         [ForeignKey(nameof(AccountId))]
-        public FilprideChartOfAccount Account { get; set; }
+        public FilprideChartOfAccount Account { get; set; } = null!;
 
         [Column(TypeName = "date")]
         public DateOnly PeriodStartDate { get; set; }
@@ -52,7 +52,7 @@ namespace IBS.Models.Filpride
         public DateTime? ClosedAt { get; set; }
 
         [Column(TypeName = "varchar(50)")]
-        public string Company { get; set; }
+        public string Company { get; set; } = null!;
 
         public bool IsValid { get; set; } = true;
     }

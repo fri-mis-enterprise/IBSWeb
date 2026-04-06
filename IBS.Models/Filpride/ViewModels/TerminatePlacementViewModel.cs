@@ -8,13 +8,13 @@ namespace IBS.Models.Filpride.ViewModels
 
         public DateOnly InterestDepositedDate { get; set; }
 
-        public string InterestDepositedTo { get; set; }
+        public string InterestDepositedTo { get; set; } = null!;
 
-        public string InterestStatus { get; set; }
+        public string InterestStatus { get; set; } = null!;
 
         public DateOnly TerminatedDate { get; set; }
 
-        public string TerminationRemarks { get; set; }
+        public string TerminationRemarks { get; set; } = null!;
     }
 
 }

@@ -39,10 +39,10 @@ namespace IBS.Models.Filpride.ViewModels
 
         #endregion
 
-        public string Status { get; set; }
+        public string Status { get; set; } = null!;
 
-        public string PriceReference { get; set; }
+        public string PriceReference { get; set; } = null!;
 
-        public List<COSFileInfo> UploadedFiles { get; set; }
+        public List<COSFileInfo> UploadedFiles { get; set; } = null!;
     }
 }

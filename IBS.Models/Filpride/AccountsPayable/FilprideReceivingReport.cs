@@ -49,7 +49,7 @@ namespace IBS.Models.Filpride.AccountsPayable
 
         [Display(Name = "Truck/Vessels")]
         [StringLength(100)]
-        public string TruckOrVessels { get; set; }
+        public string TruckOrVessels { get; set; } = null!;
 
         [Display(Name = "Qty Delivered")]
         [Column(TypeName = "numeric(18,4)")]
@@ -76,7 +76,7 @@ namespace IBS.Models.Filpride.AccountsPayable
         public string? AuthorityToLoadNo { get; set; }
 
         [StringLength(1000)]
-        public string Remarks { get; set; }
+        public string Remarks { get; set; } = null!;
 
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = false)]
         [Column(TypeName = "numeric(18,4)")]

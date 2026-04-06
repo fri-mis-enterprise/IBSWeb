@@ -28,13 +28,13 @@ namespace IBS.Models.Filpride.ViewModels
         [NotMapped]
         public List<SelectListItem>? CheckVoucherHeaders { get; set; }
 
-        public string Particulars { get; set; }
+        public string Particulars { get; set; } = null!;
 
         [Display(Name = "CR No")]
         public string? CRNo { get; set; }
 
         [Display(Name = "JV Reason")]
-        public string JVReason { get; set; }
+        public string JVReason { get; set; } = null!;
 
         public List<SelectListItem>? COA { get; set; }
 
@@ -49,8 +49,8 @@ namespace IBS.Models.Filpride.ViewModels
 
     public class JournalVoucherDetailViewModel
     {
-        public string AccountNumber { get; set; }
-        public string AccountTitle { get; set; }
+        public string AccountNumber { get; set; } = null!;
+        public string AccountTitle { get; set; } = null!;
         public decimal Debit { get; set; }
         public decimal Credit { get; set; }
         public int? SubAccountId { get; set; }

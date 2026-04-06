@@ -8,7 +8,7 @@ namespace IBS.Models
         [Key]
         public Guid NotificationId { get; set; }
 
-        public string Message { get; set; }
+        public string Message { get; set; } = null!;
 
         [Column(TypeName = "timestamp without time zone")]
         public DateTime CreatedDate { get; set; }

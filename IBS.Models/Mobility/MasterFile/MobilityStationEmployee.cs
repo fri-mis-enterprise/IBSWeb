@@ -11,7 +11,7 @@ namespace IBS.Models.Mobility.MasterFile
 
         [Display(Name = "Employee Number")]
         [Column(TypeName = "varchar(10)")]
-        public string EmployeeNumber { get; set; }
+        public string EmployeeNumber { get; set; } = null!;
 
         public string? Initial { get; set; }
 
@@ -59,15 +59,15 @@ namespace IBS.Models.Mobility.MasterFile
         [Column(TypeName = "date")]
         public DateOnly? DateResigned { get; set; }
 
-        public string Position { get; set; }
+        public string Position { get; set; } = null!;
 
         public bool IsManagerial { get; set; }
 
         [Column(TypeName = "varchar(20)")]
-        public string Supervisor { get; set; }
+        public string Supervisor { get; set; } = null!;
 
         [Column(TypeName = "varchar(5)")]
-        public string Status { get; set; }
+        public string Status { get; set; } = null!;
 
         public string? Paygrade { get; set; } = string.Empty;
 

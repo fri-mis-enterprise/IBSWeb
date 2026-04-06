@@ -39,23 +39,23 @@ namespace IBS.Models.Mobility
         public decimal LubesQty { get; set; }
 
         [Column(TypeName = "varchar(16)")]
-        public string ItemCode { get; set; }
+        public string ItemCode { get; set; } = null!;
 
         [Column(TypeName = "varchar(100)")]
-        public string Particulars { get; set; }
+        public string Particulars { get; set; } = null!;
 
         [Column(TypeName = "varchar(10)")]
         public string? xOID { get; set; }
 
         [Column(TypeName = "varchar(20)")]
-        public string Cashier { get; set; }
+        public string Cashier { get; set; } = null!;
 
         public int Shift { get; set; }
 
         public int? xTRANSACTION { get; set; }
 
         [Column(TypeName = "varchar(50)")]
-        public string xStamp { get; set; }
+        public string xStamp { get; set; } = null!;
 
         [Column(TypeName = "varchar(20)")]
         public string? plateno { get; set; }
@@ -70,6 +70,6 @@ namespace IBS.Models.Mobility
 
         public bool IsProcessed { get; set; }
 
-        public string xTicketID { get; set; }
+        public string xTicketID { get; set; } = null!;
     }
 }

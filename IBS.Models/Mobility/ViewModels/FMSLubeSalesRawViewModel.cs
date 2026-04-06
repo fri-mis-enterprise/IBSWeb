@@ -2,11 +2,11 @@ namespace IBS.Models.Mobility.ViewModels
 {
     public class FMSLubeSalesRawViewModel
     {
-        public string stncode { get; set; }
+        public string stncode { get; set; } = null!;
 
-        public string shiftrecid { get; set; }
+        public string shiftrecid { get; set; } = null!;
 
-        public string productcode { get; set; }
+        public string productcode { get; set; } = null!;
 
         public int quantity { get; set; }
 

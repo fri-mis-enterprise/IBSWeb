@@ -21,7 +21,7 @@ namespace IBS.Models.Mobility.ViewModels
         [NotMapped]
         public List<SelectListItem>? ServiceInvoices { get; set; }
 
-        public string Description { get; set; }
+        public string Description { get; set; } = null!;
 
         [Display(Name = "Price Adjustment")]
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]

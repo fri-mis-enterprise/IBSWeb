@@ -2,11 +2,11 @@ namespace IBS.DTOs
 {
     public class ChartOfAccountDto
     {
-        public string AccountNumber { get; set; }
+        public string AccountNumber { get; set; } = null!;
 
-        public string AccountName { get; set; }
+        public string AccountName { get; set; } = null!;
 
-        public string AccountType { get; set; }
+        public string AccountType { get; set; } = null!;
 
         public string? Parent { get; set; }
 

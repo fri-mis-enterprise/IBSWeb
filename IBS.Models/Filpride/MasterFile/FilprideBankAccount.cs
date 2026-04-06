@@ -10,18 +10,18 @@ namespace IBS.Models.Filpride.MasterFile
         public int BankAccountId { get; set; }
 
         [StringLength(10)]
-        public string Bank { get; set; }
+        public string Bank { get; set; } = null!;
 
         [StringLength(200)]
-        public string Branch { get; set; }
+        public string Branch { get; set; } = null!;
 
         [StringLength(20)]
         [Display(Name = "Account No")]
-        public string AccountNo { get; set; }
+        public string AccountNo { get; set; } = null!;
 
         [StringLength(200)]
         [Display(Name = "Account Name")]
-        public string AccountName { get; set; }
+        public string AccountName { get; set; } = null!;
 
         [Display(Name = "Created By")]
         [StringLength(100)]

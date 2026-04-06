@@ -9,14 +9,14 @@ namespace IBS.Models.Mobility.MasterFile
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int BankAccountId { get; set; }
 
-        public string Bank { get; set; }
-        public string Branch { get; set; }
+        public string Bank { get; set; } = null!;
+        public string Branch { get; set; } = null!;
 
         [Display(Name = "Account No")]
-        public string AccountNo { get; set; }
+        public string AccountNo { get; set; } = null!;
 
         [Display(Name = "Account Name")]
-        public string AccountName { get; set; }
+        public string AccountName { get; set; } = null!;
 
         [Display(Name = "Created By")]
         [Column(TypeName = "varchar(50)")]
