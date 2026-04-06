@@ -72,10 +72,10 @@ namespace IBS.Models.Filpride.AccountsReceivable
         public bool IsPrinted { get; set; }
 
         [StringLength(20)]
-        public string Status { get; set; }
+        public string Status { get; set; } = string.Empty;
 
         [StringLength(20)]
-        public string Type { get; set; }
+        public string Type { get; set; } = string.Empty;
 
         public DateOnly? DepositedDate { get; set; }
 
