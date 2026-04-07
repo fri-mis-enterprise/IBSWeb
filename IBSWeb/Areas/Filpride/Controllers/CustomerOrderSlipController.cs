@@ -1082,6 +1082,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             Terms = existingPo.Terms,
                             Quantity = item.Quantity,
                             Price = (decimal)existingRecord.Freight!,
+                            FinalPrice = (decimal)existingRecord.Freight!,
                             Amount = item.Quantity * (decimal)existingRecord.Freight,
                             Remarks = $"{existingRecord.SubPORemarks}\nPlease note: The values in this purchase order are for the freight charge.",
                             Company = existingPo.Company,
