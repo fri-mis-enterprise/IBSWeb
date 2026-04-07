@@ -54,8 +54,8 @@
                         <span asp-validation-for="CVId" class="text-danger"></span>
                     </div>
                     <div class="form-group mb-3">
-                        <label asp-for="PRNo" class="control-label"></label><span class="required">*</span>
-                        <select asp-for="PRNo" asp-items="@Model.ProvisionalReceipts" class="form-select js-select2 border-0 shadow" style="width:100%; max-height: 200px;" required>
+                        <label asp-for="PRNo" class="control-label"></label>
+                        <select asp-for="PRNo" asp-items="@Model.ProvisionalReceipts" class="form-select js-select2 border-0 shadow" style="width:100%; max-height: 200px;">
                             <option></option>
                         </select>
                         <span asp-validation-for="PRNo" class="text-danger"></span>

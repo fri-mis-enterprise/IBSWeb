@@ -38,7 +38,6 @@ namespace IBS.Models.Filpride.ViewModels
         public string Particulars { get; set; } = null!;
 
         [Display(Name = "PR No")]
-        [Required(ErrorMessage = "The PR No field is required.")]
         public string? PRNo { get; set; }
 
         [NotMapped]
