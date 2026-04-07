@@ -652,6 +652,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .Include(po => po.Product)
                 .Include(po => po.Supplier)
                 .Include(po => po.PickUpPoint)
+                .Where(po => po.Company == company && !po.IsSubPo)
                 .Where(po => (po.Status == nameof(Status.Posted) || po.Status == nameof(Status.Closed) && po.QuantityReceived > 0)
                              && (
                                  // POs created in the monthYear
