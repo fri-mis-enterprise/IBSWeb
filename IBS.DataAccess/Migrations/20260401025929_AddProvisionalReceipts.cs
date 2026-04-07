@@ -12,27 +12,6 @@ namespace IBS.DataAccess.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<bool>(
-                name: "is_valid",
-                table: "filpride_monthly_nibits",
-                type: "boolean",
-                nullable: false,
-                defaultValue: false);
-
-            migrationBuilder.AddColumn<bool>(
-                name: "is_valid",
-                table: "filpride_gl_sub_account_balances",
-                type: "boolean",
-                nullable: false,
-                defaultValue: false);
-
-            migrationBuilder.AddColumn<bool>(
-                name: "is_valid",
-                table: "filpride_gl_period_balances",
-                type: "boolean",
-                nullable: false,
-                defaultValue: false);
-
             migrationBuilder.CreateTable(
                 name: "filpride_provisional_receipts",
                 columns: table => new

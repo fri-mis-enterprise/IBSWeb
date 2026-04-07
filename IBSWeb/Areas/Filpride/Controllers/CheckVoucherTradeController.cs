@@ -313,7 +313,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         viewModel.COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken);
 
                         viewModel.Suppliers = (await _unitOfWork.FilprideSupplier
-                                .GetAllAsync(supp => (companyClaims == nameof(Filpride) ? supp.IsFilpride : supp.IsMobility) && supp.Category == "Trade", cancellationToken))
+                                .GetAllAsync(supp => companyClaims == nameof(Filpride) && supp.Category == "Trade", cancellationToken))
                             .Select(sup => new SelectListItem
                             {
                                 Value = sup.SupplierId.ToString(),
@@ -331,7 +331,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             .ToList();
 
                         viewModel.BankAccounts = (await _unitOfWork.FilprideBankAccount
-                                .GetAllAsync(b => (companyClaims == nameof(Filpride) ? b.IsFilpride : b.IsMobility), cancellationToken))
+                                .GetAllAsync(b => companyClaims == nameof(Filpride), cancellationToken))
                             .Select(ba => new SelectListItem
                             {
                                 Value = ba.BankAccountId.ToString(),
@@ -842,7 +842,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
 
             var supplier = await _unitOfWork.FilprideSupplier
-                .GetAsync(s => s.SupplierId == supplierId && (companyClaims == nameof(Filpride) ? s.IsFilpride : s.IsMobility));
+                .GetAsync(s => s.SupplierId == supplierId && companyClaims == nameof(Filpride));
 
             if (supplier == null)
             {
@@ -1451,7 +1451,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .ToListAsync(cancellationToken);
 
             var getSupplier = await _unitOfWork.FilprideSupplier
-                .GetAsync(s => s.SupplierId == supplierId && (companyClaims == nameof(Filpride) ? s.IsFilpride : s.IsMobility), cancellationToken);
+                .GetAsync(s => s.SupplierId == supplierId && companyClaims == nameof(Filpride), cancellationToken);
 
             if (header.CvType == "Supplier")
             {

@@ -131,7 +131,7 @@ namespace IBSWeb.Areas.Identity.Pages.Account
             {
                 // Check if user exists and is active BEFORE attempting password sign in
                 var user = await _signInManager.UserManager.FindByNameAsync(Input.Username);
-                
+
                 if (user != null && !user.IsActive)
                 {
                     _logger.LogWarning("Deactivated user attempted login: {Username}", Input.Username);
@@ -141,7 +141,7 @@ namespace IBSWeb.Areas.Identity.Pages.Account
                 }
 
                 var result = await _signInManager.PasswordSignInAsync(Input.Username, Input.Password, Input.RememberMe, lockoutOnFailure: false);
-                
+
                 if (result.Succeeded)
                 {
                     // User is guaranteed to exist and be active at this point
@@ -216,7 +216,6 @@ namespace IBSWeb.Areas.Identity.Pages.Account
         private async Task LoadPageData(string returnUrl)
         {
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
-            Stations = await _unitOfWork.GetMobilityStationListAsyncByCode();
             Companies = await _unitOfWork.GetCompanyListAsyncByName();
             Users = await _unitOfWork.GetCashierListAsyncByUsernameAsync();
             StationAccess = await _unitOfWork.GetCashierListAsyncByStationAsync();

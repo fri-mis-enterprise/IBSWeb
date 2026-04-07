@@ -3,8 +3,6 @@ using IBS.DataAccess.Repository.IRepository;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.MasterFile;
 using IBS.Models.MasterFile;
-using IBS.Models.Mobility;
-using IBS.Models.Mobility.MasterFile;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 using IBS.DTOs;
@@ -57,21 +55,6 @@ namespace IBS.DataAccess.Repository
             await _db.SaveChangesAsync(cancellationToken);
         }
 
-        public bool IsJournalEntriesBalanced(IEnumerable<MobilityGeneralLedger> journals)
-        {
-            try
-            {
-                var totalDebit = Math.Round(journals.Sum(j => j.Debit), 4);
-                var totalCredit = Math.Round(journals.Sum(j => j.Credit), 4);
-
-                return totalDebit == totalCredit;
-            }
-            catch (Exception ex)
-            {
-                throw new ArgumentException(ex.Message);
-            }
-        }
-
         public bool IsJournalEntriesBalanced(IEnumerable<FilprideGeneralLedgerBook> journals)
         {
             try
@@ -112,20 +95,6 @@ namespace IBS.DataAccess.Repository
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
-        public async Task<StationDto?> MapStationToDTO(string stationCode, CancellationToken cancellationToken = default)
-        {
-            return await _db.Set<MobilityStation>()
-                .Where(s => s.StationCode == stationCode)
-                .Select(s => new StationDto
-                {
-                    StationId = s.StationId,
-                    StationCode = s.StationCode,
-                    StationName = s.StationName,
-                    StationPOSCode = s.PosCode
-                })
-                .FirstOrDefaultAsync(cancellationToken);
-        }
-
         public async Task<SupplierDto?> MapSupplierToDTO(string supplierCode, CancellationToken cancellationToken = default)
         {
             return await _db.Set<FilprideSupplier>()
@@ -161,28 +130,6 @@ namespace IBS.DataAccess.Repository
             };
         }
 
-        public (string AccountNo, string AccountTitle) MobilityGetSalesAccountTitle(string productCode)
-        {
-            return productCode switch
-            {
-                "PET001" => ("4010101", "Sales - Biodiesel"),
-                "PET002" => ("4010102", "Sales - Econogas"),
-                "PET003" => ("4010103", "Sales - Envirogas"),
-                _ => ("4010110", "Inventory - Lubes"),
-            };
-        }
-
-        public (string AccountNo, string AccountTitle) MobilityGetCogsAccountTitle(string productCode)
-        {
-            return productCode switch
-            {
-                "PET001" => ("5010101", "COGS - Biodiesel"),
-                "PET002" => ("5010102", "COGS - Econogas"),
-                "PET003" => ("5010103", "COGS - Envirogas"),
-                _ => ("5010110", "Inventory - Lubes"),
-            };
-        }
-
         public (string AccountNo, string AccountTitle) GetInventoryAccountTitle(string productCode)
         {
             return productCode switch
@@ -191,17 +138,6 @@ namespace IBS.DataAccess.Repository
                 "PET002" => ("101040200", "Inventory - Econogas"),
                 "PET003" => ("101040300", "Inventory - Envirogas"),
                 _ => throw new ArgumentException($"Invalid product code: {productCode}"),
-            };
-        }
-
-        public (string AccountNo, string AccountTitle) MobilityGetInventoryAccountTitle(string productCode)
-        {
-            return productCode switch
-            {
-                "PET001" => ("1010401", "Inventory - Biodiesel"),
-                "PET002" => ("1010402", "Inventory - Econogas"),
-                "PET003" => ("1010403", "Inventory - Envirogas"),
-                _ => ("1010410", "Inventory - Lubes"),
             };
         }
 

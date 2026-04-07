@@ -94,7 +94,6 @@ namespace IBS.DataAccess.Repository.Filpride
             existingSupplier.WithholdingTaxPercent = model.WithholdingTaxPercent;
             existingSupplier.ZipCode = model.ZipCode;
             existingSupplier.IsFilpride = model.IsFilpride;
-            existingSupplier.IsMobility = model.IsMobility;
             existingSupplier.IsBienes = model.IsBienes;
             existingSupplier.RequiresPriceAdjustment = model.RequiresPriceAdjustment;
             existingSupplier.TradeName = model.TradeName;
@@ -126,7 +125,7 @@ namespace IBS.DataAccess.Repository.Filpride
         {
             return await _db.FilprideSuppliers
                 .OrderBy(s => s.SupplierCode)
-                .Where(s => s.IsActive && s.Category == "Trade" && (company == nameof(Filpride) ? s.IsFilpride : s.IsMobility))
+                .Where(s => s.IsActive && s.Category == "Trade" && company == nameof(Filpride))
                 .Select(s => new SelectListItem
                 {
                     Value = s.SupplierId.ToString(),

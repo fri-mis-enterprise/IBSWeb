@@ -78,7 +78,6 @@ namespace IBS.DataAccess.Repository.Filpride
             existingCustomer.ZipCode = model.ZipCode;
             existingCustomer.RetentionRate = model.RetentionRate;
             existingCustomer.IsFilpride = model.IsFilpride;
-            existingCustomer.IsMobility = model.IsMobility;
             existingCustomer.IsBienes = model.IsBienes;
             existingCustomer.VatType = model.VatType;
             existingCustomer.Type = model.Type;

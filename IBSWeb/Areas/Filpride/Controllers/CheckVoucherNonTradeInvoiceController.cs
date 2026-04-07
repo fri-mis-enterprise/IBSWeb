@@ -1645,7 +1645,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var companyClaims = await GetCompanyClaimAsync();
 
             var supplier = await _unitOfWork.FilprideSupplier
-                .GetAsync(s => s.SupplierId == supplierId && (companyClaims == nameof(Filpride) ? s.IsFilpride : s.IsMobility));
+                .GetAsync(s => s.SupplierId == supplierId && companyClaims == nameof(Filpride));
 
             if (supplier == null)
             {
@@ -1672,7 +1672,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             var companyClaims = await GetCompanyClaimAsync();
             // Replace this with your actual repository/service call
-            var bankAccounts = await _unitOfWork.FilprideBankAccount.GetAllAsync(b => (companyClaims == nameof(Filpride) ? b.IsFilpride : b.IsMobility));
+            var bankAccounts = await _unitOfWork.FilprideBankAccount.GetAllAsync(b => companyClaims == nameof(Filpride));
 
             return Json(bankAccounts.Select(b => new
             {
@@ -1686,7 +1686,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         public async Task<IActionResult> GetBankAccountById(int bankId)
         {
             var companyClaims = await GetCompanyClaimAsync();
-            var bankAccount = await _unitOfWork.FilprideBankAccount.GetAsync(b => b.BankAccountId == bankId && (companyClaims == nameof(Filpride) ? b.IsFilpride : b.IsMobility));
+            var bankAccount = await _unitOfWork.FilprideBankAccount.GetAsync(b => b.BankAccountId == bankId && companyClaims == nameof(Filpride));
 
             if (bankAccount == null)
             {
@@ -1768,7 +1768,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         public async Task<IActionResult> GetCustomers()
         {
             var companyClaims = await GetCompanyClaimAsync();
-            var employees = await _unitOfWork.FilprideCustomer.GetAllAsync(c => (companyClaims == nameof(Filpride) ? c.IsFilpride : c.IsMobility));
+            var employees = await _unitOfWork.FilprideCustomer.GetAllAsync(c => companyClaims == nameof(Filpride));
 
             return Json(employees.OrderBy(c => c.CustomerCode).Select(c => new
             {
@@ -1801,7 +1801,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         public async Task<IActionResult> GetSuppliers()
         {
             var companyClaims = await GetCompanyClaimAsync();
-            var suppliers = await _unitOfWork.FilprideSupplier.GetAllAsync(s => (companyClaims == nameof(Filpride) ? s.IsFilpride : s.IsMobility));
+            var suppliers = await _unitOfWork.FilprideSupplier.GetAllAsync(s => companyClaims == nameof(Filpride));
 
             return Json(suppliers.OrderBy(c => c.SupplierCode).Select(c => new
             {

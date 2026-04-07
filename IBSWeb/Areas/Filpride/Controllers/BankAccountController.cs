@@ -236,7 +236,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingModel.Bank = model.Bank;
                 existingModel.Branch = model.Branch;
                 existingModel.IsFilpride = model.IsFilpride;
-                existingModel.IsMobility = model.IsMobility;
                 existingModel.IsBienes = model.IsBienes;
 
                 await _unitOfWork.SaveAsync(cancellationToken);

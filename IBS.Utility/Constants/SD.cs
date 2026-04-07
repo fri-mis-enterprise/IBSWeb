@@ -88,21 +88,5 @@ namespace IBS.Utility.Constants
         public const string Date_Format = "MMM dd, yyyy";
 
         #endregion Format string
-
-        #region Mobility Position
-
-        public const string Cashier = "CASHIER";
-        public const string Pump_Attendant = "PUMP ATTENDANT";
-        public const string Care_Taker = "CARETAKER";
-        public const string Retail_Assistant = "RETAIL ASSISTANT";
-
-        #endregion Mobility Position
-
-        #region Mobility Department
-
-        public const string PA_CA = "PA/CA";
-        public const string OIC = "OIC";
-
-        #endregion Mobility Department
     }
 }

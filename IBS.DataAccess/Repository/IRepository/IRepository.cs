@@ -1,5 +1,4 @@
 using IBS.Models.Filpride.Books;
-using IBS.Models.Mobility;
 using System.Linq.Expressions;
 using IBS.DTOs;
 
@@ -19,21 +18,13 @@ namespace IBS.DataAccess.Repository.IRepository
 
         Task RemoveRecords<TEntity>(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default) where TEntity : class;
 
-        bool IsJournalEntriesBalanced(IEnumerable<MobilityGeneralLedger> journals);
-
         bool IsJournalEntriesBalanced(IEnumerable<FilprideGeneralLedgerBook> journals);
 
         (string AccountNo, string AccountTitle) GetSalesAccountTitle(string productCode);
 
         (string AccountNo, string AccountTitle) GetCogsAccountTitle(string productCode);
 
-        (string AccountNo, string AccountTitle) MobilityGetSalesAccountTitle(string productCode);
-
-        (string AccountNo, string AccountTitle) MobilityGetCogsAccountTitle(string productCode);
-
         (string AccountNo, string AccountTitle) GetInventoryAccountTitle(string productCode);
-
-        (string AccountNo, string AccountTitle) MobilityGetInventoryAccountTitle(string productCode);
 
         (string AccountNo, string AccountTitle) GetFreightAccount(string productCode);
 
@@ -50,8 +41,6 @@ namespace IBS.DataAccess.Repository.IRepository
         // Retrieving DTOs (Data Transfer Objects)
 
         Task<ProductDto?> MapProductToDTO(string productCode, CancellationToken cancellationToken = default);
-
-        Task<StationDto?> MapStationToDTO(string stationCode, CancellationToken cancellationToken = default);
 
         Task<SupplierDto?> MapSupplierToDTO(string supplierCode, CancellationToken cancellationToken = default);
 

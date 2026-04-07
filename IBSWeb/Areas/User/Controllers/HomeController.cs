@@ -132,14 +132,6 @@ namespace IBSWeb.Areas.User.Controllers
 
                 #endregion -- Filpride
 
-                #region -- Mobility Station
-
-                MobilityStationUnservePO = await _dbContext.MobilityPurchaseOrders
-                        .Where(po => po.Status == "Posted" && !po.IsReceived)
-                        .CountAsync(),
-
-                #endregion -- Mobility Station
-
                 #region -- Accounting - For Approval
 
                 JournalVoucherForApprovalCount = await _dbContext.FilprideJournalVoucherHeaders
