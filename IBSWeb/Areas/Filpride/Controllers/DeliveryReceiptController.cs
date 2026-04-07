@@ -369,7 +369,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 FilprideAuditTrail auditTrailBook = new(model.CreatedBy!, $"Create new delivery receipt# {model.DeliveryReceiptNo}", "Delivery Receipt", model.Company);
                 await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
 
-                if (viewModel.Freight != customerOrderSlip.Freight || viewModel.IsECCEdited)
+                if (customerOrderSlip.DeliveryOption != SD.DeliveryOption_DirectDelivery &&
+                    (viewModel.Freight != customerOrderSlip.Freight || viewModel.IsECCEdited))
                 {
                     var operationManager = await _dbContext.ApplicationUsers
                         .Where(a => a.Position == SD.Position_OperationManager)
@@ -586,7 +587,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     }
                 }
 
-                if (viewModel.Freight != existingRecord.Freight || viewModel.IsECCEdited)
+                if (existingRecord.CustomerOrderSlip?.DeliveryOption != SD.DeliveryOption_DirectDelivery &&
+                    (viewModel.Freight != existingRecord.Freight || viewModel.IsECCEdited))
                 {
                     var hauler = await _unitOfWork.FilprideSupplier
                         .GetAsync(x => x.SupplierId == viewModel.HaulerId, cancellationToken);
