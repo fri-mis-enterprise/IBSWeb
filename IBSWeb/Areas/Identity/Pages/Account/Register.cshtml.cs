@@ -129,15 +129,7 @@ namespace IBSWeb.Areas.Identity.Pages.Account
                 {
                     Text = i,
                     Value = i
-                }),
-                MobilityStations = _dbContext.MobilityStations
-                .OrderBy(s => s.StationId)
-                .Where(s => s.IsActive)
-                .Select(s => new SelectListItem
-                {
-                    Value = s.StationCode,
-                    Text = s.StationCode + " " + s.StationName
-                }),
+                })
             };
         }
 

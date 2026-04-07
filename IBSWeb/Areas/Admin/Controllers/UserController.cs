@@ -416,22 +416,6 @@ namespace IBSWeb.Areas.Admin.Controllers
             return Json(roles);
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetStations()
-        {
-            var stations = await _dbContext.MobilityStations
-                .Where(s => s.IsActive)
-                .OrderBy(s => s.StationId)
-                .Select(s => new SelectListItem
-                {
-                    Value = s.StationCode,
-                    Text = $"{s.StationCode} {s.StationName}"
-                })
-                .ToListAsync();
-
-            return Json(stations);
-        }
-
         #endregion
     }
 

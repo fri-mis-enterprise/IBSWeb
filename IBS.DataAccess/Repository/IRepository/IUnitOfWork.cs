@@ -1,9 +1,7 @@
 using IBS.DataAccess.Repository.Bienes.IRepository;
 using IBS.DataAccess.Repository.Filpride.IRepository;
 using IBS.DataAccess.Repository.MasterFile.IRepository;
-using IBS.DataAccess.Repository.Mobility.IRepository;
 using IBS.Models.Enums;
-using IBS.Models.Mobility.MasterFile;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace IBS.DataAccess.Repository.IRepository
@@ -33,78 +31,6 @@ namespace IBS.DataAccess.Repository.IRepository
         Task<List<SelectListItem>> GetCashierListAsyncByUsernameAsync(CancellationToken cancellationToken = default);
 
         Task<List<SelectListItem>> GetCashierListAsyncByStationAsync(CancellationToken cancellationToken = default);
-
-        Task ExecuteInTransactionAsync(Func<Task> action, CancellationToken cancellationToken = default);
-
-        #region--Mobility
-
-        Mobility.IRepository.IChartOfAccountRepository MobilityChartOfAccount { get; }
-
-        IFuelPurchaseRepository MobilityFuelPurchase { get; }
-
-        ILubePurchaseHeaderRepository MobilityLubePurchaseHeader { get; }
-
-        ILubePurchaseDetailRepository MobilityLubePurchaseDetail { get; }
-
-        ISalesHeaderRepository MobilitySalesHeader { get; }
-
-        ISalesDetailRepository MobilitySalesDetail { get; }
-
-        IPOSalesRepository MobilityPOSales { get; }
-
-        IOfflineRepository MobilityOffline { get; }
-
-        IStationRepository MobilityStation { get; }
-        Mobility.IRepository.ISupplierRepository MobilitySupplier { get; }
-        Mobility.IRepository.ICustomerRepository MobilityCustomer { get; }
-        Mobility.IRepository.IBankAccountRepository MobilityBankAccount { get; }
-        Mobility.IRepository.IServiceRepository MobilityService { get; }
-        Mobility.IRepository.IProductRepository MobilityProduct { get; }
-        Mobility.IRepository.IPickUpPointRepository MobilityPickUpPoint { get; }
-        Mobility.IRepository.IEmployeeRepository MobilityEmployee { get; }
-        Mobility.IRepository.IInventoryRepository MobilityInventory { get; }
-
-        Mobility.IRepository.IGeneralLedgerRepository MobilityGeneralLedger { get; }
-
-        Mobility.IRepository.IPurchaseOrderRepository MobilityPurchaseOrder { get; }
-
-        Mobility.IRepository.IReceivingReportRepository MobilityReceivingReport { get; }
-        Mobility.IRepository.ICheckVoucherRepository MobilityCheckVoucher { get; }
-        Mobility.IRepository.IJournalVoucherRepository MobilityJournalVoucher { get; }
-        Mobility.IRepository.IServiceInvoiceRepository MobilityServiceInvoice { get; }
-        Mobility.IRepository.ICreditMemoRepository MobilityCreditMemo { get; }
-        Mobility.IRepository.IDebitMemoRepository MobilityDebitMemo { get; }
-        Mobility.IRepository.ICollectionReceiptRepository MobilityCollectionReceipt { get; }
-
-        Mobility.IRepository.ICustomerOrderSlipRepository MobilityCustomerOrderSlip { get; }
-
-        IDepositRepository MobilityDeposit { get; }
-
-        Task<List<SelectListItem>> GetMobilityStationListAsyncById(CancellationToken cancellationToken = default);
-
-        Task<List<SelectListItem>> GetMobilityStationListAsyncByCode(CancellationToken cancellationToken = default);
-
-        Task<List<SelectListItem>> GetMobilityStationListWithCustomersAsyncByCode(List<MobilityCustomer> mobilityCustomers, CancellationToken cancellationToken = default);
-
-        Task<List<SelectListItem>> GetMobilityCustomerListAsyncByCodeName(CancellationToken cancellationToken = default);
-
-        Task<List<SelectListItem>> GetMobilityCustomerListAsyncById(string stationCodeClaims, CancellationToken cancellationToken = default);
-
-        Task<List<SelectListItem>> GetMobilityCustomerListAsyncByIdAll(string stationCodeClaims, CancellationToken cancellationToken = default);
-
-        Task<List<SelectListItem>> GetMobilityCustomerListAsyncByCode(CancellationToken cancellationToken = default);
-
-        Task<List<SelectListItem>> GetMobilitySupplierListAsyncById(string stationCodeClaims, CancellationToken cancellationToken = default);
-
-        Task<List<SelectListItem>> GetMobilityCustomerListAsync(string stationCodeClaims, CancellationToken cancellationToken = default);
-
-        Task<string> GetMobilityStationNameAsync(string stationCodeClaims, CancellationToken cancellationToken = default);
-
-        Task<List<SelectListItem>> GetMobilityProductListAsyncByCode(CancellationToken cancellationToken = default);
-
-        Task<List<SelectListItem>> GetMobilityProductListAsyncById(CancellationToken cancellationToken = default);
-
-        #endregion
 
         #region--Filpride
 

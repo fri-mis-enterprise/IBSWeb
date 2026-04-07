@@ -952,13 +952,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                /// TODO Uncomment this feature once the mobility company is on live
-                // if (existingRecord.Customer!.CustomerType == nameof(CustomerType.Retail))
-                // {
-                //     await _unitOfWork.MobilityReceivingReport
-                //         .AutoGenerateReceivingReport(existingRecord, deliveredDate, cancellationToken);
-                // }
-
                 existingRecord.DeliveredDate = deliveredDate;
                 existingRecord.Status = nameof(DRStatus.ForInvoicing);
                 existingRecord.PostedBy = GetUserFullName();
