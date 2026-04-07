@@ -15,7 +15,7 @@ class MasterFileSelector {
                 id: 'company',
                 title: 'Company',
                 url: urls.getCompanies,
-                triggerAccount: '101020600 AR-Exchange Check',
+                triggerAccounts: ['101020600 AR-Exchange Check', '101020510 AR-NT Filpride Group'],
                 placeholder: 'Select a company',
                 formatOption: (item) => `${item.accountNumber} - ${item.accountName}`,
                 inputName: 'CompanyMasterFileId'
@@ -42,7 +42,7 @@ class MasterFileSelector {
                 id: 'supplier',
                 title: 'Supplier',
                 url: urls.getSuppliers,
-                triggerAccount: '101020500 AR-Non Trade Receivable',
+                triggerAccounts: ['101020500 AR-Non Trade Receivable', '101060900 Security Deposit'],
                 placeholder: 'Select a supplier',
                 formatOption: (item) => `${item.accountNumber} - ${item.accountName}`,
                 inputName: 'SupplierMasterFileId'
