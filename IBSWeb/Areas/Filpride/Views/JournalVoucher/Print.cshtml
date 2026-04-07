@@ -11,7 +11,7 @@
     ViewData["Title"] = "Journal Voucher - Preview";
     var totalDebit = 0m;
     var totalCredit = 0m;
-        
+
     var selectedCompany = string.Empty;
 
     if (SignInManager.IsSignedIn(User))
@@ -296,13 +296,13 @@
             let jvType = "@jvType";
             let isAmortization = "@Model.IsAmortization";
             let message = "You won't be able to revert this!";
-            
+
             if (jvType === "@JvType.Accrual") {
                 message = "This journal voucher will be automatically reversed in the following month. " + message;
             }
 
             if (jvType === "@JvType.Amortization" && isAmortization.toLowerCase() === "true") {
-                message = "This journal voucher will generate amortization schedules. " + message; 
+                message = "This journal voucher will generate amortization schedules. " + message;
             }
 
             Swal.fire({
@@ -377,7 +377,7 @@
                             window.removeEventListener('afterprint', afterPrintHandler);
                             controllerThenPrint(id);
                         };
-                        
+
                         window.addEventListener('afterprint', afterPrintHandler);
                         Swal.close();
                         setTimeout(() => { window.print(); }, 200);
@@ -395,7 +395,7 @@
                     window.removeEventListener('afterprint', afterPrintHandler);
                     controllerThenPrint(id);
                 };
-                
+
                 window.addEventListener('afterprint', afterPrintHandler);
                 window.print();
             }
@@ -407,6 +407,6 @@
             window.location.href = url;
         }
     </script>
-    
+
     <script src="~/js/disable-dev-tools-in-print.js" asp-append-version="true"></script>
 }

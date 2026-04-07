@@ -94,6 +94,60 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return claims.FirstOrDefault(c => c.Type == FilterTypeClaimType)?.Value;
         }
 
+        private async Task<List<SelectListItem>> GetLiquidationCheckVoucherHeadersAsync(string companyClaims, int employeeId, int? selectedCvId, CancellationToken cancellationToken)
+        {
+            return await _dbContext.FilprideCheckVoucherHeaders
+                .OrderBy(c => c.CheckVoucherHeaderNo)
+                .Where(c =>
+                    c.Company == companyClaims &&
+                    c.IsAdvances &&
+                    c.EmployeeId == employeeId &&
+                    (c.Status == nameof(CheckVoucherPaymentStatus.Unliquidated) || c.CheckVoucherHeaderId == selectedCvId))
+                .Select(cvh => new SelectListItem
+                {
+                    Value = cvh.CheckVoucherHeaderId.ToString(),
+                    Text = cvh.CheckVoucherHeaderNo
+                })
+                .ToListAsync(cancellationToken);
+        }
+
+        private async Task<List<SelectListItem>> GetLiquidationProvisionalReceiptsAsync(string companyClaims, int employeeId, string? selectedPrNo, CancellationToken cancellationToken)
+        {
+            return await _dbContext.FilprideProvisionalReceipts
+                .OrderByDescending(pr => pr.TransactionDate)
+                .ThenByDescending(pr => pr.SeriesNumber)
+                .Where(pr =>
+                    pr.Company == companyClaims &&
+                    pr.EmployeeId == employeeId &&
+                    ((pr.Status != nameof(CollectionReceiptStatus.Canceled) &&
+                      pr.Status != nameof(CollectionReceiptStatus.Voided)) ||
+                     pr.SeriesNumber == selectedPrNo))
+                .Select(pr => new SelectListItem
+                {
+                    Value = pr.SeriesNumber,
+                    Text = pr.SeriesNumber
+                })
+                .ToListAsync(cancellationToken);
+        }
+
+        private async Task PopulateLiquidationDependenciesAsync(JournalVoucherViewModel viewModel, string companyClaims, CancellationToken cancellationToken, int? selectedCvId = null, string? selectedPrNo = null)
+        {
+            viewModel.COA = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
+            viewModel.Employees = await _unitOfWork.GetFilprideEmployeeListById(cancellationToken);
+            viewModel.MinDate = await _unitOfWork
+                .GetMinimumPeriodBasedOnThePostedPeriods(Module.JournalVoucher, cancellationToken);
+
+            if (viewModel.EmployeeId.HasValue)
+            {
+                viewModel.CheckVoucherHeaders = await GetLiquidationCheckVoucherHeadersAsync(companyClaims, viewModel.EmployeeId.Value, selectedCvId ?? viewModel.CVId, cancellationToken);
+                viewModel.ProvisionalReceipts = await GetLiquidationProvisionalReceiptsAsync(companyClaims, viewModel.EmployeeId.Value, selectedPrNo ?? viewModel.PRNo, cancellationToken);
+                return;
+            }
+
+            viewModel.CheckVoucherHeaders = new List<SelectListItem>();
+            viewModel.ProvisionalReceipts = new List<SelectListItem>();
+        }
+
         public async Task<IActionResult> Index(string? view, string filterType)
         {
             await UpdateFilterTypeClaim(filterType);
@@ -196,24 +250,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             var companyClaims = await GetCompanyClaimAsync();
 
-            viewModel.COA = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
 
-            viewModel.CheckVoucherHeaders = await _dbContext.FilprideCheckVoucherHeaders
-                .OrderBy(c => c.CheckVoucherHeaderNo)
-                .Where(c =>
-                    c.Company == companyClaims &&
-                    c.IsAdvances &&
-                    c.EmployeeId != null &&
-                    c.Status == nameof(CheckVoucherPaymentStatus.Unliquidated))
-                .Select(cvh => new SelectListItem
-                {
-                    Value = cvh.CheckVoucherHeaderId.ToString(),
-                    Text = cvh.CheckVoucherHeaderNo
-                })
-                .ToListAsync(cancellationToken);
-
-            viewModel.MinDate = await _unitOfWork
-                .GetMinimumPeriodBasedOnThePostedPeriods(Module.JournalVoucher, cancellationToken);
+            await PopulateLiquidationDependenciesAsync(viewModel, companyClaims, cancellationToken);
 
             return View(viewModel);
         }
@@ -229,22 +271,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            viewModel.COA = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
-            viewModel.CheckVoucherHeaders = await _dbContext.FilprideCheckVoucherHeaders
-                .OrderBy(c => c.CheckVoucherHeaderNo)
-                .Where(c =>
-                    c.Company == companyClaims &&
-                    c.IsAdvances &&
-                    c.EmployeeId != null &&
-                    c.Status == nameof(CheckVoucherPaymentStatus.Unliquidated))
-                .Select(cvh => new SelectListItem
-                {
-                    Value = cvh.CheckVoucherHeaderId.ToString(),
-                    Text = cvh.CheckVoucherHeaderNo
-                })
-                .ToListAsync(cancellationToken);
-            viewModel.MinDate = await _unitOfWork
-                .GetMinimumPeriodBasedOnThePostedPeriods(Module.JournalVoucher, cancellationToken);
+            await PopulateLiquidationDependenciesAsync(viewModel, companyClaims, cancellationToken);
 
             if (!ModelState.IsValid)
             {
@@ -268,7 +295,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     References = viewModel.References,
                     CVId = viewModel.CVId,
                     Particulars = viewModel.Particulars,
-                    CRNo = viewModel.CRNo,
+                    CRNo = viewModel.PRNo,
                     JVReason = viewModel.JVReason,
                     CreatedBy = GetUserFullName(),
                     Company = companyClaims,
@@ -372,6 +399,34 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
 
             return Json(null);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetLiquidationCheckVouchersByEmployee(int employeeId, int? selectedCvId, CancellationToken cancellationToken = default)
+        {
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            var selectList = await GetLiquidationCheckVoucherHeadersAsync(companyClaims, employeeId, selectedCvId, cancellationToken);
+            return Json(selectList);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetProvisionalReceiptsByEmployee(int employeeId, string? selectedPrNo, CancellationToken cancellationToken = default)
+        {
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            var selectList = await GetLiquidationProvisionalReceiptsAsync(companyClaims, employeeId, selectedPrNo, cancellationToken);
+            return Json(selectList);
         }
 
         [HttpGet]
@@ -601,8 +656,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     TransactionDate = existingHeaderModel.Date,
                     References = existingHeaderModel.References,
                     CVId = existingHeaderModel.CVId,
+                    EmployeeId = existingHeaderModel.CheckVoucherHeader?.EmployeeId,
                     Particulars = existingHeaderModel.Particulars,
-                    CRNo = existingHeaderModel.CRNo,
+                    PRNo = existingHeaderModel.CRNo,
                     JVReason = existingHeaderModel.JVReason,
                     Details = existingDetailsModel.Select(d => new JournalVoucherDetailViewModel
                     {
@@ -613,22 +669,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         SubAccountId = d.SubAccountId,
                         SubAccountCodeName = d.SubAccountName
                     }).ToList(),
-                    CheckVoucherHeaders = await _dbContext.FilprideCheckVoucherHeaders
-                        .OrderBy(c => c.CheckVoucherHeaderNo)
-                        .Where(c =>
-                            c.Company == companyClaims &&
-                            c.IsAdvances &&
-                            c.EmployeeId != null &&
-                            c.Status == nameof(CheckVoucherPaymentStatus.Unliquidated))
-                        .Select(cvh => new SelectListItem
-                        {
-                            Value = cvh.CheckVoucherHeaderId.ToString(),
-                            Text = cvh.CheckVoucherHeaderNo
-                        })
-                        .ToListAsync(cancellationToken),
-                    COA = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken),
                     MinDate = minDate
                 };
+
+                if (companyClaims == null)
+                {
+                    return BadRequest();
+                }
+
+                await PopulateLiquidationDependenciesAsync(model, companyClaims, cancellationToken, existingHeaderModel.CVId, existingHeaderModel.CRNo);
 
                 return View(model);
             }
@@ -645,12 +694,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditLiquidation(JournalVoucherViewModel viewModel, CancellationToken cancellationToken)
         {
-            if (!ModelState.IsValid)
-            {
-                TempData["warning"] = "The information provided was invalid.";
-                return View(viewModel);
-            }
-
             var companyClaims = await GetCompanyClaimAsync();
 
             if (companyClaims == null)
@@ -658,24 +701,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            await PopulateLiquidationDependenciesAsync(viewModel, companyClaims, cancellationToken, viewModel.CVId, viewModel.PRNo);
 
-            viewModel.COA = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
-            viewModel.CheckVoucherHeaders = await _dbContext.FilprideCheckVoucherHeaders
-                .OrderBy(c => c.CheckVoucherHeaderNo)
-                .Where(c =>
-                    c.Company == companyClaims &&
-                    c.IsAdvances &&
-                    c.EmployeeId != null &&
-                    c.Status == nameof(CheckVoucherPaymentStatus.Unliquidated))
-                .Select(cvh => new SelectListItem
-                {
-                    Value = cvh.CheckVoucherHeaderId.ToString(),
-                    Text = cvh.CheckVoucherHeaderNo
-                })
-                .ToListAsync(cancellationToken);
-            viewModel.MinDate = await _unitOfWork
-                .GetMinimumPeriodBasedOnThePostedPeriods(Module.JournalVoucher, cancellationToken);
+            if (!ModelState.IsValid)
+            {
+                TempData["warning"] = "The information provided was invalid.";
+                return View(viewModel);
+            }
+
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             try
             {
@@ -700,7 +734,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingHeaderModel.References = viewModel.References;
                 existingHeaderModel.CVId = viewModel.CVId;
                 existingHeaderModel.Particulars = viewModel.Particulars;
-                existingHeaderModel.CRNo = viewModel.CRNo;
+                existingHeaderModel.CRNo = viewModel.PRNo;
                 existingHeaderModel.JVReason = viewModel.JVReason;
                 existingHeaderModel.EditedBy = GetUserFullName();
                 existingHeaderModel.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
