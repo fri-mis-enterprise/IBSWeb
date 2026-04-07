@@ -22,16 +22,27 @@ namespace IBS.Models.Filpride.ViewModels
         [Display(Name = "CV Id")]
         public int? CVId { get; set; }
 
+        [Display(Name = "Employee")]
+        [Required(ErrorMessage = "The Employee field is required.")]
+        public int? EmployeeId { get; set; }
+
         [ForeignKey(nameof(CVId))]
         public FilprideCheckVoucherHeader? CheckVoucherHeader { get; set; }
 
         [NotMapped]
         public List<SelectListItem>? CheckVoucherHeaders { get; set; }
 
+        [NotMapped]
+        public List<SelectListItem>? Employees { get; set; }
+
         public string Particulars { get; set; } = null!;
 
-        [Display(Name = "CR No")]
-        public string? CRNo { get; set; }
+        [Display(Name = "PR No")]
+        [Required(ErrorMessage = "The PR No field is required.")]
+        public string? PRNo { get; set; }
+
+        [NotMapped]
+        public List<SelectListItem>? ProvisionalReceipts { get; set; }
 
         [Display(Name = "JV Reason")]
         public string JVReason { get; set; } = null!;

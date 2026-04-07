@@ -40,21 +40,30 @@
                         <label asp-for="References" class="control-label"></label>
                     </div>
                     <div class="form-group mb-3">
+                        <label asp-for="EmployeeId" class="control-label"></label><span class="required">*</span>
+                        <select asp-for="EmployeeId" asp-items="@Model.Employees" class="form-select js-select2" style="width:100%" required>
+                            <option></option>
+                        </select>
+                        <span asp-validation-for="EmployeeId" class="text-danger"></span>
+                    </div>
+                    <div class="form-group mb-3">
                         <label class="control-label">CV No.</label>
-                        <select asp-for="CVId" asp-items="@Model.CheckVoucherHeaders" class="form-select js-select2 checkVoucher" style="width:100%">
+                        <select asp-for="CVId" asp-items="@Model.CheckVoucherHeaders" class="form-select js-select2 checkVoucher" style="width:100%" required>
                             <option></option>
                         </select>
                         <span asp-validation-for="CVId" class="text-danger"></span>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label asp-for="PRNo" class="control-label"></label><span class="required">*</span>
+                        <select asp-for="PRNo" asp-items="@Model.ProvisionalReceipts" class="form-select js-select2" style="width:100%" required>
+                            <option></option>
+                        </select>
+                        <span asp-validation-for="PRNo" class="text-danger"></span>
                     </div>
                     <div class="form-floating mb-3">
                         <input asp-for="Particulars" type="text" class="form-control" placeholder="" />
                         <label asp-for="Particulars" class="control-label">Particulars</label>
                         <span asp-validation-for="Particulars" class="text-danger"></span>
-                    </div>
-                    <div class="form-floating mb-3">
-                        <input asp-for="CRNo" type="text" class="form-control" placeholder="" />
-                        <label asp-for="CRNo" class="control-label"></label>
-                        <span asp-validation-for="CRNo" class="text-danger"></span>
                     </div>
                     <div class="form-floating mb-3">
                         <textarea asp-for="JVReason" type="text" class="form-control" placeholder="Enter JV Reason" style="height: 100px"></textarea>
@@ -284,6 +293,12 @@
                 allowClear: true,
                 width: 'resolve',
                 theme: 'classic'
+            });
+
+            $('#EmployeeId, #CVId, #PRNo').select2({
+                placeholder: "Select an option...",
+                allowClear: true,
+                width: 'resolve'
             });
 
             updateTotalDebitAndCredit();
@@ -596,14 +611,53 @@
             $("#tableBody").empty();
         }
 
+        function populateSelectOptions(selector, items, selectedValue) {
+            const select = $(selector);
+            select.empty().append('<option></option>');
+
+            $.each(items, function (_, item) {
+                const option = new Option(item.text, item.value, false, item.value == selectedValue);
+                select.append(option);
+            });
+
+            select.trigger('change.select2');
+        }
+
+        function loadEmployeeOptions(employeeId, selectedCvId, selectedPrNo) {
+            if (!employeeId) {
+                populateSelectOptions("#CVId", [], null);
+                populateSelectOptions("#PRNo", [], null);
+                clearFields();
+                return;
+            }
+
+            $.get('@Url.Action("GetLiquidationCheckVouchersByEmployee", "JournalVoucher", new { area = "Filpride" })',
+                { employeeId: employeeId, selectedCvId: selectedCvId })
+                .done(function (data) {
+                    populateSelectOptions("#CVId", data, selectedCvId);
+                    cvDetails($("#CVId").val());
+                });
+
+            $.get('@Url.Action("GetProvisionalReceiptsByEmployee", "JournalVoucher", new { area = "Filpride" })',
+                { employeeId: employeeId, selectedPrNo: selectedPrNo })
+                .done(function (data) {
+                    populateSelectOptions("#PRNo", data, selectedPrNo);
+                });
+        }
+
+        $("#EmployeeId").change(function () {
+            loadEmployeeOptions($(this).val(), null, null);
+        });
+
         $(".checkVoucher").each(function () {
-            var cvId = $(this).val();
-            cvDetails(cvId);
+            cvDetails($(this).val());
         });
 
         $(".checkVoucher").change(function () {
             var cvId = $(this).val();
             cvDetails(cvId);
         });
+
+        loadEmployeeOptions($("#EmployeeId").val(), $("#CVId").val(), $("#PRNo").val());
     </script>
 }
