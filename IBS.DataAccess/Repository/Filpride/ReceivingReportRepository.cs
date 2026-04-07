@@ -443,16 +443,13 @@ namespace IBS.DataAccess.Repository.Filpride
                 throw new Exception("Receiving Report or Inventory not found.");
             }
 
-            var hasAlreadyBeenUsed = await _db.FilprideSalesInvoices
-                .AnyAsync(si =>
+            var existingSalesInvoice = await _db.FilprideSalesInvoices
+                .FirstOrDefaultAsync(si =>
                     si.ReceivingReportId == model.ReceivingReportId &&
                     si.Status != nameof(Status.Voided) &&
                     si.Status != nameof(Status.Canceled), cancellationToken);
 
-            if (hasAlreadyBeenUsed)
-            {
-                throw new InvalidOperationException("This record has already been utilized in a sales invoice. Voiding is not permitted.");
-            }
+            existingSalesInvoice?.ReceivingReportId = 0;
 
             model.VoidedBy = currentUser;
             model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
