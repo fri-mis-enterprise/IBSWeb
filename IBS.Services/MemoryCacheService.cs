@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -42,6 +43,8 @@ namespace IBS.Services
             TimeSpan absoluteExpiration,
             CancellationToken cancellationToken = default)
         {
+            var cacheEntrySize = EstimateSize(value);
+
             _cache.Set(
                 key,
                 value,
@@ -49,7 +52,7 @@ namespace IBS.Services
                 {
                     SlidingExpiration = slidingExpiration,
                     AbsoluteExpirationRelativeToNow = absoluteExpiration,
-                    Size = 1,
+                    Size = cacheEntrySize,
                     PostEvictionCallbacks =
                     {
                         new PostEvictionCallbackRegistration
@@ -61,6 +64,18 @@ namespace IBS.Services
 
             _keys.TryAdd(key, 0);
             return Task.CompletedTask;
+        }
+
+        private static long EstimateSize<T>(T value)
+        {
+            return value switch
+            {
+                null => 1,
+                string text => Math.Max(1, text.Length * sizeof(char)),
+                byte[] bytes => Math.Max(1, bytes.Length),
+                ICollection collection => Math.Max(1, collection.Count * 256L),
+                _ => 1024L
+            };
         }
 
         public Task RemoveAsync(string key, CancellationToken cancellationToken = default)

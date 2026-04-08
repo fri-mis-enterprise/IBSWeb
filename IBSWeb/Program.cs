@@ -55,7 +55,12 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 // Razor
-builder.Services.AddRazorPages().AddRazorRuntimeCompilation();
+IMvcBuilder razorPagesBuilder = builder.Services.AddRazorPages();
+
+if (builder.Environment.IsDevelopment())
+{
+    razorPagesBuilder.AddRazorRuntimeCompilation();
+}
 
 // Repositories + DI
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();

@@ -945,16 +945,24 @@ namespace IBS.DataAccess.Repository.Filpride
                 .AnyAsync(dr => dr.ManualDrNo == manualDrNo);
         }
 
-        public async Task RecalculateDeliveryReceipts(int customerOrderSlipId, decimal updatedPrice, string userName, CancellationToken cancellationToken = default)
+        public async Task RecalculateDeliveryReceipts(
+            int customerOrderSlipId,
+            decimal updatedPrice,
+            string userName,
+            CancellationToken cancellationToken = default)
         {
-            var deliveryReceipts = await GetAllAsync(x => x.CustomerOrderSlipId == customerOrderSlipId
-                                                          && x.VoidedBy == null
-                                                          && x.CanceledBy == null, cancellationToken);
+            List<FilprideDeliveryReceipt> deliveryReceipts = await dbSet
+                .Where(x => x.CustomerOrderSlipId == customerOrderSlipId
+                            && x.VoidedBy == null
+                            && x.CanceledBy == null)
+                .Include(dr => dr.CustomerOrderSlip)
+                    .ThenInclude(cos => cos!.Product)
+                .ToListAsync(cancellationToken);
 
-            foreach (var deliveryReceipt in deliveryReceipts)
+            foreach (FilprideDeliveryReceipt deliveryReceipt in deliveryReceipts)
             {
-                var updatedAmount = deliveryReceipt.Quantity * updatedPrice;
-                var difference = updatedAmount - deliveryReceipt.TotalAmount;
+                decimal updatedAmount = deliveryReceipt.Quantity * updatedPrice;
+                decimal difference = updatedAmount - deliveryReceipt.TotalAmount;
                 deliveryReceipt.TotalAmount = updatedAmount;
 
                 if (deliveryReceipt.DeliveredDate == null)
