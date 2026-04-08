@@ -43,8 +43,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private readonly ILogger<CheckVoucherNonTradeInvoiceController> _logger;
 
-        private readonly ICacheService _cacheService;
-
         private readonly ISubAccountResolver _subAccountResolver;
 
         private const string FilterTypeClaimType = "CheckVoucherNonTradeInvoice.FilterType";
@@ -54,7 +52,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             ApplicationDbContext dbContext,
             ICloudStorageService cloudStorageService,
             ILogger<CheckVoucherNonTradeInvoiceController> logger,
-            ICacheService cacheService,
             ISubAccountResolver subAccountResolver)
         {
             _unitOfWork = unitOfWork;
@@ -62,7 +59,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             _dbContext = dbContext;
             _cloudStorageService = cloudStorageService;
             _logger = logger;
-            _cacheService = cacheService;
             _subAccountResolver = subAccountResolver;
         }
 
@@ -275,68 +271,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            string coaCacheKey = $"coa:{companyClaims}";
-            string supplierCacheKey = $"supplier:{companyClaims}";
-            string minDateCacheKey = $"minDate:{companyClaims}";
-
-            // Chart of Accounts
-            List<SelectListItem>? coaSelectList = await _cacheService.GetAsync<List<SelectListItem>>(
-                coaCacheKey,
-                cancellationToken);
-
-            if (coaSelectList == null)
-            {
-                coaSelectList = await _unitOfWork
-                    .GetChartOfAccountListAsyncByAccountTitle(cancellationToken);
-
-                await _cacheService.SetAsync(
-                    coaCacheKey,
-                    coaSelectList,
-                    TimeSpan.FromMinutes(1),
-                    TimeSpan.FromHours(1),
-                    cancellationToken);
-            }
+            List<SelectListItem> coaSelectList = await _unitOfWork
+                .GetChartOfAccountListAsyncByAccountTitle(cancellationToken);
 
             _logger.LogInformation("CheckVoucherNonTradeInvoice/Create GET loaded {CoaCount} chart of account items for company {Company}.",
                 coaSelectList.Count, companyClaims);
 
-            List<SelectListItem>? supplierSelectList = await _cacheService.GetAsync<List<SelectListItem>>(
-                supplierCacheKey,
-                cancellationToken);
-
-            // Suppliers
-            if (supplierSelectList == null)
-            {
-                supplierSelectList = await _unitOfWork
-                    .GetFilprideNonTradeSupplierListAsyncById(companyClaims, cancellationToken);
-
-                await _cacheService.SetAsync(
-                    supplierCacheKey,
-                    supplierSelectList,
-                    TimeSpan.FromMinutes(1),
-                    TimeSpan.FromHours(1),
-                    cancellationToken);
-            }
+            List<SelectListItem> supplierSelectList = await _unitOfWork
+                .GetFilprideNonTradeSupplierListAsyncById(companyClaims, cancellationToken);
 
             _logger.LogInformation("CheckVoucherNonTradeInvoice/Create GET loaded {SupplierCount} supplier items for company {Company}.",
                 supplierSelectList.Count, companyClaims);
 
-            // Min Date
-            DateTime minDate = await _cacheService.GetAsync<DateTime>(
-                minDateCacheKey,
-                cancellationToken);
-
-            if (minDate == default)
-            {
-                minDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
-
-                await _cacheService.SetAsync(
-                    minDateCacheKey,
-                    minDate,
-                    TimeSpan.FromMinutes(1),
-                    TimeSpan.FromHours(1),
-                    cancellationToken);
-            }
+            DateTime minDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
 
             viewModel.ChartOfAccounts = coaSelectList;
             viewModel.Suppliers = supplierSelectList;
