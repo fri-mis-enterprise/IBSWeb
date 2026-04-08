@@ -2,6 +2,9 @@
 
 @{
     ViewData["Title"] = "Check Voucher Non-Trade Invoice - Edit";
+    var chartOfAccountItems = Model.ChartOfAccounts!
+        .Where(account => !account.Value.StartsWith("202010200"))
+        .ToList();
 }
 
 <link rel="stylesheet" href="~/css/form-style.css">
@@ -97,62 +100,55 @@
                                 <tbody>
                                 @for (var i = 0; i < Model.AccountingEntries!.Count; i++)
                                 {
-                                <tr>
-                                    <td>
-                                        <select name="AccountingEntries[@i].AccountTitle" asp-for="@Model.AccountingEntries[i].AccountTitle"
-                                                class="form-select form-select-sm chart-of-accounts default-expense js-select2 w-100"
-                                                style="width: 100%">
-                                            <option value="">-- Select Account --</option>
-                                            @foreach (var account in Model.ChartOfAccounts!)
-                                            {
-                                            if (account.Value.StartsWith("202010200"))
-                                            {
-                                            continue; //Exclude the AP-Non Trade Payable
-                                            }
-
-                                            <option value="@account.Value">@account.Text</option>
-                                            }
-                                        </select>
-                                        <input type="hidden" name="AccountingEntries[@i].BankMasterFileId" value="@Model.AccountingEntries[i].BankMasterFileId" class="bank-master-file-id" />
-                                        <input type="hidden" name="AccountingEntries[@i].CompanyMasterFileId" value="@Model.AccountingEntries[i].CompanyMasterFileId" class="company-master-file-id" />
-                                        <input type="hidden" name="AccountingEntries[@i].EmployeeMasterFileId" value="@Model.AccountingEntries[i].EmployeeMasterFileId" class="employee-master-file-id" />
-                                        <input type="hidden" name="AccountingEntries[@i].CustomerMasterFileId" value="@Model.AccountingEntries[i].CustomerMasterFileId" class="customer-master-file-id" />
-                                        <input type="hidden" name="AccountingEntries[@i].SupplierMasterFileId" value="@Model.AccountingEntries[i].SupplierMasterFileId" class="supplier-master-file-id" />
-                                    </td>
-                                    <td>
-                                        <input type="number" name="AccountingEntries[@i].Amount" value="@Model.AccountingEntries[i].Amount" class="form-control form-control-sm text-end amount" />
-                                    </td>
-                                    <td class="text-center">
-                                        <input type="checkbox"
-                                               name="AccountingEntries[@i].Vatable"
-                                               value="true"
-                                               @(Model.AccountingEntries[i].Vatable ? "checked" : "")
-                                               class="form-check-input vatable default-vatable" />
-                                    </td>
-                                    <td>
-                                        <select name="AccountingEntries[@i].TaxPercentage" asp-for="@Model.AccountingEntries[i].TaxPercentage" class="form-select form-select-sm taxable">
-                                            <option value="0" selected="">0%</option>
-                                            <option value="0.0100">1%</option>
-                                            <option value="0.0200">2%</option>
-                                            <option value="0.0500">5%</option>
-                                            <option value="0.1000">10%</option>
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <input type="number" name="AccountingEntries[@i].VatAmount" value="@Model.AccountingEntries[i].VatAmount" class="form-control form-control-sm text-end vat-amount" readonly />
-                                    </td>
-                                    <td>
-                                        <input type="number" name="AccountingEntries[@i].TaxAmount" value="@Model.AccountingEntries[i].TaxAmount" class="form-control form-control-sm text-end tax-amount" readonly />
-                                    </td>
-                                    <td>
-                                        <input type="number" name="AccountingEntries[@i].NetOfVatAmount" value="@Model.AccountingEntries[i].NetOfVatAmount" class="form-control form-control-sm text-end net-of-vat" readonly />
-                                    </td>
-                                    <td class="text-center">
-                                        <button type="button" class="btn btn-danger btn-sm removeRow" @(i == 0 ? "disabled" : "")>
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
+                                    <tr>
+                                        <td>
+                                            <select name="AccountingEntries[@i].AccountTitle"
+                                                    asp-for="@Model.AccountingEntries[i].AccountTitle"
+                                                    asp-items="chartOfAccountItems"
+                                                    class="form-select form-select-sm chart-of-accounts default-expense js-select2 w-100"
+                                                    style="width: 100%">
+                                                <option value="">-- Select Account --</option>
+                                            </select>
+                                            <input type="hidden" name="AccountingEntries[@i].BankMasterFileId" value="@Model.AccountingEntries[i].BankMasterFileId" class="bank-master-file-id" />
+                                            <input type="hidden" name="AccountingEntries[@i].CompanyMasterFileId" value="@Model.AccountingEntries[i].CompanyMasterFileId" class="company-master-file-id" />
+                                            <input type="hidden" name="AccountingEntries[@i].EmployeeMasterFileId" value="@Model.AccountingEntries[i].EmployeeMasterFileId" class="employee-master-file-id" />
+                                            <input type="hidden" name="AccountingEntries[@i].CustomerMasterFileId" value="@Model.AccountingEntries[i].CustomerMasterFileId" class="customer-master-file-id" />
+                                            <input type="hidden" name="AccountingEntries[@i].SupplierMasterFileId" value="@Model.AccountingEntries[i].SupplierMasterFileId" class="supplier-master-file-id" />
+                                        </td>
+                                        <td>
+                                            <input type="number" name="AccountingEntries[@i].Amount" value="@Model.AccountingEntries[i].Amount" class="form-control form-control-sm text-end amount" />
+                                        </td>
+                                        <td class="text-center">
+                                            <input type="checkbox"
+                                                   name="AccountingEntries[@i].Vatable"
+                                                   value="true"
+                                                   @(Model.AccountingEntries[i].Vatable ? "checked" : "")
+                                                   class="form-check-input vatable default-vatable" />
+                                        </td>
+                                        <td>
+                                            <select name="AccountingEntries[@i].TaxPercentage" asp-for="@Model.AccountingEntries[i].TaxPercentage" class="form-select form-select-sm taxable">
+                                                <option value="0" selected="">0%</option>
+                                                <option value="0.0100">1%</option>
+                                                <option value="0.0200">2%</option>
+                                                <option value="0.0500">5%</option>
+                                                <option value="0.1000">10%</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="number" name="AccountingEntries[@i].VatAmount" value="@Model.AccountingEntries[i].VatAmount" class="form-control form-control-sm text-end vat-amount" readonly />
+                                        </td>
+                                        <td>
+                                            <input type="number" name="AccountingEntries[@i].TaxAmount" value="@Model.AccountingEntries[i].TaxAmount" class="form-control form-control-sm text-end tax-amount" readonly />
+                                        </td>
+                                        <td>
+                                            <input type="number" name="AccountingEntries[@i].NetOfVatAmount" value="@Model.AccountingEntries[i].NetOfVatAmount" class="form-control form-control-sm text-end net-of-vat" readonly />
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-danger btn-sm removeRow" @(i == 0 ? "disabled" : "")>
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
                                 }
                                 </tbody>
                             </table>
@@ -279,7 +275,7 @@
             vatAmountField.value = vatAmount.toFixed(4);
             taxAmountField.value = taxAmount.toFixed(4);
             netOfVatField.value = netOfVat.toFixed(4);
-            
+
             const text = accountField.options[accountField.selectedIndex]?.text || '';
             const accountTitle = text.substring(text.indexOf(')') + 1).trim();
 
@@ -746,7 +742,7 @@
             let totalValue = parseFloat($("#totalAmount").val()) || 0;
             let totalDebit = parseNumber(document.getElementById("totalDebitCell")?.textContent || "0");
             let totalCredit = parseNumber(document.getElementById("totalCreditCell")?.textContent || "0");
-            
+
             let errorMessage = "";
             let isValid = true;
 

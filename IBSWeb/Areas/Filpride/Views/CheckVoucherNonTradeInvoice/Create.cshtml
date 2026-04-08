@@ -3,6 +3,9 @@
 
 @{
     ViewData["Title"] = "Check Voucher Non-Trade Invoice - Create";
+    var chartOfAccountItems = Model.ChartOfAccounts!
+        .Where(account => !account.Value.StartsWith("202010200"))
+        .ToList();
 }
 
 <link rel="stylesheet" href="~/css/form-style.css">
@@ -28,7 +31,7 @@
                     <label class="control-label">Type<span class="required">*</span></label>
                     <select asp-for="Type" class="form-select js-select2 border-0 shadow" style="width:100%; max-height: 200px;" required>
                         <option value="" selected disabled>Select PO type</option>
-                        @foreach (DocumentType documentType in Enum.GetValues<DocumentType>())
+                        @foreach (var documentType in Enum.GetValues<DocumentType>())
                         {
                             <option value="@documentType">@documentType.ToString()</option>
                         }
@@ -110,19 +113,11 @@
                                 <tbody>
                                 <tr>
                                     <td>
-                                        <select asp-for="AccountingEntries![0].AccountTitle" 
+                                        <select asp-for="AccountingEntries![0].AccountTitle"
+                                                asp-items="chartOfAccountItems"
                                                 class="form-select form-select-sm chart-of-accounts default-expense js-select2 w-100"
                                                 style="width: 100%" required>
                                             <option value="">-- Select Account --</option>
-                                            @foreach (var account in Model.ChartOfAccounts!)
-                                            {
-                                                if (account.Value.StartsWith("202010200"))
-                                                {
-                                                    continue; //Exclude the AP-Non Trade Payable
-                                                }
-                                                
-                                                <option value="@account.Value">@account.Text</option>
-                                            }
                                         </select>
                                         <span asp-validation-for="AccountingEntries![0].AccountTitle" class="text-danger"></span>
                                     </td>
@@ -202,7 +197,7 @@
         // Object to store accumulated journal entries
         let accumulatedEntries = {};
         let reverseAccumulatedEntries = {};
-        
+
         // Store original chart of accounts HTML
         let originalChartOfAccountsHTML = null;
 
@@ -276,7 +271,7 @@
             if (vatAmount < 0) {
                 reverseAddToAccumulatedEntries(INPUT_VAT, 0, Math.abs(vatAmount));
             }
-            
+
             addToAccumulatedEntries(AP_NON_TRADE, 0, netOfTaxAmount);
 
 
@@ -428,8 +423,8 @@
             const newRowHTML = `
             <tr>
                 <td class="px-2">
-                    <select name="AccountingEntries[${rowCount}].AccountTitle" 
-                            class="form-select form-select-sm chart-of-accounts js-select2" 
+                    <select name="AccountingEntries[${rowCount}].AccountTitle"
+                            class="form-select form-select-sm chart-of-accounts js-select2"
                             style="width: 100%" required>
                         ${originalChartOfAccountsHTML}
                     </select>
@@ -493,7 +488,7 @@
             if (firstSelect) {
                 originalChartOfAccountsHTML = firstSelect.innerHTML;
             }
-            
+
             // Attach event listener to the select field
             $('.supplier').on('change', function () {
                 var supplierId = $(this).val();
@@ -632,7 +627,7 @@
                 this.submit();
             }
         });
-        
+
     </script>
     <script src="~/js/masterFileSelector.js"></script>
     <script>
