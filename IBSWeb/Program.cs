@@ -113,7 +113,7 @@ app.MapPost("/jobs/daily-service",
     })
     .AllowAnonymous();
 
-app.MapGet("/health", () => Results.Ok("Healthy"));
+app.MapGet("/health", () => Results.Ok("Healthy")).AllowAnonymous();
 
 app.UseSerilogRequestLogging();
 
@@ -126,9 +126,8 @@ if (!app.Environment.IsDevelopment())
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 app.UseStaticFiles();
-app.UseMiddleware<MaintenanceMiddleware>();
-
 app.UseRouting();
+app.UseMiddleware<MaintenanceMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 
