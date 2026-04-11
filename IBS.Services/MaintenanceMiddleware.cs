@@ -1,5 +1,6 @@
 using IBS.DataAccess.Data;
 using IBS.Utility.Constants;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,12 +18,18 @@ namespace IBS.Services
 
         public async Task InvokeAsync(HttpContext context, IServiceProvider serviceProvider)
         {
-            // Get the DbContext (or use your repository/unit of work)
+            var allowsAnonymous = context.GetEndpoint()?.Metadata.GetMetadata<IAllowAnonymous>() is not null;
+
+            if (allowsAnonymous)
+            {
+                await _next(context);
+                return;
+            }
+
             using (var scope = serviceProvider.CreateScope())
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-                // Check Maintenance Mode (update table/field as necessary)
                 var isMaintenanceMode = await dbContext.AppSettings
                     .Where(s => s.SettingKey == AppSettingKey.MaintenanceMode)
                     .Select(s => s.Value == "true")

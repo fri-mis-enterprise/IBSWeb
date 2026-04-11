@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using QuestPDF;
+using QuestPDF.Infrastructure;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,7 +29,7 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // QuestPDF
-QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+Settings.License = LicenseType.Community;
 
 builder.Services.AddAuthorization(options =>
 {
@@ -117,7 +119,7 @@ app.MapPost("/jobs/daily-service",
     })
     .AllowAnonymous();
 
-app.MapGet("/health", () => Results.Ok("Healthy"));
+app.MapGet("/health", () => Results.Ok("Healthy")).AllowAnonymous();
 
 app.UseSerilogRequestLogging();
 
@@ -130,9 +132,8 @@ if (!app.Environment.IsDevelopment())
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 app.UseStaticFiles();
-app.UseMiddleware<MaintenanceMiddleware>();
-
 app.UseRouting();
+app.UseMiddleware<MaintenanceMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 
