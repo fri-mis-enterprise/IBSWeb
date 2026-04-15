@@ -189,19 +189,20 @@
 
             $('#filterWithDCP').on('click', function() {
                 table.columns().search(''); // Clear previous filters
-                table.columns(5).search('not-null', true, true).draw();
+                table.columns(6).search('not-null', true, true).draw();
             });
 
             $('#filterWithDCR').on('click', function() {
                 table.columns().search(''); // Clear previous filters
-                table.columns(6).search('not-null', true, true).draw();
+                table.columns(7).search('not-null', true, true).draw();
             });
 
             $('#filterWithoutDates').on('click', function() {
                 table.columns().search(''); // Clear previous filters
-                table.columns(5).search('^$|^\\s*$', true, true)
-                    .columns(6).search('^$|^\\s*$', true, true)
+                table.columns(6).search('^$|^\\s*$', true, true)
+                    .columns(7).search('^$|^\\s*$', true, true)
                     .draw();
+            });
             });
 
             $('.btn-group button').on('click', function() {
