@@ -436,44 +436,49 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                #region --Retrieve PO
+                var isPosted = existingModel.PostedBy != null;
 
-                var po = await _unitOfWork.FilpridePurchaseOrder
-                    .GetAsync(x => x.PurchaseOrderId == viewModel.PurchaseOrderId, cancellationToken);
-
-                if (po == null)
-                {
-                    return NotFound();
-                }
-
-                #endregion --Retrieve PO
-
-                var totalAmountRr = po.Quantity - po.QuantityReceived;
-
-                if (viewModel.QuantityDelivered > totalAmountRr && existingModel.PostedBy == null)
-                {
-                    TempData["info"] = "Input is exceed to remaining quantity delivered";
-                    return View(viewModel);
-                }
-
-                existingModel.Date = viewModel.Date;
-                existingModel.POId = po.PurchaseOrderId;
-                existingModel.PONo = po.PurchaseOrderNo;
-                existingModel.DueDate = await _unitOfWork.FilprideReceivingReport.ComputeDueDateAsync(po.Terms, viewModel.Date, cancellationToken);
                 existingModel.SupplierInvoiceNumber = viewModel.SupplierSiNo;
                 existingModel.SupplierInvoiceDate = viewModel.SupplierSiDate;
                 existingModel.SupplierDrNo = viewModel.SupplierDrNo;
                 existingModel.WithdrawalCertificate = viewModel.WithdrawalCertificate;
                 existingModel.TruckOrVessels = viewModel.TruckOrVessels;
-                existingModel.QuantityDelivered = viewModel.QuantityDelivered;
-                existingModel.QuantityReceived = viewModel.QuantityReceived;
-                existingModel.GainOrLoss = viewModel.QuantityReceived - viewModel.QuantityDelivered;
-                existingModel.AuthorityToLoadNo = viewModel.AuthorityToLoadNo;
                 existingModel.Remarks = viewModel.Remarks;
-                existingModel.ReceivedDate = viewModel.ReceivedDate;
-                existingModel.Amount = viewModel.QuantityReceived * await _unitOfWork.FilpridePurchaseOrder.GetPurchaseOrderCost(po.PurchaseOrderId, cancellationToken);
-                existingModel.OldRRNo = viewModel.OldRRNo;
                 existingModel.CostBasedOnSoa = viewModel.CostBasedOnSoa;
+
+                if (!isPosted)
+                {
+                    #region --Retrieve PO
+
+                    var po = await _unitOfWork.FilpridePurchaseOrder
+                        .GetAsync(x => x.PurchaseOrderId == viewModel.PurchaseOrderId, cancellationToken);
+
+                    if (po == null)
+                    {
+                        return NotFound();
+                    }
+
+                    #endregion --Retrieve PO
+
+                    var totalAmountRr = po.Quantity - po.QuantityReceived + existingModel.QuantityReceived;
+
+                    if (viewModel.QuantityDelivered > totalAmountRr)
+                    {
+                        TempData["info"] = "Input is exceed to remaining quantity delivered";
+                        return View(viewModel);
+                    }
+
+                    existingModel.Date = viewModel.Date;
+                    existingModel.POId = po.PurchaseOrderId;
+                    existingModel.PONo = po.PurchaseOrderNo;
+                    existingModel.DueDate = await _unitOfWork.FilprideReceivingReport.ComputeDueDateAsync(po.Terms, viewModel.Date, cancellationToken);
+                    existingModel.QuantityDelivered = viewModel.QuantityDelivered;
+                    existingModel.QuantityReceived = viewModel.QuantityReceived;
+                    existingModel.GainOrLoss = viewModel.QuantityReceived - viewModel.QuantityDelivered;
+                    existingModel.AuthorityToLoadNo = viewModel.AuthorityToLoadNo;
+                    existingModel.ReceivedDate = viewModel.ReceivedDate;
+                    existingModel.Amount = viewModel.QuantityReceived * await _unitOfWork.FilpridePurchaseOrder.GetPurchaseOrderCost(po.PurchaseOrderId, cancellationToken);
+                }
 
                 if (!_dbContext.ChangeTracker.HasChanges())
                 {
