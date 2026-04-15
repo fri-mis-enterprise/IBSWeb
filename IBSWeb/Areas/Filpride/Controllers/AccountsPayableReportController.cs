@@ -3025,7 +3025,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                        && drIds.Contains(rr.DeliveryReceiptId.Value), cancellationToken);
                 var rrLookup = receivingReports
                     .Where(rr => rr.DeliveryReceiptId.HasValue)
-                    .ToDictionary(rr => rr.DeliveryReceiptId!.Value, rr => rr);
+                    .ToLookup(rr => rr.DeliveryReceiptId!.Value);
 
                 #region -- Initialize "total" Variables for operations --
 
@@ -3121,24 +3121,33 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var isSupplierVatable = dr.PurchaseOrder!.VatType == SD.VatType_Vatable;
                     var isHaulerVatable = dr.HaulerVatType == SD.VatType_Vatable;
                     var isCustomerVatable = dr.CustomerOrderSlip!.VatType == SD.VatType_Vatable;
-
-                    var rr = dr.HasReceivingReport && rrLookup.TryGetValue(dr.DeliveryReceiptId, out var receivingReport)
-                        ? receivingReport
-                        : null;
-
+                    var relatedReceivingReports = dr.HasReceivingReport
+                        ? rrLookup[dr.DeliveryReceiptId].OrderBy(rr => rr.Date).ToList()
+                        : [];
+                    var rrNumbers = relatedReceivingReports
+                        .Select(rr => rr.ReceivingReportNo)
+                        .Where(rrNo => !string.IsNullOrWhiteSpace(rrNo));
+                    var rrDateDisplay = relatedReceivingReports.Count switch
+                    {
+                        0 => dr.DeliveredDate?.ToString("MMM/dd/yyyy"),
+                        1 => relatedReceivingReports[0].Date.ToString("MMM/dd/yyyy"),
+                        _ => $"{relatedReceivingReports.First().Date:MMM/dd/yyyy} - {relatedReceivingReports.Last().Date:MMM/dd/yyyy}"
+                    };
                     var volume = dr.Quantity;
                     var cosPricePerLiter = dr.CustomerOrderSlip.DeliveredPrice; // sales per liter
                     var salesAmount = dr.TotalAmount; // sales total
                     var netSales = isCustomerVatable
                         ? repoCalculator.ComputeNetOfVat(salesAmount)
                         : salesAmount;
-                    var costAmount = rr?.Amount ?? dr.PurchaseOrder.FinalPrice * volume; // purchase total
-                    var costPerLiter = costAmount / volume; // purchase per liter
+                    var costAmount = relatedReceivingReports.Count > 0
+                        ? relatedReceivingReports.Sum(rr => rr.Amount)
+                        : dr.PurchaseOrder.FinalPrice * volume; // purchase total
+                    var costPerLiter = volume != 0m ? costAmount / volume : 0m; // purchase per liter
                     var netPurchases = isSupplierVatable
                         ? repoCalculator.ComputeNetOfVat(costAmount)
                         : costAmount; // purchase total net
                     var gmAmount = netSales - netPurchases; // gross margin total
-                    var gmPerLiter = gmAmount / volume; // gross margin per liter
+                    var gmPerLiter = volume != 0m ? gmAmount / volume : 0m; // gross margin per liter
                     var freightCharge = dr.Freight + dr.ECC; // freight charge per liter
                     var freightChargeAmount = dr.FreightAmount; // freight charge total
                     var freightChargeNet = isHaulerVatable && freightChargeAmount != 0m
@@ -3147,17 +3156,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var commissionPerLiter = dr.CommissionRate; // commission rate
                     var commissionAmount = dr.CommissionAmount; // commission total
                     var netMarginAmount = gmAmount - freightChargeNet - commissionAmount;
-                    var netMarginPerLiter = netMarginAmount / volume; // net margin per liter
+                    var netMarginPerLiter = volume != 0m ? netMarginAmount / volume : 0m; // net margin per liter
 
                     #endregion -- Variables and Formulas --
 
                     #region -- Assign Values to Cells --
 
-                    gmReportWorksheet.Cells[row, 1].Value = dr.DeliveredDate;
+                    gmReportWorksheet.Cells[row, 1].Value = rrDateDisplay;
                     gmReportWorksheet.Cells[row, 2].Value = dr.PurchaseOrder.SupplierName;
                     gmReportWorksheet.Cells[row, 3].Value = dr.PurchaseOrder.Terms;
                     gmReportWorksheet.Cells[row, 4].Value = dr.PurchaseOrder.PurchaseOrderNo;
-                    gmReportWorksheet.Cells[row, 5].Value = rr?.ReceivingReportNo;
+                    gmReportWorksheet.Cells[row, 5].Value = string.Join(", ", rrNumbers);
                     gmReportWorksheet.Cells[row, 6].Value = dr.DeliveryReceiptNo;
                     gmReportWorksheet.Cells[row, 7].Value = dr.CustomerOrderSlip.CustomerName;
                     gmReportWorksheet.Cells[row, 8].Value = dr.PurchaseOrder.ProductName;
@@ -3197,8 +3206,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     totalNetSales += netSales;
                     totalFcNet += freightChargeNet;
 
-                    gmReportWorksheet.Cells[row, 1].Style.Numberformat.Format = "MMM/dd/yyyy";
-
                     #endregion -- Add the values to total and format number cells --
 
                     row++;
@@ -3208,12 +3215,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region -- Other subtotal values and formatting of subtotal cells --
 
-                var totalCostPerLiter = totalCostAmount / totalVolume;
-                var totalCosPrice = totalSalesAmount / totalVolume;
-                totalGmPerLiter = totalGmAmount / totalVolume;
-                var totalFreightCharge = totalFcAmount / totalVolume;
-                var totalCommissionPerLiter = totalCommissionAmount / totalVolume;
-                totalNetMarginPerLiter = totalNetMarginAmount / totalVolume;
+                var totalCostPerLiter = totalVolume != 0m ? totalCostAmount / totalVolume : 0m;
+                var totalCosPrice = totalVolume != 0m ? totalSalesAmount / totalVolume : 0m;
+                totalGmPerLiter = totalVolume != 0m ? totalGmAmount / totalVolume : 0m;
+                var totalFreightCharge = totalVolume != 0m ? totalFcAmount / totalVolume : 0m;
+                var totalCommissionPerLiter = totalVolume != 0m ? totalCommissionAmount / totalVolume : 0m;
+                totalNetMarginPerLiter = totalVolume != 0m ? totalNetMarginAmount / totalVolume : 0m;
 
                 gmReportWorksheet.Cells[row, 10].Value = "Total: ";
                 gmReportWorksheet.Cells[row, 12].Value = totalVolume;
@@ -3499,18 +3506,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var totalNetMarginForEnvirogas = 0m;
                 var totalNetMarginPerLiterForEnvirogas = 0m;
 
-                var purchaseAmountsCache = grossMarginReport.ToDictionary(
-                    dr => dr.DeliveryReceiptId,
-                    dr =>
-                    {
-                        if (dr.HasReceivingReport && rrLookup.TryGetValue(dr.DeliveryReceiptId, out var rr))
-                        {
-                            return rr.Amount;
-                        }
-                        return dr.PurchaseOrder!.FinalPrice * dr.Quantity;
-                    }
-                );
-
                 foreach (var customerType in Enum.GetValues<CustomerType>())
                 {
                     var list = grossMarginReport.Where(s => s.Customer?.CustomerType == customerType.ToString()).ToList();
@@ -3527,7 +3522,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var overallNetOfSalesSum = isCustomerVatable && overallSalesSum != 0m
                         ? repoCalculator.ComputeNetOfVat(overallSalesSum)
                         : overallSalesSum;
-                    var overallPurchasesSum = list.Sum(s => purchaseAmountsCache[s.DeliveryReceiptId]);
+                    var overallPurchasesSum = list.Sum(s =>
+                    {
+                        var relatedRrs = s.HasReceivingReport ? rrLookup[s.DeliveryReceiptId] : [];
+                        return relatedRrs.Any() ? relatedRrs.Sum(rr => rr.Amount) : s.PurchaseOrder!.FinalPrice * s.Quantity;
+                    });
                     var overallNetOfPurchasesSum = isSupplierVatable && overallPurchasesSum != 0m
                         ? repoCalculator.ComputeNetOfVat(overallPurchasesSum)
                         : overallPurchasesSum;
@@ -3565,7 +3564,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var biodieselNetOfSalesSum = isCustomerVatable && biodieselSalesSum != 0m
                         ? repoCalculator.ComputeNetOfVat(biodieselSalesSum)
                         : biodieselSalesSum;
-                    var biodieselPurchasesSum = listForBiodiesel.Sum(s => purchaseAmountsCache[s.DeliveryReceiptId]);
+                    var biodieselPurchasesSum = listForBiodiesel.Sum(s =>
+                    {
+                        var relatedRrs = s.HasReceivingReport ? rrLookup[s.DeliveryReceiptId] : [];
+                        return relatedRrs.Any() ? relatedRrs.Sum(rr => rr.Amount) : s.PurchaseOrder!.FinalPrice * s.Quantity;
+                    });
                     var biodieselNetOfPurchasesSum = isSupplierVatable && biodieselPurchasesSum != 0m
                         ? repoCalculator.ComputeNetOfVat(biodieselPurchasesSum)
                         : biodieselPurchasesSum;
@@ -3602,7 +3605,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var econogasNetOfSalesSum = isCustomerVatable && econogasSalesSum != 0m
                         ? repoCalculator.ComputeNetOfVat(econogasSalesSum)
                         : econogasSalesSum;
-                    var econogasPurchasesSum = listForEconogas.Sum(s => purchaseAmountsCache[s.DeliveryReceiptId]);
+                    var econogasPurchasesSum = listForEconogas.Sum(s =>
+                    {
+                        var relatedRrs = s.HasReceivingReport ? rrLookup[s.DeliveryReceiptId] : [];
+                        return relatedRrs.Any() ? relatedRrs.Sum(rr => rr.Amount) : s.PurchaseOrder!.FinalPrice * s.Quantity;
+                    });
                     var econogasNetOfPurchasesSum = isSupplierVatable && econogasPurchasesSum != 0m
                         ? repoCalculator.ComputeNetOfVat(econogasPurchasesSum)
                         : econogasPurchasesSum;
@@ -3639,7 +3646,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var envirogasNetOfSalesSum = isCustomerVatable && envirogasSalesSum != 0m
                         ? repoCalculator.ComputeNetOfVat(envirogasSalesSum)
                         : envirogasSalesSum;
-                    var envirogasPurchasesSum = listForEnvirogas.Sum(s => purchaseAmountsCache[s.DeliveryReceiptId]);
+                    var envirogasPurchasesSum = listForEnvirogas.Sum(s =>
+                    {
+                        var relatedRrs = s.HasReceivingReport ? rrLookup[s.DeliveryReceiptId] : [];
+                        return relatedRrs.Any() ? relatedRrs.Sum(rr => rr.Amount) : s.PurchaseOrder!.FinalPrice * s.Quantity;
+                    });
                     var envirogasNetOfPurchasesSum = isSupplierVatable && envirogasPurchasesSum != 0m
                         ? repoCalculator.ComputeNetOfVat(envirogasPurchasesSum)
                         : envirogasPurchasesSum;
