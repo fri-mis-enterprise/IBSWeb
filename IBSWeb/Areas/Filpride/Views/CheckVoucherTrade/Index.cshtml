@@ -30,6 +30,7 @@
                         <th class="text-start">CV#</th>
                         <th class="text-start">Date</th>
                         <th class="text-start">Supplier</th>
+                        <th class="text-start">Check#</th>
                         <th class="text-start">Total</th>
                         <th class="text-start">Created By</th>
                         <th class="text-start">Status</th>
@@ -100,7 +101,7 @@
                 cancelButtonColor: '#d33',
                 confirmButtonText: 'Yes'
             }).then((result) => {
-                if (result.isConfirmed) {   
+                if (result.isConfirmed) {
                     $.ajax({
                         url: '@Url.Action("Cancel", "CheckVoucherTrade", new { area = "Filpride" })',
                         type: 'POST',
@@ -182,7 +183,7 @@
                     "render": function (data, type, row) {
                         // Assuming 'Date' is in ISO format like "2024-07-12T00:00:00"
                         var date = new Date(data);
-                        return date.toLocaleDateString('en-US', { 
+                        return date.toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'short',
                             day: '2-digit'
@@ -190,6 +191,7 @@
                     }
                 },
                 { "data": "supplier.supplierName" },
+                { "data": "checkNo" },
                 {
                     "data": "total",
                     "render": function (data, type, row) {
@@ -213,9 +215,9 @@
                     "orderable": false,
                     "render": function (data, type, row) {
                         var dropdown = `<div class="dropdown actions-dropdown" style="${row.voidedBy != null || row.canceledBy != null ? 'display:none;' : ''}">
-                                             <button class="btn btn-light btn-sm dropdown-toggle w-100" 
-                                                        type="button" 
-                                                        data-bs-toggle="dropdown" 
+                                             <button class="btn btn-light btn-sm dropdown-toggle w-100"
+                                                        type="button"
+                                                        data-bs-toggle="dropdown"
                                                         aria-expanded="false">
                                                     <i class="bi bi-three-dots"></i>
                                             </button>

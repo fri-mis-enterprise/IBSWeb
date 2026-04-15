@@ -114,7 +114,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         (hasDate && s.Date == date) ||
                         s.Reference!.ToLower().Contains(searchValue) == true ||
                         s.Status.ToLower().Contains(searchValue) ||
-                        s.Particulars!.ToLower().Contains(searchValue) == true
+                        s.Particulars!.ToLower().Contains(searchValue) == true ||
+                        s.CheckNo!.ToLower().Contains(searchValue) == true
                         );
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)

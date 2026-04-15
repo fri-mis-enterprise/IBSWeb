@@ -90,6 +90,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         s.Total.ToString().Contains(searchValue) ||
                         s.CheckVoucherHeaderId.ToString().Contains(searchValue) ||
                         s.Reference!.ToLower().Contains(searchValue) == true ||
+                        s.CheckNo!.ToLower().Contains(searchValue) == true ||
                         (hasDate && s.Date == date) ||
                         (hasDcpDate && s.DcpDate == dcpDate) == true ||
                         (hasDcrDate && s.DcrDate == dcrDate) == true
