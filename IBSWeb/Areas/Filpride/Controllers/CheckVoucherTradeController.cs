@@ -198,7 +198,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             s.Category.ToLower().Contains(searchValue) ||
                             s.CvType!.ToLower().Contains(searchValue) == true ||
                             s.CreatedBy!.ToLower().Contains(searchValue) ||
-                            s.Particulars!.ToLower().Contains(searchValue) == true
+                            s.Particulars!.ToLower().Contains(searchValue) == true ||
+                            s.CheckNo!.ToLower().Contains(searchValue) == true
                         );
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)

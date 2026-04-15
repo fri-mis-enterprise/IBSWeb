@@ -46,6 +46,7 @@
                         <th class="text-start">Date</th>
                         <th class="text-start">Payee</th>
                         <th class="text-start">INV#</th>
+                        <th class="text-start">Check#</th>
                         <th class="text-start">Total</th>
                         <th class="text-start">Status</th>
                         <th class="text-center" style="width: 100px;">Actions</th>
@@ -190,7 +191,7 @@
         $(document).ready(function () {
             let filterValue = localStorage.getItem('filterDate') || "";
             $('#inputDate').val(filterValue);
-            
+
             let table = $('#paginatedTable').DataTable({
                 "processing": true,
                 "serverSide": true,
@@ -239,18 +240,19 @@
                             return date.toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'short',
-                                day: '2-digit' 
+                                day: '2-digit'
                             });
                         }
                     },
                     { "data": "payee" },
-                    { 
+                    {
                         "data": "reference",
                         "name": "reference",
                         "render": function (data, type, row) {
-                            return data ?? ""; 
+                            return data ?? "";
                         }
                     },
+                    { "data": "checkNo" },
                     {
                         "data": "total",
                         "render": function (data, type, row) {
@@ -261,14 +263,14 @@
                     {
                         "data": "status",
                         "render": function (data, type, row) {
-                            var statusClass = row.status === "@nameof(CheckVoucherPaymentStatus.Posted)" 
-                                ? "bg-info" 
-                                : row.status === "@nameof(CheckVoucherPaymentStatus.Voided)" || row.status === "@nameof(CheckVoucherPaymentStatus.Unliquidated)" 
-                                    ? "bg-danger" 
-                                    : row.status === "@nameof(CheckVoucherPaymentStatus.Canceled)" 
-                                        ? "bg-warning" 
-                                        : row.status === "@nameof(CheckVoucherPaymentStatus.Liquidated)" 
-                                            ? "bg-success" 
+                            var statusClass = row.status === "@nameof(CheckVoucherPaymentStatus.Posted)"
+                                ? "bg-info"
+                                : row.status === "@nameof(CheckVoucherPaymentStatus.Voided)" || row.status === "@nameof(CheckVoucherPaymentStatus.Unliquidated)"
+                                    ? "bg-danger"
+                                    : row.status === "@nameof(CheckVoucherPaymentStatus.Canceled)"
+                                        ? "bg-warning"
+                                        : row.status === "@nameof(CheckVoucherPaymentStatus.Liquidated)"
+                                            ? "bg-success"
                                             : "";
 
                             return `<span class="badge rounded-pill ${statusClass}">${row.status}</span>`;
@@ -279,9 +281,9 @@
                         "orderable": false,
                         "render": function (data, type, row) {
                             return `<div class="dropdown actions-dropdown" style="${row.voidedBy != null || row.canceledBy != null ? 'display:none;' : ''}">
-                                            <button class="btn btn-light btn-sm dropdown-toggle w-100" 
-                                                        type="button" 
-                                                        data-bs-toggle="dropdown" 
+                                            <button class="btn btn-light btn-sm dropdown-toggle w-100"
+                                                        type="button"
+                                                        data-bs-toggle="dropdown"
                                                         aria-expanded="false">
                                                     <i class="bi bi-three-dots"></i>
                                             </button>
@@ -310,13 +312,13 @@
                                                  </li>
                                                  ${row.isAdvances && row.status === "@nameof(CheckVoucherPaymentStatus.Unliquidated)" ? `
                                                     <li>
-                                                        <a class="dropdown-item" href="javascript:void(0);" 
+                                                        <a class="dropdown-item" href="javascript:void(0);"
                                                            onclick="confirmLiquidate(${row.checkVoucherHeaderId})">
                                                            Liquidate
                                                         </a>
                                                     </li>
                                                 ` : ``}
-                                                 
+
                                                  `
                                               }
                                             </ul>

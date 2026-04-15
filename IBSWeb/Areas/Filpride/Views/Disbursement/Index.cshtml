@@ -28,7 +28,7 @@
                         <i class="bi bi-x-circle"></i> Without Dates
                     </button>
                 </div>
-                
+
                 <table class="table table-hover mb-0" id="paginatedTable">
                     <thead class="bg-light">
                     <tr>
@@ -36,6 +36,7 @@
                         <th class="text-start">Date</th>
                         <th class="text-start">Payee</th>
                         <th class="text-start">INV#</th>
+                        <th class="text-start">Check#</th>
                         <th class="text-start">Total</th>
                         <th class="text-start">DCP Date</th>
                         <th class="text-start">DCR Date</th>
@@ -93,7 +94,7 @@
                         "name": "date",
                         "render": function (data, type, row){
                             var date = new Date(data);
-                            return date.toLocaleDateString('en-US', { 
+                            return date.toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'short',
                                 day: '2-digit'
@@ -102,6 +103,7 @@
                     },
                     { "data": "payee" },
                     { "data": "reference" },
+                    { "data": "checkNo" },
                     {
                         "data": "total",
                         "render": function (data, type, row){
@@ -117,10 +119,10 @@
                                 return ''; // Return an empty string or any placeholder for null values
                             }
                             var date = new Date(data);
-                            return date.toLocaleDateString('en-US', { 
+                            return date.toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'short',
-                                day: '2-digit' 
+                                day: '2-digit'
                             });
                         }
                     },
@@ -129,10 +131,10 @@
                         "name": "dcrDate",
                         "render": function (data, type, row) {
                             if (!data) {
-                                return ''; 
+                                return '';
                             }
                             var date = new Date(data);
-                            return date.toLocaleDateString('en-US', { 
+                            return date.toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'short',
                                 day: '2-digit'
@@ -143,13 +145,13 @@
                         "data": "checkVoucherHeaderId",
                         "orderable": false,
                         "render": function(data, type, row) {
-                            let actions = `<div class="dropdown actions-dropdown" 
+                            let actions = `<div class="dropdown actions-dropdown"
                                             @*TODO ask what is the hint for the system to make this action hidden*@
                                             @** style="${row.dcpDate != null && row.dcrDate != null ? 'display:none;' : ''}"**@
                                             >
-                                            <button class="btn btn-light btn-sm dropdown-toggle w-100" 
-                                                        type="button" 
-                                                        data-bs-toggle="dropdown" 
+                                            <button class="btn btn-light btn-sm dropdown-toggle w-100"
+                                                        type="button"
+                                                        data-bs-toggle="dropdown"
                                                         aria-expanded="false">
                                                     <i class="bi bi-three-dots"></i>
                                                  </button>
@@ -159,7 +161,7 @@
                                 actions += `<li><a class="dropdown-item" href="#" onclick="showAddDCPDate('${data}')"> Add DCP Date</a></li>`;
                             } else  {
                                 actions += `<li><a class="dropdown-item" href="#" onclick="showAddDCPDate('${data}', '${row.dcpDate}', ${row.dcrDate ? `'${row.dcrDate}'` : null})"> Update DCP Date</a></li>`;
-                                
+
                                 if (row.dcrDate === null) {
                                     actions += `<li><a class="dropdown-item" href="#" onclick="showAddDCRDate('${data}', '${row.dcpDate}')"> Add DCR Date</a></li>`;
                                 } else  {
@@ -180,7 +182,7 @@
                     }
                 ]
             });
-            
+
             $('#filterAll').on('click', function() {
                 table.columns().search('').draw();
             });
