@@ -2,7 +2,6 @@
   - name: gcr.io/cloud-builders/docker
     args:
         - build
-        - '--no-cache'
         - '-t'
         - '$_AR_HOSTNAME/$PROJECT_ID/$_SERVICE_NAME/filpride/$_SERVICE_NAME:$COMMIT_SHA'
         - '-f'
@@ -28,12 +27,39 @@
         - $_PLATFORM
         - '--labels'
         - 'company=filpride'
+        - '--cpu'
+        - '1'
+        - '--memory'
+        - '2Gi'
+        - '--concurrency'
+        - '20'
+        - '--timeout'
+        - '300'
+        - '--max-instances'
+        - '20'
+        - '--min-instances'
+        - '0'
+        - '--cpu-throttling'
+        - '--execution-environment'
+        - 'gen2'
+        - '--set-env-vars'
+        - 'ASPNETCORE_ENVIRONMENT=Production'
+        - '--set-secrets'
+        - 'ConnectionStrings__DefaultConnection=DefaultConnection:latest'
+        - '--set-cloudsql-instances'
+        - 'integrated-business-system:us-central1:ibs-instance'
         - '--quiet'
 
 timeout: 1200s
 
 images:
   - '$_AR_HOSTNAME/$PROJECT_ID/$_SERVICE_NAME/filpride/$_SERVICE_NAME:$COMMIT_SHA'
+
+substitutions:
+  _AR_HOSTNAME: us-central1-docker.pkg.dev
+  _DEPLOY_REGION: us-central1
+  _SERVICE_NAME: ibsweb
+  _PLATFORM: managed
 
 options:
   logging: CLOUD_LOGGING_ONLY
