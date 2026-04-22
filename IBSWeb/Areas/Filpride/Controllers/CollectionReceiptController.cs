@@ -2940,7 +2940,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     throw new ArgumentException("No sales invoice found");
                 }
 
-                List<(string salesInvoiceNo, string OrNumber, string problem, string customerName, DateOnly transactionDate)> listOfNeedToCorrect = new();
+                List<(string salesInvoiceNo, string OrNumber, string problem, string customerName, DateOnly transactionDate, decimal paymentAmount, decimal remainingBalance)> listOfNeedToCorrect = new();
                 var model = new List<FilprideCollectionReceipt>();
                 var details = new List<FilprideCollectionReceiptDetail>();
                 var seriesNumber = 1;
@@ -2949,23 +2949,42 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     existingSalesInvoice.TryGetValue(record.SalesInvoiceNo.Trim(), out var getSalesInvoice);
 
+                    var total = record.CashAmount + record.CheckAmount + record.ManagersCheckAmount +
+                                record.EWT + record.WVAT;
+
                     if (getSalesInvoice == null)
                     {
-                        listOfNeedToCorrect.Add((record.SalesInvoiceNo, record.ReferenceNo, "Sales Invoice not found", record.CustomerName, record.TransactionDate));
+                        listOfNeedToCorrect.Add((record.SalesInvoiceNo,
+                            record.ReferenceNo,
+                            "Sales Invoice not found",
+                            record.CustomerName,
+                            record.TransactionDate,
+                            total,
+                            getSalesInvoice?.Balance ?? 0));
                         continue;
                     }
 
-                    var total = record.CashAmount + record.CheckAmount + record.ManagersCheckAmount +
-                                record.EWT + record.WVAT;
                     if (total == 0)
                     {
-                        listOfNeedToCorrect.Add((record.SalesInvoiceNo, record.ReferenceNo, "Please input at least one type form of payment", record.CustomerName, record.TransactionDate));
+                        listOfNeedToCorrect.Add((record.SalesInvoiceNo,
+                            record.ReferenceNo,
+                            "Please input at least one type form of payment",
+                            record.CustomerName
+                            , record.TransactionDate,
+                            total,
+                            getSalesInvoice.Balance));
                         continue;
                     }
 
                     if (total > getSalesInvoice.Balance)
                     {
-                        listOfNeedToCorrect.Add((record.SalesInvoiceNo, record.ReferenceNo, $"Total payment amount: {total} cannot exceed the balance: {getSalesInvoice.Balance}", record.CustomerName, record.TransactionDate));
+                        listOfNeedToCorrect.Add((record.SalesInvoiceNo,
+                            record.ReferenceNo,
+                            $"Total payment amount: {total} cannot exceed the balance: {getSalesInvoice.Balance}",
+                            record.CustomerName,
+                            record.TransactionDate,
+                            total,
+                            getSalesInvoice.Balance));
                         continue;
                     }
 
@@ -3088,10 +3107,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 var fileContent = new StringBuilder();
                 fileContent.AppendLine($"duration of uploading single collection:{timer.Elapsed}");
-                fileContent.AppendLine($"{"Sales Invoice No",-17}\t{"OR Number",-12}\t{"Problem"}");
+                fileContent.AppendLine("Sales Invoice No\tOR Number\tProblem\tCustomer Name\tTransaction Date\tPayment Amount\tRemaining Balance");
                 foreach (var record in listOfNeedToCorrect)
                 {
-                    fileContent.AppendLine($"{record.salesInvoiceNo}\t{record.OrNumber}\t{record.problem}\t{record.customerName}\t{record.transactionDate}");
+                    fileContent.AppendLine($"{record.salesInvoiceNo}\t{record.OrNumber}\t{record.problem}\t{record.customerName}\t{record.transactionDate}\t{record.paymentAmount}\t{record.remainingBalance}");
                 }
                 // Convert the content to a byte array
                 var bytes = Encoding.UTF8.GetBytes(fileContent.ToString());
@@ -3133,7 +3152,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .Select(x => x.First())
                 .ToDictionaryAsync(x => x.SalesInvoiceNo!, cancellationToken);
 
-            List<(string? salesInvoiceNo, string? OrNumber, string problem, string? customerName, DateOnly transactionDate)> listOfNeedToCorrect = new();
+            List<(string? salesInvoiceNo, string? OrNumber, string problem, string? customerName, DateOnly transactionDate, decimal paymentAmount, decimal remainingBalance)> listOfNeedToCorrect = new();
 
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
             var model = new List<FilprideCollectionReceipt>();
@@ -3162,7 +3181,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     {
                         listOfNeedToCorrect.Add((cr.Select(x => x.SalesInvoiceNo).FirstOrDefault(),
                             cr.Select(x => x.ReferenceNo).FirstOrDefault(),
-                            "Please input at least one type form of payment", cr.Select(x => x.CustomerName).FirstOrDefault(), cr.Select(x => x.TransactionDate).FirstOrDefault()));
+                            "Please input at least one type form of payment", cr.Select(x => x.CustomerName).FirstOrDefault(),
+                            cr.Select(x => x.TransactionDate).FirstOrDefault(),
+                            cr.Select(x => x.SiAmount).FirstOrDefault(),
+                            0 ));
                         continue;
                     }
 
@@ -3193,9 +3215,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         if (getSalesInvoice == null)
                         {
                             listOfNeedToCorrect.Add((
-                                cr.Select(x => x.SalesInvoiceNo).FirstOrDefault(),
-                                cr.Select(x => x.ReferenceNo).FirstOrDefault(),
-                                "Sales Invoice not found", record.CustomerName, record.TransactionDate
+                                record.SalesInvoiceNo,
+                                record.ReferenceNo,
+                                "Sales Invoice not found",
+                                record.CustomerName,
+                                record.TransactionDate,
+                                record.SiAmount,
+                                getSalesInvoice?.Balance ?? 0
                             ));
 
                             skipOuter = true;
@@ -3203,19 +3229,27 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         }
                         if (getSalesInvoice.CustomerId == 0)
                         {
-                            listOfNeedToCorrect.Add((cr.Select(x => x.SalesInvoiceNo).FirstOrDefault(),
-                                cr.Select(x => x.ReferenceNo).FirstOrDefault(),
-                                "Customer Id not found!", record.CustomerName, record.TransactionDate));
+                            listOfNeedToCorrect.Add((
+                                record.SalesInvoiceNo,
+                                record.ReferenceNo,
+                                "Customer Id not found!",
+                                record.CustomerName,
+                                record.TransactionDate,
+                                record.SiAmount,
+                                getSalesInvoice.Balance));
 
                             continue;
                         }
                         if (record.SiAmount > getSalesInvoice.Balance)
                         {
                             listOfNeedToCorrect.Add((
-                                cr.Select(x => x.SalesInvoiceNo).FirstOrDefault(),
-                                cr.Select(x => x.ReferenceNo).FirstOrDefault(),
-                                $"Total payment amount: {record.SiAmount} cannot exceed the balance: {getSalesInvoice.Balance}"
-                                , record.CustomerName, record.TransactionDate
+                                    record.SalesInvoiceNo,
+                                    record.ReferenceNo,
+                                $"Total payment amount: {record.SiAmount} cannot exceed the balance: {getSalesInvoice.Balance}",
+                                    record.CustomerName,
+                                    record.TransactionDate,
+                                    record.SiAmount,
+                                getSalesInvoice.Balance
                             ));
 
                             skipOuter = true;
@@ -3355,10 +3389,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 var fileContent = new StringBuilder();
                 fileContent.AppendLine($"duration of uploading multiple collection:{timer.Elapsed}");
-                fileContent.AppendLine($"{"Sales Invoice No",-17}\t{"OR Number",-12}\t{"Problem"}");
+                fileContent.AppendLine("Sales Invoice No\tOR Number\tProblem\tCustomer Name\tTransaction Date\tPayment Amount\tRemaining Balance");
                 foreach (var record in listOfNeedToCorrect)
                 {
-                    fileContent.AppendLine($"{record.salesInvoiceNo}\t{record.OrNumber}\t{record.problem}\t{record.customerName}\t{record.transactionDate}");
+                    fileContent.AppendLine($"{record.salesInvoiceNo}\t{record.OrNumber}\t{record.problem}\t{record.customerName}\t{record.transactionDate}\t{record.paymentAmount}\t{record.remainingBalance}");
                 }
 
                 // Convert the content to a byte array
