@@ -2949,8 +2949,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     existingSalesInvoice.TryGetValue(record.SalesInvoiceNo.Trim(), out var getSalesInvoice);
 
-                    var total = record.CashAmount + record.CheckAmount + record.ManagersCheckAmount +
-                                record.EWT + record.WVAT;
+                    var cashAmount = record.CashAmount ?? 0m;
+                    var checkAmount = record.CheckAmount ?? 0m;
+                    var managersCheckAmount = record.ManagersCheckAmount ?? 0m;
+                    var ewt = record.EWT ?? 0m;
+                    var wvat = record.WVAT ?? 0m;
+
+                    var total = cashAmount + checkAmount + managersCheckAmount +
+                                ewt + wvat;
 
                     if (getSalesInvoice == null)
                     {
@@ -3013,23 +3019,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             TransactionDate = transactionDate,
                             ReferenceNo = record.ReferenceNo,
                             Remarks = record.Remarks,
-                            CashAmount = record.CashAmount,
+                            CashAmount = record.CashAmount ?? 0m,
                             CheckDate = record.CheckDate != DateOnly.MinValue
                             ? record.CheckDate
                             : null,
                             CheckNo = record.CheckNo,
                             CheckBank = record.CheckBank,
                             CheckBranch = record.CheckBranch,
-                            CheckAmount = record.CheckAmount,
+                            CheckAmount = record.CheckAmount ?? 0m,
                             ManagersCheckDate = record.ManagersCheckDate != DateOnly.MinValue
                             ? record.ManagersCheckDate
                             : null,
                             ManagersCheckNo = record.ManagersCheckNo,
                             ManagersCheckBank = record.ManagersCheckBank,
                             ManagersCheckBranch = record.ManagersCheckBranch,
-                            ManagersCheckAmount = record.ManagersCheckAmount,
-                            EWT = record.EWT,
-                            WVAT = record.WVAT,
+                            ManagersCheckAmount = record.ManagersCheckAmount ?? 0m,
+                            EWT = record.EWT ?? 0m,
+                            WVAT = record.WVAT ?? 0m,
                             Total = total,
                             CreatedBy = "JAMES MATTHEW B. CASTILLEJO",
                             CreatedDate = createdDate,
@@ -3038,7 +3044,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             BatchNumber = record.BatchNumber,
                             PostedBy = GetUserFullName(),
                             PostedDate = postedDate,
-                            Status = nameof(CollectionReceiptStatus.Posted),
+                            Status = nameof(CollectionReceiptStatus.Posted)
                         });
 
                     var netDiscount = getSalesInvoice.Amount - getSalesInvoice.Discount;
@@ -3170,12 +3176,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 foreach (var cr in records.GroupBy(x => x.ReferenceNo))
                 {
+                    var cashAmount = cr.Select(x => x.CashAmount).FirstOrDefault() ?? 0m;
+                    var checkAmount = cr.Select(x => x.CheckAmount).FirstOrDefault() ?? 0m;
+                    var managersCheckAmount = cr.Select(x => x.ManagersCheckAmount).FirstOrDefault() ?? 0m;
+                    var ewt = cr.Select(x => x.EWT).FirstOrDefault() ?? 0m;
+                    var wvat = cr.Select(x => x.WVAT).FirstOrDefault() ?? 0m;
 
-                    var total = cr.Select(x => x.CashAmount).FirstOrDefault()
-                                + cr.Select(x => x.CheckAmount).FirstOrDefault()
-                                + cr.Select(x => x.ManagersCheckAmount).FirstOrDefault()
-                                + cr.Select(x => x.EWT).FirstOrDefault()
-                                + cr.Select(x => x.WVAT).FirstOrDefault();
+                    var total = cashAmount + checkAmount + managersCheckAmount + ewt + wvat;
 
                     if (total == 0)
                     {
@@ -3302,8 +3309,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             CustomerId = customerId,
                             ReferenceNo = cr.Select(x => x.ReferenceNo).FirstOrDefault() ?? string.Empty,
                             Remarks = cr.Select(x => x.Remarks).FirstOrDefault().Truncate(100),
-                            CashAmount = cr.Select(x => x.CashAmount).FirstOrDefault(),
-                            CheckAmount = cr.Select(x => x.CheckAmount).FirstOrDefault(),
+                            CashAmount = cr.Select(x => x.CashAmount).FirstOrDefault() ?? 0m,
+                            CheckAmount = cr.Select(x => x.CheckAmount).FirstOrDefault() ?? 0m,
                             CheckNo = cr.Select(x => x.CheckNo).FirstOrDefault(),
                             CheckBranch = cr.Select(x => x.CheckBranch).FirstOrDefault(),
                             CheckDate = cr.Select(x => x.CheckDate).FirstOrDefault() != DateOnly.Parse("0001-01-01")
@@ -3317,9 +3324,808 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             ManagersCheckNo = cr.Select(x => x.ManagersCheckNo).FirstOrDefault(),
                             ManagersCheckBank = cr.Select(x => x.ManagersCheckBank).FirstOrDefault(),
                             ManagersCheckBranch = cr.Select(x => x.ManagersCheckBranch).FirstOrDefault(),
-                            ManagersCheckAmount = cr.Select(x => x.ManagersCheckAmount).FirstOrDefault(),
-                            EWT = cr.Select(x => x.EWT).FirstOrDefault(),
-                            WVAT = cr.Select(x => x.WVAT).FirstOrDefault(),
+                            ManagersCheckAmount = cr.Select(x => x.ManagersCheckAmount).FirstOrDefault() ?? 0m,
+                            EWT = cr.Select(x => x.EWT).FirstOrDefault() ?? 0m,
+                            WVAT = cr.Select(x => x.WVAT).FirstOrDefault() ?? 0m,
+                            Total = total,
+                            CreatedBy = "JAMES MATTHEW B. CASTILLEJO",
+                            CreatedDate = createdDate,
+                            Company = companyClaims,
+                            Type = cr.Select(x => x.Type).FirstOrDefault(),
+                            BatchNumber = cr.Select(x => x.BatchNumber).FirstOrDefault() ?? string.Empty,
+                            MultipleSIId = invoiceId.ToArray(),
+                            MultipleSI = invoiceNos.ToArray(),
+                            SIMultipleAmount = invoiceAmounts.ToArray(),
+                            MultipleTransactionDate = invoiceTranDate.ToArray(),
+                            PostedBy = GetUserFullName(),
+                            PostedDate = postedDate,
+                            Status = nameof(CollectionReceiptStatus.Posted)
+                        });
+
+                    #endregion --Saving default value
+                }
+                await _dbContext.FilprideCollectionReceipts.AddRangeAsync(model, cancellationToken);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+
+                foreach (var record in model)
+                {
+                    var index = 0;
+                    foreach (var siNo in record.MultipleSI!)
+                    {
+                        if (existingSalesInvoice.TryGetValue(siNo.Trim(), out var getSalesInvoice))
+                        {
+                            details.Add(
+                                new FilprideCollectionReceiptDetail
+                                {
+                                    CollectionReceiptId = record.CollectionReceiptId,
+                                    CollectionReceiptNo = record.CollectionReceiptNo ?? string.Empty,
+                                    InvoiceDate = getSalesInvoice.TransactionDate,
+                                    InvoiceNo = getSalesInvoice.SalesInvoiceNo ?? string.Empty,
+                                    Amount = record.SIMultipleAmount?[index] ?? 0
+                                });
+                        }
+
+                        index++;
+                    }
+                }
+                await _dbContext.FilprideCollectionReceiptDetails.AddRangeAsync(details, cancellationToken);
+
+                var auditTrail = new List<FilprideAuditTrail>();
+                foreach (var record in model)
+                {
+                    #region --Audit Trail Recording
+
+                    auditTrail.Add(
+                        new FilprideAuditTrail
+                        {
+                            Username = record.CreatedBy!,
+                            Date = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
+                                TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila")),
+                            MachineName = Environment.MachineName,
+                            Activity = $"Create new collection receipt# {record.CollectionReceiptNo}",
+                            DocumentType = "Collection Receipt",
+                            Company = record.Company
+                        });
+
+                    #endregion --Audit Trail Recording
+                }
+                await _dbContext.FilprideAuditTrails.AddRangeAsync(auditTrail, cancellationToken);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+
+                TempData["success"] = "Collection receipt created successfully.";
+
+                var fileContent = new StringBuilder();
+                fileContent.AppendLine($"duration of uploading multiple collection:{timer.Elapsed}");
+                fileContent.AppendLine("Sales Invoice No\tOR Number\tProblem\tCustomer Name\tTransaction Date\tPayment Amount\tRemaining Balance");
+                foreach (var record in listOfNeedToCorrect)
+                {
+                    fileContent.AppendLine($"{record.salesInvoiceNo}\t{record.OrNumber}\t{record.problem}\t{record.customerName}\t{record.transactionDate}\t{record.paymentAmount}\t{record.remainingBalance}");
+                }
+
+                // Convert the content to a byte array
+                var bytes = Encoding.UTF8.GetBytes(fileContent.ToString());
+
+                await transaction.CommitAsync(cancellationToken);
+                return File(bytes, "text/plain", "NeedToCorrect.txt");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to create sales invoice multiple collection receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Created by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+                await transaction.RollbackAsync(cancellationToken);
+                TempData["error"] = ex.Message;
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        public async Task<IActionResult> UploadCsvForSingleInvoiceExceedingBalance(CancellationToken cancellationToken)
+        {
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                throw new ArgumentException("Company claims not found!");
+            }
+
+            using var reader = new StreamReader(@"C:\Users\Administrator\Documents\SINGLE INVOICE AUGUST 2024 - NOVEMBER 2025(EXCEED PAYMENT).csv");
+            using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+            var records = csv.GetRecords<UploadCsvForSingleInvoiceViewModel>().OrderBy(x => x.TransactionDate).ToList();
+
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            var timer = Stopwatch.StartNew();
+            try
+            {
+                var salesInvoiceNo = records.Select(x => x.SalesInvoiceNo.Trim()).Distinct().ToList();
+
+                var existingSalesInvoice = await _dbContext.FilprideSalesInvoices
+                    .Where(x => salesInvoiceNo.Contains(x.SalesInvoiceNo!))
+                    .GroupBy(x => x.SalesInvoiceNo)
+                    .Select(x => x.First())
+                    .ToDictionaryAsync(x => x.SalesInvoiceNo!, cancellationToken);
+
+                if (existingSalesInvoice == null)
+                {
+                    throw new ArgumentException("No sales invoice found");
+                }
+
+                List<(string salesInvoiceNo, string OrNumber, string problem, string customerName, DateOnly transactionDate, decimal paymentAmount, decimal remainingBalance)> listOfNeedToCorrect = new();
+                var model = new List<FilprideCollectionReceipt>();
+                var details = new List<FilprideCollectionReceiptDetail>();
+                var lastSeries = _dbContext.FilprideCollectionReceipts
+                    .OrderByDescending(x => x.CollectionReceiptId)
+                    .Select(x => x.CollectionReceiptNo);
+
+                var seriesNumber = int.TryParse(lastSeries.FirstOrDefault(), out var num) ? num + 1 : 1;
+
+                foreach (var record in records)
+                {
+                    existingSalesInvoice.TryGetValue(record.SalesInvoiceNo.Trim(), out var getSalesInvoice);
+
+                    var cashAmount = record.CashAmount ?? 0m;
+                    var checkAmount = record.CheckAmount ?? 0m;
+                    var managersCheckAmount = record.ManagersCheckAmount ?? 0m;
+                    var ewt = record.EWT ?? 0m;
+                    var wvat = record.WVAT ?? 0m;
+
+                    var total = cashAmount + checkAmount + managersCheckAmount +
+                                ewt + wvat;
+
+                    if (getSalesInvoice == null)
+                    {
+                        listOfNeedToCorrect.Add((record.SalesInvoiceNo,
+                            record.ReferenceNo,
+                            "Sales Invoice not found",
+                            record.CustomerName,
+                            record.TransactionDate,
+                            total,
+                            getSalesInvoice?.Balance ?? 0));
+                        continue;
+                    }
+
+                    if (total == 0)
+                    {
+                        listOfNeedToCorrect.Add((record.SalesInvoiceNo,
+                            record.ReferenceNo,
+                            "Please input at least one type form of payment",
+                            record.CustomerName
+                            , record.TransactionDate,
+                            total,
+                            getSalesInvoice.Balance));
+                        continue;
+                    }
+
+                    var random = new Random();
+
+                    // Working hours: 8:30 AM to 7:00 PM
+                    var start = new TimeSpan(8, 30, 0);
+                    var end = new TimeSpan(19, 0, 0);
+
+                    // Compute random time inside the range
+                    var range = end - start;
+                    var randomTime = start + TimeSpan.FromTicks((long)(range.Ticks * random.NextDouble()));
+                    var transactionDate = record.TransactionDate;
+                    var createdDate = DateTimeHelper.GetNextTransactionDateTime(transactionDate);
+                    var postedDate = DateTimeHelper.GetNextTransactionDateTime(transactionDate);
+
+                    #region --Saving default value
+
+                    model.Add(
+                        new FilprideCollectionReceipt
+                        {
+                            CollectionReceiptNo = seriesNumber.ToString(),
+                            SalesInvoiceId = getSalesInvoice.SalesInvoiceId,
+                            SINo = getSalesInvoice.SalesInvoiceNo,
+                            CustomerId = getSalesInvoice.CustomerId,
+                            TransactionDate = transactionDate,
+                            ReferenceNo = record.ReferenceNo,
+                            Remarks = record.Remarks,
+                            CashAmount = record.CashAmount ?? 0m,
+                            CheckDate = record.CheckDate != DateOnly.MinValue
+                            ? record.CheckDate
+                            : null,
+                            CheckNo = record.CheckNo,
+                            CheckBank = record.CheckBank,
+                            CheckBranch = record.CheckBranch,
+                            CheckAmount = record.CheckAmount ?? 0m,
+                            ManagersCheckDate = record.ManagersCheckDate != DateOnly.MinValue
+                            ? record.ManagersCheckDate
+                            : null,
+                            ManagersCheckNo = record.ManagersCheckNo,
+                            ManagersCheckBank = record.ManagersCheckBank,
+                            ManagersCheckBranch = record.ManagersCheckBranch,
+                            ManagersCheckAmount = record.ManagersCheckAmount ?? 0m,
+                            EWT = record.EWT ?? 0m,
+                            WVAT = record.WVAT ?? 0m,
+                            Total = total,
+                            CreatedBy = "JAMES MATTHEW B. CASTILLEJO",
+                            CreatedDate = createdDate,
+                            Company = companyClaims,
+                            Type = record.Type,
+                            BatchNumber = record.BatchNumber,
+                            PostedBy = GetUserFullName(),
+                            PostedDate = postedDate,
+                            Status = nameof(CollectionReceiptStatus.Posted),
+                        });
+
+                    var netDiscount = getSalesInvoice.Amount - getSalesInvoice.Discount;
+
+                    getSalesInvoice.AmountPaid += total;
+                    getSalesInvoice.Balance = netDiscount - getSalesInvoice.AmountPaid;
+
+                    if (getSalesInvoice.Balance == 0 && getSalesInvoice.AmountPaid == netDiscount)
+                    {
+                        getSalesInvoice.IsPaid = true;
+                        getSalesInvoice.PaymentStatus = "Paid";
+                    }
+                    else if (getSalesInvoice.AmountPaid > netDiscount)
+                    {
+                        getSalesInvoice.IsPaid = true;
+                        getSalesInvoice.PaymentStatus = "OverPaid";
+                    }
+
+                    #endregion --Saving default value
+
+                    seriesNumber++;
+                }
+                await _dbContext.FilprideCollectionReceipts.AddRangeAsync(model, cancellationToken);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+
+                foreach (var record in model)
+                {
+                    existingSalesInvoice.TryGetValue(record.SINo!.Trim(), out var getSalesInvoice);
+
+                    details.Add(
+                        new FilprideCollectionReceiptDetail
+                        {
+                            CollectionReceiptId = record.CollectionReceiptId,
+                            CollectionReceiptNo = record.CollectionReceiptNo ?? string.Empty,
+                            InvoiceDate = record.SalesInvoice!.TransactionDate,
+                            InvoiceNo = record.SINo,
+                            Amount = record.Total
+                        });
+                }
+
+                await _dbContext.FilprideCollectionReceiptDetails.AddRangeAsync(details, cancellationToken);
+
+                var auditTrail = new List<FilprideAuditTrail>();
+                foreach (var record in model)
+                {
+                    #region --Audit Trail Recording
+
+                    auditTrail.Add(
+                        new FilprideAuditTrail
+                        {
+                            Username = record.CreatedBy!,
+                            Date = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
+                                TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila")),
+                            MachineName = Environment.MachineName,
+                            Activity = $"Create new collection receipt# {record.CollectionReceiptNo}",
+                            DocumentType = "Collection Receipt",
+                            Company = record.Company
+                        });
+
+                    #endregion --Audit Trail Recording
+                }
+                await _dbContext.FilprideAuditTrails.AddRangeAsync(auditTrail, cancellationToken);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+
+                TempData["success"] = "Collection receipt created successfully.";
+
+                var fileContent = new StringBuilder();
+                fileContent.AppendLine($"duration of uploading single collection:{timer.Elapsed}");
+                fileContent.AppendLine("Sales Invoice No\tOR Number\tProblem\tCustomer Name\tTransaction Date\tPayment Amount\tRemaining Balance");
+                foreach (var record in listOfNeedToCorrect)
+                {
+                    fileContent.AppendLine($"{record.salesInvoiceNo}\t{record.OrNumber}\t{record.problem}\t{record.customerName}\t{record.transactionDate}\t{record.paymentAmount}\t{record.remainingBalance}");
+                }
+                // Convert the content to a byte array
+                var bytes = Encoding.UTF8.GetBytes(fileContent.ToString());
+
+                await transaction.CommitAsync(cancellationToken);
+                return File(bytes, "text/plain", "NeedToCorrect.txt");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to create sales invoice single collection receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Created by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+                await transaction.RollbackAsync(cancellationToken);
+                TempData["error"] = ex.Message;
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        public async Task<IActionResult> UploadCsvForMultipleInvoiceSalesInvoiceNotFound(CancellationToken cancellationToken)
+        {
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            using var reader = new StreamReader(@"C:\Users\Administrator\Documents\MULTI INVOICE AUGUST 2024 - NOVEMBER 2025(SI NOT FOUND) v2.csv");
+            using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+            var records = csv.GetRecords<UploadCsvForMultipleInvoiceViewModel>()
+                .OrderBy(x => x.TransactionDate)
+                .ToList();
+
+            var salesInvoiceNo = records.Select(x => x.SalesInvoiceNo.Trim()).Distinct().ToList();
+            var customerName = records.Select(x => x.CustomerName.Trim()).Distinct().ToList();
+
+            var existingSalesInvoice = await _dbContext.FilprideSalesInvoices
+                .Where(x => salesInvoiceNo.Contains(x.SalesInvoiceNo!))
+                .GroupBy(x => x.SalesInvoiceNo)
+                .Select(x => x.First())
+                .ToDictionaryAsync(x => x.SalesInvoiceNo!, cancellationToken);
+
+            var existingCustomers = await _dbContext.FilprideCustomers
+                .Where(x => customerName.Contains(x.CustomerName))
+                .GroupBy(x => x.CustomerName)
+                .Select(x => x.First())
+                .ToDictionaryAsync(x => x.CustomerName, cancellationToken);
+
+            List<(string? salesInvoiceNo, string? OrNumber, string problem, string? customerName, DateOnly transactionDate, decimal paymentAmount, decimal remainingBalance)> listOfNeedToCorrect = new();
+
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            var model = new List<FilprideCollectionReceipt>();
+            var details = new List<FilprideCollectionReceiptDetail>();
+
+            var lastSeries = _dbContext.FilprideCollectionReceipts
+                .OrderByDescending(x => x.CollectionReceiptId)
+                .Select(x => x.CollectionReceiptNo);
+
+            var seriesNumber = int.TryParse(lastSeries.FirstOrDefault(), out var num) ? num : 0;
+
+            var timer = Stopwatch.StartNew();
+
+            try
+            {
+                foreach (var cr in records.GroupBy(x => x.ReferenceNo))
+                {
+
+                    var cashAmount = cr.Select(x => x.CashAmount).FirstOrDefault() ?? 0m;
+                    var checkAmount = cr.Select(x => x.CheckAmount).FirstOrDefault() ?? 0m;
+                    var managersCheckAmount = cr.Select(x => x.ManagersCheckAmount).FirstOrDefault() ?? 0m;
+                    var ewt = cr.Select(x => x.EWT).FirstOrDefault() ?? 0m;
+                    var wvat = cr.Select(x => x.WVAT).FirstOrDefault() ?? 0m;
+
+                    var total = cashAmount + checkAmount + managersCheckAmount + ewt + wvat;
+
+                    if (total == 0)
+                    {
+                        listOfNeedToCorrect.Add((cr.Select(x => x.SalesInvoiceNo).FirstOrDefault(),
+                            cr.Select(x => x.ReferenceNo).FirstOrDefault(),
+                            "Please input at least one type form of payment", cr.Select(x => x.CustomerName).FirstOrDefault(),
+                            cr.Select(x => x.TransactionDate).FirstOrDefault(),
+                            cr.Select(x => x.SiAmount).FirstOrDefault(),
+                            0 ));
+                        continue;
+                    }
+
+                    var random = new Random();
+
+                    // Working hours: 8:30 AM to 7:00 PM
+                    var start = new TimeSpan(8, 30, 0);
+                    var end = new TimeSpan(19, 0, 0);
+
+                    // Compute random time inside the range
+                    var range = end - start;
+                    var randomTime = start + TimeSpan.FromTicks((long)(range.Ticks * random.NextDouble()));
+
+                    #region --Saving default value
+
+                    var skipOuter = false;
+
+                    var invoiceId = new List<int>();
+                    var invoiceNos = new List<string>();
+                    var invoiceAmounts = new List<decimal>();
+                    var invoiceTranDate = new List<DateOnly>();
+                    var customerId = 0;
+
+                    foreach (var record in cr)
+                    {
+                        existingCustomers.TryGetValue(record.CustomerName.Trim(), out var customer);
+                        var salesInvoiceTransactionDate = record.TransactionDate;
+                        var salesInvoiceCreatedDate = DateTimeHelper.GetNextTransactionDateTime(salesInvoiceTransactionDate);
+                        var salesInvoicePostedDate = DateTimeHelper.GetNextTransactionDateTime(salesInvoiceTransactionDate);
+
+                        if (customer == null)
+                        {
+                            return BadRequest();
+                        }
+
+                        var salesInvoice = new FilprideSalesInvoice
+                        {
+                            SalesInvoiceNo = await _unitOfWork.FilprideSalesInvoice.GenerateCodeAsync(companyClaims, "Undocumented", cancellationToken),
+                            CustomerId = customer.CustomerId,
+                            ProductId = 4,
+                            OtherRefNo = record.ReferenceNo,
+                            Quantity = record.Total,
+                            UnitPrice = 1,
+                            Amount = record.Total,
+                            Balance = record.Total,
+                            Remarks = record.Remarks,
+                            TransactionDate = salesInvoiceTransactionDate,
+                            Discount = 0,
+                            DueDate = await _unitOfWork.FilprideSalesInvoice.ComputeDueDateAsync(customer.CustomerTerms, salesInvoiceTransactionDate, cancellationToken),
+                            PurchaseOrderId = 9,
+                            CreatedBy = GetUserFullName(),
+                            CreatedDate = salesInvoiceCreatedDate,
+                            Company = companyClaims,
+                            Type = "Undocumented",
+                            ReceivingReportId = 0,
+                            Terms = customer.CustomerTerms,
+                            CustomerAddress = customer.CustomerAddress,
+                            CustomerTin = customer.CustomerTin,
+                            Status = "Posted",
+                            PostedBy = GetUserFullName(),
+                            PostedDate = salesInvoicePostedDate
+                        };
+
+                        existingSalesInvoice[salesInvoice.SalesInvoiceNo.Trim()] = salesInvoice;
+
+                        #region --Audit Trail Recording
+
+                        FilprideAuditTrail auditTrailBook = new(salesInvoice.CreatedBy, $"Create new sales invoice# {salesInvoice.SalesInvoiceNo}", "Sales Invoice", salesInvoice.Company);
+                        await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
+
+                        #endregion --Audit Trail Recording
+
+                        await _unitOfWork.FilprideSalesInvoice.AddAsync(salesInvoice, cancellationToken);
+                        await _unitOfWork.SaveAsync(cancellationToken);
+
+                        if (salesInvoice.Amount > salesInvoice.Balance)
+                        {
+                            listOfNeedToCorrect.Add((
+                                record.SalesInvoiceNo,
+                                record.ReferenceNo,
+                                $"Total payment amount: {record.SiAmount} cannot exceed the balance: {salesInvoice.Balance}",
+                                record.CustomerName,
+                                record.TransactionDate,
+                                record.SiAmount,
+                                salesInvoice.Balance
+                            ));
+
+                            skipOuter = true;
+                            continue;
+                        }
+
+                        invoiceId.Add(salesInvoice.SalesInvoiceId);
+                        invoiceNos.Add(salesInvoice.SalesInvoiceNo);
+                        invoiceAmounts.Add(salesInvoice.Amount);
+                        invoiceTranDate.Add(salesInvoice.TransactionDate);
+
+                        if (!salesInvoice.IsPaid)
+                        {
+                            decimal netDiscount = salesInvoice.Amount - salesInvoice.Discount;
+
+                            salesInvoice.AmountPaid += salesInvoice.Amount;
+
+                            salesInvoice.Balance = netDiscount - salesInvoice.AmountPaid;
+
+                            if (salesInvoice.Balance == 0 && salesInvoice.AmountPaid == netDiscount)
+                            {
+                                salesInvoice.IsPaid = true;
+                                salesInvoice.PaymentStatus = "Paid";
+                            }
+                            else if (salesInvoice.AmountPaid > netDiscount)
+                            {
+                                salesInvoice.IsPaid = true;
+                                salesInvoice.PaymentStatus = "OverPaid";
+                            }
+                        }
+
+                        customerId = salesInvoice.CustomerId;
+                    }
+
+                    if (skipOuter)
+                    {
+                        continue;
+                    }
+                    seriesNumber++;
+
+                    var transactionDate = cr.Select(x => x.TransactionDate).FirstOrDefault();
+                    var createdDate = DateTimeHelper.GetNextTransactionDateTime(transactionDate);
+                    var postedDate = DateTimeHelper.GetNextTransactionDateTime(transactionDate);
+
+                    model.Add(
+                        new FilprideCollectionReceipt
+                        {
+                            CollectionReceiptNo = seriesNumber.ToString(),
+                            TransactionDate = transactionDate,
+                            CustomerId = customerId,
+                            ReferenceNo = cr.Select(x => x.ReferenceNo).FirstOrDefault() ?? string.Empty,
+                            Remarks = cr.Select(x => x.Remarks).FirstOrDefault().Truncate(100),
+                            CashAmount = cr.Select(x => x.CashAmount).FirstOrDefault() ?? 0m,
+                            CheckAmount = cr.Select(x => x.CheckAmount).FirstOrDefault() ?? 0m,
+                            CheckNo = cr.Select(x => x.CheckNo).FirstOrDefault(),
+                            CheckBranch = cr.Select(x => x.CheckBranch).FirstOrDefault(),
+                            CheckDate = cr.Select(x => x.CheckDate).FirstOrDefault() != DateOnly.Parse("0001-01-01")
+                            ? cr.Select(x => x.CheckDate).FirstOrDefault()
+                            : null,
+                            CheckBank = cr.Select(x => x.CheckBank).FirstOrDefault(),
+                            ManagersCheckDate = cr.Select(x => x.ManagersCheckDate).FirstOrDefault() !=
+                                            DateOnly.Parse("0001-01-01")
+                            ? cr.Select(x => x.ManagersCheckDate).FirstOrDefault()
+                            : null,
+                            ManagersCheckNo = cr.Select(x => x.ManagersCheckNo).FirstOrDefault(),
+                            ManagersCheckBank = cr.Select(x => x.ManagersCheckBank).FirstOrDefault(),
+                            ManagersCheckBranch = cr.Select(x => x.ManagersCheckBranch).FirstOrDefault(),
+                            ManagersCheckAmount = cr.Select(x => x.ManagersCheckAmount).FirstOrDefault() ?? 0m,
+                            EWT = cr.Select(x => x.EWT).FirstOrDefault() ?? 0m,
+                            WVAT = cr.Select(x => x.WVAT).FirstOrDefault() ?? 0m,
+                            Total = total,
+                            CreatedBy = "JAMES MATTHEW B. CASTILLEJO",
+                            CreatedDate = createdDate,
+                            Company = companyClaims,
+                            Type = cr.Select(x => x.Type).FirstOrDefault(),
+                            BatchNumber = cr.Select(x => x.BatchNumber).FirstOrDefault() ?? string.Empty,
+                            MultipleSIId = invoiceId.ToArray(),
+                            MultipleSI = invoiceNos.ToArray(),
+                            SIMultipleAmount = invoiceAmounts.ToArray(),
+                            MultipleTransactionDate = invoiceTranDate.ToArray(),
+                            PostedBy = GetUserFullName(),
+                            PostedDate = postedDate,
+                            Status = nameof(CollectionReceiptStatus.Posted)
+                        });
+
+                    #endregion --Saving default value
+                }
+                await _dbContext.FilprideCollectionReceipts.AddRangeAsync(model, cancellationToken);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+
+                foreach (var record in model)
+                {
+                    var index = 0;
+                    foreach (var siNo in record.MultipleSI!)
+                    {
+                        if (existingSalesInvoice.TryGetValue(siNo.Trim(), out var getSalesInvoice))
+                        {
+                            details.Add(
+                                new FilprideCollectionReceiptDetail
+                                {
+                                    CollectionReceiptId = record.CollectionReceiptId,
+                                    CollectionReceiptNo = record.CollectionReceiptNo ?? string.Empty,
+                                    InvoiceDate = getSalesInvoice.TransactionDate,
+                                    InvoiceNo = getSalesInvoice.SalesInvoiceNo ?? string.Empty,
+                                    Amount = record.SIMultipleAmount?[index] ?? 0
+                                });
+                        }
+
+                        index++;
+                    }
+                }
+                await _dbContext.FilprideCollectionReceiptDetails.AddRangeAsync(details, cancellationToken);
+
+                var auditTrail = new List<FilprideAuditTrail>();
+                foreach (var record in model)
+                {
+                    #region --Audit Trail Recording
+
+                    auditTrail.Add(
+                        new FilprideAuditTrail
+                        {
+                            Username = record.CreatedBy!,
+                            Date = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
+                                TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila")),
+                            MachineName = Environment.MachineName,
+                            Activity = $"Create new collection receipt# {record.CollectionReceiptNo}",
+                            DocumentType = "Collection Receipt",
+                            Company = record.Company
+                        });
+
+                    #endregion --Audit Trail Recording
+                }
+                await _dbContext.FilprideAuditTrails.AddRangeAsync(auditTrail, cancellationToken);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+
+                TempData["success"] = "Collection receipt created successfully.";
+
+                var fileContent = new StringBuilder();
+                fileContent.AppendLine($"duration of uploading multiple collection:{timer.Elapsed}");
+                fileContent.AppendLine("Sales Invoice No\tOR Number\tProblem\tCustomer Name\tTransaction Date\tPayment Amount\tRemaining Balance");
+                foreach (var record in listOfNeedToCorrect)
+                {
+                    fileContent.AppendLine($"{record.salesInvoiceNo}\t{record.OrNumber}\t{record.problem}\t{record.customerName}\t{record.transactionDate}\t{record.paymentAmount}\t{record.remainingBalance}");
+                }
+
+                // Convert the content to a byte array
+                var bytes = Encoding.UTF8.GetBytes(fileContent.ToString());
+
+                await transaction.CommitAsync(cancellationToken);
+                return File(bytes, "text/plain", "NeedToCorrect.txt");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to create sales invoice multiple collection receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Created by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+                await transaction.RollbackAsync(cancellationToken);
+                TempData["error"] = ex.Message;
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        public async Task<IActionResult> UploadCsvForMultipleInvoiceExceedingBalance(CancellationToken cancellationToken)
+        {
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            using var reader = new StreamReader(@"C:\Users\Administrator\Documents\MULTI INVOICE AUGUST 2024 - NOVEMBER 2025(EXCEED PAYMENT) v2.csv");
+            using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+            var records = csv.GetRecords<UploadCsvForMultipleInvoiceViewModel>()
+                .OrderBy(x => x.TransactionDate)
+                .ToList();
+
+            var salesInvoiceNo = records.Select(x => x.SalesInvoiceNo.Trim()).Distinct().ToList();
+
+            var existingSalesInvoice = await _dbContext.FilprideSalesInvoices
+                .Where(x => salesInvoiceNo.Contains(x.SalesInvoiceNo!))
+                .GroupBy(x => x.SalesInvoiceNo)
+                .Select(x => x.First())
+                .ToDictionaryAsync(x => x.SalesInvoiceNo!, cancellationToken);
+
+            List<(string? salesInvoiceNo, string? OrNumber, string problem, string? customerName, DateOnly transactionDate, decimal paymentAmount, decimal remainingBalance)> listOfNeedToCorrect = new();
+
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            var model = new List<FilprideCollectionReceipt>();
+            var details = new List<FilprideCollectionReceiptDetail>();
+
+            var lastSeries = _dbContext.FilprideCollectionReceipts
+                .OrderByDescending(x => x.CollectionReceiptId)
+                .Select(x => x.CollectionReceiptNo);
+
+            var seriesNumber = int.TryParse(lastSeries.FirstOrDefault(), out var num) ? num : 0;
+
+            var timer = Stopwatch.StartNew();
+
+            try
+            {
+                foreach (var cr in records.GroupBy(x => x.ReferenceNo))
+                {
+                    var cashAmount = cr.Select(x => x.CashAmount).FirstOrDefault() ?? 0m;
+                    var checkAmount = cr.Select(x => x.CheckAmount).FirstOrDefault() ?? 0m;
+                    var managersCheckAmount = cr.Select(x => x.ManagersCheckAmount).FirstOrDefault() ?? 0m;
+                    var ewt = cr.Select(x => x.EWT).FirstOrDefault() ?? 0m;
+                    var wvat = cr.Select(x => x.WVAT).FirstOrDefault() ?? 0m;
+
+                    var total = cashAmount + checkAmount + managersCheckAmount + ewt + wvat;
+
+                    if (total == 0)
+                    {
+                        listOfNeedToCorrect.Add((cr.Select(x => x.SalesInvoiceNo).FirstOrDefault(),
+                            cr.Select(x => x.ReferenceNo).FirstOrDefault(),
+                            "Please input at least one type form of payment", cr.Select(x => x.CustomerName).FirstOrDefault(),
+                            cr.Select(x => x.TransactionDate).FirstOrDefault(),
+                            cr.Select(x => x.SiAmount).FirstOrDefault(),
+                            0 ));
+                        continue;
+                    }
+
+                    var random = new Random();
+
+                    // Working hours: 8:30 AM to 7:00 PM
+                    var start = new TimeSpan(8, 30, 0);
+                    var end = new TimeSpan(19, 0, 0);
+
+                    // Compute random time inside the range
+                    var range = end - start;
+                    var randomTime = start + TimeSpan.FromTicks((long)(range.Ticks * random.NextDouble()));
+
+                    #region --Saving default value
+
+                    var skipOuter = false;
+
+                    var invoiceId = new List<int>();
+                    var invoiceNos = new List<string>();
+                    var invoiceAmounts = new List<decimal>();
+                    var invoiceTranDate = new List<DateOnly>();
+                    var customerId = 0;
+
+                    foreach (var record in cr)
+                    {
+                        existingSalesInvoice.TryGetValue(record.SalesInvoiceNo.Trim(), out var getSalesInvoice);
+
+                        if (getSalesInvoice == null)
+                        {
+                            listOfNeedToCorrect.Add((
+                                record.SalesInvoiceNo,
+                                record.ReferenceNo,
+                                "Sales Invoice not found",
+                                record.CustomerName,
+                                record.TransactionDate,
+                                record.SiAmount,
+                                getSalesInvoice?.Balance ?? 0
+                            ));
+
+                            skipOuter = true;
+                            continue;
+                        }
+                        if (getSalesInvoice.CustomerId == 0)
+                        {
+                            listOfNeedToCorrect.Add((
+                                record.SalesInvoiceNo,
+                                record.ReferenceNo,
+                                "Customer Id not found!",
+                                record.CustomerName,
+                                record.TransactionDate,
+                                record.SiAmount,
+                                getSalesInvoice.Balance));
+
+                            continue;
+                        }
+
+                        invoiceId.Add(getSalesInvoice.SalesInvoiceId);
+                        invoiceNos.Add(record.SalesInvoiceNo);
+                        invoiceAmounts.Add(record.SiAmount);
+                        invoiceTranDate.Add(getSalesInvoice.TransactionDate);
+
+                        if (!getSalesInvoice.IsPaid)
+                        {
+                            decimal netDiscount = getSalesInvoice.Amount - getSalesInvoice.Discount;
+
+                            getSalesInvoice.AmountPaid += record.SiAmount;
+
+                            getSalesInvoice.Balance = netDiscount - getSalesInvoice.AmountPaid;
+
+                            if (getSalesInvoice.Balance == 0 && getSalesInvoice.AmountPaid == netDiscount)
+                            {
+                                getSalesInvoice.IsPaid = true;
+                                getSalesInvoice.PaymentStatus = "Paid";
+                            }
+                            else if (getSalesInvoice.AmountPaid > netDiscount)
+                            {
+                                getSalesInvoice.IsPaid = true;
+                                getSalesInvoice.PaymentStatus = "OverPaid";
+                            }
+                        }
+
+                        customerId = getSalesInvoice.CustomerId;
+                    }
+
+                    if (skipOuter)
+                    {
+                        continue;
+                    }
+                    seriesNumber++;
+
+                    var transactionDate = cr.Select(x => x.TransactionDate).FirstOrDefault();
+                    var createdDate = DateTimeHelper.GetNextTransactionDateTime(transactionDate);
+                    var postedDate = DateTimeHelper.GetNextTransactionDateTime(transactionDate);
+
+                    model.Add(
+                        new FilprideCollectionReceipt
+                        {
+                            CollectionReceiptNo = seriesNumber.ToString(),
+                            TransactionDate = transactionDate,
+                            CustomerId = customerId,
+                            ReferenceNo = cr.Select(x => x.ReferenceNo).FirstOrDefault() ?? string.Empty,
+                            Remarks = cr.Select(x => x.Remarks).FirstOrDefault().Truncate(100),
+                            CashAmount = cr.Select(x => x.CashAmount).FirstOrDefault() ?? 0m,
+                            CheckAmount = cr.Select(x => x.CheckAmount).FirstOrDefault() ?? 0m,
+                            CheckNo = cr.Select(x => x.CheckNo).FirstOrDefault(),
+                            CheckBranch = cr.Select(x => x.CheckBranch).FirstOrDefault(),
+                            CheckDate = cr.Select(x => x.CheckDate).FirstOrDefault() != DateOnly.Parse("0001-01-01")
+                            ? cr.Select(x => x.CheckDate).FirstOrDefault()
+                            : null,
+                            CheckBank = cr.Select(x => x.CheckBank).FirstOrDefault(),
+                            ManagersCheckDate = cr.Select(x => x.ManagersCheckDate).FirstOrDefault() !=
+                                            DateOnly.Parse("0001-01-01")
+                            ? cr.Select(x => x.ManagersCheckDate).FirstOrDefault()
+                            : null,
+                            ManagersCheckNo = cr.Select(x => x.ManagersCheckNo).FirstOrDefault(),
+                            ManagersCheckBank = cr.Select(x => x.ManagersCheckBank).FirstOrDefault(),
+                            ManagersCheckBranch = cr.Select(x => x.ManagersCheckBranch).FirstOrDefault(),
+                            ManagersCheckAmount = cr.Select(x => x.ManagersCheckAmount).FirstOrDefault() ?? 0m,
+                            EWT = cr.Select(x => x.EWT).FirstOrDefault() ?? 0m,
+                            WVAT = cr.Select(x => x.WVAT).FirstOrDefault() ?? 0m,
                             Total = total,
                             CreatedBy = "JAMES MATTHEW B. CASTILLEJO",
                             CreatedDate = createdDate,
