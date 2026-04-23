@@ -12,33 +12,33 @@ namespace IBS.Models.Filpride.ViewModels
 
         public string Remarks { get; set; } = null!;
 
-        public decimal CashAmount { get; set; }
+        public decimal? CashAmount { get; set; }
 
-        public DateOnly CheckDate { get; set; }
+        public DateOnly? CheckDate { get; set; }
 
-        public string CheckNo { get; set; } = null!;
+        public string? CheckNo { get; set; } = null!;
 
-        public string CheckBank { get; set; } = null!;
+        public string? CheckBank { get; set; } = null!;
 
-        public string CheckBranch { get; set; } = null!;
+        public string? CheckBranch { get; set; } = null!;
 
-        public decimal CheckAmount { get; set; }
+        public decimal? CheckAmount { get; set; }
 
-        public decimal ManagersCheckAmount { get; set; }
+        public decimal? ManagersCheckAmount { get; set; }
 
-        public DateOnly ManagersCheckDate { get; set; }
+        public DateOnly? ManagersCheckDate { get; set; }
 
-        public string ManagersCheckNo { get; set; } = null!;
+        public string? ManagersCheckNo { get; set; } = null!;
 
-        public string ManagersCheckBank { get; set; } = null!;
+        public string? ManagersCheckBank { get; set; } = null!;
 
-        public string ManagersCheckBranch { get; set; } = null!;
+        public string? ManagersCheckBranch { get; set; } = null!;
 
-        public decimal EWT { get; set; }
+        public decimal? EWT { get; set; }
 
-        public decimal WVAT { get; set; }
+        public decimal? WVAT { get; set; }
 
-        public decimal Total { get; set; }
+        public decimal? Total { get; set; }
 
         public string BatchNumber { get; set; } = null!;
 
