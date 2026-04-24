@@ -6,15 +6,23 @@ namespace IBS.Models.Filpride.ViewModels
 
         public string SalesInvoiceNo { get; set; } = null!;
 
-        public DateOnly TransactionDate { get; set; }
+        public string Remarks { get; set; } = null!;
+
+        public decimal SiAmount { get; set; }
 
         public string ReferenceNo { get; set; } = null!;
 
-        public string Remarks { get; set; } = null!;
+        public DateOnly TransactionDate { get; set; }
 
         public decimal? CashAmount { get; set; }
 
         public DateOnly? CheckDate { get; set; }
+
+        public DateOnly DateDeposited { get; set; }
+
+        public int BankId { get; set; }
+
+        public DateOnly ClearingDate { get; set; }
 
         public string? CheckNo { get; set; }
 
@@ -43,7 +51,5 @@ namespace IBS.Models.Filpride.ViewModels
         public string BatchNumber { get; set; } = null!;
 
         public string Type { get; set; } = null!;
-
-        public decimal SiAmount { get; set; }
     }
 }

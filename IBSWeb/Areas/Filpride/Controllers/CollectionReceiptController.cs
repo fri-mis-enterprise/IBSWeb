@@ -2918,7 +2918,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 throw new ArgumentException("Company claims not found!");
             }
 
-            using var reader = new StreamReader(@"C:\Users\Administrator\Documents\SINGLE INVOICE AUGUST 2024 - NOVEMBER 2025_1.csv");
+            using var reader = new StreamReader(@"C:\Users\Administrator\Documents\SINGLE COLLECTION.csv");
             using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
             var records = csv.GetRecords<UploadCsvForSingleInvoiceViewModel>().OrderBy(x => x.TransactionDate).ToList();
 
@@ -3044,7 +3044,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             BatchNumber = record.BatchNumber,
                             PostedBy = GetUserFullName(),
                             PostedDate = postedDate,
-                            Status = nameof(CollectionReceiptStatus.Posted)
+                            Status = nameof(CollectionReceiptStatus.Posted),
+                            DepositedDate = record.DateDeposited,
+                            ClearedDate = record.ClearingDate,
+                            BankId = record.BankId
                         });
 
                     var netDiscount = getSalesInvoice.Amount - getSalesInvoice.Discount;
@@ -3144,7 +3147,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            using var reader = new StreamReader(@"C:\Users\Administrator\Documents\MULTI INVOICE AUGUST 2024 - NOVEMBER 2025_1.csv");
+            using var reader = new StreamReader(@"C:\Users\Administrator\Documents\MULTIPLE COLLECTION.csv");
             using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
             var records = csv.GetRecords<UploadCsvForMultipleInvoiceViewModel>()
                 .OrderBy(x => x.TransactionDate)
@@ -4562,7 +4565,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
         [HttpGet]
         public IActionResult BatchApplyClearingDate(int id,
             DateOnly clearingDate,
