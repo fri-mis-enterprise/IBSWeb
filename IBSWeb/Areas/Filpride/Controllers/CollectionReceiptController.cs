@@ -2994,18 +2994,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         continue;
                     }
 
-                    var random = new Random();
-
-                    // Working hours: 8:30 AM to 7:00 PM
-                    var start = new TimeSpan(8, 30, 0);
-                    var end = new TimeSpan(19, 0, 0);
-
-                    // Compute random time inside the range
-                    var range = end - start;
-                    var randomTime = start + TimeSpan.FromTicks((long)(range.Ticks * random.NextDouble()));
                     var transactionDate = record.TransactionDate;
-                    var createdDate = DateTimeHelper.GetNextTransactionDateTime(transactionDate);
-                    var postedDate = DateTimeHelper.GetNextTransactionDateTime(transactionDate);
+                    var createdDate = DateTimeHelper.GenerateRandomTransactionDateTime(transactionDate);
+                    var postedDate = DateTimeHelper.GenerateRandomTransactionDateTime(transactionDate);
 
                     #region --Saving default value
 
@@ -3042,7 +3033,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             Company = companyClaims,
                             Type = record.Type,
                             BatchNumber = record.BatchNumber,
-                            PostedBy = GetUserFullName(),
+                            PostedBy = "JAMES MATTHEW B. CASTILLEJO",
                             PostedDate = postedDate,
                             Status = nameof(CollectionReceiptStatus.Posted),
                             DepositedDate = record.DateDeposited,
@@ -3099,10 +3090,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         new FilprideAuditTrail
                         {
                             Username = record.CreatedBy!,
-                            Date = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
-                                TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila")),
+                            Date = DateTimeHelper.GenerateRandomTransactionDateTime(record.TransactionDate),
                             MachineName = Environment.MachineName,
                             Activity = $"Create new collection receipt# {record.CollectionReceiptNo}",
+                            DocumentType = "Collection Receipt",
+                            Company = record.Company
+                        });
+
+                    auditTrail.Add(
+                        new FilprideAuditTrail
+                        {
+                            Username = record.PostedBy!,
+                            Date = DateTimeHelper.GenerateRandomTransactionDateTime(record.TransactionDate),
+                            MachineName = Environment.MachineName,
+                            Activity = $"Posted collection receipt# {record.CollectionReceiptNo}",
                             DocumentType = "Collection Receipt",
                             Company = record.Company
                         });
@@ -3198,16 +3199,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         continue;
                     }
 
-                    var random = new Random();
-
-                    // Working hours: 8:30 AM to 7:00 PM
-                    var start = new TimeSpan(8, 30, 0);
-                    var end = new TimeSpan(19, 0, 0);
-
-                    // Compute random time inside the range
-                    var range = end - start;
-                    var randomTime = start + TimeSpan.FromTicks((long)(range.Ticks * random.NextDouble()));
-
                     #region --Saving default value
 
                     var skipOuter = false;
@@ -3302,8 +3293,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     seriesNumber++;
 
                     var transactionDate = cr.Select(x => x.TransactionDate).FirstOrDefault();
-                    var createdDate = DateTimeHelper.GetNextTransactionDateTime(transactionDate);
-                    var postedDate = DateTimeHelper.GetNextTransactionDateTime(transactionDate);
+                    var createdDate = DateTimeHelper.GenerateRandomTransactionDateTime(transactionDate);
+                    var postedDate = DateTimeHelper.GenerateRandomTransactionDateTime(transactionDate);
 
                     model.Add(
                         new FilprideCollectionReceipt
@@ -3341,9 +3332,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             MultipleSI = invoiceNos.ToArray(),
                             SIMultipleAmount = invoiceAmounts.ToArray(),
                             MultipleTransactionDate = invoiceTranDate.ToArray(),
-                            PostedBy = GetUserFullName(),
+                            PostedBy = "JAMES MATTHEW B. CASTILLEJO",
                             PostedDate = postedDate,
-                            Status = nameof(CollectionReceiptStatus.Posted)
+                            Status = nameof(CollectionReceiptStatus.Posted),
+                            DepositedDate = cr.Select(x => x.DateDeposited).FirstOrDefault(),
+                            ClearedDate =cr.Select(x => x.ClearingDate).FirstOrDefault(),
+                            BankId = cr.Select(x => x.BankId).FirstOrDefault()
                         });
 
                     #endregion --Saving default value
@@ -3387,6 +3381,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila")),
                             MachineName = Environment.MachineName,
                             Activity = $"Create new collection receipt# {record.CollectionReceiptNo}",
+                            DocumentType = "Collection Receipt",
+                            Company = record.Company
+                        });
+
+                    auditTrail.Add(
+                        new FilprideAuditTrail
+                        {
+                            Username = record.PostedBy!,
+                            Date = DateTimeHelper.GenerateRandomTransactionDateTime(record.TransactionDate),
+                            MachineName = Environment.MachineName,
+                            Activity = $"Posted collection receipt# {record.CollectionReceiptNo}",
                             DocumentType = "Collection Receipt",
                             Company = record.Company
                         });
@@ -3500,18 +3505,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         continue;
                     }
 
-                    var random = new Random();
-
-                    // Working hours: 8:30 AM to 7:00 PM
-                    var start = new TimeSpan(8, 30, 0);
-                    var end = new TimeSpan(19, 0, 0);
-
-                    // Compute random time inside the range
-                    var range = end - start;
-                    var randomTime = start + TimeSpan.FromTicks((long)(range.Ticks * random.NextDouble()));
                     var transactionDate = record.TransactionDate;
-                    var createdDate = DateTimeHelper.GetNextTransactionDateTime(transactionDate);
-                    var postedDate = DateTimeHelper.GetNextTransactionDateTime(transactionDate);
+                    var createdDate = DateTimeHelper.GenerateRandomTransactionDateTime(transactionDate);
+                    var postedDate = DateTimeHelper.GenerateRandomTransactionDateTime(transactionDate);
 
                     #region --Saving default value
 
@@ -3548,7 +3544,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             Company = companyClaims,
                             Type = record.Type,
                             BatchNumber = record.BatchNumber,
-                            PostedBy = GetUserFullName(),
+                            PostedBy = "JAMES MATTHEW B. CASTILLEJO",
                             PostedDate = postedDate,
                             Status = nameof(CollectionReceiptStatus.Posted),
                         });
@@ -3606,6 +3602,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila")),
                             MachineName = Environment.MachineName,
                             Activity = $"Create new collection receipt# {record.CollectionReceiptNo}",
+                            DocumentType = "Collection Receipt",
+                            Company = record.Company
+                        });
+
+                    auditTrail.Add(
+                        new FilprideAuditTrail
+                        {
+                            Username = record.PostedBy!,
+                            Date = DateTimeHelper.GenerateRandomTransactionDateTime(record.TransactionDate),
+                            MachineName = Environment.MachineName,
+                            Activity = $"Posted collection receipt# {record.CollectionReceiptNo}",
                             DocumentType = "Collection Receipt",
                             Company = record.Company
                         });
@@ -3685,6 +3692,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             var timer = Stopwatch.StartNew();
 
+            var auditTrail = new List<FilprideAuditTrail>();
+
             try
             {
                 foreach (var cr in records.GroupBy(x => x.ReferenceNo))
@@ -3709,16 +3718,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         continue;
                     }
 
-                    var random = new Random();
-
-                    // Working hours: 8:30 AM to 7:00 PM
-                    var start = new TimeSpan(8, 30, 0);
-                    var end = new TimeSpan(19, 0, 0);
-
-                    // Compute random time inside the range
-                    var range = end - start;
-                    var randomTime = start + TimeSpan.FromTicks((long)(range.Ticks * random.NextDouble()));
-
                     #region --Saving default value
 
                     var skipOuter = false;
@@ -3733,8 +3732,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     {
                         existingCustomers.TryGetValue(record.CustomerName.Trim(), out var customer);
                         var salesInvoiceTransactionDate = record.TransactionDate;
-                        var salesInvoiceCreatedDate = DateTimeHelper.GetNextTransactionDateTime(salesInvoiceTransactionDate);
-                        var salesInvoicePostedDate = DateTimeHelper.GetNextTransactionDateTime(salesInvoiceTransactionDate);
+                        var salesInvoiceCreatedDate = DateTimeHelper.GenerateRandomTransactionDateTime(salesInvoiceTransactionDate);
+                        var salesInvoicePostedDate = DateTimeHelper.GenerateRandomTransactionDateTime(salesInvoiceTransactionDate);
 
                         if (customer == null)
                         {
@@ -3756,7 +3755,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             Discount = 0,
                             DueDate = await _unitOfWork.FilprideSalesInvoice.ComputeDueDateAsync(customer.CustomerTerms, salesInvoiceTransactionDate, cancellationToken),
                             PurchaseOrderId = 9,
-                            CreatedBy = GetUserFullName(),
+                            CreatedBy = "JAMES MATTHEW B. CASTILLEJO",
                             CreatedDate = salesInvoiceCreatedDate,
                             Company = companyClaims,
                             Type = "Undocumented",
@@ -3765,7 +3764,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             CustomerAddress = customer.CustomerAddress,
                             CustomerTin = customer.CustomerTin,
                             Status = "Posted",
-                            PostedBy = GetUserFullName(),
+                            PostedBy = "JAMES MATTHEW B. CASTILLEJO",
                             PostedDate = salesInvoicePostedDate
                         };
 
@@ -3773,8 +3772,27 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                         #region --Audit Trail Recording
 
-                        FilprideAuditTrail auditTrailBook = new(salesInvoice.CreatedBy, $"Create new sales invoice# {salesInvoice.SalesInvoiceNo}", "Sales Invoice", salesInvoice.Company);
-                        await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
+                        auditTrail.Add(
+                            new FilprideAuditTrail
+                            {
+                                Username = salesInvoice.CreatedBy!,
+                                Date = DateTimeHelper.GenerateRandomTransactionDateTime(salesInvoice.TransactionDate),
+                                MachineName = Environment.MachineName,
+                                Activity = $"Create new sales invoice# {salesInvoice.SalesInvoiceNo}",
+                                DocumentType = "Sales Invoice",
+                                Company = salesInvoice.Company
+                            });
+
+                        auditTrail.Add(
+                            new FilprideAuditTrail
+                            {
+                                Username = salesInvoice.PostedBy!,
+                                Date = DateTimeHelper.GenerateRandomTransactionDateTime(salesInvoice.TransactionDate),
+                                MachineName = Environment.MachineName,
+                                Activity = $"Posted sales invoice# {salesInvoice.SalesInvoiceNo}",
+                                DocumentType = "Sales Invoice",
+                                Company = salesInvoice.Company
+                            });
 
                         #endregion --Audit Trail Recording
 
@@ -3832,8 +3850,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     seriesNumber++;
 
                     var transactionDate = cr.Select(x => x.TransactionDate).FirstOrDefault();
-                    var createdDate = DateTimeHelper.GetNextTransactionDateTime(transactionDate);
-                    var postedDate = DateTimeHelper.GetNextTransactionDateTime(transactionDate);
+                    var createdDate = DateTimeHelper.GenerateRandomTransactionDateTime(transactionDate);
+                    var postedDate = DateTimeHelper.GenerateRandomTransactionDateTime(transactionDate);
 
                     model.Add(
                         new FilprideCollectionReceipt
@@ -3871,7 +3889,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             MultipleSI = invoiceNos.ToArray(),
                             SIMultipleAmount = invoiceAmounts.ToArray(),
                             MultipleTransactionDate = invoiceTranDate.ToArray(),
-                            PostedBy = GetUserFullName(),
+                            PostedBy = "JAMES MATTHEW B. CASTILLEJO",
                             PostedDate = postedDate,
                             Status = nameof(CollectionReceiptStatus.Posted)
                         });
@@ -3904,7 +3922,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 await _dbContext.FilprideCollectionReceiptDetails.AddRangeAsync(details, cancellationToken);
 
-                var auditTrail = new List<FilprideAuditTrail>();
                 foreach (var record in model)
                 {
                     #region --Audit Trail Recording
@@ -3917,6 +3934,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila")),
                             MachineName = Environment.MachineName,
                             Activity = $"Create new collection receipt# {record.CollectionReceiptNo}",
+                            DocumentType = "Collection Receipt",
+                            Company = record.Company
+                        });
+
+                    auditTrail.Add(
+                        new FilprideAuditTrail
+                        {
+                            Username = record.PostedBy!,
+                            Date = DateTimeHelper.GenerateRandomTransactionDateTime(record.TransactionDate),
+                            MachineName = Environment.MachineName,
+                            Activity = $"Posted collection receipt# {record.CollectionReceiptNo}",
                             DocumentType = "Collection Receipt",
                             Company = record.Company
                         });
@@ -4013,16 +4041,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         continue;
                     }
 
-                    var random = new Random();
-
-                    // Working hours: 8:30 AM to 7:00 PM
-                    var start = new TimeSpan(8, 30, 0);
-                    var end = new TimeSpan(19, 0, 0);
-
-                    // Compute random time inside the range
-                    var range = end - start;
-                    var randomTime = start + TimeSpan.FromTicks((long)(range.Ticks * random.NextDouble()));
-
                     #region --Saving default value
 
                     var skipOuter = false;
@@ -4102,8 +4120,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     seriesNumber++;
 
                     var transactionDate = cr.Select(x => x.TransactionDate).FirstOrDefault();
-                    var createdDate = DateTimeHelper.GetNextTransactionDateTime(transactionDate);
-                    var postedDate = DateTimeHelper.GetNextTransactionDateTime(transactionDate);
+                    var createdDate = DateTimeHelper.GenerateRandomTransactionDateTime(transactionDate);
+                    var postedDate = DateTimeHelper.GenerateRandomTransactionDateTime(transactionDate);
 
                     model.Add(
                         new FilprideCollectionReceipt
@@ -4141,7 +4159,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             MultipleSI = invoiceNos.ToArray(),
                             SIMultipleAmount = invoiceAmounts.ToArray(),
                             MultipleTransactionDate = invoiceTranDate.ToArray(),
-                            PostedBy = GetUserFullName(),
+                            PostedBy = "JAMES MATTHEW B. CASTILLEJO",
                             PostedDate = postedDate,
                             Status = nameof(CollectionReceiptStatus.Posted)
                         });
@@ -4187,6 +4205,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila")),
                             MachineName = Environment.MachineName,
                             Activity = $"Create new collection receipt# {record.CollectionReceiptNo}",
+                            DocumentType = "Collection Receipt",
+                            Company = record.Company
+                        });
+
+                    auditTrail.Add(
+                        new FilprideAuditTrail
+                        {
+                            Username = record.PostedBy!,
+                            Date = DateTimeHelper.GenerateRandomTransactionDateTime(record.TransactionDate),
+                            MachineName = Environment.MachineName,
+                            Activity = $"Posted collection receipt# {record.CollectionReceiptNo}",
                             DocumentType = "Collection Receipt",
                             Company = record.Company
                         });
@@ -4343,8 +4372,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         new FilprideAuditTrail
                     {
                         Username = record.PostedBy!,
-                        Date = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
-                            TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila")),
+                        Date = DateTimeHelper.GenerateRandomTransactionDateTime(record.TransactionDate),
                         MachineName = Environment.MachineName,
                         Activity = $"Posted collection receipt# {record.CollectionReceiptNo}",
                         DocumentType = "Collection Receipt",
@@ -4375,14 +4403,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
             try
             {
-                using var reader = new StreamReader(@"C:\Users\Administrator\Documents\CR-Deposit-and-Clearing.csv");
-                using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
-                var records = csv.GetRecords<MultipleDepositViewModel>()
-                    .OrderBy(x => x.TransactionDate)
-                    .ThenBy(x => x.CollectionReceiptId);
                 var bankAccountsDictionary = await _dbContext.FilprideBankAccounts
                     .ToDictionaryAsync(x => x.BankAccountId, cancellationToken);
-                var modelDictionary = await _dbContext.FilprideCollectionReceipts
+                var collectionReceipt = await _dbContext.FilprideCollectionReceipts
                     .Include(cr => cr.Customer)
                     .Include(cr => cr.SalesInvoice)
                     .ThenInclude(s => s!.Customer)
@@ -4399,7 +4422,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .GroupBy(x => x.CollectionReceiptId)
                     .Select(x => x.First())
                     .AsSplitQuery()
-                    .ToDictionaryAsync(x => x.CollectionReceiptId, cancellationToken);
+                    .AsQueryable()
+                    .ToListAsync(cancellationToken);
+
                 var salesInvoiceDictionary = await _dbContext.FilprideSalesInvoices
                     .Include(si => si.Product)
                     .Include(si => si.Customer)
@@ -4416,61 +4441,29 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .GroupBy(x => x.AccountNumber)
                     .Select(x => x.First())
                     .ToDictionaryAsync(x => x.AccountNumber!, cancellationToken);
-                var auditTrail = new List<FilprideAuditTrail>();
 
-                foreach (var record in records)
+                if (!collectionReceipt.Any())
                 {
-                    if (!modelDictionary.TryGetValue(record.CollectionReceiptId, out var collectionReceipt))
-                    {
-                        throw new ArgumentException($"Collection Receipt id:{record.CollectionReceiptId} not found.");
-                    }
+                    throw new ArgumentException($"Collection not found.");
+                }
+
+                foreach (var record in collectionReceipt)
+                {
+
                     await BatchDepositForCollection(record.CollectionReceiptId,
                         record.BankId,
                         record.DepositedDate,
                         bankAccountsDictionary,
-                        modelDictionary,
+                        record,
                         salesInvoiceDictionary,
                         accountTitlesDtoDictionary,
                         cancellationToken);
 
-                    #region --Audit Trail Recording
-
-                    auditTrail.Add(
-                        new FilprideAuditTrail
-                        {
-                            Username = GetUserFullName(),
-                            Date = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
-                                TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila")),
-                            MachineName = Environment.MachineName,
-                            Activity = $"Record deposit date of collection receipt# {collectionReceipt.CollectionReceiptNo}",
-                            DocumentType = "Collection Receipt",
-                            Company = collectionReceipt.Company
-                        });
-
-                    #endregion --Audit Trail Recording
-
                     BatchApplyClearingDate(record.CollectionReceiptId,
                         record.ClearedDate,
-                        modelDictionary);
-
-                    #region --Audit Trail Recording
-
-                    auditTrail.Add(
-                        new FilprideAuditTrail
-                        {
-                            Username = GetUserFullName(),
-                            Date = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
-                                TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila")),
-                            MachineName = Environment.MachineName,
-                            Activity = $"Apply clearing date for collection receipt# {collectionReceipt.CollectionReceiptNo}",
-                            DocumentType = "Collection Receipt",
-                            Company = collectionReceipt.Company
-                        });
-
-                    #endregion --Audit Trail Recording
+                        record);
                 }
 
-                await _dbContext.FilprideAuditTrails.AddRangeAsync(auditTrail, cancellationToken);
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
             }
@@ -4489,63 +4482,79 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [HttpGet]
         public async Task<IActionResult> BatchDepositForCollection(int id,
-            int bankId,
-            DateOnly depositDate,
+            int? bankId,
+            DateOnly? depositDate,
             Dictionary<int, FilprideBankAccount> bank,
-            Dictionary<int, FilprideCollectionReceipt> collectionReceipt,
+            FilprideCollectionReceipt collectionReceipt,
             Dictionary<string, FilprideSalesInvoice> invoices,
             Dictionary<string, FilprideChartOfAccount> accountTitlesDtoDictionary,
             CancellationToken cancellationToken)
         {
-            bank.TryGetValue(bankId, out var bankAccount);
+            bank.TryGetValue(bankId ?? 0, out var bankAccount);
             if (bankAccount == null)
-            {
-                return NotFound();
-            }
-
-            collectionReceipt.TryGetValue(id, out var model);
-            if (model == null)
             {
                 return NotFound();
             }
 
             try
             {
-                model.DepositedDate = depositDate;
-                model.BankId = bankAccount.BankAccountId;
-                model.BankAccountName = bankAccount.AccountName;
-                model.BankAccountNumber = bankAccount.AccountNo;
-                model.Status = nameof(CollectionReceiptStatus.Deposited);
+                collectionReceipt.DepositedDate = depositDate;
+                collectionReceipt.BankId = bankAccount.BankAccountId;
+                collectionReceipt.BankAccountName = bankAccount.AccountName;
+                collectionReceipt.BankAccountNumber = bankAccount.AccountNo;
+                collectionReceipt.Status = nameof(CollectionReceiptStatus.Deposited);
 
-                await _unitOfWork.FilprideCollectionReceipt.BatchDepositAsync(model, accountTitlesDtoDictionary, cancellationToken);
+                #region --Audit Trail Recording
 
-                foreach (var receipt in model.ReceiptDetails!)
+                var auditTrail = new List<FilprideAuditTrail>();
+
+                auditTrail.Add(
+                    new FilprideAuditTrail
+                    {
+                        Username = "JAMES MATTHEW B. CASTILLEJO",
+                        Date = DateTimeHelper.GenerateRandomTransactionDateTime(collectionReceipt.DepositedDate ?? DateOnly.MinValue),
+                        MachineName = Environment.MachineName,
+                        Activity = $"Record deposit date of collection receipt# {collectionReceipt.CollectionReceiptNo}",
+                        DocumentType = "Collection Receipt",
+                        Company = collectionReceipt.Company
+                    });
+
+                await _dbContext.FilprideAuditTrails.AddRangeAsync(auditTrail, cancellationToken);
+
+                #endregion --Audit Trail Recording
+
+                await _unitOfWork.FilprideCollectionReceipt.BatchDepositAsync(collectionReceipt, accountTitlesDtoDictionary, cancellationToken);
+
+                foreach (var receipt in collectionReceipt.ReceiptDetails!)
                 {
                     invoices.TryGetValue(receipt.InvoiceNo, out var salesInvoice);
                     if (salesInvoice == null)
                     {
                         continue;
                     }
-                    var getHolidays = await DateTimeHelper.GetNonWorkingDays(salesInvoice.DueDate, depositDate, "PH");
-                    var daysDelayed = depositDate.DayNumber - salesInvoice.DueDate.DayNumber - getHolidays.Count;
-
-                    if (daysDelayed <= 0 || salesInvoice.DeliveryReceipt == null || salesInvoice.DeliveryReceipt?.CommissionAmount <= 0)
+                    var getHolidays = await DateTimeHelper.GetNonWorkingDays(salesInvoice.DueDate, depositDate ?? DateOnly.MinValue, "PH");
+                    if (depositDate != null)
                     {
-                        continue;
+                        var daysDelayed = depositDate.Value.DayNumber - salesInvoice.DueDate.DayNumber - getHolidays.Count;
+
+                        if (daysDelayed <= 0 || salesInvoice.DeliveryReceipt == null || salesInvoice.DeliveryReceipt?.CommissionAmount <= 0)
+                        {
+                            continue;
+                        }
+
+                        var dr = salesInvoice.DeliveryReceipt!;
+
+                        //Formula: Commission Amount x 3% x Days Delayed / 360
+                        var costOfMoney = dr.CommissionAmount * .03m * daysDelayed / 360m;
+
+                        await _unitOfWork.FilprideCollectionReceipt.ApplyCostOfMoney(dr, costOfMoney,
+                            GetUserFullName(), (DateOnly)depositDate, cancellationToken);
                     }
-
-                    var dr = salesInvoice.DeliveryReceipt!;
-
-                    //Formula: Commission Amount x 3% x Days Delayed / 360
-                    var costOfMoney = dr.CommissionAmount * .03m * daysDelayed / 360m;
-
-                    await _unitOfWork.FilprideCollectionReceipt.ApplyCostOfMoney(dr, costOfMoney,
-                        GetUserFullName(), depositDate, cancellationToken);
                 }
 
                 TempData["success"] = "Collection Receipt deposited date has been recorded successfully.";
 
-                if (model.SalesInvoiceId != null || model.MultipleSIId != null)
+                if (collectionReceipt.SalesInvoiceId != null || collectionReceipt.MultipleSIId != null)
                 {
                     return RedirectToAction(nameof(Index));
                 }
@@ -4557,7 +4566,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 _logger.LogError(ex, "Failed to record deposit date. Error: {ErrorMessage}, Stack: {StackTrace}. Recorded by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
 
-                if (model.SalesInvoiceId != null || model.MultipleSIId != null)
+                if (collectionReceipt.SalesInvoiceId != null || collectionReceipt.MultipleSIId != null)
                 {
                     return RedirectToAction(nameof(Index));
                 }
@@ -4567,24 +4576,36 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [HttpGet]
         public IActionResult BatchApplyClearingDate(int id,
-            DateOnly clearingDate,
-            Dictionary<int, FilprideCollectionReceipt> collectionReceipt)
+            DateOnly? clearingDate,
+            FilprideCollectionReceipt collectionReceipt)
         {
-            collectionReceipt.TryGetValue(id, out var model);
-
-            if (model == null)
-            {
-                return NotFound();
-            }
-
             try
             {
-                model.ClearedDate = clearingDate;
-                model.Status = nameof(CollectionReceiptStatus.Cleared);
+                collectionReceipt.ClearedDate = clearingDate;
+                collectionReceipt.Status = nameof(CollectionReceiptStatus.Cleared);
+
+                #region --Audit Trail Recording
+
+                var auditTrail = new List<FilprideAuditTrail>();
+
+                auditTrail.Add(
+                    new FilprideAuditTrail
+                    {
+                        Username = "JAMES MATTHEW B. CASTILLEJO",
+                        Date = DateTimeHelper.GenerateRandomTransactionDateTime(collectionReceipt.ClearedDate ?? DateOnly.MinValue),
+                        MachineName = Environment.MachineName,
+                        Activity = $"Apply clearing date for collection receipt# {collectionReceipt.CollectionReceiptNo}",
+                        DocumentType = "Collection Receipt",
+                        Company = collectionReceipt.Company
+                    });
+
+                _dbContext.FilprideAuditTrails.AddRangeAsync(auditTrail);
+
+                #endregion --Audit Trail Recording
 
                 TempData["success"] = "Collection Receipt clearing date has been applied successfully.";
 
-                if (model.SalesInvoiceId != null || model.MultipleSIId != null)
+                if (collectionReceipt.SalesInvoiceId != null || collectionReceipt.MultipleSIId != null)
                 {
                     return RedirectToAction(nameof(Index));
                 }
@@ -4597,7 +4618,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 _logger.LogError(ex, "Failed to apply clearing date. Error: {ErrorMessage}, Stack: {StackTrace}. Recorded by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
 
-                if (model.SalesInvoiceId != null || model.MultipleSIId != null)
+                if (collectionReceipt.SalesInvoiceId != null || collectionReceipt.MultipleSIId != null)
                 {
                     return RedirectToAction(nameof(Index));
                 }

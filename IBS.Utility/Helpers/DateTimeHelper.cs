@@ -18,7 +18,7 @@ namespace IBS.Utility.Helpers
             return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, PhilippineTimeZone);
         }
 
-        public static DateTime GetNextTransactionDateTime(DateOnly date)
+        public static DateTime GenerateRandomTransactionDateTime(DateOnly date)
         {
             lock (_lock) // ensures thread safety
             {
