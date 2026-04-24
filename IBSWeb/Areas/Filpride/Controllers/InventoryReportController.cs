@@ -526,8 +526,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[currentRow, 11].Style.Numberformat.Format = currencyTwoDecimalFormat;
 
                         // Unit Cost Average
-                        worksheet.Cells[currentRow, 12].Value = subTotalTotalBalance > 0
-                            ? subTotalTotalBalance / subTotalTotalBalance
+                        worksheet.Cells[currentRow, 12].Value = subTotalInventoryBalance > 0
+                            ? subTotalTotalBalance / subTotalInventoryBalance
                             : 0m;
                         worksheet.Cells[currentRow, 12].Style.Numberformat.Format = currencyFourDecimalFormat;
 
