@@ -1057,20 +1057,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         if (statusFilter == "InvalidOnly")
                         {
                             filter = i => i.Company == companyClaims
-                                        && i.Date <= viewModel.DateFrom
+                                        && i.DeliveredDate <= viewModel.DateFrom
                                         && (i.Status == nameof(DRStatus.Voided));
                         }
                         else if (statusFilter == "All")
                         {
                             filter = i => i.Company == companyClaims
-                                        && i.Date <= viewModel.DateFrom
+                                        && i.DeliveredDate <= viewModel.DateFrom
                                         && (i.Status == nameof(DRStatus.Invoiced) || i.Status == nameof(DRStatus.ForInvoicing)
                                             || i.Status == nameof(DRStatus.Voided));
                         }
                         else // ValidOnly
                         {
                             filter = i => i.Company == companyClaims
-                                        && i.Date <= viewModel.DateFrom
+                                        && i.DeliveredDate <= viewModel.DateFrom
                                         && (i.Status == nameof(DRStatus.Invoiced) || i.Status == nameof(DRStatus.ForInvoicing));
                         }
                     }
@@ -1079,23 +1079,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         if (statusFilter == "InvalidOnly")
                         {
                             filter = i => i.Company == companyClaims
-                                        && i.Date >= viewModel.DateFrom
-                                        && i.Date <= viewModel.DateTo
+                                        && i.DeliveredDate >= viewModel.DateFrom
+                                        && i.DeliveredDate <= viewModel.DateTo
                                         && (i.Status == nameof(DRStatus.Voided) || i.Status == nameof(DRStatus.Canceled));
                         }
                         else if (statusFilter == "All")
                         {
                             filter = i => i.Company == companyClaims
-                                        && i.Date >= viewModel.DateFrom
-                                        && i.Date <= viewModel.DateTo
+                                        && i.DeliveredDate >= viewModel.DateFrom
+                                        && i.DeliveredDate <= viewModel.DateTo
                                         && (i.Status == nameof(DRStatus.Invoiced) || i.Status == nameof(DRStatus.ForInvoicing)
                                             || i.Status == nameof(DRStatus.Voided) || i.Status == nameof(DRStatus.Canceled));
                         }
                         else // ValidOnly
                         {
                             filter = i => i.Company == companyClaims
-                                        && i.Date >= viewModel.DateFrom
-                                        && i.Date <= viewModel.DateTo
+                                        && i.DeliveredDate >= viewModel.DateFrom
+                                        && i.DeliveredDate <= viewModel.DateTo
                                         && (i.Status == nameof(DRStatus.Invoiced) || i.Status == nameof(DRStatus.ForInvoicing));
                         }
                     }
