@@ -137,17 +137,17 @@ namespace IBS.DataAccess.Repository.Filpride
 
             // Calculate initial values
 
-            var cost = receivingReport.PurchaseOrder!.VatType == SD.VatType_Vatable
+            var cost = Math.Round(receivingReport.PurchaseOrder!.VatType == SD.VatType_Vatable
                 ? ComputeNetOfVat(receivingReport.PurchaseOrder.FinalPrice)
-                : receivingReport.PurchaseOrder.FinalPrice;
+                : receivingReport.PurchaseOrder.FinalPrice, 4);
 
             var total = receivingReport.QuantityReceived * cost;
             var inventoryBalance = (previousInventory?.InventoryBalance ?? 0) + receivingReport.QuantityReceived;
             var totalBalance = (previousInventory?.TotalBalance ?? 0) + total;
 
-            var averageCost = totalBalance == 0 || inventoryBalance == 0
+            var averageCost = Math.Round(totalBalance == 0 || inventoryBalance == 0
                 ? cost
-                : totalBalance / inventoryBalance;
+                : totalBalance / inventoryBalance, 4);
 
             // Create new inventory entry
             var inventory = new FilprideInventory
@@ -185,7 +185,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     transaction.AverageCost = transaction.TotalBalance == 0 ||
                                               transaction.InventoryBalance == 0
                         ? transaction.Cost
-                        : transaction.TotalBalance / transaction.InventoryBalance;
+                        : Math.Round(transaction.TotalBalance / transaction.InventoryBalance, 4);
 
                     var costOfGoodsSold = transaction.AverageCost * transaction.Quantity;
 
@@ -204,7 +204,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     transaction.AverageCost = transaction.TotalBalance == 0 ||
                                               transaction.InventoryBalance == 0
                         ? transaction.Cost
-                        : transaction.TotalBalance / transaction.InventoryBalance;
+                        : Math.Round(transaction.TotalBalance / transaction.InventoryBalance, 4);
 
                     // Update running totals
                     runningAverageCost = transaction.AverageCost;
@@ -304,7 +304,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     ? ComputeNetOfVat(poPrice)
                     : poPrice;
 
-                cost = netOfVat;
+                cost = Math.Round(netOfVat, 4);
             }
             else
             {
@@ -318,7 +318,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
             var averageCost = totalBalance == 0 || inventoryBalance == 0
                 ? cost
-                : totalBalance / inventoryBalance;
+                : Math.Round(totalBalance / inventoryBalance, 4);
 
             // Create new inventory entry
             var inventory = new FilprideInventory
@@ -356,7 +356,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     transaction.AverageCost = transaction.TotalBalance == 0 ||
                                               transaction.InventoryBalance == 0
                         ? transaction.Cost
-                        : transaction.TotalBalance / transaction.InventoryBalance;
+                        : Math.Round(transaction.TotalBalance / transaction.InventoryBalance, 4);
 
                     var costOfGoodsSold = transaction.AverageCost * transaction.Quantity;
 
@@ -375,7 +375,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     transaction.AverageCost = transaction.TotalBalance == 0 ||
                                               transaction.InventoryBalance == 0
                         ? transaction.Cost
-                        : transaction.TotalBalance / transaction.InventoryBalance;
+                        : Math.Round(transaction.TotalBalance / transaction.InventoryBalance, 4);
 
                     // Update running totals
                     runningAverageCost = transaction.AverageCost;
@@ -541,7 +541,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     transaction.InventoryBalance = inventoryBalance != 0 ? inventoryBalance - transaction.Quantity : transaction.Quantity;
                     transaction.AverageCost = transaction.TotalBalance == 0 || transaction.InventoryBalance == 0
                         ? previousInventory.AverageCost
-                        : transaction.TotalBalance / transaction.InventoryBalance;
+                        : Math.Round(transaction.TotalBalance / transaction.InventoryBalance, 4);
                     var costOfGoodsSold = transaction.AverageCost * transaction.Quantity;
 
                     averageCost = transaction.AverageCost;
@@ -588,7 +588,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     transaction.InventoryBalance = inventoryBalance + transaction.Quantity;
                     transaction.AverageCost = transaction.TotalBalance == 0 || transaction.InventoryBalance == 0
                         ? transaction.Cost
-                        : transaction.TotalBalance / transaction.InventoryBalance;
+                        : Math.Round(transaction.TotalBalance / transaction.InventoryBalance, 4);
 
                     averageCost = transaction.AverageCost;
                     totalBalance = transaction.TotalBalance;
