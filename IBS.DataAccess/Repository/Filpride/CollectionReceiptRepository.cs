@@ -1075,7 +1075,7 @@ namespace IBS.DataAccess.Repository.Filpride
                         Credit = 0,
                         Company = collectionReceipt.Company,
                         CreatedBy = collectionReceipt.PostedBy!,
-                        CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
+                        CreatedDate = DateTimeHelper.GenerateRandomTransactionDateTime(DateOnly.FromDateTime(collectionReceipt.CreatedDate)),
                         SubAccountType = SubAccountType.BankAccount,
                         SubAccountId = collectionReceipt.BankId,
                         SubAccountName = collectionReceipt.BankId.HasValue
@@ -1101,7 +1101,7 @@ namespace IBS.DataAccess.Repository.Filpride
                         Credit = 0,
                         Company = collectionReceipt.Company,
                         CreatedBy = collectionReceipt.PostedBy!,
-                        CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
+                        CreatedDate = DateTimeHelper.GenerateRandomTransactionDateTime(DateOnly.FromDateTime(collectionReceipt.CreatedDate)),
                         ModuleType = nameof(ModuleType.Collection)
                     }
                 );
@@ -1122,7 +1122,7 @@ namespace IBS.DataAccess.Repository.Filpride
                         Credit = 0,
                         Company = collectionReceipt.Company,
                         CreatedBy = collectionReceipt.PostedBy!,
-                        CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
+                        CreatedDate = DateTimeHelper.GenerateRandomTransactionDateTime(DateOnly.FromDateTime(collectionReceipt.CreatedDate)),
                         ModuleType = nameof(ModuleType.Collection)
                     }
                 );
@@ -1143,7 +1143,7 @@ namespace IBS.DataAccess.Repository.Filpride
                         Credit = collectionReceipt.CashAmount + collectionReceipt.CheckAmount + collectionReceipt.ManagersCheckAmount,
                         Company = collectionReceipt.Company,
                         CreatedBy = collectionReceipt.PostedBy!,
-                        CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
+                        CreatedDate = DateTimeHelper.GenerateRandomTransactionDateTime(DateOnly.FromDateTime(collectionReceipt.CreatedDate)),
                         SubAccountType = SubAccountType.Customer,
                         SubAccountId = collectionReceipt.CustomerId,
                         SubAccountName = customerName,
@@ -1167,7 +1167,7 @@ namespace IBS.DataAccess.Repository.Filpride
                         Credit = collectionReceipt.EWT,
                         Company = collectionReceipt.Company,
                         CreatedBy = collectionReceipt.PostedBy!,
-                        CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
+                        CreatedDate = DateTimeHelper.GenerateRandomTransactionDateTime(DateOnly.FromDateTime(collectionReceipt.CreatedDate)),
                         ModuleType = nameof(ModuleType.Collection)
                     }
                 );
@@ -1188,7 +1188,7 @@ namespace IBS.DataAccess.Repository.Filpride
                         Credit = collectionReceipt.WVAT,
                         Company = collectionReceipt.Company,
                         CreatedBy = collectionReceipt.PostedBy!,
-                        CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
+                        CreatedDate = DateTimeHelper.GenerateRandomTransactionDateTime(DateOnly.FromDateTime(collectionReceipt.CreatedDate)),
                         ModuleType = nameof(ModuleType.Collection)
                     }
                 );
@@ -1213,7 +1213,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     Credit = 0,
                     Company = collectionReceipt.Company,
                     CreatedBy = collectionReceipt.PostedBy,
-                    CreatedDate = collectionReceipt.PostedDate ?? DateTimeHelper.GetCurrentPhilippineTime(),
+                    CreatedDate = DateTimeHelper.GenerateRandomTransactionDateTime(DateOnly.FromDateTime(collectionReceipt.CreatedDate)),
                 }
             };
 
@@ -1233,7 +1233,7 @@ namespace IBS.DataAccess.Repository.Filpride
                         Credit = 0,
                         Company = collectionReceipt.Company,
                         CreatedBy = collectionReceipt.PostedBy,
-                        CreatedDate = collectionReceipt.PostedDate ?? DateTimeHelper.GetCurrentPhilippineTime(),
+                        CreatedDate = DateTimeHelper.GenerateRandomTransactionDateTime(DateOnly.FromDateTime(collectionReceipt.CreatedDate)),
                     }
                 );
             }
@@ -1254,7 +1254,7 @@ namespace IBS.DataAccess.Repository.Filpride
                         Credit = 0,
                         Company = collectionReceipt.Company,
                         CreatedBy = collectionReceipt.PostedBy,
-                        CreatedDate = collectionReceipt.PostedDate ?? DateTimeHelper.GetCurrentPhilippineTime(),
+                        CreatedDate = DateTimeHelper.GenerateRandomTransactionDateTime(DateOnly.FromDateTime(collectionReceipt.CreatedDate)),
                     }
                 );
             }
@@ -1273,7 +1273,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     Credit = collectionReceipt.CashAmount + collectionReceipt.CheckAmount + collectionReceipt.ManagersCheckAmount,
                     Company = collectionReceipt.Company,
                     CreatedBy = collectionReceipt.PostedBy,
-                    CreatedDate = collectionReceipt.PostedDate ?? DateTimeHelper.GetCurrentPhilippineTime(),
+                    CreatedDate = DateTimeHelper.GenerateRandomTransactionDateTime(DateOnly.FromDateTime(collectionReceipt.CreatedDate)),
                 }
             );
 
@@ -1293,7 +1293,7 @@ namespace IBS.DataAccess.Repository.Filpride
                         Credit = collectionReceipt.EWT,
                         Company = collectionReceipt.Company,
                         CreatedBy = collectionReceipt.PostedBy,
-                        CreatedDate = collectionReceipt.PostedDate ?? DateTimeHelper.GetCurrentPhilippineTime(),
+                        CreatedDate = DateTimeHelper.GenerateRandomTransactionDateTime(DateOnly.FromDateTime(collectionReceipt.CreatedDate)),
                     }
                 );
             }
@@ -1314,7 +1314,7 @@ namespace IBS.DataAccess.Repository.Filpride
                         Credit = collectionReceipt.WVAT,
                         Company = collectionReceipt.Company,
                         CreatedBy = collectionReceipt.PostedBy,
-                        CreatedDate = collectionReceipt.PostedDate ?? DateTimeHelper.GetCurrentPhilippineTime(),
+                        CreatedDate = DateTimeHelper.GenerateRandomTransactionDateTime(DateOnly.FromDateTime(collectionReceipt.CreatedDate)),
                     }
                 );
             }
