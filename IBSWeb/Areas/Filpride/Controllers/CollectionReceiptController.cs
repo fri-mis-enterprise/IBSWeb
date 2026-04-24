@@ -3700,7 +3700,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             cr.Select(x => x.ReferenceNo).FirstOrDefault(),
                             "Please input at least one type form of payment", cr.Select(x => x.CustomerName).FirstOrDefault(),
                             cr.Select(x => x.TransactionDate).FirstOrDefault(),
-                            cr.Select(x => x.SiAmount).FirstOrDefault(),
+                            total,
                             0 ));
                         continue;
                     }
