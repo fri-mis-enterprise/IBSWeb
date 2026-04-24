@@ -3234,7 +3234,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             skipOuter = true;
                             continue;
                         }
-                        if (getSalesInvoice.CustomerId == 0)
+                        if (getSalesInvoice.CustomerId == 0 && !skipOuter)
                         {
                             listOfNeedToCorrect.Add((
                                 record.SalesInvoiceNo,
@@ -3245,9 +3245,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 record.SiAmount,
                                 getSalesInvoice.Balance));
 
+                            skipOuter = true;
                             continue;
                         }
-                        if (record.SiAmount > getSalesInvoice.Balance)
+                        if (record.SiAmount > getSalesInvoice.Balance && !skipOuter)
                         {
                             listOfNeedToCorrect.Add((
                                     record.SalesInvoiceNo,
@@ -3268,7 +3269,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         invoiceAmounts.Add(record.SiAmount);
                         invoiceTranDate.Add(getSalesInvoice.TransactionDate);
 
-                        if (!getSalesInvoice.IsPaid)
+                        if (!getSalesInvoice.IsPaid && !skipOuter)
                         {
                             decimal netDiscount = getSalesInvoice.Amount - getSalesInvoice.Discount;
 
@@ -3798,7 +3799,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         invoiceAmounts.Add(salesInvoice.Amount);
                         invoiceTranDate.Add(salesInvoice.TransactionDate);
 
-                        if (!salesInvoice.IsPaid)
+                        if (!salesInvoice.IsPaid && !skipOuter)
                         {
                             decimal netDiscount = salesInvoice.Amount - salesInvoice.Discount;
 
@@ -4048,7 +4049,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             skipOuter = true;
                             continue;
                         }
-                        if (getSalesInvoice.CustomerId == 0)
+                        if (getSalesInvoice.CustomerId == 0 && !skipOuter)
                         {
                             listOfNeedToCorrect.Add((
                                 record.SalesInvoiceNo,
@@ -4059,6 +4060,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 record.SiAmount,
                                 getSalesInvoice.Balance));
 
+                            skipOuter = true;
                             continue;
                         }
 
@@ -4067,7 +4069,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         invoiceAmounts.Add(record.SiAmount);
                         invoiceTranDate.Add(getSalesInvoice.TransactionDate);
 
-                        if (!getSalesInvoice.IsPaid)
+                        if (!getSalesInvoice.IsPaid && !skipOuter)
                         {
                             decimal netDiscount = getSalesInvoice.Amount - getSalesInvoice.Discount;
 
