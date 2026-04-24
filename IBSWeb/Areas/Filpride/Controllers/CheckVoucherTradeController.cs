@@ -156,6 +156,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 0.02m => "201030220",
                 0.05m => "201030230",
                 0.10m => "201030240",
+                0.005m => "201030250",
                 _ => null
             };
         }
