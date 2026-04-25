@@ -459,7 +459,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                       && cvd.CheckVoucherHeader.Date >= dateFrom &&
                                       cvd.CheckVoucherHeader.Date <= dateTo
                                       && (statusFilter == "ValidOnly"
-                                          ? cvd.CheckVoucherHeader.VoidedBy == null
+                                          ? cvd.CheckVoucherHeader.PostedBy != null
                                           : statusFilter == "InvalidOnly"
                                               ? cvd.CheckVoucherHeader.VoidedBy != null
                                               : true))
@@ -675,7 +675,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             cvh.Date >= dateFrom &&
                             cvh.Date <= dateTo
                             && (statusFilter == "ValidOnly"
-                                ? cvh.VoidedBy == null
+                                ? cvh.PostedBy != null
                                 : statusFilter == "InvalidOnly"
                                     ? cvh.VoidedBy != null
                                     : true))

@@ -62,7 +62,7 @@
                            asp-for="DateTo" />
                     <small id="dateToHelp" class="text-muted">
                         Optional for Delivered reports
-                    </small>    
+                    </small>
                 </div>
             </div>
             <!-- Status Filter (Delivered only) -->
@@ -70,7 +70,7 @@
                 <label asp-for="DRStatusFilter" class="col-sm-4 col-form-label text-right"></label>
                 <div class="col-sm-6">
                     <select asp-for="DRStatusFilter" class="form-control">
-                        <option value="ValidOnly">Valid Only (Exclude Voided)</option>
+                        <option value="ValidOnly">Valid Only</option>
                         <option value="All">All (Include Voided)</option>
                         <option value="InvalidOnly">Voided Only</option>
                     </select>
@@ -114,7 +114,7 @@
                     // Hide date filters
                     dateFromGroup.hide();
                     dateToGroup.hide();
-                    $("#statusFilterGroup").hide(); 
+                    $("#statusFilterGroup").hide();
                     // Remove validation
                     dateFrom.prop("required", false).val("");
                     dateTo.prop("required", false).val("");
@@ -125,7 +125,7 @@
 
                     dateFrom.prop("required", true);
                     dateTo.prop("required", false);
-                    $("#statusFilterGroup").show(); 
+                    $("#statusFilterGroup").show();
 
                     dateTo.addClass("bg-light");
                     dateToHelp.text("Optional for Delivered reports");
