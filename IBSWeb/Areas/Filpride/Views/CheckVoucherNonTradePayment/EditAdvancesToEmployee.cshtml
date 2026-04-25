@@ -55,7 +55,7 @@
                 <div class="form-group mb-3">
                     <label asp-for="Total" class="control-label"></label><span class="required">*</span>
                     <input asp-for="Total" class="form-control"
-                           placeholder="0.000"
+                           placeholder="0.0000"
                            required
                            min="1"/>
                     <span asp-validation-for="Total" class="text-danger"></span>
@@ -141,39 +141,39 @@
         $(document).ready(function() {
             // Initial update when the page loads
             updateAccountingEntries();
-            
+
             // Update accounting entries when Total field changes
             $("#Total").on("input", function() {
                 updateAccountingEntries();
             });
-            
+
             function updateAccountingEntries() {
                 let total = parseNumber($("#Total").val()) || 0;
                 let formattedTotal = formatNumberToFour(total);
-                
+
                 $(".advances-debit").val(formattedTotal);
-                
+
                 $(".cib-credit").val(formattedTotal);
-                
+
                 updateTotals();
-                
+
                 validateDebitAndCredit();
             }
-            
+
             function updateTotals() {
                 var totalDebit = 0;
                 var totalCredit = 0;
-                
+
                 // Calculate total debit
                 $("input[name='Debit']").each(function() {
                     totalDebit += parseNumber($(this).val()) || 0;
                 });
-                
+
                 // Calculate total credit
                 $("input[name='Credit']").each(function() {
                     totalCredit += parseNumber($(this).val()) || 0;
                 });
-                
+
                 // Update total displays
                 $(".totalDebit").text(formatNumberToFour(totalDebit));
                 $(".totalCredit").text(formatNumberToFour(totalCredit));
@@ -188,7 +188,7 @@
                 let employeeId = $("#EmployeeId").val();
                 getEmployeeDetails(employeeId)
             }
-            
+
         });
 
         function getEmployeeDetails(employeeId) {
@@ -283,6 +283,6 @@
                 });
             }
         });
-        
+
     </script>
 }

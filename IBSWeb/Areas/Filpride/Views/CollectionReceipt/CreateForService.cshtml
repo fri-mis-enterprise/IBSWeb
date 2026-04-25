@@ -31,7 +31,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="card-body p-4">
             <form id="myForm" asp-action="CreateForService" method="post" enctype="multipart/form-data">
                 @Html.AntiForgeryToken()
@@ -97,7 +97,7 @@ Balance:        <span id="balance"></span>
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="table-responsive">
                     <table class="table-bordered w-100" style="min-width: 750px;">
                         <tbody>
@@ -234,7 +234,7 @@ Balance:        <span id="balance"></span>
                         </div>
                         <div class="form-group pt-4">
                             <label class="control-label">Amount</label>
-                            <input id="AccountAmount" class="form-control moneyInput" value="" placeholder="0.000" />
+                            <input id="AccountAmount" class="form-control moneyInput" value="" placeholder="0.0000" />
                             <span class="text-danger"></span>
                         </div>
                     </form>
@@ -290,7 +290,7 @@ Balance:        <span id="balance"></span>
                     });
                 });
             });
-        
+
         </script>
 
         <script>

@@ -78,7 +78,7 @@
                         <span asp-validation-for="BatchNumber" class="text-danger"></span>
                     </div>
                 </div>
-                
+
                 <div class="col-12 col-md-4 p-3" style="border:dotted 1px;">
                     <pre>
             <b>Invoice Details</b>
@@ -244,7 +244,7 @@ Balance:        <span id="balance"></span>
                     </div>
                     <div class="form-group pt-4">
                         <label class="control-label">Amount</label>
-                        <input id="AccountAmount" class="form-control moneyInput" value="" placeholder="0.000" />
+                        <input id="AccountAmount" class="form-control moneyInput" value="" placeholder="0.0000" />
                         <span class="text-danger"></span>
                     </div>
                 </form>
@@ -263,7 +263,7 @@ Balance:        <span id="balance"></span>
     }
     <script>
         let collectionReceiptId = @Html.Raw(Json.Serialize(Model.CollectionReceiptId));
-        
+
         $(document).ready(function () {
             $("#CustomerId").change(function () {
                 var customerNo = $(this).val();

@@ -40,8 +40,8 @@
             </fieldset>
             <div class="form-group mb-3">
                 <label asp-for="TransactionDate" class="control-label"></label>
-                <input asp-for="TransactionDate" 
-                       type="Date" 
+                <input asp-for="TransactionDate"
+                       type="Date"
                        class="form-control"
                        min="@Model.MinDate.ToString("yyyy-MM-dd")"/>
                 <span asp-validation-for="TransactionDate" class="text-danger"></span>
@@ -56,12 +56,12 @@
                 </div>
                 <div class="form-group mb-3">
                     <label class="control-label">Quantity</label>
-                    <input asp-for="Quantity" class="form-control money" placeholder="0.000" required/>
+                    <input asp-for="Quantity" class="form-control money" placeholder="0.0000" required/>
                     <span asp-validation-for="Quantity" class="text-danger"></span>
                 </div>
                 <div class="form-group mb-3">
                     <label asp-for="AdjustedPrice" class="control-label"></label>
-                    <input asp-for="AdjustedPrice" class="form-control money" value="@Model.AdjustedPrice" placeholder="0.000" required/>
+                    <input asp-for="AdjustedPrice" class="form-control money" value="@Model.AdjustedPrice" placeholder="0.0000" required/>
                     <span asp-validation-for="AdjustedPrice" class="text-danger"></span>
                 </div>
             </div>
@@ -79,7 +79,7 @@
                     </div>
                     <div class="col-sm">
                         <label asp-for="Amount" class="control-label"></label>
-                        <input asp-for="Amount" class="form-control moneyInput" value="@Model.Amount" placeholder="0.000"/>
+                        <input asp-for="Amount" class="form-control moneyInput" value="@Model.Amount" placeholder="0.0000"/>
                         <span asp-validation-for="Amount" class="text-danger"></span>
                     </div>
                 </div>

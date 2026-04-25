@@ -15,7 +15,7 @@
     .table-bordered tbody tr:last-child td {
         border-bottom: none !important;
     }
-</style> 
+</style>
 
 <link rel="stylesheet" href="~/css/form-style.css">
 
@@ -46,9 +46,9 @@
                     </div>
                     <div class="form-group mb-3">
                         <label asp-for="TransactionDate" class="control-label">Transaction Date<span class="required">*</span></label>
-                        <input asp-for="TransactionDate" 
-                               type="Date" 
-                               class="form-control" 
+                        <input asp-for="TransactionDate"
+                               type="Date"
+                               class="form-control"
                                value="@DateTimeHelper.GetCurrentPhilippineTime().ToString("yyyy-MM-dd")"
                                min="@Model.MinDate.ToString("yyyy-MM-dd")"/>
                         <span asp-validation-for="TransactionDate" class="text-danger"></span>
@@ -102,12 +102,12 @@
                                 </tr>
                                 <tr class="sticky-bottom bg-white">
                                     <td class="text-end fw-bold p-3">Grand Total:</td>
-                                    <td class="text-end" id="grandTotalRRAmount">0.000</td>
-                                    <td class="text-end" id="grandTotalVatAmount">0.000</td>
-                                    <td class="text-end" id="grandTotalEWTAmount">0.000</td>
-                                    <td class="text-end" id="grandTotalNetOfEWT" style="padding-left:20px;">0.000</td>
-                                    <td class="text-end" id="grandTotalAmountPaid">0.000</td>
-                                    <td class="text-end" id="grandTotalBalance" style="padding-right:20px;">0.000</td>
+                                    <td class="text-end" id="grandTotalRRAmount">0.0000</td>
+                                    <td class="text-end" id="grandTotalVatAmount">0.0000</td>
+                                    <td class="text-end" id="grandTotalEWTAmount">0.0000</td>
+                                    <td class="text-end" id="grandTotalNetOfEWT" style="padding-left:20px;">0.0000</td>
+                                    <td class="text-end" id="grandTotalAmountPaid">0.0000</td>
+                                    <td class="text-end" id="grandTotalBalance" style="padding-right:20px;">0.0000</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -267,7 +267,7 @@
                         </div>
                         <div class="form-group pt-4">
                             <label class="control-label">Amount</label>
-                            <input id="AccountAmount" class="form-control moneyInput" value="" placeholder="0.000" />
+                            <input id="AccountAmount" class="form-control moneyInput" value="" placeholder="0.0000" />
                             <span class="text-danger"></span>
                         </div>
                     </form>
@@ -319,7 +319,7 @@
                 });
             });
         });
-    
+
     </script>
 
     <script>
@@ -455,7 +455,7 @@
                     calculateGrandTotalInvoiceAmount();
 
                     updateTotal2();
-                    
+
                 },
                 error: function (xhr, status, error) {
                     console.error('Error fetching balance:', error);
@@ -503,7 +503,7 @@
 
     <script>
         let totalBalance = 0;
-        
+
         document.addEventListener("DOMContentLoaded", function () {
             $("#submitButton").on("click", checkIfExceed);
             let inputs = document.querySelectorAll(".moneyInput");
@@ -567,12 +567,12 @@
                 }
             }
         }
-        
+
         $(document).on("input", "input[name='SIMultipleAmount']", updateTotal2);
 
         function updateTotal2() {
             totalBalance = 0;
-            
+
             $("input[name='SIMultipleAmount']").each(function () {
                 let val = $(this).val().replace(/,/g, '');
                 let num = parseFloat(val) || 0;
@@ -583,7 +583,7 @@
             $("#siTotal").text(formatNumber(totalBalance));
         }
     </script>
-    
+
     <script>
         $(document).on("blur change", "[name='SIMultipleAmount']", function () {
             let numValue = parseNumber($(this).val());
@@ -602,7 +602,7 @@
             } else {
                 $(this).val(formatNumber(numValue)); // format nicely on blur
             }
-            
+
             if (numValue === 0){
                 $(this).val(formatNumber(1)); // auto-correct
                 setTimeout(() => {

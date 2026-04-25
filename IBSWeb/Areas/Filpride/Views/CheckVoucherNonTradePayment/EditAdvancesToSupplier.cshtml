@@ -56,7 +56,7 @@
                 <div class="form-group mb-3">
                     <label asp-for="Total" class="control-label"></label><span class="required">*</span>
                     <input asp-for="Total" class="form-control"
-                           placeholder="0.000"
+                           placeholder="0.0000"
                            required
                            min="1"/>
                     <span asp-validation-for="Total" class="text-danger"></span>
@@ -155,7 +155,7 @@
             } else {
                 updateAccountingEntries();
             }
-            
+
             // Update accounting entries when Total field changes
             $("#Total").on("input", function() {
                 updateAccountingEntries();
@@ -165,7 +165,7 @@
                 let supplierId = $(this).val();
                 getSupplierDetails(supplierId)
             });
-            
+
         });
 
         function getSupplierDetails(supplierId) {
@@ -317,6 +317,6 @@
                 });
             }
         });
-        
+
     </script>
 }
