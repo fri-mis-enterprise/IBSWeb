@@ -56,17 +56,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
         }
 
-        public async Task<IActionResult> Index(string? view, CancellationToken cancellationToken)
+        public async Task<IActionResult> Index(string? view, bool showHidden = false, CancellationToken cancellationToken = default)
         {
             if (view == nameof(DynamicView.ChartOfAccount))
             {
                 return View("ExportIndex");
             }
 
-            var level1 = await _unitOfWork.FilprideChartOfAccount
-                .GetAllAsync(cancellationToken : cancellationToken);
+            ViewBag.ShowHidden = showHidden;
 
-            return View(level1.Where(c => c.Level == 1)
+            var accounts = await _unitOfWork.FilprideChartOfAccount
+                .GetAllAsync(cancellationToken: cancellationToken);
+            if (!showHidden)
+            {
+                accounts = FilterHiddenAccounts(accounts);
+            }
+
+            return View(accounts.Where(c => c.Level == 1)
                 .ToList());
         }
 
@@ -185,6 +191,50 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleHidden(int accountId, bool showHidden = false, CancellationToken cancellationToken = default)
+        {
+            var existingAccount = await _unitOfWork.FilprideChartOfAccount
+                .GetAsync(x => x.AccountId == accountId, cancellationToken);
+
+            if (existingAccount == null)
+            {
+                return NotFound();
+            }
+
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                existingAccount.IsHidden = !existingAccount.IsHidden;
+                existingAccount.EditedBy = GetUserFullName();
+                existingAccount.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
+                await _unitOfWork.SaveAsync(cancellationToken);
+                await _cacheService.RemoveAsync($"coa:{await GetCompanyClaimAsync()}", cancellationToken);
+
+                var action = existingAccount.IsHidden ? "Hidden" : "Unhidden";
+
+                FilprideAuditTrail auditTrailBook = new(GetUserFullName(),
+                    $"{action} Account #{existingAccount.AccountNumber}", "Chart of Accounts", (await GetCompanyClaimAsync())!);
+                await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
+
+                await transaction.CommitAsync(cancellationToken);
+                TempData["success"] = $"Account {existingAccount.AccountNumber} {action.ToLowerInvariant()} successfully";
+                return Json(new
+                {
+                    redirectUrl = Url.Action("Index", "ChartOfAccount", new { area = "Filpride", showHidden })
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to toggle chart of account visibility. Updated by: {UserName}", _userManager.GetUserName(User));
+                await transaction.RollbackAsync(cancellationToken);
+                TempData["Error"] = ex.Message;
+                return RedirectToAction(nameof(Index), new { showHidden });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> GetChartOfAccountList(
             [FromForm] DataTablesParameters parameters,
             DateTime? dateFrom,
@@ -225,6 +275,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             (s.AccountName != null && s.AccountName.ToLower().Contains(searchValue)) ||
                             (s.AccountType != null && s.AccountType.ToLower().Contains(searchValue)) ||
                             (s.NormalBalance != null && s.NormalBalance.ToLower().Contains(searchValue)) ||
+                            (s.IsHidden ? "hidden" : "visible").Contains(searchValue) ||
                             s.Level.ToString().Contains(searchValue) ||
                             (hasCreatedDate && DateOnly.FromDateTime(s.CreatedDate) == DateOnly.FromDateTime(createdDate))
                         );
@@ -267,6 +318,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         x.AccountName,
                         x.AccountType,
                         x.NormalBalance,
+                        x.IsHidden,
                         x.Level,
                         x.CreatedDate
                     })
@@ -328,8 +380,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["I1"].Value = "EditedBy";
                 worksheet.Cells["J1"].Value = "EditedDate";
                 worksheet.Cells["K1"].Value = "HasChildren";
-                worksheet.Cells["L1"].Value = "ParentAccountId";
-                worksheet.Cells["M1"].Value = "OriginalChartOfAccount";
+                worksheet.Cells["L1"].Value = "IsHidden";
+                worksheet.Cells["M1"].Value = "ParentAccountId";
+                worksheet.Cells["N1"].Value = "OriginalChartOfAccount";
 
                 var row = 2;
 
@@ -346,8 +399,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 9].Value = item.EditedBy;
                     worksheet.Cells[row, 10].Value = item.EditedDate.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
                     worksheet.Cells[row, 11].Value = item.HasChildren;
-                    worksheet.Cells[row, 12].Value = item.ParentAccountId;
-                    worksheet.Cells[row, 13].Value = item.AccountId;
+                    worksheet.Cells[row, 12].Value = item.IsHidden;
+                    worksheet.Cells[row, 13].Value = item.ParentAccountId;
+                    worksheet.Cells[row, 14].Value = item.AccountId;
 
                     row++;
                 }
@@ -383,6 +437,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .Select(coa => coa.AccountId) // Assuming Id is the primary key
                 .ToListAsync(cancellationToken);
             return Json(coaIds);
+        }
+
+        private static List<FilprideChartOfAccount> FilterHiddenAccounts(IEnumerable<FilprideChartOfAccount> accounts)
+        {
+            var visibleAccounts = accounts
+                .Where(account => !account.IsHidden)
+                .ToList();
+
+            foreach (var account in visibleAccounts)
+            {
+                account.Children = FilterHiddenAccounts(account.Children);
+            }
+
+            return visibleAccounts;
         }
     }
 }

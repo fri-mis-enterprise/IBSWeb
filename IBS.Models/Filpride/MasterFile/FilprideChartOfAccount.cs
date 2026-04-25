@@ -55,6 +55,8 @@ namespace IBS.Models.Filpride.MasterFile
 
         public bool HasChildren { get; set; }
 
+        public bool IsHidden { get; set; }
+
         [StringLength(20)]
         public string FinancialStatementType { get; set; } = null!;
 

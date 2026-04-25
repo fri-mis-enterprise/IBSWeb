@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="~/css/index-style.css">
 
 <div class="card shadow border-0 mt-4">
+    @Html.AntiForgeryToken()
     <div class="card-header bg-secondary bg-gradient ml-0 py-3">
         <div class="row">
             <div class="col-12 text-center">
@@ -43,6 +44,7 @@
                 <th>@Html.DisplayNameFor(model => model.AccountName)</th>
                 <th>@Html.DisplayNameFor(model => model.AccountType)</th>
                 <th>@Html.DisplayNameFor(model => model.NormalBalance)</th>
+                <th>STATUS</th>
                 <th>@Html.DisplayNameFor(model => model.Level)</th>
                 <th>CREATED DATE</th>
             </tr>
@@ -116,6 +118,13 @@
                     { 
                         data: 'normalBalance',
                         name: 'normalBalance'
+                    },
+                    {
+                        data: 'isHidden',
+                        name: 'isHidden',
+                        render: function (data) {
+                            return data ? 'Hidden' : 'Visible';
+                        }
                     },
                     {
                         data: 'level',
