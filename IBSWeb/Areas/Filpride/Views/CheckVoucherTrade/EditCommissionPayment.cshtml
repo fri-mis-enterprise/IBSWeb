@@ -479,6 +479,8 @@
         function updateTotalDebitAndCredit() {
             var totalDebit = 0;
             var totalCreditExcludingCib = 0;
+            var baseDebitTotal = 0;
+            var baseCreditExcludingCib = 0;
             var totalManualCredit = 0;
             var hasCreditOverflow = false;
 
@@ -501,10 +503,15 @@
 
                 if ($(this).hasClass("manual-entry-row")) {
                     totalManualCredit += credit;
+                } else {
+                    baseDebitTotal += debit;
+                    if (!creditField.hasClass("cib-credit")) {
+                        baseCreditExcludingCib += credit;
+                    }
                 }
             });
 
-            var cashInBankAmount = totalDebit - totalCreditExcludingCib;
+            var cashInBankAmount = (baseDebitTotal - baseCreditExcludingCib) - totalManualCredit;
             if (cashInBankAmount < 0 || (cashInBankAmount === 0 && totalManualCredit > 0)) {
                 hasCreditOverflow = true;
                 cashInBankAmount = 0;
@@ -597,7 +604,7 @@
                 }
             });
 
-            if (credit > 0 && currentCashInBank > 0 && credit >= currentCashInBank) {
+            if (credit > 0 && credit >= currentCashInBank) {
                 event.preventDefault();
                 alert('Credit entry must be less than the available Cash in Bank amount.');
                 return;
