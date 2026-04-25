@@ -146,7 +146,7 @@
                             <td><input type="text" name="AccountNumber" value="101010100" class="w-100" style='border:none' readonly/></td>
                             <td><input type='text' name="AccountTitle" value="Cash in Bank" class="w-100 accountTitle" style='border:none' readonly/></td>
                             <td><input type='text' name="Debit" value='0.000' class="w-100" style='border:none' readonly/></td>
-                            <td><input type='text' name="Credit" value="@Model.CashInBankAmount.ToString("N4")" class="w-100 cib-credit money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' /></td>
+                            <td><input type='text' name="Credit" value="@Model.CashInBankAmount.ToString("N4")" class="w-100 cib-credit money" style='border:none' readonly /></td>
                             <td></td>
                         </tr>
                         @foreach (var entry in Model.AdditionalAccountingEntries)
@@ -234,8 +234,6 @@
         });
     </script>
     <script>
-        let preserveLoadedCashInBank = true;
-
         $(document).ready(function () {
             $(".supplier").each(function () {
                 var suppId = $(this).val();
@@ -244,7 +242,6 @@
                 displayRecords(suppId, cvId)
             });
             $(".supplier").change(function () {
-                preserveLoadedCashInBank = false;
                 var suppId = $(this).val();
                 var cvId = $("#CvId").val();
                 computeDefaultEntry(suppId, cvId)
@@ -472,9 +469,6 @@
                 totalNetOfEWT += drAmount;
             });
             $(".totalNetOfEWT").val(formatNumberToFour(totalNetOfEWT));
-            if (!preserveLoadedCashInBank) {
-                $(".cib-credit").val(formatNumberToFour(totalNetOfEWT));
-            }
             $(".grandTotalAmountPaid").text(formatNumberToFour(totalNetOfEWT));
             $(".grandTotalBalance").text(formatNumberToFour(Math.abs(parseNumber($(".grandTotalBalance").attr('data-balance')) - totalNetOfEWT)));
 
@@ -484,11 +478,15 @@
 
         function updateTotalDebitAndCredit() {
             var totalDebit = 0;
-            var totalCredit = 0;
+            var totalCreditExcludingCib = 0;
+            var totalManualCredit = 0;
+            var hasCreditOverflow = false;
 
             $("#accountingEntriesBody tr, .defaultEntry tr").each(function () {
-                var debitInput = $(this).find("td:eq(2) input").val();
-                var creditInput = $(this).find("td:eq(3) input").val();
+                var debitField = $(this).find("td:eq(2) input");
+                var creditField = $(this).find("td:eq(3) input");
+                var debitInput = debitField.val();
+                var creditInput = creditField.val();
                 debitInput = debitInput ? String(debitInput) : "";
                 creditInput = creditInput ? String(creditInput) : "";
 
@@ -496,18 +494,35 @@
                 var credit = parseNumber(creditInput);
 
                 totalDebit += debit;
-                totalCredit += credit;
+
+                if (!creditField.hasClass("cib-credit")) {
+                    totalCreditExcludingCib += credit;
+                }
+
+                if ($(this).hasClass("manual-entry-row")) {
+                    totalManualCredit += credit;
+                }
             });
+
+            var cashInBankAmount = totalDebit - totalCreditExcludingCib;
+            if (cashInBankAmount < 0 || (cashInBankAmount === 0 && totalManualCredit > 0)) {
+                hasCreditOverflow = true;
+                cashInBankAmount = 0;
+            }
+
+            $(".cib-credit").val(formatNumberToFour(cashInBankAmount));
+
+            var totalCredit = totalCreditExcludingCib + cashInBankAmount;
 
             $(".totalDebit").text(formatNumberToFour(totalDebit));
             $(".totalCredit").text(formatNumberToFour(totalCredit));
             $("#debit").val("0.000");
             $("#credit").val("0.000");
-            validateDebitAndCredit();
+            validateDebitAndCredit(hasCreditOverflow);
         }
     </script>
     <script>
-        function validateDebitAndCredit() {
+        function validateDebitAndCredit(hasCreditOverflow = false) {
             var totalDebit = parseNumber($(".totalDebit").text());
             var totalCredit = parseNumber($(".totalCredit").text());
             var errorMessage = "";
@@ -517,7 +532,10 @@
                 $("#accountingEntriesBody").after('<div id="balance-error-message" class="text-danger mt-2"></div>');
             }
 
-            if (totalDebit !== totalCredit) {
+            if (hasCreditOverflow) {
+                errorMessage = "Credit entries must be less than the available Cash in Bank amount.";
+                isValid = false;
+            } else if (totalDebit !== totalCredit) {
                 errorMessage = "Debit and Credit totals must be equal.";
                 isValid = false;
             } else if (totalDebit === 0 && totalCredit === 0) {
@@ -545,6 +563,7 @@
             var accountTitle = $("#AccountNo option:selected").text().replace(/^\S+\s+/, "");
             var debit = parseNumber($("#debit").val());
             var credit = parseNumber($("#credit").val());
+            var currentCashInBank = parseNumber($(".cib-credit").val());
 
             if (!accountNumber || !accountTitle) {
                 event.preventDefault();
@@ -561,6 +580,32 @@
             if (debit !== 0 && credit !== 0) {
                 event.preventDefault();
                 alert('Invalid please input to debit or credit only.');
+                return;
+            }
+
+            var totalDebit = 0;
+            var totalCreditExcludingCib = 0;
+
+            $("#accountingEntriesBody tr").each(function () {
+                var debitField = $(this).find("td:eq(2) input");
+                var creditField = $(this).find("td:eq(3) input");
+
+                totalDebit += parseNumber(debitField.val());
+
+                if (!creditField.hasClass("cib-credit")) {
+                    totalCreditExcludingCib += parseNumber(creditField.val());
+                }
+            });
+
+            if (credit > 0 && currentCashInBank > 0 && credit >= currentCashInBank) {
+                event.preventDefault();
+                alert('Credit entry must be less than the available Cash in Bank amount.');
+                return;
+            }
+
+            if ((totalCreditExcludingCib + credit) > totalDebit) {
+                event.preventDefault();
+                alert('Credit entry exceeds the available Cash in Bank amount.');
                 return;
             }
 
