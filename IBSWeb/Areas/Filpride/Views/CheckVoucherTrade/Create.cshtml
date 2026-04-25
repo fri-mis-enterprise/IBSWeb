@@ -210,10 +210,10 @@
                         <option></option>
                     </select>
                 </div>
-                <div class="form-group pt-4">
-                    <label class="control-label">Debit</label>
-                    <input id="debit" value="0.0000" class="form-control moneyInput" placeholder="0.0000" />
-                </div>
+                @* <div class="form-group pt-4"> *@
+                @*     <label class="control-label">Debit</label> *@
+                @*     <input id="debit" value="0.0000" class="form-control moneyInput" placeholder="0.0000" /> *@
+                @* </div> *@
                 <div class="form-group pt-4">
                     <label class="control-label">Credit</label>
                     <input id="credit" value="0.0000" class="form-control moneyInput" placeholder="0.0000" />
@@ -437,8 +437,8 @@
                         } else {
                             availableAdvanceAmount = 0;
                             $("#advancesRow").hide();
-                            $("#advancesDebit").val("0.000");
-                            $("#advancesCredit").val("0.000");
+                            $("#advancesDebit").val("0.0000");
+                            $("#advancesCredit").val("0.0000");
                             $("#AdvancesCVNo").val("");
                             $("#AppliedAdvanceAmount").val("0.0000");
                             $("#advance-limit-message").hide();
@@ -449,8 +449,8 @@
                         console.error('Error checking PO payment terms:', error);
                         availableAdvanceAmount = 0;
                         $("#advancesRow").hide();
-                        $("#advancesDebit").val("0.000");
-                        $("#advancesCredit").val("0.000");
+                        $("#advancesDebit").val("0.0000");
+                        $("#advancesCredit").val("0.0000");
                         $("#AdvancesCVNo").val("");
                         $("#AppliedAdvanceAmount").val("0.0000");
                         $("#advance-limit-message").hide();
@@ -460,8 +460,8 @@
             } else {
                 availableAdvanceAmount = 0;
                 $("#advancesRow").hide();
-                $("#advancesDebit").val("0.000");
-                $("#advancesCredit").val("0.000");
+                $("#advancesDebit").val("0.0000");
+                $("#advancesCredit").val("0.0000");
                 $("#AdvancesCVNo").val("");
                 $("#AppliedAdvanceAmount").val("0.0000");
                 $("#advance-limit-message").hide();
@@ -661,7 +661,7 @@
             var newRow = `<tr class="manual-entry-row">
                 <td><input type="text" name="AccountNumber" value="${accountNumber}" class="w-100" style='border:none' readonly /></td>
                 <td><input type="text" name="AccountTitle" value="${accountTitle}" class="w-100" style='border:none' readonly /></td>
-                <td><input type="text" name="Debit" value="${formatNumberToFour(debit)}" class="w-100 money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' /></td>
+                <td><input type="text" name="Debit" value="${formatNumberToFour(debit)}" class="w-100 money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' readonly /></td>
                 <td><input type="text" name="Credit" value="${formatNumberToFour(credit)}" class="w-100 money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' /></td>
                 <td><button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">Remove</button></td>
             </tr>`;

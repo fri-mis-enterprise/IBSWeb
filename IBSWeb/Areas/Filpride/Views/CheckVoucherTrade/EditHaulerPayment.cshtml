@@ -76,7 +76,7 @@
                     <span asp-validation-for="OldCVNo" class="text-danger"></span>
                     <label asp-for="OldCVNo" class="control-label mx-2">Old CV #<span class="required">*</span></label>
                 </div>
-                
+
                 <div class="form-group mb-3">
                     <label asp-for="TransactionDate" class="control-label"></label><span class="required">*</span>
                     <input asp-for="TransactionDate"
@@ -85,7 +85,7 @@
                            min="@Model.MinDate.ToString("yyyy-MM-dd")"/>
                     <span asp-validation-for="TransactionDate" class="text-danger"></span>
                 </div>
-                
+
                 <div class="form-floating mb-3">
                     <textarea asp-for="SiNo" class="form-control" placeholder="Input si no" style="height: 100px"></textarea>
                     <label asp-for="SiNo" class="control-label ms-2">Supplier Invoice No</label>
@@ -138,13 +138,13 @@
                             <td><input type="text" name="AccountNumber" value="201010300" class="w-100" style='border:none' readonly/></td>
                             <td><input type='text' name="AccountTitle" value='AP - Hauling Payable' class="w-100" style='border:none' readonly/></td>
                             <td><input type='text' name="Debit" value='@Model.DefaultPayableAmount.ToString("N4")' class="w-100 totalNetOfEWT" style='border:none' readonly/></td>
-                            <td><input type='text' name="Credit" value='0.000' class="w-100" style='border:none' readonly/></td>
+                            <td><input type='text' name="Credit" value='0.0000' class="w-100" style='border:none' readonly/></td>
                             <td></td>
                         </tr>
                         <tr>
                             <td><input type="text" name="AccountNumber" value="101010100" class="w-100" style='border:none' readonly/></td>
                             <td><input type='text' name="AccountTitle" value="Cash in Bank" class="w-100 accountTitle" style='border:none' readonly/></td>
-                            <td><input type='text' name="Debit" value='0.000' class="w-100" style='border:none' readonly/></td>
+                            <td><input type='text' name="Debit" value='0.0000' class="w-100" style='border:none' readonly/></td>
                             <td><input type='text' name="Credit" value="@Model.CashInBankAmount.ToString("N4")" class="w-100 cib-credit money" style='border:none' readonly /></td>
                             <td></td>
                         </tr>
@@ -153,7 +153,7 @@
                             <tr class="manual-entry-row">
                                 <td><input type="text" name="AccountNumber" value="@entry.AccountNumber" class="w-100" style='border:none' readonly /></td>
                                 <td><input type="text" name="AccountTitle" value="@entry.AccountTitle" class="w-100" style='border:none' readonly /></td>
-                                <td><input type="text" name="Debit" value="@entry.Debit.ToString("N4")" class="w-100 money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' /></td>
+                                <td><input type="text" name="Debit" value="@entry.Debit.ToString("N4")" class="w-100 money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' readonly /></td>
                                 <td><input type="text" name="Credit" value="@entry.Credit.ToString("N4")" class="w-100 money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' /></td>
                                 <td><button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">Remove</button></td>
                             </tr>
@@ -162,8 +162,8 @@
                         <tbody>
                         <tr>
                             <td class="text-end" colspan="2">TOTAL:</td>
-                            <td class="totalDebit">0.000</td>
-                            <td class="totalCredit">0.000</td>
+                            <td class="totalDebit">0.0000</td>
+                            <td class="totalCredit">0.0000</td>
                             <td></td>
                         </tr>
                         </tbody>
@@ -197,10 +197,10 @@
                         <option></option>
                     </select>
                 </div>
-                <div class="form-group pt-4">
-                    <label class="control-label">Debit</label>
-                    <input id="debit" value="0.0000" class="form-control moneyInput" placeholder="0.0000" />
-                </div>
+                @* <div class="form-group pt-4"> *@
+                @*     <label class="control-label">Debit</label> *@
+                @*     <input id="debit" value="0.0000" class="form-control moneyInput" placeholder="0.0000" /> *@
+                @* </div> *@
                 <div class="form-group pt-4">
                     <label class="control-label">Credit</label>
                     <input id="credit" value="0.0000" class="form-control moneyInput" placeholder="0.0000" />
@@ -279,7 +279,7 @@
         function updateSelectedCount() {
             const count = selectedRecords.length;
             $('#selectedCount').text(count);
-            
+
             if (count > 0) {
                 $('.selected-dr-count').fadeIn();
             } else {
@@ -324,7 +324,7 @@
                             tr.append($('<td>').addClass('text-end grossAmount').text(formatNumberToFour(dr.netOfEwtAmount)));
                             tr.append($('<td>').addClass('text-end').append(paymentInput));
                             tr.append($('<td>').addClass('text-end balance').text(formatNumberToFour(displayedBalance)));
-                            
+
                             if (modelDRs.has(dr.id)) {
                                 paymentInput.addClass('inputAmount').val(amountPaid).show();
                                 tr.attr('data-last-amount', amountPaid);
@@ -356,9 +356,9 @@
                 </tr>
             `);
                     tbody.append(totalRow);
-                    
+
                     updateAmounts();
-                    
+
                     // Update "Select All" checkbox state
                     const totalCheckboxes = $('.selectCheckbox').length;
                     const checkedCheckboxes = $('.selectCheckbox:checked').length;
@@ -386,7 +386,7 @@
 
             allRecordsSelected = isChecked;
         }
-        
+
         $(document).on('change', '.selectCheckbox', function () {
             preserveLoadedCashInBank = false;
             const row = $(this).closest('tr');
@@ -450,7 +450,7 @@
                     updateAmounts();
                     return;
                 }
-            }   
+            }
             $(this).removeClass('is-invalid');
 
             row.find('.balance').text(formatNumberToFour(initialBalance - paymentAmount));
@@ -464,7 +464,7 @@
             amountInputs.forEach(function (input) {
                 let rawValue = input.value;
                 let drAmount = parseNumber(rawValue);
-                
+
                 totalNetOfEWT += drAmount;
             });
             $(".totalNetOfEWT").val(formatNumberToFour(totalNetOfEWT));
@@ -522,8 +522,8 @@
 
             $(".totalDebit").text(formatNumberToFour(totalDebit));
             $(".totalCredit").text(formatNumberToFour(totalCredit));
-            $("#debit").val("0.000");
-            $("#credit").val("0.000");
+            $("#debit").val("0.0000");
+            $("#credit").val("0.0000");
             validateDebitAndCredit(hasCreditOverflow);
         }
     </script>
@@ -567,7 +567,7 @@
         function saveAccountingEntry(event) {
             var accountNumber = $("#AccountNo").val();
             var accountTitle = $("#AccountNo option:selected").text().replace(/^\S+\s+/, "");
-            var debit = parseNumber($("#debit").val());
+            var debit = parseNumber(($("#debit").val() ?? "0").toString());
             var credit = parseNumber($("#credit").val());
             var currentCashInBank = parseNumber($(".cib-credit").val());
 
@@ -618,7 +618,7 @@
             var newRow = `<tr class="manual-entry-row">
                 <td><input type="text" name="AccountNumber" value="${accountNumber}" class="w-100" style='border:none' readonly /></td>
                 <td><input type="text" name="AccountTitle" value="${accountTitle}" class="w-100" style='border:none' readonly /></td>
-                <td><input type="text" name="Debit" value="${formatNumberToFour(debit)}" class="w-100 money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' /></td>
+                <td><input type="text" name="Debit" value="${formatNumberToFour(debit)}" class="w-100 money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' readonly /></td>
                 <td><input type="text" name="Credit" value="${formatNumberToFour(credit)}" class="w-100 money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' /></td>
                 <td><button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">Remove</button></td>
             </tr>`;

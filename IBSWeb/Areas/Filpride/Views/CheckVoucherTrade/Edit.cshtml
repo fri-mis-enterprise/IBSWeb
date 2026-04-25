@@ -163,7 +163,7 @@
                             <tr class="manual-entry-row">
                                 <td><input type="text" name="AccountNumber" value="@entry.AccountNumber" class="w-100" style='border:none' readonly /></td>
                                 <td><input type="text" name="AccountTitle" value="@entry.AccountTitle" class="w-100" style='border:none' readonly /></td>
-                                <td><input type="text" name="Debit" value="@entry.Debit.ToString("N4")" class="w-100 money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' /></td>
+                                <td><input type="text" name="Debit" value="@entry.Debit.ToString("N4")" class="w-100 money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' readonly /></td>
                                 <td><input type="text" name="Credit" value="@entry.Credit.ToString("N4")" class="w-100 money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' /></td>
                                 <td><button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">Remove</button></td>
                             </tr>
@@ -208,10 +208,10 @@
                         <option></option>
                     </select>
                 </div>
-                <div class="form-group pt-4">
-                    <label class="control-label">Debit</label>
-                    <input id="debit" value="0.0000" class="form-control moneyInput" placeholder="0.0000" />
-                </div>
+                @* <div class="form-group pt-4"> *@
+                @*     <label class="control-label">Debit</label> *@
+                @*     <input id="debit" value="0.0000" class="form-control moneyInput" placeholder="0.0000" /> *@
+                @* </div> *@
                 <div class="form-group pt-4">
                     <label class="control-label">Credit</label>
                     <input id="credit" value="0.0000" class="form-control moneyInput" placeholder="0.0000" />
@@ -652,7 +652,7 @@
         function saveAccountingEntry(event) {
             var accountNumber = $("#AccountNo").val();
             var accountTitle = $("#AccountNo option:selected").text().replace(/^\S+\s+/, "");
-            var debit = parseNumber($("#debit").val());
+            var debit = parseNumber(($("#debit").val() ?? "0").toString());
             var credit = parseNumber($("#credit").val());
             var currentCashInBank = parseNumber($(".cib-credit").val());
 
@@ -703,7 +703,7 @@
             var newRow = `<tr class="manual-entry-row">
                 <td><input type="text" name="AccountNumber" value="${accountNumber}" class="w-100" style='border:none' readonly /></td>
                 <td><input type="text" name="AccountTitle" value="${accountTitle}" class="w-100" style='border:none' readonly /></td>
-                <td><input type="text" name="Debit" value="${formatNumberToFour(debit)}" class="w-100 money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' /></td>
+                <td><input type="text" name="Debit" value="${formatNumberToFour(debit)}" class="w-100 money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' readonly /></td>
                 <td><input type="text" name="Credit" value="${formatNumberToFour(credit)}" class="w-100 money editable-amount" style='border:none' oninput='updateTotalDebitAndCredit()' /></td>
                 <td><button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">Remove</button></td>
             </tr>`;
