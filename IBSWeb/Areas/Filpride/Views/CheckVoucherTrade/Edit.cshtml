@@ -155,7 +155,7 @@
                             <td><input type="text" name="AccountNumber" value="101060100" class="w-100" style='border:none' readonly /></td>
                             <td><input type='text' name="AccountTitle" value='Advances to Supplier' class="w-100" style='border:none' readonly /></td>
                             <td><input type='text' name="Debit" value='0.0000' class="w-100" id="advancesDebit" style='border:none' readonly /></td>
-                            <td><input type='number' name="Credit" value='0.0000' class="w-100" id="advancesCredit" style='border:none'  /></td>
+                            <td><input type='text' name="Credit" value='0.0000' class="w-100" id="advancesCredit" style='border:none'  /></td>
                             <td></td>
                         </tr>
                         @foreach (var entry in Model.AdditionalAccountingEntries)
@@ -447,6 +447,9 @@
         }
 
         let availableAdvanceAmount = 0;
+        const initialAdvancesCVNo = @Html.Raw(Json.Serialize(Model.AdvancesCVNo ?? string.Empty));
+        const initialAppliedAdvanceAmount = Number(@Html.Raw(Json.Serialize(Model.AppliedAdvanceAmount)));
+        let isInitialAdvanceLoad = true;
 
         function displayAdvances(poNumber){
             if (poNumber && poNumber.length > 0) {
@@ -456,14 +459,30 @@
                     data: { poNumbers: poNumber },
                     traditional: true,
                     success: function(response) {
+                        const shouldPreserveInitialAdvance = isInitialAdvanceLoad
+                            && initialAdvancesCVNo
+                            && initialAppliedAdvanceAmount > 0;
+
                         if (response.hasCodOrPrepaid && response.advanceAmount > 0) {
-                            availableAdvanceAmount = response.advanceAmount;
+                            availableAdvanceAmount = shouldPreserveInitialAdvance
+                                ? Math.max(Number(response.advanceAmount) || 0, initialAppliedAdvanceAmount)
+                                : response.advanceAmount;
                             $("#advancesRow").show();
                             $("#advancesDebit").val(formatNumberToFour(0));
-                            const initialAdvance = $("#AppliedAdvanceAmount").val();
-                            $("#advancesCredit").val(initialAdvance);
-                            $("#AdvancesCVNo").val(response.advanceCVNo);
+                            $("#advancesCredit").val(formatNumberToFour(shouldPreserveInitialAdvance
+                                ? initialAppliedAdvanceAmount
+                                : parseNumber($("#AppliedAdvanceAmount").val())));
+                            $("#AdvancesCVNo").val(shouldPreserveInitialAdvance ? initialAdvancesCVNo : response.advanceCVNo);
                             $("#advance-limit-message").text(`Available advance: ${formatNumberToFour(availableAdvanceAmount)}`).show();
+                            updateAmounts();
+                        } else if (shouldPreserveInitialAdvance) {
+                            availableAdvanceAmount = initialAppliedAdvanceAmount;
+                            $("#advancesRow").show();
+                            $("#advancesDebit").val("0.0000");
+                            $("#advancesCredit").val(formatNumberToFour(initialAppliedAdvanceAmount));
+                            $("#AdvancesCVNo").val(initialAdvancesCVNo);
+                            $("#AppliedAdvanceAmount").val(formatNumberToFour(initialAppliedAdvanceAmount));
+                            $("#advance-limit-message").text(`Previously applied advance: ${formatNumberToFour(initialAppliedAdvanceAmount)}`).show();
                             updateAmounts();
                         } else {
                             availableAdvanceAmount = 0;
@@ -475,6 +494,7 @@
                             $("#advance-limit-message").hide();
                             updateAmounts();
                         }
+                        isInitialAdvanceLoad = false;
                     },
                     error: function(xhr, status, error) {
                         console.error('Error checking PO payment terms:', error);
@@ -486,6 +506,7 @@
                         $("#AppliedAdvanceAmount").val("0.0000");
                         $("#advance-limit-message").hide();
                         updateAmounts();
+                        isInitialAdvanceLoad = false;
                     }
                 });
             } else {
@@ -497,6 +518,7 @@
                 $("#AppliedAdvanceAmount").val("0.0000");
                 $("#advance-limit-message").hide();
                 updateAmounts();
+                isInitialAdvanceLoad = false;
             }
         }
 
@@ -617,8 +639,14 @@
             var hasAdvances = $("#advancesRow").is(":visible");
             var advancesAmount = 0;
             if (hasAdvances) {
-                var maxAdvanceAmount = Math.max(0, Math.min(availableAdvanceAmount, totalNetOfEWT));
                 advancesAmount = parseNumber($("#advancesCredit").val());
+                const isInitialEditRestore = $(".selectCheckbox").length === 0
+                    && initialAdvancesCVNo
+                    && initialAppliedAdvanceAmount > 0;
+
+                var maxAdvanceAmount = isInitialEditRestore
+                    ? Math.max(0, availableAdvanceAmount)
+                    : Math.max(0, Math.min(availableAdvanceAmount, totalNetOfEWT));
 
                 if (advancesAmount < 0 || isNaN(advancesAmount)) {
                     advancesAmount = 0;

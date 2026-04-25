@@ -4363,7 +4363,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         cv.CheckVoucherHeader.IsAdvances &&
                         cv.CheckVoucherHeader.Total > cv.CheckVoucherHeader.AmountPaid &&
                         cv.CheckVoucherHeader.Status == nameof(CheckVoucherPaymentStatus.Posted) &&
-                        cv.AccountName.Contains("Advances to Suppliers") &&
+                        cv.AccountNo == _advancesToSupplierAccountNo &&
                         cv.CheckVoucherHeader.Company == companyClaims);
 
             if (advancesVoucher == null)
