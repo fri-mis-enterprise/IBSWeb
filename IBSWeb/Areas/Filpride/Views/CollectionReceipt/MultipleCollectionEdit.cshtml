@@ -47,8 +47,8 @@
                     </div>
                     <div class="form-group mb-3">
                         <label asp-for="TransactionDate" class="control-label">Transaction Date<span class="required">*</span></label>
-                        <input asp-for="TransactionDate" 
-                               type="Date" 
+                        <input asp-for="TransactionDate"
+                               type="Date"
                                class="form-control"
                                min="@Model.MinDate.ToString("yyyy-MM-dd")"/>
                         <span asp-validation-for="TransactionDate" class="text-danger"></span>
@@ -101,12 +101,12 @@
                             </tr>
                             <tr class="sticky-bottom bg-white">
                                 <td class="text-end fw-bold p-3">Grand Total:</td>
-                                <td class="text-end" id="grandTotalRRAmount">0.000</td>
-                                <td class="text-end" id="grandTotalVatAmount">0.000</td>
-                                <td class="text-end" id="grandTotalEWTAmount">0.000</td>
-                                <td class="text-end" id="grandTotalNetOfEWT" style="padding-left:20px;">0.000</td>
-                                <td class="text-end" id="grandTotalAmountPaid">0.000</td>
-                                <td class="text-end" id="grandTotalBalance" style="padding-right:20px;">0.000</td>
+                                <td class="text-end" id="grandTotalRRAmount">0.0000</td>
+                                <td class="text-end" id="grandTotalVatAmount">0.0000</td>
+                                <td class="text-end" id="grandTotalEWTAmount">0.0000</td>
+                                <td class="text-end" id="grandTotalNetOfEWT" style="padding-left:20px;">0.0000</td>
+                                <td class="text-end" id="grandTotalAmountPaid">0.0000</td>
+                                <td class="text-end" id="grandTotalBalance" style="padding-right:20px;">0.0000</td>
                             </tr>
                             </tbody>
                         </table>
@@ -247,7 +247,7 @@
                     </div>
                     <div class="form-group pt-4">
                         <label class="control-label">Amount</label>
-                        <input id="AccountAmount" class="form-control moneyInput" value="" placeholder="0.000" />
+                        <input id="AccountAmount" class="form-control moneyInput" value="" placeholder="0.0000" />
                         <span class="text-danger"></span>
                     </div>
                 </form>
@@ -311,7 +311,7 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
                 }
             });
         });
-        
+
         // Trigger customer change on page load to populate invoices
         if ($("#CustomerId").val()) {
             $("#CustomerId").trigger('change');
@@ -366,13 +366,13 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
 
         // this function updates the second table that contains SI List and Amount
         $invoices.change(function () {
-            
+
             // get values in multiselect
             let selectedInvoices = $invoices.val() || [];
 
             // store the new invoice IDs to a variable
             const newInvoiceIds = selectedInvoices.filter(id => !InvoicePayments.some(item => item.invoiceId === parseInt(id)));
-            
+
             // remove old values from array that does not exist now in multiselect
             InvoicePayments = InvoicePayments.filter(item => selectedInvoices.includes(item.invoiceId.toString()));
 
@@ -400,7 +400,7 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
                     }
                 });
             });
-            
+
             $siList.empty();
             $siAmount.empty();
 
@@ -482,7 +482,7 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
                     }
 
                     calculateGrandTotalInvoiceAmount();
-                    
+
                     updateTotal2();
                 },
                 error: function (xhr, status, error) {
@@ -547,7 +547,7 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             });
-            
+
             if (total === 0){
                 $("#submitButton").trigger("change").prop("disabled", true);
             }

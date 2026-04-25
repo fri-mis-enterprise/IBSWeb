@@ -296,7 +296,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             if (id == 0)
             {
-                return Json(new { InventoryBalance = 0.000, AverageCost = 0.000, TotalBalance = 0.000 });
+                return Json(new { InventoryBalance = 0.0000, AverageCost = 0.0000, TotalBalance = 0.0000 });
             }
 
             var dateFrom = dateTo.AddDays(-dateTo.Day + 1);
@@ -308,7 +308,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             if (getPerBook == null)
             {
-                return Json(new { InventoryBalance = 0.000, AverageCost = 0.000, TotalBalance = 0.000 });
+                return Json(new { InventoryBalance = 0.0000, AverageCost = 0.0000, TotalBalance = 0.0000 });
             }
 
             return Json(new { InventoryBalance = getPerBook.InventoryBalance, AverageCost = getPerBook.AverageCost, TotalBalance = getPerBook.TotalBalance });

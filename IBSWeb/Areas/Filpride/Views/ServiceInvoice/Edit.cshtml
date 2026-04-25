@@ -39,9 +39,9 @@
             </div>
             <div id="drDiv" class="form-group mb-3" style="display: none">
                 <label asp-for="DeliveryReceiptId" class="control-label">DR<span class="required">*</span></label>
-                <select asp-for="DeliveryReceiptId" 
-                        class="form-control js-select2" 
-                        asp-items="@Model.DeliveryReceipts" 
+                <select asp-for="DeliveryReceiptId"
+                        class="form-control js-select2"
+                        asp-items="@Model.DeliveryReceipts"
                         style="width:100%">
                     <option></option>
                 </select>
@@ -53,7 +53,7 @@
                 <span asp-validation-for="DueDate" class="text-danger"></span>
             </div>
             <div class="form-floating mb-3">
-                <input asp-for="Discount" class="form-control moneyInput" placeholder="0.000"/>
+                <input asp-for="Discount" class="form-control moneyInput" placeholder="0.0000"/>
                 <label asp-for="Discount" class="control-label">Discount</label>
                 <span asp-validation-for="Discount" class="text-danger"></span>
             </div>

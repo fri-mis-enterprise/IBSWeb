@@ -67,7 +67,7 @@
                 <div class="form-group mb-3">
                     <label asp-for="Total" class="control-label"></label><span class="required">*</span>
                     <input asp-for="Total" class="form-control"
-                           placeholder="0.000"
+                           placeholder="0.0000"
                            required
                            min="1"/>
                     <span asp-validation-for="Total" class="text-danger"></span>
@@ -161,7 +161,7 @@
         $(document).ready(function() {
             // Initial update when the page loads
             updateAccountingEntries();
-            
+
             // Update accounting entries when Total field changes
             $("#Total").on("input", function() {
                 updateAccountingEntries();
@@ -171,7 +171,7 @@
                 let supplierId = $(this).val();
                 getSupplierDetails(supplierId)
             });
-            
+
         });
 
         function getSupplierDetails(supplierId) {
@@ -194,8 +194,8 @@
                             const accountTitle = parts.slice(1).join(" ");
                             taxPercent = data.taxPercent;
                             vatType = data.vatType;
-                            
-                            
+
+
                             $("#Payee").val(data.name);
                             $("#PayeeAddress").val(data.address);
                             $("#PayeeTin").val(data.tinNo);
@@ -226,8 +226,8 @@
 
         function updateAccountingEntries() {
             let total = parseNumber($("#Total").val()) || 0;
-            let ewtAmount = vatType === "@SD.VatType_Vatable" 
-                ? (total / 1.12) * taxPercent 
+            let ewtAmount = vatType === "@SD.VatType_Vatable"
+                ? (total / 1.12) * taxPercent
                 : total * taxPercent;
             let netOfEwtAmount = total - ewtAmount;
 
@@ -325,6 +325,6 @@
                 });
             }
         });
-        
+
     </script>
 }

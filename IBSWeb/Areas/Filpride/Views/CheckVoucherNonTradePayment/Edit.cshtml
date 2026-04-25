@@ -26,9 +26,9 @@
                 <input asp-for="CvId" type="hidden"/>
                 <div class="form-group mb-3">
                     <label asp-for="TransactionDate" class="control-label"></label><span class="required">*</span>
-                    <input asp-for="TransactionDate" 
-                           type="Date" 
-                           class="form-control" 
+                    <input asp-for="TransactionDate"
+                           type="Date"
+                           class="form-control"
                            min="@Model.MinDate.ToString("yyyy-MM-dd")"/>
                     <span asp-validation-for="TransactionDate" class="text-danger"></span>
                 </div>
@@ -78,7 +78,7 @@
                 </div>
                 <div class="form-group mb-3">
                     <label asp-for="Total" class="control-label"></label><span class="required">*</span>
-                    <input asp-for="Total" class="form-control money totalAmount total" value="" placeholder="0.000" readonly/>
+                    <input asp-for="Total" class="form-control money totalAmount total" value="" placeholder="0.0000" readonly/>
                     <span asp-validation-for="Total" class="text-danger"></span>
                 </div>
                 <div class="form-group mb-3">
@@ -180,7 +180,7 @@
             $(".GetCVList").change(function () {
                 var suppId = $(this).val();
                 let paymentId = $("#CvId").val();
-                
+
                 if (suppId !== "") {
                     $.ajax({
                         url: "@Url.Action("GetCVs", "CheckVoucherNonTradePayment")",
@@ -224,8 +224,8 @@
                         url: '@Url.Action("GetMultipleInvoiceDetails", "CheckVoucherNonTradePayment", new { area = "Filpride" })',
                         method: "GET",
                         traditional: true,
-                        data: { 
-                            cvId: cvSelect, 
+                        data: {
+                            cvId: cvSelect,
                             supplierId: supplierId,
                             paymentId: paymentId
                         },
@@ -238,14 +238,14 @@
                                         var cvRow = `<tr>
                                                         <td class="text-center">${cv.cvNumber}</td>
                                                         <td class="text-center">
-                                                            <input type="number" 
-                                                                   class="form-control amount-input" 
+                                                            <input type="number"
+                                                                   class="form-control amount-input"
                                                                    name="PaymentDetails[${index}].AmountPaid"
                                                                    data-max-balance="${cv.maxBalance}"
                                                                    data-index="${index}"
                                                                    value="${(cv.balance).toFixed(4)}"
-                                                                   min="0.0001" 
-                                                                   max="${cv.maxBalance}" 
+                                                                   min="0.0001"
+                                                                   max="${cv.maxBalance}"
                                                                    step="0.0001"
                                                                    required />
                                                             <small class="text-muted d-block">Max: ${formatNumberToFour(cv.maxBalance)}</small>
@@ -255,11 +255,11 @@
                                                     </tr>`;
                                         $(".cvAmountList").append(cvRow);
                                     });
-                                    
+
                                     // Store original data for recalculation
                                     window.originalTotal = data.totalCredit;
                                     window.originalEntries = data.journalEntries;
-                                    
+
                                     // Add validation and recalculation on amount change
                                     $(".amount-input").on("input", function() {
                                         var input = $(this);
@@ -267,15 +267,15 @@
                                         var val = parseFloat(input.val()) || 0;
                                         var idx = input.data("index");
                                         var err = $(`.amount-error-${idx}`);
-                                        
+
                                         err.hide();
                                         input.removeClass("is-invalid");
-                                        
+
                                         if (val <= 0 || val > max) {
                                             err.text(val <= 0 ? "Must not be 0 or negative" : "Exceeds balance").show();
                                             input.addClass("is-invalid");
                                         }
-                                        
+
                                         recalculateTotals();
                                         validateDebitAndCredit();
                                     });
@@ -300,7 +300,7 @@
                                 if(data.transactionDate > minDateFromModel){
                                     $("#TransactionDate").val(data.transactionDate).attr("min", data.transactionDate)
                                 }
-                                
+
                                 validateDebitAndCredit();
                             }
                         },
@@ -318,11 +318,11 @@
         $(document).ready(function () {
             $("#MultipleCvId").trigger("change");
         });
-        
+
         // Recalculate totals and journal entries based on changed amounts
         function recalculateTotals() {
             if (!window.originalEntries || !window.originalTotal) return;
-            
+
             var newTotal = 0;
             var hasInvalid = false;
             $(".amount-input").each(function() {
@@ -333,21 +333,21 @@
                 }
                 newTotal += val;
             });
-            
+
             if (hasInvalid || newTotal === 0 || window.originalTotal === 0) return;
 
             var ratio = newTotal / window.originalTotal;
-            
+
             $("#accountingEntriesBody").empty();
             var newDebitTotal = 0;
             var newCreditTotal = 0;
-            
+
             window.originalEntries.forEach(function(entry) {
                 var newDebit = entry.debit * ratio;
                 var newCredit = entry.credit * ratio;
                 newDebitTotal += newDebit;
                 newCreditTotal += newCredit;
-                
+
                 var row = `<tr>
                     <td><input type="text" name="AccountNumber" value="${entry.accountNumber}" class="w-100" style='border:none' readonly /></td>
                     <td><input name='AccountTitle' value='${entry.accountTitle}' class="w-100" style='border:none' readonly /></td>
@@ -356,12 +356,12 @@
                 </tr>`;
                 $("#accountingEntriesBody").append(row);
             });
-            
+
             $(".totalDebit").text(formatNumberToFour(newDebitTotal));
             $(".totalCredit").text(formatNumberToFour(newCreditTotal));
             $("#Total").val(formatNumberToFour(newCreditTotal));
         }
-        
+
     </script>
     <script>
         function validateDebitAndCredit() {
@@ -427,6 +427,6 @@
                 });
             }
         });
-        
+
     </script>
 }
