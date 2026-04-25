@@ -65,12 +65,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             ViewBag.ShowHidden = showHidden;
 
-            var accounts = await _unitOfWork.FilprideChartOfAccount
-                .GetAllAsync(cancellationToken: cancellationToken);
-            if (!showHidden)
-            {
-                accounts = FilterHiddenAccounts(accounts);
-            }
+            var accounts = showHidden
+                ? await _unitOfWork.FilprideChartOfAccount.GetAllAsyncIgnoreQueryFilters(cancellationToken: cancellationToken)
+                : await _unitOfWork.FilprideChartOfAccount.GetAllAsync(cancellationToken: cancellationToken);
 
             return View(accounts.Where(c => c.Level == 1)
                 .ToList());
@@ -84,7 +81,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             try
             {
                 var parentAccount = await _unitOfWork.FilprideChartOfAccount
-                    .GetAsync(c => c.AccountId == parentId, cancellationToken);
+                    .GetAsyncIgnoreQueryFilters(c => c.AccountId == parentId, cancellationToken);
 
                 if (parentAccount == null)
                 {
@@ -151,7 +148,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         public async Task<IActionResult> Edit(int accountId, string accountName, CancellationToken cancellationToken)
         {
             var existingAccount = await _unitOfWork.FilprideChartOfAccount
-                .GetAsync(x => x.AccountId == accountId, cancellationToken);
+                .GetAsyncIgnoreQueryFilters(x => x.AccountId == accountId, cancellationToken);
 
             if (existingAccount == null)
             {
@@ -194,7 +191,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         public async Task<IActionResult> ToggleHidden(int accountId, bool showHidden = false, CancellationToken cancellationToken = default)
         {
             var existingAccount = await _unitOfWork.FilprideChartOfAccount
-                .GetAsync(x => x.AccountId == accountId, cancellationToken);
+                .GetAsyncIgnoreQueryFilters(x => x.AccountId == accountId, cancellationToken);
 
             if (existingAccount == null)
             {
@@ -244,7 +241,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             try
             {
                 var chartOfAccounts = _unitOfWork.FilprideChartOfAccount
-                    .GetAllQuery();
+                    .GetAllQueryIgnoreQueryFilters();
 
                 var totalRecords = await chartOfAccounts.CountAsync(cancellationToken);
 
@@ -434,23 +431,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         public async Task<IActionResult> GetAllChartOfAccountIds(CancellationToken cancellationToken)
         {
             var coaIds = await _dbContext.FilprideChartOfAccounts
+                .IgnoreQueryFilters()
                 .Select(coa => coa.AccountId) // Assuming Id is the primary key
                 .ToListAsync(cancellationToken);
             return Json(coaIds);
-        }
-
-        private static List<FilprideChartOfAccount> FilterHiddenAccounts(IEnumerable<FilprideChartOfAccount> accounts)
-        {
-            var visibleAccounts = accounts
-                .Where(account => !account.IsHidden)
-                .ToList();
-
-            foreach (var account in visibleAccounts)
-            {
-                account.Children = FilterHiddenAccounts(account.Children);
-            }
-
-            return visibleAccounts;
         }
     }
 }

@@ -173,6 +173,7 @@ namespace IBS.DataAccess.Data
             {
                 coa.HasIndex(coa => coa.AccountNumber).IsUnique();
                 coa.HasIndex(coa => coa.AccountName);
+                coa.HasQueryFilter(coa => !coa.IsHidden);
             });
             #endregion
 
