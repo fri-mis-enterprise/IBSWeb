@@ -2918,7 +2918,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 throw new ArgumentException("Company claims not found!");
             }
 
-            using var reader = new StreamReader(@"C:\Users\Administrator\Documents\SINGLE COLLECTION.csv");
+            using var reader = new StreamReader(@"C:\Users\Administrator\Downloads\Uploading of collection\INDUSTRIAL SINGLE COLLECTION.csv");
             using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
             var records = csv.GetRecords<UploadCsvForSingleInvoiceViewModel>().OrderBy(x => x.TransactionDate).ToList();
 
@@ -2943,7 +2943,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 List<(string salesInvoiceNo, string OrNumber, string problem, string customerName, DateOnly transactionDate, decimal paymentAmount, decimal remainingBalance)> listOfNeedToCorrect = new();
                 var model = new List<FilprideCollectionReceipt>();
                 var details = new List<FilprideCollectionReceiptDetail>();
-                var seriesNumber = 1;
+
+                var lastSeries = _dbContext.FilprideCollectionReceipts
+                    .OrderByDescending(x => x.CollectionReceiptId)
+                    .Select(x => x.CollectionReceiptNo);
+
+                var seriesNumber = int.TryParse(lastSeries.FirstOrDefault(), out var num) ? num + 1 : 1;
 
                 foreach (var record in records)
                 {
@@ -3148,7 +3153,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            using var reader = new StreamReader(@"C:\Users\Administrator\Documents\MULTIPLE COLLECTION.csv");
+            using var reader = new StreamReader(@"C:\Users\Administrator\Downloads\Uploading of collection\INDUSTRIAL MULTIPLE COLLECTION.csv");
             using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
             var records = csv.GetRecords<UploadCsvForMultipleInvoiceViewModel>()
                 .OrderBy(x => x.TransactionDate)
@@ -3172,7 +3177,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .OrderByDescending(x => x.CollectionReceiptId)
                 .Select(x => x.CollectionReceiptNo);
 
-            var seriesNumber = int.TryParse(lastSeries.FirstOrDefault(), out var num) ? num : 0;
+            var seriesNumber = int.TryParse(lastSeries.FirstOrDefault(), out var num) ? num + 1 : 1;
 
             var timer = Stopwatch.StartNew();
 
