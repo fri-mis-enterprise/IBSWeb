@@ -1,5 +1,6 @@
 using IBS.DataAccess.Data;
 using IBS.Models;
+using IBS.Models.MasterFile;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -7,7 +8,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace IBS.Services.Attributes
 {
-    public class DepartmentAuthorizeAttribute : AuthorizeAttribute, IAuthorizationFilter
+    public class DepartmentAuthorizeAttribute: AuthorizeAttribute, IAuthorizationFilter
     {
         private readonly string[] _departments;
 
@@ -18,16 +19,29 @@ namespace IBS.Services.Attributes
 
         public void OnAuthorization(AuthorizationFilterContext context)
         {
-            var userManager = context.HttpContext.RequestServices.GetService(typeof(UserManager<ApplicationUser>)) as UserManager<ApplicationUser>;
-            var dbContext = context.HttpContext.RequestServices.GetService(typeof(ApplicationDbContext)) as ApplicationDbContext;
+            var userManager =
+                context.HttpContext.RequestServices.GetService(typeof(UserManager<ApplicationUser>)) as
+                    UserManager<ApplicationUser>;
+            var dbContext =
+                context.HttpContext.RequestServices.GetService(typeof(ApplicationDbContext)) as ApplicationDbContext;
 
             if (userManager != null && dbContext != null)
             {
                 var user = userManager.GetUserAsync(context.HttpContext.User).Result;
 
-                // Assuming "Department" is a property in your ApplicationUser model
+                if (user == null)
+                {
+                    context.Result = new ForbidResult();
+                    return;
+                }
+
+                if (context.HttpContext.User.IsInRole("Admin"))
+                {
+                    return;
+                }
+
                 var userDepartment = dbContext.ApplicationUsers
-                    .Where(u => u.Id == user!.Id)
+                    .Where(u => u.Id == user.Id)
                     .Select(u => u.Department)
                     .FirstOrDefault();
 
