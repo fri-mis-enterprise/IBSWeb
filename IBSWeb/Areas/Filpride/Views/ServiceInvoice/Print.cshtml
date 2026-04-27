@@ -8,14 +8,14 @@
 
 @{
     ViewData["Title"] = "Service Invoice - Preview";
-        
+
     var selectedCompany = string.Empty;
 
     if (SignInManager.IsSignedIn(User))
     {
         selectedCompany = User.Claims.FirstOrDefault(c => c.Type == "Company")?.Value;
     }
-    
+
     var decimalFormat = Model.Customer!.CustomerType != nameof(CustomerType.Government) ? SD.Two_Decimal_Format : SD.Four_Decimal_Format;
 }
 
@@ -156,7 +156,7 @@
                                 <td><p style="margin-left:8%;" class="mb-0"><b>Zero-Rated Sales: </b></p></td>
 
                                 <td class="text-end">
-                                    @if (Model.VatType == "Zero Rated")
+                                    @if (Model.VatType == "Zero-Rated")
                                     {
                                         if (Model.Discount > 0)
                                         {
@@ -224,7 +224,7 @@
     <p style="margin-top:20px; font-size: 11px;" class="p-italic">
         This is a system generated invoice, no signature required.
     </p>
-    
+
     @if (selectedCompany == "Filpride")
     {
         <div class="text-center w-100 compact-section" style="margin-top:20px;">
@@ -365,6 +365,6 @@
             window.location.href = url;
         }
     </script>
-    
+
     <script src="~/js/disable-dev-tools-in-print.js" asp-append-version="true"></script>
 }
