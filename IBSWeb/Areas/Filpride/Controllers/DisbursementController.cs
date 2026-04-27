@@ -15,7 +15,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
     [CompanyAuthorize(nameof(Filpride))]
-    [DepartmentAuthorize(SD.Department_Finance, SD.Department_RCD)]
+    [DepartmentAuthorize(SD.Department_Finance,
+        SD.Department_ManagementAccounting,
+        SD.Department_Accounting,
+        SD.Department_RCD)]
     public class DisbursementController : Controller
     {
         private readonly ApplicationDbContext _dbContext;
@@ -154,6 +157,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [DepartmentAuthorize(SD.Department_Finance)]
         [HttpPost]
         public async Task<IActionResult> UpdateDCPDate(int cvId, DateOnly dcpDate, CancellationToken cancellationToken)
         {
@@ -191,6 +195,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return Json(new { success = true });
         }
 
+        [DepartmentAuthorize(SD.Department_Finance)]
         [HttpPost]
         public async Task<IActionResult> UpdateDCRDate(int cvId, DateOnly dcrDate, CancellationToken cancellationToken)
         {
