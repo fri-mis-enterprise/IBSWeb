@@ -83,9 +83,9 @@ namespace IBS.DataAccess.Repository.Filpride
                 .OrderByDescending(x => x.SalesInvoiceNo!.Length)
                 .ThenByDescending(x => x.SalesInvoiceNo)
                 .FirstOrDefaultAsync(x =>
-                    x.Company == company &&
-                    x.Type == nameof(DocumentType.Documented),
-                    cancellationToken);
+                        !x.SalesInvoiceNo!.Contains("SIBEG") &&
+                        x.Company == company &&
+                        x.Type == nameof(DocumentType.Documented), cancellationToken);
 
             if (lastSi == null)
             {
@@ -107,9 +107,9 @@ namespace IBS.DataAccess.Repository.Filpride
                 .OrderByDescending(x => x.SalesInvoiceNo!.Length)
                 .ThenByDescending(x => x.SalesInvoiceNo)
                 .FirstOrDefaultAsync(x =>
-                    x.Company == company &&
-                    x.Type == nameof(DocumentType.Undocumented),
-                    cancellationToken);
+                        !x.SalesInvoiceNo!.Contains("SIBEG") &&
+                        x.Company == company &&
+                        x.Type == nameof(DocumentType.Undocumented), cancellationToken);
 
             if (lastSi == null)
             {
