@@ -833,5 +833,48 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             return RedirectToAction(nameof(Index));
         }
+
+        public async Task<IActionResult> Unpost(int id, CancellationToken cancellationToken)
+        {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                var provisionalReceipt = await _unitOfWork.ProvisionalReceipt
+                                                          .GetAsync(x => x.Id == id, cancellationToken)
+                                                      ?? throw new NullReferenceException("Provisional receipt id not found.");
+
+                if (await _unitOfWork.IsPeriodPostedAsync(Module.ProvisionalReceipt, provisionalReceipt.TransactionDate, cancellationToken))
+                {
+                    TempData["error"] = $"Cannot unpost this record because the period {provisionalReceipt.TransactionDate:MMM yyyy} is already closed.";
+                    return RedirectToAction(nameof(Print), new { id });
+                }
+
+                provisionalReceipt.PostedBy = null;
+                provisionalReceipt.PostedDate = null;
+                provisionalReceipt.Status = nameof(Status.Pending);
+
+                #region --Audit Trail Recording
+
+                FilprideAuditTrail auditTrailBook = new(GetUserFullName(), $"Unposted provisional receipt# {provisionalReceipt.SeriesNumber}", "Provisional Receipt", provisionalReceipt.Company);
+                await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
+
+                #endregion --Audit Trail Recording
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                TempData["success"] = "Provisional receipt has been Unposted.";
+
+                return RedirectToAction(nameof(Print), new { id });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to unpost provisional receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Unposted by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+                await transaction.RollbackAsync(cancellationToken);
+                TempData["error"] = ex.Message;
+                return RedirectToAction(nameof(Index));
+            }
+        }
     }
 }
