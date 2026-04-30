@@ -5,17 +5,21 @@ namespace IBS.Utility.Helpers
 {
     public static class DateTimeHelper
     {
-        private static readonly TimeZoneInfo PhilippineTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila");
+        private static readonly TimeZoneInfo _philippineTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila");
 
         private static readonly object _lock = new();
         private static DateTime? _lastGeneratedTime;
-
-
         private static readonly HttpClient _httpClient = new();
 
         public static DateTime GetCurrentPhilippineTime()
         {
-            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, PhilippineTimeZone);
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _philippineTimeZone);
+        }
+
+        public static DateOnly GetFirstDayOfCurrentPhilippineMonth()
+        {
+            var currentDate = GetCurrentPhilippineTime();
+            return new DateOnly(currentDate.Year, currentDate.Month, 1);
         }
 
         public static DateTime GenerateRandomTransactionDateTime(DateOnly date)
@@ -67,12 +71,11 @@ namespace IBS.Utility.Helpers
             var nonWorkingDays = new List<DateOnly>();
 
             var jsonSerializerOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            using var httpClient = new HttpClient();
 
             // Get holidays for all years in the range
             for (int year = startDate.Year; year <= endDate.Year; year++)
             {
-                using var response = await httpClient.GetAsync($"https://date.nager.at/api/v3/publicholidays/{year}/{countryCode}");
+                using var response = await _httpClient.GetAsync($"https://date.nager.at/api/v3/publicholidays/{year}/{countryCode}");
 
                 if (response.IsSuccessStatusCode)
                 {

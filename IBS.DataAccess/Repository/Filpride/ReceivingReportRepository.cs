@@ -554,6 +554,7 @@ namespace IBS.DataAccess.Repository.Filpride
             var ledgers = new List<FilprideGeneralLedgerBook>();
             var isIncremental = difference > 0;
             difference = Math.Abs(difference);
+            var firstDayOfMonth = DateTimeHelper.GetFirstDayOfCurrentPhilippineMonth();
             var particulars = $"Update Cost on DR#{model.DeliveryReceipt?.DeliveryReceiptNo}. DR dated {model.DeliveryReceipt?.DeliveredDate}";
             var netOfVatAmount = model.PurchaseOrder!.VatType == SD.VatType_Vatable
                 ? ComputeNetOfVat(difference)
@@ -561,7 +562,10 @@ namespace IBS.DataAccess.Repository.Filpride
             var vatAmount = model.PurchaseOrder!.VatType == SD.VatType_Vatable
                 ? ComputeVatAmount(netOfVatAmount)
                 : 0m;
-            var ewtAmount = model.PurchaseOrder!.TaxType == SD.TaxType_WithTax ? ComputeEwtAmount(netOfVatAmount, 0.01m) : 0m;
+            var ewtAmount = model.PurchaseOrder!.TaxType == SD.TaxType_WithTax
+                ? ComputeEwtAmount(netOfVatAmount, 0.01m)
+                : 0m;
+
 
             if (model.PurchaseOrder.Terms == SD.Terms_Cod || model.PurchaseOrder.Terms == SD.Terms_Prepaid)
             {
@@ -607,7 +611,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
             ledgers.Add(new FilprideGeneralLedgerBook
             {
-                Date = DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime()),
+                Date = firstDayOfMonth,
                 Reference = model.ReceivingReportNo!,
                 Description = particulars,
                 AccountId = inventoryTitle.AccountId,
@@ -625,7 +629,7 @@ namespace IBS.DataAccess.Repository.Filpride
             {
                 ledgers.Add(new FilprideGeneralLedgerBook
                 {
-                    Date = DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime()),
+                    Date = firstDayOfMonth,
                     Reference = model.ReceivingReportNo!,
                     Description = particulars,
                     AccountId = vatInputTitle.AccountId,
@@ -642,7 +646,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
             ledgers.Add(new FilprideGeneralLedgerBook
             {
-                Date = DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime()),
+                Date = firstDayOfMonth,
                 Reference = model.ReceivingReportNo!,
                 Description = particulars,
                 AccountId = apTradeTitle.AccountId,
@@ -663,7 +667,7 @@ namespace IBS.DataAccess.Repository.Filpride
             {
                 ledgers.Add(new FilprideGeneralLedgerBook
                 {
-                    Date = DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime()),
+                    Date = firstDayOfMonth,
                     Reference = model.ReceivingReportNo!,
                     Description = particulars,
                     AccountId = ewtTitle.AccountId,
@@ -686,7 +690,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
                 ledgers.Add(new FilprideGeneralLedgerBook
                 {
-                    Date = DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime()),
+                    Date = firstDayOfMonth,
                     Reference = model.ReceivingReportNo!,
                     Description = particulars,
                     AccountId = cogsTitle.AccountId,
@@ -702,7 +706,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
                 ledgers.Add(new FilprideGeneralLedgerBook
                 {
-                    Date = DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime()),
+                    Date = firstDayOfMonth,
                     Reference = model.ReceivingReportNo!,
                     Description = particulars,
                     AccountId = inventoryTitle.AccountId,
