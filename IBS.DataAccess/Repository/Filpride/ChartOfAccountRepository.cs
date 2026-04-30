@@ -61,7 +61,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
         public IEnumerable<ChartOfAccountDto> GetSummaryReportView(CancellationToken cancellationToken = default)
         {
-            var query = from c in _db.FilprideChartOfAccounts
+            var query = from c in _db.FilprideChartOfAccounts.IgnoreQueryFilters()
                         join gl in _db.FilprideGeneralLedgerBooks on c.AccountNumber equals gl.AccountNo into glGroup
                         from gl in glGroup.DefaultIfEmpty()
                         group new { c, gl } by new { c.Level, c.AccountNumber, c.AccountName, c.AccountType, } into g

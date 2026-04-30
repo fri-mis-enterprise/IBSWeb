@@ -97,6 +97,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
 
                 var generalLedgers = await _dbContext.FilprideGeneralLedgerBooks
+                    .IgnoreQueryFilters()
                     .Include(gl => gl.Account)
                     .Where(gl =>
                         gl.Date >= firstDayOfMonth &&
@@ -105,6 +106,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ToListAsync(cancellationToken);
 
                 var chartOfAccounts = await _dbContext.FilprideChartOfAccounts
+                    .IgnoreQueryFilters()
                     .Include(coa => coa.Children)
                     .OrderBy(coa => coa.AccountNumber)
                     .Where(coa => coa.FinancialStatementType == nameof(FinancialStatementType.PnL))
@@ -338,6 +340,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
 
                 var generalLedgers = await _dbContext.FilprideGeneralLedgerBooks
+                    .IgnoreQueryFilters()
                     .Include(gl => gl.Account) // Level 4
                     .Where(gl =>
                         gl.Date >= firstDayOfMonth &&
@@ -346,6 +349,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ToListAsync(cancellationToken);
 
                 var chartOfAccounts = await _dbContext.FilprideChartOfAccounts
+                    .IgnoreQueryFilters()
                     .Include(coa => coa.Children)
                     .OrderBy(coa => coa.AccountNumber)
                     .Where(coa => coa.FinancialStatementType == nameof(FinancialStatementType.PnL))
@@ -590,6 +594,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
 
                 var generalLedgers = await _dbContext.FilprideGeneralLedgerBooks
+                    .IgnoreQueryFilters()
                     .Include(gl => gl.Account) // Level 4
                     .ThenInclude(ac => ac.ParentAccount) // Level 3
                     .ThenInclude(ac => ac!.ParentAccount) // Level 2
@@ -790,6 +795,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
 
                 var generalLedgers = await _dbContext.FilprideGeneralLedgerBooks
+                    .IgnoreQueryFilters()
                     .Include(gl => gl.Account) // Level 4
                     .ThenInclude(ac => ac.ParentAccount) // Level 3
                     .ThenInclude(ac => ac!.ParentAccount) // Level 2
@@ -973,6 +979,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             try
             {
                 var currentLedgers = await _dbContext.FilprideGeneralLedgerBooks
+                    .IgnoreQueryFilters()
                     .Include(gl => gl.Account) // Level 4
                     .ThenInclude(ac => ac.ParentAccount) // Level 3
                     .ThenInclude(ac => ac!.ParentAccount) // Level 2
@@ -984,6 +991,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ToListAsync(cancellationToken);
 
                 var priorLedgers = await _dbContext.FilprideGeneralLedgerBooks
+                    .IgnoreQueryFilters()
                     .Include(gl => gl.Account) // Level 4
                     .ThenInclude(ac => ac.ParentAccount) // Level 3
                     .ThenInclude(ac => ac!.ParentAccount) // Level 2
@@ -994,6 +1002,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ToListAsync(cancellationToken);
 
                 var chartOfAccounts = await _dbContext.FilprideChartOfAccounts
+                    .IgnoreQueryFilters()
                     .OrderBy(coa => coa.AccountNumber)
                     .ToListAsync(cancellationToken);
 
@@ -1196,8 +1205,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 var glPeriodBalances = await _dbContext.FilprideGlPeriodBalances
+                    .IgnoreQueryFilters()
                     .Include(g => g.Account)
                     .Where(pb =>
+                        pb.IsValid &&
                         pb.PeriodStartDate >= dateFrom &&
                         pb.PeriodEndDate <= dateTo &&
                         pb.Company == companyClaims)
@@ -1205,6 +1216,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ToListAsync(cancellationToken);
 
                 var chartOfAccounts = await _dbContext.FilprideChartOfAccounts
+                    .IgnoreQueryFilters()
                     .OrderBy(coa => coa.AccountNumber)
                     .ToListAsync(cancellationToken);
 
@@ -1374,6 +1386,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
 
                 var generalLedgers = await _dbContext.FilprideGeneralLedgerBooks
+                    .IgnoreQueryFilters()
                     .Include(gl => gl.Account)
                     .Where(gl =>
                         gl.Date <= lastDayOfMonth &&
@@ -1381,6 +1394,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ToListAsync(cancellationToken);
 
                 var chartOfAccounts = await _dbContext.FilprideChartOfAccounts
+                    .IgnoreQueryFilters()
                     .Include(coa => coa.Children)
                     .OrderBy(coa => coa.AccountNumber)
                     .Where(coa => coa.FinancialStatementType == nameof(FinancialStatementType.BalanceSheet))
@@ -1649,6 +1663,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
 
                 var generalLedgers = await _dbContext.FilprideGeneralLedgerBooks
+                    .IgnoreQueryFilters()
                     .Include(gl => gl.Account) // Level 4
                     .Where(gl =>
                         gl.Date <= lastDayOfMonth &&
@@ -1656,6 +1671,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ToListAsync(cancellationToken);
 
                 var chartOfAccounts = await _dbContext.FilprideChartOfAccounts
+                    .IgnoreQueryFilters()
                     .Include(coa => coa.Children)
                     .Where(coa => coa.FinancialStatementType == nameof(FinancialStatementType.BalanceSheet))
                     .OrderBy(coa => coa.AccountNumber)

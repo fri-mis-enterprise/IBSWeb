@@ -100,6 +100,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
             var generalLedgerBooks = await _db
                 .FilprideGeneralLedgerBooks
+                .IgnoreQueryFilters()
                 .Where(i => i.Company == company && i.Date >= dateFrom && i.Date <= dateTo && i.IsPosted)
                 .Include(i => i.Account)
                 .OrderBy(i => i.Date)

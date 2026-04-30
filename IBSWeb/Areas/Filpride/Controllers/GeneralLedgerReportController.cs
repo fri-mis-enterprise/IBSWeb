@@ -393,6 +393,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var viewModel = new GeneralLedgerReportViewModel
             {
                 ChartOfAccounts = await _dbContext.FilprideChartOfAccounts
+                    .IgnoreQueryFilters()
                     .Where(coa => !coa.HasChildren)
                     .OrderBy(coa => coa.AccountNumber)
                     .Select(s => new SelectListItem
@@ -425,10 +426,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
+                var selectedAccountNo = model.AccountNo?
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    .FirstOrDefault();
+
                 var generalLedgerByAccountNo = await _dbContext.FilprideGeneralLedgerBooks
                     .Where(g =>
                         g.Date >= model.DateFrom && g.Date <= model.DateTo &&
-                        (model.AccountNo == null || g.AccountNo == model.AccountNo) &&
+                        (selectedAccountNo == null || g.AccountNo == selectedAccountNo) &&
                         g.Company == companyClaims)
                     .ToListAsync(cancellationToken);
 
@@ -439,7 +444,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 var chartOfAccount = await _unitOfWork.FilprideChartOfAccount
-                    .GetAllAsync(cancellationToken: cancellationToken);
+                    .GetAllAsyncIgnoreQueryFilters(cancellationToken: cancellationToken);
 
                 var document = Document.Create(container =>
                 {
@@ -658,7 +663,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .FirstOrDefault();
 
                 var selectedAccount = await _unitOfWork.FilprideChartOfAccount
-                    .GetAsync(coa => selectedAccountNo != null && coa.AccountNumber == selectedAccountNo, cancellationToken);
+                    .GetAsyncIgnoreQueryFilters(coa => selectedAccountNo != null && coa.AccountNumber == selectedAccountNo, cancellationToken);
 
                 var generalLedgerByAccountNo = await _dbContext.FilprideGeneralLedgerBooks
                     .Where(g =>
@@ -680,7 +685,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ToList();
 
                 var accounts = await _unitOfWork.FilprideChartOfAccount
-                    .GetAllAsync(a => accountNumbers.Contains(a.AccountNumber!), cancellationToken);
+                    .GetAllAsyncIgnoreQueryFilters(a => accountNumbers.Contains(a.AccountNumber!), cancellationToken);
 
                 var accountDictionary = accounts
                     .Where(a => !string.IsNullOrEmpty(a.AccountNumber))
@@ -688,8 +693,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 var previousPeriodEndDate = dateFrom.AddDays(-1);
                 var glPeriodBalances = await _dbContext.FilprideGlPeriodBalances
+                    .IgnoreQueryFilters()
                     .Include(g => g.Account)
                     .Where(pb => accountNumbers.Contains(pb.Account.AccountNumber!) &&
+                                 pb.IsValid &&
                                  pb.PeriodEndDate == previousPeriodEndDate && pb.Company == companyClaims)
                     .ToListAsync(cancellationToken);
 
@@ -1352,6 +1359,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var viewModel = new GeneralLedgerReportViewModel
             {
                 ChartOfAccounts = await _dbContext.FilprideChartOfAccounts
+                    .IgnoreQueryFilters()
                     .Where(coa => !coa.HasChildren)
                     .OrderBy(coa => coa.AccountNumber)
                     .Select(s => new SelectListItem
@@ -1399,8 +1407,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 // Query subsidiary ledger balances from database
                 var subsidiaryLedgers = await _dbContext.FilprideGlSubAccountBalances
+                    .IgnoreQueryFilters()
                     .Include(s => s.Account)
                     .Where(s =>
+                        s.IsValid &&
                         s.PeriodEndDate >= dateFrom &&
                         s.PeriodStartDate <= dateTo &&
                         (selectedAccountNo == null || s.Account.AccountNumber == selectedAccountNo) &&
@@ -1434,7 +1444,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 var selectedAccount = selectedAccountNo != null
                     ? await _unitOfWork.FilprideChartOfAccount
-                        .GetAsync(coa => coa.AccountNumber == selectedAccountNo, cancellationToken)
+                        .GetAsyncIgnoreQueryFilters(coa => coa.AccountNumber == selectedAccountNo, cancellationToken)
                     : null;
 
                 worksheet.Cells["B2"].Value = $"{dateFrom:yyyy-MM-dd} - {dateTo:yyyy-MM-dd}";

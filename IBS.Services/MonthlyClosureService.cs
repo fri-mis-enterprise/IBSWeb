@@ -213,6 +213,7 @@ namespace IBS.Services
                 }
 
                 var generalLedgers = await _dbContext.FilprideGeneralLedgerBooks
+                    .IgnoreQueryFilters()
                     .Include(gl => gl.Account)
                     .ThenInclude(filprideChartOfAccount => filprideChartOfAccount.ParentAccount) // Level 4
                     .Where(gl =>
@@ -415,6 +416,7 @@ namespace IBS.Services
 
                 // Get all accounts from COA for this company
                 var allAccounts = await _dbContext.FilprideChartOfAccounts
+                    .IgnoreQueryFilters()
                     .OrderBy(x => x.AccountNumber)
                     .ToListAsync(cancellationToken);
 
@@ -425,6 +427,7 @@ namespace IBS.Services
                 }
 
                 var glEntries = await _dbContext.FilprideGeneralLedgerBooks
+                    .IgnoreQueryFilters()
                     .Include(x => x.Account)
                     .Where(x =>
                         x.Company == company &&
@@ -469,7 +472,8 @@ namespace IBS.Services
 
                 // Get beginning balances for all accounts
                 var beginningBalancesDict = await _dbContext.FilprideGlPeriodBalances
-                    .Where(x => accountIds.Contains(x.AccountId) && x.PeriodEndDate < periodEnd)
+                    .IgnoreQueryFilters()
+                    .Where(x => x.IsValid && accountIds.Contains(x.AccountId) && x.PeriodEndDate < periodEnd)
                     .GroupBy(x => x.AccountId)
                     .Select(g => new
                     {
@@ -520,7 +524,8 @@ namespace IBS.Services
                 if (glGroupedBySubAccount.Any())
                 {
                     var subAccountBeginningBalances = await _dbContext.FilprideGlSubAccountBalances
-                        .Where(x => accountIds.Contains(x.AccountId) && x.PeriodEndDate < periodEnd)
+                        .IgnoreQueryFilters()
+                        .Where(x => x.IsValid && accountIds.Contains(x.AccountId) && x.PeriodEndDate < periodEnd)
                         .ToListAsync(cancellationToken);
 
                     var subAccountBalancesDict = subAccountBeginningBalances
