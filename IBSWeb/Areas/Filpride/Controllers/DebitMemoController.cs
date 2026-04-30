@@ -1427,5 +1427,59 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             return Json(dmIds);
         }
+
+        public async Task<IActionResult> Unpost(int id, CancellationToken cancellationToken)
+        {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                var debitMemo = await _unitOfWork.FilprideDebitMemo
+                                                          .GetAsync(x => x.DebitMemoId == id, cancellationToken)
+                                                      ?? throw new NullReferenceException("Debit memo id not found.");
+
+                if (await _unitOfWork.IsPeriodPostedAsync(Module.DebitMemo, debitMemo.TransactionDate, cancellationToken))
+                {
+                    TempData["error"] = $"Cannot unpost this record because the period {debitMemo.TransactionDate:MMM yyyy} is already closed.";
+                    return RedirectToAction(nameof(Print), new { id });
+                }
+
+                debitMemo.PostedBy = null;
+                debitMemo.PostedDate = null;
+                debitMemo.Status = nameof(Status.Pending);
+
+                if (debitMemo.SalesInvoiceId != null || debitMemo.SalesInvoiceId != 0)
+                {
+                    await _unitOfWork.FilprideSalesInvoice.RemoveRecords<FilprideSalesBook>(x => x.SerialNo == debitMemo.DebitMemoNo, cancellationToken);
+                    await _unitOfWork.FilprideSalesInvoice.RemoveRecords<FilprideGeneralLedgerBook>(x => x.Reference == debitMemo.DebitMemoNo, cancellationToken);
+                }
+                else
+                {
+                    await _unitOfWork.FilprideServiceInvoice.RemoveRecords<FilprideSalesBook>(x => x.SerialNo == debitMemo.DebitMemoNo, cancellationToken);
+                    await _unitOfWork.FilprideServiceInvoice.RemoveRecords<FilprideGeneralLedgerBook>(x => x.Reference == debitMemo.DebitMemoNo, cancellationToken);
+                }
+
+                #region --Audit Trail Recording
+
+                FilprideAuditTrail auditTrailBook = new(GetUserFullName(), $"Unposted debit memo# {debitMemo.DebitMemoNo}", "Debit Memo", debitMemo.Company);
+                await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
+
+                #endregion --Audit Trail Recording
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                TempData["success"] = "Debit Memo has been Unposted.";
+
+                return RedirectToAction(nameof(Print), new { id });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to unpost debit memo. Error: {ErrorMessage}, Stack: {StackTrace}. Unposted by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+                await transaction.RollbackAsync(cancellationToken);
+                TempData["error"] = ex.Message;
+                return RedirectToAction(nameof(Index));
+            }
+        }
     }
 }

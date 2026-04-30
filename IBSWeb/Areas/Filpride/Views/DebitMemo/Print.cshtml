@@ -8,7 +8,7 @@
 
 @{
     ViewData["Title"] = "Debit Memo - Preview";
-    
+
     var customerType = (Model.SalesInvoice?.CustomerOrderSlip?.CustomerType ?? Model.SalesInvoice?.Customer?.CustomerType) ?? Model.ServiceInvoice!.Customer!.CustomerType;
     var customerName = (Model.SalesInvoice?.CustomerOrderSlip?.CustomerName ?? Model.SalesInvoice?.Customer?.CustomerName) ?? Model.ServiceInvoice!.CustomerName;
     var customerAddress = (Model.SalesInvoice?.CustomerOrderSlip?.CustomerAddress ?? Model.SalesInvoice?.Customer?.CustomerAddress) ?? Model.ServiceInvoice!.CustomerAddress;
@@ -25,9 +25,9 @@
     {
         selectedCompany = User.Claims.FirstOrDefault(c => c.Type == "Company")?.Value;
     }
-    
+
     var decimalFormat = customerType != nameof(CustomerType.Government) ? SD.Two_Decimal_Format : SD.Four_Decimal_Format;
-    
+
     var invoiceNo = Model.SalesInvoice?.SalesInvoiceNo ?? Model.ServiceInvoice!.ServiceInvoiceNo;
     var invoiceDate = Model.SalesInvoice?.TransactionDate.ToString(SD.Date_Format) ?? Model.ServiceInvoice!.Period.ToString(SD.Date_Format);
     var product = Model.SalesInvoice?.CustomerOrderSlip?.ProductName ?? @Model.ServiceInvoice!.ServiceName;
@@ -60,7 +60,7 @@
             </p>
         </td>
     </tr>
-    <tr>    
+    <tr>
         <td class="text-end" style="padding-top: 10px !important;"><h6 class="series"><b>No.&nbsp;@Html.DisplayFor(model => model.DebitMemoNo)</b></h6></td>
     </tr>
     <tr>
@@ -198,7 +198,7 @@
     <p style="margin-top:20px; font-size: 11px;" class="p-italic">
         <i>This is a system generated invoice, no signature required.</i>
     </p>
-    
+
     <div class="text-center w-100 compact-section" style="margin-top:10px;">
         <em><strong>"THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX"</strong></em><br/><br/>
         @if (selectedCompany == "Filpride")
@@ -260,6 +260,13 @@
             <div class="col-6 col-md-3">
                 <a onclick="confirmPrint(@Model.DebitMemoId)" class="btn btn-primary form-control buttons">Print</a>
             </div>
+
+            if (Model.Status == nameof(Status.Posted))
+            {
+                <div class="col-6 col-md-3">
+                    <a class="btn btn-secondary form-control buttons" onclick="confirmUnpost(@Model.DebitMemoId)">Unpost</a>
+                </div>
+            }
         }
     }
 
@@ -343,6 +350,25 @@
             window.location.href = url; // only redirect
         }
     </script>
-    
+
+    <script>
+        function confirmUnpost(id) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "This will revert its status to ForPosting",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let url = `@Url.Action("Unpost", "DebitMemo", new { area = "Filpride" })/${id}`;
+                    window.location.href = url;
+                }
+            })
+        }
+
+    </script>
     <script src="~/js/disable-dev-tools-in-print.js" asp-append-version="true"></script>
 }

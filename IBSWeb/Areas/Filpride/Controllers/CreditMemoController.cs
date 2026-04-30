@@ -1490,5 +1490,59 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             return Json(cmIds);
         }
+
+        public async Task<IActionResult> Unpost(int id, CancellationToken cancellationToken)
+        {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                var creditMemo = await _unitOfWork.FilprideCreditMemo
+                                                          .GetAsync(x => x.CreditMemoId == id, cancellationToken)
+                                                      ?? throw new NullReferenceException("Credit memo id not found.");
+
+                if (await _unitOfWork.IsPeriodPostedAsync(Module.CreditMemo, creditMemo.TransactionDate, cancellationToken))
+                {
+                    TempData["error"] = $"Cannot unpost this record because the period {creditMemo.TransactionDate:MMM yyyy} is already closed.";
+                    return RedirectToAction(nameof(Print), new { id });
+                }
+
+                creditMemo.PostedBy = null;
+                creditMemo.PostedDate = null;
+                creditMemo.Status = nameof(Status.Pending);
+
+                if (creditMemo.SalesInvoiceId != null || creditMemo.SalesInvoiceId != 0)
+                {
+                    await _unitOfWork.FilprideSalesInvoice.RemoveRecords<FilprideSalesBook>(x => x.SerialNo == creditMemo.CreditMemoNo, cancellationToken);
+                    await _unitOfWork.FilprideSalesInvoice.RemoveRecords<FilprideGeneralLedgerBook>(x => x.Reference == creditMemo.CreditMemoNo, cancellationToken);
+                }
+                else
+                {
+                    await _unitOfWork.FilprideServiceInvoice.RemoveRecords<FilprideSalesBook>(x => x.SerialNo == creditMemo.CreditMemoNo, cancellationToken);
+                    await _unitOfWork.FilprideServiceInvoice.RemoveRecords<FilprideGeneralLedgerBook>(x => x.Reference == creditMemo.CreditMemoNo, cancellationToken);
+                }
+
+                #region --Audit Trail Recording
+
+                FilprideAuditTrail auditTrailBook = new(GetUserFullName(), $"Unposted credit memo# {creditMemo.CreditMemoNo}", "Credit Memo", creditMemo.Company);
+                await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
+
+                #endregion --Audit Trail Recording
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                TempData["success"] = "Credit Memo has been Unposted.";
+
+                return RedirectToAction(nameof(Print), new { id });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to unpost credit memo. Error: {ErrorMessage}, Stack: {StackTrace}. Unposted by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+                await transaction.RollbackAsync(cancellationToken);
+                TempData["error"] = ex.Message;
+                return RedirectToAction(nameof(Index));
+            }
+        }
     }
 }
