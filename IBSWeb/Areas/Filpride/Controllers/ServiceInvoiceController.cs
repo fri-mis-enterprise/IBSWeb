@@ -1011,5 +1011,51 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return Json(new { success = false, error = ex.Message });
             }
         }
+
+        public async Task<IActionResult> Unpost(int id, CancellationToken cancellationToken)
+        {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                var serviceInvoice = await _unitOfWork.FilprideServiceInvoice
+                                                          .GetAsync(x => x.ServiceInvoiceId == id, cancellationToken)
+                                                      ?? throw new NullReferenceException("Service invoice id not found.");
+
+                if (await _unitOfWork.IsPeriodPostedAsync(Module.ServiceInvoice, serviceInvoice.Period, cancellationToken))
+                {
+                    TempData["error"] = $"Cannot unpost this record because the period {serviceInvoice.Period:MMM yyyy} is already closed.";
+                    return RedirectToAction(nameof(Print), new { id });
+                }
+
+                serviceInvoice.PostedBy = null;
+                serviceInvoice.PostedDate = null;
+                serviceInvoice.Status = nameof(Status.Pending);
+
+                await _unitOfWork.FilprideSalesInvoice.RemoveRecords<FilprideGeneralLedgerBook>(x => x.Reference == serviceInvoice.ServiceInvoiceNo, cancellationToken);
+                await _unitOfWork.FilprideSalesInvoice.RemoveRecords<FilprideSalesBook>(x => x.SerialNo == serviceInvoice.ServiceInvoiceNo, cancellationToken);
+
+                #region --Audit Trail Recording
+
+                FilprideAuditTrail auditTrailBook = new(GetUserFullName(), $"Unposted service invoice# {serviceInvoice.ServiceInvoiceNo}", "Service Invoice", serviceInvoice.Company);
+                await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
+
+                #endregion --Audit Trail Recording
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                TempData["success"] = "Service invoice has been Unposted.";
+
+                return RedirectToAction(nameof(Print), new { id });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to unpost service invoice. Error: {ErrorMessage}, Stack: {StackTrace}. Unposted by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+                await transaction.RollbackAsync(cancellationToken);
+                TempData["error"] = ex.Message;
+                return RedirectToAction(nameof(Index));
+            }
+        }
     }
 }
