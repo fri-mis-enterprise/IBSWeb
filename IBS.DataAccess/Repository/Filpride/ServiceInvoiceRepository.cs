@@ -202,13 +202,14 @@ namespace IBS.DataAccess.Repository.Filpride
                                  ?? throw new ArgumentException("Account title '201030100' not found.");
             var servicesTitle = accountTitlesDto.Find(c => c.AccountNumber == model.Service!.CurrentAndPreviousNo!)
                                 ?? throw new ArgumentException($"Account title '{model.Service!.CurrentAndPreviousNo}' not found.");
+            var particulars = $"{model.ServiceName} for the period of {model.Period:MMM, yyyy}";
 
             ledgers.Add(
                 new FilprideGeneralLedgerBook
                 {
                     Date = model.Period.AddMonths(1).AddDays(-1),
                     Reference = model.ServiceInvoiceNo,
-                    Description = model.ServiceName,
+                    Description = particulars,
                     AccountId = arTradeTitle.AccountId,
                     AccountNo = arTradeTitle.AccountNumber,
                     AccountTitle = arTradeTitle.AccountName,
@@ -230,7 +231,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     {
                         Date = model.Period.AddMonths(1).AddDays(-1),
                         Reference = model.ServiceInvoiceNo,
-                        Description = model.ServiceName,
+                        Description = particulars,
                         AccountId = arTradeCwt.AccountId,
                         AccountNo = arTradeCwt.AccountNumber,
                         AccountTitle = arTradeCwt.AccountName,
@@ -250,7 +251,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     {
                         Date = model.Period.AddMonths(1).AddDays(-1),
                         Reference = model.ServiceInvoiceNo,
-                        Description = model.ServiceName,
+                        Description = particulars,
                         AccountId = arTradeCwv.AccountId,
                         AccountNo = arTradeCwv.AccountNumber,
                         AccountTitle = arTradeCwv.AccountName,
@@ -269,7 +270,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 {
                     Date = model.Period.AddMonths(1).AddDays(-1),
                     Reference = model.ServiceInvoiceNo,
-                    Description = model.ServiceName,
+                    Description = particulars,
                     AccountId = servicesTitle.AccountId,
                     AccountNo = servicesTitle.AccountNumber,
                     AccountTitle = servicesTitle.AccountName,
@@ -289,7 +290,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     {
                         Date = model.Period.AddMonths(1).AddDays(-1),
                         Reference = model.ServiceInvoiceNo,
-                        Description = model.ServiceName,
+                        Description = particulars,
                         AccountId = vatOutputTitle.AccountId,
                         AccountNo = vatOutputTitle.AccountNumber,
                         AccountTitle = vatOutputTitle.AccountName,
