@@ -484,6 +484,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
+            if (await _unitOfWork.IsPeriodPostedAsync(Module.SalesInvoice, model.TransactionDate, cancellationToken))
+            {
+                TempData["error"] = $"Cannot unpost this record because the period {model.TransactionDate:MMM yyyy} is already closed.";
+                return RedirectToAction(nameof(Print), new { id });
+            }
+
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             try
@@ -496,7 +502,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 if (model.DeliveryReceiptId != null)
                 {
-                    var existingDr = await _unitOfWork.FilprideDeliveryReceipt.GetAsync(dr => dr.DeliveryReceiptId == model.DeliveryReceiptId, cancellationToken) ?? throw new ArgumentNullException($"The DR#{model.DeliveryReceiptId} not found! Contact MIS Enterprise.");
+                    var existingDr = await _unitOfWork.FilprideDeliveryReceipt
+                        .GetAsync(dr => dr.DeliveryReceiptId == model.DeliveryReceiptId, cancellationToken)
+                                     ?? throw new ArgumentNullException($"The DR#{model.DeliveryReceiptId} not found! Contact MIS Enterprise.");
 
                     existingDr.HasAlreadyInvoiced = true;
                     existingDr.Status = nameof(DRStatus.Invoiced);
@@ -938,6 +946,60 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .Select(invoice => invoice.SalesInvoiceId);
 
             return Json(invoiceIds);
+        }
+
+        public async Task<IActionResult> Unpost(int id, CancellationToken cancellationToken)
+        {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                var salesInvoice = await _dbContext.FilprideSalesInvoices
+                                                          .FirstOrDefaultAsync(x => x.SalesInvoiceId == id, cancellationToken)
+                                                      ?? throw new NullReferenceException("Sales invoice id not found.");
+
+                if (await _unitOfWork.IsPeriodPostedAsync(Module.SalesInvoice, salesInvoice.TransactionDate, cancellationToken))
+                {
+                    TempData["error"] = $"Cannot unpost this record because the period {salesInvoice.TransactionDate:MMM yyyy} is already closed.";
+                    return RedirectToAction(nameof(Print), new { id });
+                }
+
+                salesInvoice.PostedBy = null;
+                salesInvoice.PostedDate = null;
+                salesInvoice.Status = nameof(Status.Pending);
+
+                if (salesInvoice.DeliveryReceiptId != null)
+                {
+                    var existingDr = await _unitOfWork.FilprideDeliveryReceipt
+                                         .GetAsync(dr => dr.DeliveryReceiptId == salesInvoice.DeliveryReceiptId, cancellationToken)
+                                     ?? throw new ArgumentNullException($"The DR#{salesInvoice.DeliveryReceiptId} not found! Contact MIS Enterprise.");
+
+                    existingDr.HasAlreadyInvoiced = false;
+                    existingDr.Status = nameof(DRStatus.ForInvoicing);
+                }
+
+                await _unitOfWork.FilprideSalesInvoice.RemoveRecords<FilprideSalesBook>(x => x.SerialNo == salesInvoice.SalesInvoiceNo, cancellationToken);
+
+                #region --Audit Trail Recording
+
+                FilprideAuditTrail auditTrailBook = new(GetUserFullName(), $"Unposted sales invoice# {salesInvoice.SalesInvoiceNo}", "Sales Invoice", salesInvoice.Company);
+                await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
+
+                #endregion --Audit Trail Recording
+
+                await transaction.CommitAsync(cancellationToken);
+                TempData["success"] = "Sales invoice has been Unposted.";
+
+                return RedirectToAction(nameof(Print), new { id });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to unpost sales invoice. Error: {ErrorMessage}, Stack: {StackTrace}. Unposted by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+                await transaction.RollbackAsync(cancellationToken);
+                TempData["error"] = ex.Message;
+                return RedirectToAction(nameof(Index));
+            }
         }
     }
 }
