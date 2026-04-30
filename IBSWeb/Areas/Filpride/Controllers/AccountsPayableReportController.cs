@@ -460,9 +460,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                       cvd.CheckVoucherHeader.Date <= dateTo
                                       && (statusFilter == "ValidOnly"
                                           ? cvd.CheckVoucherHeader.PostedBy != null
-                                          : statusFilter == "InvalidOnly"
-                                              ? cvd.CheckVoucherHeader.VoidedBy != null
-                                              : true))
+                                          : statusFilter != "InvalidOnly" || cvd.CheckVoucherHeader.VoidedBy != null))
                         .Include(cvd => cvd.CheckVoucherHeader)
                         .ThenInclude(cvh => cvh!.Supplier)
                         .OrderBy(cvd => cvd.CheckVoucherHeader!.Date)
@@ -476,7 +474,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 var payments = await _dbContext.FilprideCheckVoucherHeaders
                     .AsNoTracking()
-                    .Where(x => x.Reference != null && nonTradeNos.Contains(x.Reference) && x.Company == companyClaims)
+                    .Where(x =>
+                        x.PostedBy != null &&
+                        x.Reference != null &&
+                        nonTradeNos.Contains(x.Reference) &&
+                        x.Company == companyClaims)
                     .Select(x => new
                     {
                         x.Reference,
@@ -676,9 +678,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             cvh.Date <= dateTo
                             && (statusFilter == "ValidOnly"
                                 ? cvh.PostedBy != null
-                                : statusFilter == "InvalidOnly"
-                                    ? cvh.VoidedBy != null
-                                    : true))
+                                : statusFilter != "InvalidOnly" || cvh.VoidedBy != null))
                         .Include(cvh => cvh.Details!)
                         .Include(cvh => cvh.Supplier)
                         .OrderBy(cvh => cvh.Date)
@@ -931,7 +931,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             try
             {
                 var statusFilter = NormalizeStatusFilter(model.StatusFilter);
-                var purchaseOrder = await _unitOfWork.FilprideReport.GetPurchaseOrderReport(model.DateFrom, model.DateTo, companyClaims, statusFilter);
+                var purchaseOrder = await _unitOfWork.FilprideReport
+                    .GetPurchaseOrderReport(model.DateFrom, model.DateTo, companyClaims, statusFilter, cancellationToken);
 
                 if (purchaseOrder.Count == 0)
                 {
@@ -1251,7 +1252,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
             try
             {
-                var purchaseReport = await _unitOfWork.FilprideReport.GetPurchaseReport(model.DateFrom, model.DateTo, companyClaims, dateSelectionType: model.DateSelectionType);
+                var purchaseReport = await _unitOfWork.FilprideReport
+                    .GetPurchaseReport(model.DateFrom, model.DateTo, companyClaims, dateSelectionType: model.DateSelectionType, cancellationToken: cancellationToken);
 
                 if (purchaseReport.Count == 0)
                 {
@@ -1813,7 +1815,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region -- Populate data rows --
 
-                FilprideAuthorityToLoad? atl;
                 foreach (var pr in purchaseReport)
                 {
                     #region -- Variables and Formulas --
@@ -1852,6 +1853,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         : 0m;
                     var freightNetOfWht = freightAmount - freightWhtAmount;
 
+                    FilprideAuthorityToLoad? atl;
                     if (pr.AuthorityToLoadNo != null)
                     {
                         atlLookup.TryGetValue(pr.AuthorityToLoadNo, out atl);
@@ -2216,7 +2218,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var grossMarginReport = await _unitOfWork.FilprideReport.GetPurchaseReport(model.DateFrom, model.DateTo, companyClaims, model.Customers, model.Commissionee);
+                var grossMarginReport = await _unitOfWork.FilprideReport
+                    .GetPurchaseReport(model.DateFrom, model.DateTo, companyClaims, model.Customers, model.Commissionee, cancellationToken: cancellationToken);
 
                 if (!grossMarginReport.Any())
                 {
@@ -3862,7 +3865,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ThenBy(rr => rr.Date.Month)
                     .ThenBy(rr => rr.PurchaseOrder!.Supplier!.SupplierName)
                     .GroupBy(x => new { x.Date.Year, x.Date.Month })
-                    .ToListAsync();
+                    .ToListAsync(cancellationToken: cancellationToken);
 
                 if (!receivingReports.Any())
                 {
@@ -4286,8 +4289,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Select(rrSet => new RrWithAmountPaidViewModel
                     {
                         ReceivingReport = rrSet,
-                        AmountPaid = idsOfRrsOfSelectedPeriodFromCv.Where(rr => rr.ReceivingReportId == rrSet.ReceivingReportId).FirstOrDefault() == null ? 0m :
-                        idsOfRrsOfSelectedPeriodFromCv.Where(rr => rr.ReceivingReportId == rrSet.ReceivingReportId).FirstOrDefault()!.AmountPaid
+                        AmountPaid = idsOfRrsOfSelectedPeriodFromCv.FirstOrDefault(rr => rr.ReceivingReportId == rrSet.ReceivingReportId) == null ? 0m :
+                            idsOfRrsOfSelectedPeriodFromCv.FirstOrDefault(rr => rr.ReceivingReportId == rrSet.ReceivingReportId)!.AmountPaid
                     })
                     .GroupBy(rr => new MonthYear(
                         rr.ReceivingReport.Date!.Year,
@@ -4300,8 +4303,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Select(rrSet => new RrWithAmountPaidViewModel
                     {
                         ReceivingReport = rrSet,
-                        AmountPaid = idsOfRrsOfPreviousPeriodsFromCv.Where(rr => rr.ReceivingReportId == rrSet.ReceivingReportId).FirstOrDefault() == null ? 0m :
-                            idsOfRrsOfPreviousPeriodsFromCv.Where(rr => rr.ReceivingReportId == rrSet.ReceivingReportId).FirstOrDefault()!.AmountPaid
+                        AmountPaid = idsOfRrsOfPreviousPeriodsFromCv.FirstOrDefault(rr => rr.ReceivingReportId == rrSet.ReceivingReportId) == null ? 0m :
+                            idsOfRrsOfPreviousPeriodsFromCv.FirstOrDefault(rr => rr.ReceivingReportId == rrSet.ReceivingReportId)!.AmountPaid
                     })
                     .GroupBy(rr => new MonthYear(
                         rr.ReceivingReport.Date!.Year,
@@ -4667,14 +4670,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     }
 
                                     // write in the category
-                                    worksheet.Cells[row, i * 5 - 1].Value = volume;
+                                    worksheet.Cells[row, (i * 5) - 1].Value = volume;
                                     worksheet.Cells[row, i * 5].Value = gross;
-                                    worksheet.Cells[row, i * 5 + 1].Value = ewt;
-                                    worksheet.Cells[row, i * 5 + 2].Value = net;
-                                    worksheet.Cells[row, i * 5 - 1].Style.Numberformat.Format = currencyFormat;
+                                    worksheet.Cells[row, (i * 5) + 1].Value = ewt;
+                                    worksheet.Cells[row, (i * 5) + 2].Value = net;
+                                    worksheet.Cells[row, (i * 5) - 1].Style.Numberformat.Format = currencyFormat;
                                     worksheet.Cells[row, i * 5].Style.Numberformat.Format = currencyFormat;
-                                    worksheet.Cells[row, i * 5 + 1].Style.Numberformat.Format = currencyFormat;
-                                    worksheet.Cells[row, i * 5 + 2].Style.Numberformat.Format = currencyFormat;
+                                    worksheet.Cells[row, (i * 5) + 1].Style.Numberformat.Format = currencyFormat;
+                                    worksheet.Cells[row, (i * 5) + 2].Style.Numberformat.Format = currencyFormat;
 
                                     // decide what to do to subtotals depending on category (beg, current, payment)
                                     switch (i)
@@ -5827,7 +5830,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 // inserting filpride image
                 var imgFilprideLogoPath = Path.Combine(_webHostEnvironment.WebRootPath, "img", "Filpride-logo.png");
-                var pic = worksheet.Drawings.AddPicture("Landscape", new FileInfo(imgFilprideLogoPath));
+                var pic = await worksheet.Drawings.AddPictureAsync("Landscape", new FileInfo(imgFilprideLogoPath));
                 pic.SetSize(120, 50);
                 pic.SetPosition(2, 0, 2, 0);
 
@@ -7601,14 +7604,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             row += 2;
 
                             // SEGMENT TITLE
-                            if (segment.ToString() == "Retail")
-                            {
-                                worksheet.Cells[row, 2].Value = $"{segment}/MOBILITY: {product}";
-                            }
-                            else
-                            {
-                                worksheet.Cells[row, 2].Value = $"{segment}: {product}";
-                            }
+                            worksheet.Cells[row, 2].Value = segment.ToString() == "Retail" ? $"{segment}/MOBILITY: {product}" : $"{segment}: {product}";
                             worksheet.Cells[row, 2].Style.Font.Bold = true;
 
                             row++;
@@ -8002,8 +7998,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Select(drSet => new DrWithAmountPaidViewModel
                     {
                         DeliveryReceipt = drSet,
-                        AmountPaid = idsOfDrsOfSelectedPeriodFromCv.Where(dr => dr.DeliveryReceiptId == drSet.DeliveryReceiptId).FirstOrDefault() == null ? 0m :
-                        idsOfDrsOfSelectedPeriodFromCv.Where(dr => dr.DeliveryReceiptId == drSet.DeliveryReceiptId).FirstOrDefault()!.AmountPaid
+                        AmountPaid = idsOfDrsOfSelectedPeriodFromCv.FirstOrDefault(dr => dr.DeliveryReceiptId == drSet.DeliveryReceiptId) == null ? 0m :
+                            idsOfDrsOfSelectedPeriodFromCv.FirstOrDefault(dr => dr.DeliveryReceiptId == drSet.DeliveryReceiptId)!.AmountPaid
                     })
                     .GroupBy(dr => new MonthYear(
                         dr.DeliveryReceipt.DeliveredDate!.Value.Year,
@@ -8016,8 +8012,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Select(drSet => new DrWithAmountPaidViewModel
                     {
                         DeliveryReceipt = drSet,
-                        AmountPaid = idsOfDrsOfPreviousPeriodsFromCv.Where(dr => dr.DeliveryReceiptId == drSet.DeliveryReceiptId).FirstOrDefault() == null ? 0m :
-                            idsOfDrsOfPreviousPeriodsFromCv.Where(dr => dr.DeliveryReceiptId == drSet.DeliveryReceiptId).FirstOrDefault()!.AmountPaid
+                        AmountPaid = idsOfDrsOfPreviousPeriodsFromCv.FirstOrDefault(dr => dr.DeliveryReceiptId == drSet.DeliveryReceiptId) == null ? 0m :
+                            idsOfDrsOfPreviousPeriodsFromCv.FirstOrDefault(dr => dr.DeliveryReceiptId == drSet.DeliveryReceiptId)!.AmountPaid
                     })
                     .GroupBy(dr => new MonthYear(
                         dr.DeliveryReceipt.DeliveredDate!.Value.Year,
@@ -8387,14 +8383,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     }
 
                                     // write in the category
-                                    worksheet.Cells[row, i * 5 - 1].Value = volume;
+                                    worksheet.Cells[row, (i * 5) - 1].Value = volume;
                                     worksheet.Cells[row, i * 5].Value = gross;
-                                    worksheet.Cells[row, i * 5 + 1].Value = ewt;
-                                    worksheet.Cells[row, i * 5 + 2].Value = net;
-                                    worksheet.Cells[row, i * 5 - 1].Style.Numberformat.Format = currencyFormat;
+                                    worksheet.Cells[row, (i * 5) + 1].Value = ewt;
+                                    worksheet.Cells[row, (i * 5) + 2].Value = net;
+                                    worksheet.Cells[row, (i * 5) - 1].Style.Numberformat.Format = currencyFormat;
                                     worksheet.Cells[row, i * 5].Style.Numberformat.Format = currencyFormat;
-                                    worksheet.Cells[row, i * 5 + 1].Style.Numberformat.Format = currencyFormat;
-                                    worksheet.Cells[row, i * 5 + 2].Style.Numberformat.Format = currencyFormat;
+                                    worksheet.Cells[row, (i * 5) + 1].Style.Numberformat.Format = currencyFormat;
+                                    worksheet.Cells[row, (i * 5) + 2].Style.Numberformat.Format = currencyFormat;
 
                                     // decide what to do to subtotals depending on category (beg, current, payment)
                                     switch (i)
@@ -8670,9 +8666,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var dateFrom = model.DateFrom;
-                var dateTo = model.DateTo;
-                var extractedBy = GetUserFullName();
                 var companyClaims = await GetCompanyClaimAsync();
 
                 if (companyClaims == null)
