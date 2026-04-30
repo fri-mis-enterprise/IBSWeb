@@ -990,7 +990,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 var arTradeCwt = accountTitlesDto.Find(c => c.AccountNumber == "101020200") ?? throw new ArgumentException("Account title '101020200' not found.");
                 var arTradeCwv = accountTitlesDto.Find(c => c.AccountNumber == "101020300") ?? throw new ArgumentException("Account title '101020300' not found.");
 
-                var dateToday = DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime());
+                var firstDayOfTheMonth = DateTimeHelper.GetFirstDayOfCurrentPhilippineMonth();
                 var particulars = $"Update Price on DR#{deliveryReceipt.DeliveryReceiptNo}. DR dated {deliveryReceipt.DeliveredDate}";
                 var isIncremental = difference > 0;
                 difference = Math.Abs(difference);
@@ -1011,7 +1011,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 {
                     ledgers.Add(new FilprideGeneralLedgerBook
                     {
-                        Date = dateToday,
+                        Date = firstDayOfTheMonth,
                         Reference = deliveryReceipt.DeliveryReceiptNo,
                         Description = particulars,
                         AccountId = arTradeCwt.AccountId,
@@ -1030,7 +1030,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 {
                     ledgers.Add(new FilprideGeneralLedgerBook
                     {
-                        Date = dateToday,
+                        Date = firstDayOfTheMonth,
                         Reference = deliveryReceipt.DeliveryReceiptNo,
                         Description = particulars,
                         AccountId = arTradeCwv.AccountId,
@@ -1047,7 +1047,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
                 ledgers.Add(new FilprideGeneralLedgerBook
                 {
-                    Date = dateToday,
+                    Date = firstDayOfTheMonth,
                     Reference = deliveryReceipt.DeliveryReceiptNo,
                     Description = particulars,
                     AccountId = deliveryReceipt.CustomerOrderSlip.Terms == SD.Terms_Cod ? cashInBankTitle.AccountId : arTradeTitle.AccountId,
@@ -1070,7 +1070,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
                 ledgers.Add(new FilprideGeneralLedgerBook
                 {
-                    Date = dateToday,
+                    Date = firstDayOfTheMonth,
                     Reference = deliveryReceipt.DeliveryReceiptNo,
                     Description = particulars,
                     AccountId = salesTitle.AccountId,
@@ -1086,7 +1086,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
                 ledgers.Add(new FilprideGeneralLedgerBook
                 {
-                    Date = dateToday,
+                    Date = firstDayOfTheMonth,
                     Reference = deliveryReceipt.DeliveryReceiptNo,
                     Description = particulars,
                     AccountId = vatOutputTitle.AccountId,
@@ -1136,7 +1136,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 var ewtAccountNo = commissioneeTaxTitle?.FirstOrDefault();
                 var ewtTitle = accountTitlesDto.FirstOrDefault(c => c.AccountNumber == ewtAccountNo);
 
-                var dateToday = DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime());
+                var firstDayOfMonth = DateTimeHelper.GetFirstDayOfCurrentPhilippineMonth();
                 var particulars = $"Update commission rate on DR#{deliveryReceipt.DeliveryReceiptNo}. DR dated {deliveryReceipt.DeliveredDate}";
                 var isIncremental = difference > 0;
                 difference = Math.Abs(difference);
@@ -1150,7 +1150,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
                 ledgers.Add(new FilprideGeneralLedgerBook
                 {
-                    Date = dateToday,
+                    Date = firstDayOfMonth,
                     Reference = deliveryReceipt.DeliveryReceiptNo,
                     Description = particulars,
                     AccountId = commissionTitle.AccountId,
@@ -1166,7 +1166,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
                 ledgers.Add(new FilprideGeneralLedgerBook
                 {
-                    Date = dateToday,
+                    Date = firstDayOfMonth,
                     Reference = deliveryReceipt.DeliveryReceiptNo,
                     Description = particulars,
                     AccountId = apCommissionPayableTitle.AccountId,
@@ -1187,7 +1187,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 {
                     ledgers.Add(new FilprideGeneralLedgerBook
                     {
-                        Date = dateToday,
+                        Date = firstDayOfMonth,
                         Reference = deliveryReceipt.DeliveryReceiptNo,
                         Description = particulars,
                         AccountId = ewtTitle!.AccountId,
@@ -1237,7 +1237,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 var ewtAccountNo = haulerTaxTitle?.FirstOrDefault();
                 var ewtTitle = accountTitlesDto.FirstOrDefault(c => c.AccountNumber == ewtAccountNo);
 
-                var dateToday = DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime());
+                var firstDayOfMonth = DateTimeHelper.GetFirstDayOfCurrentPhilippineMonth();
                 var particulars = $"Update freight rate on DR#{deliveryReceipt.DeliveryReceiptNo}. DR dated {deliveryReceipt.DeliveredDate}";
                 var isIncremental = difference > 0;
                 difference = Math.Abs(difference);
@@ -1255,7 +1255,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
                 ledgers.Add(new FilprideGeneralLedgerBook
                 {
-                    Date = dateToday,
+                    Date = firstDayOfMonth,
                     Reference = deliveryReceipt.DeliveryReceiptNo,
                     Description = particulars,
                     AccountId = freightTitle.AccountId,
@@ -1275,7 +1275,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
                 ledgers.Add(new FilprideGeneralLedgerBook
                 {
-                    Date = dateToday,
+                    Date = firstDayOfMonth,
                     Reference = deliveryReceipt.DeliveryReceiptNo,
                     Description = particulars,
                     AccountId = vatInputTitle.AccountId,
@@ -1291,7 +1291,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
                 ledgers.Add(new FilprideGeneralLedgerBook
                 {
-                    Date = dateToday,
+                    Date = firstDayOfMonth,
                     Reference = deliveryReceipt.DeliveryReceiptNo,
                     Description = particulars,
                     AccountId = apHaulingPayableTitle.AccountId,
@@ -1312,7 +1312,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 {
                     ledgers.Add(new FilprideGeneralLedgerBook
                     {
-                        Date = dateToday,
+                        Date = firstDayOfMonth,
                         Reference = deliveryReceipt.DeliveryReceiptNo,
                         Description = particulars,
                         AccountId = ewtTitle!.AccountId,
