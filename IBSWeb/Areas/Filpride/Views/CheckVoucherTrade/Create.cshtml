@@ -610,7 +610,7 @@
         function saveAccountingEntry(event) {
             var accountNumber = $("#AccountNo").val();
             var accountTitle = $("#AccountNo option:selected").text().replace(/^\S+\s+/, "");
-            var debit = parseNumber($("#debit").val());
+            var debit = parseNumber(($("#debit").val() ?? "0").toString());
             var credit = parseNumber($("#credit").val());
             var currentCashInBank = parseNumber($(".cib-credit").val());
 
