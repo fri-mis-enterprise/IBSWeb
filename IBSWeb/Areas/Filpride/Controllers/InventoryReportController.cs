@@ -339,18 +339,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var worksheet = package.Workbook.Worksheets.Add("Inventory Report");
 
                 // Set up the header section
-                worksheet.Cells["A1:M1"].Merge = true;
+                worksheet.Cells["A1:P1"].Merge = true;
                 worksheet.Cells["A1"].Value = "INVENTORY REPORT";
                 worksheet.Cells["A1"].Style.Font.Size = 20;
                 worksheet.Cells["A1"].Style.Font.Bold = true;
                 worksheet.Cells["A1"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
 
-                worksheet.Cells["A2:M2"].Merge = true;
+                worksheet.Cells["A2:P2"].Merge = true;
                 worksheet.Cells["A2"].Value = $"As of {viewModel.DateTo:MMMM yyyy}";
                 worksheet.Cells["A2"].Style.Font.Size = 12;
                 worksheet.Cells["A2"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
 
-                worksheet.Cells["A3:M3"].Merge = true;
+                worksheet.Cells["A3:P3"].Merge = true;
                 worksheet.Cells["A3"].Value = $"Product Name: {product!.ProductName}";
                 worksheet.Cells["A3"].Style.Font.Size = 14;
                 worksheet.Cells["A3"].Style.Font.Bold = true;
@@ -450,11 +450,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         subTotalBegBalAmt += !isSales
                             ? firstEntry.TotalBalance - firstEntry.Total
                             : firstEntry.TotalBalance + firstEntry.Total;
+                        var beginningAverageCost = subTotalBegBalQty != 0
+                            ? subTotalBegBalAmt / subTotalBegBalQty
+                            : 0m;
 
                         worksheet.Cells[currentRow, 1].Value = "BEGINNING BALANCE";
                         worksheet.Cells[currentRow, 5].Value = subTotalBegBalQty;
                         worksheet.Cells[currentRow, 5].Style.Numberformat.Format = currencyTwoDecimalFormat;
-                        worksheet.Cells[currentRow, 6].Value = firstEntry.Cost;
+                        worksheet.Cells[currentRow, 6].Value = beginningAverageCost;
                         worksheet.Cells[currentRow, 6].Style.Numberformat.Format = currencyFourDecimalFormat;
                         worksheet.Cells[currentRow, 7].Value = subTotalBegBalAmt;
                         worksheet.Cells[currentRow, 7].Style.Numberformat.Format = currencyTwoDecimalFormat;
