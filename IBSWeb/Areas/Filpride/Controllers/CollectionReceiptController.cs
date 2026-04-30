@@ -2909,6 +2909,54 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        public async Task<IActionResult> Unpost(int id, CancellationToken cancellationToken)
+        {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                var collectionReceipt = await _unitOfWork.FilprideCollectionReceipt
+                                                          .GetAsync(x => x.CollectionReceiptId == id, cancellationToken)
+                                                      ?? throw new NullReferenceException("Collection receipt id not found.");
+
+                bool isMultipleSi = collectionReceipt.MultipleSIId?.Length > 0;
+
+                if (await _unitOfWork.IsPeriodPostedAsync(Module.CollectionReceipt, collectionReceipt.TransactionDate, cancellationToken))
+                {
+                    TempData["error"] = $"Cannot unpost this record because the period {collectionReceipt.TransactionDate:MMM yyyy} is already closed.";
+                    return RedirectToAction(isMultipleSi ? nameof(MultipleCollectionPrint) : nameof(Print), new { id });
+                }
+
+                collectionReceipt.PostedBy = null;
+                collectionReceipt.PostedDate = null;
+                collectionReceipt.Status = nameof(CollectionReceiptStatus.Pending);
+
+                await _unitOfWork.FilprideCollectionReceipt.RemoveRecords<FilprideGeneralLedgerBook>(x => x.Reference == collectionReceipt.CollectionReceiptNo, cancellationToken);
+                await _unitOfWork.FilprideCollectionReceipt.RemoveRecords<FilprideCashReceiptBook>(x => x.RefNo == collectionReceipt.CollectionReceiptNo, cancellationToken);
+
+                #region --Audit Trail Recording
+
+                FilprideAuditTrail auditTrailBook = new(GetUserFullName(), $"Unposted collection receipt# {collectionReceipt.CollectionReceiptNo}", "Collection Receipt", collectionReceipt.Company);
+                await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
+
+                #endregion --Audit Trail Recording
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                TempData["success"] = "Collection receipt has been Unposted.";
+
+                return RedirectToAction(isMultipleSi ? nameof(MultipleCollectionPrint) : nameof(Print), new { id });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to unpost collection receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Unposted by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+                await transaction.RollbackAsync(cancellationToken);
+                TempData["error"] = ex.Message;
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
         public async Task<IActionResult> UploadCsvForSingleInvoice(CancellationToken cancellationToken)
         {
             var companyClaims = await GetCompanyClaimAsync();

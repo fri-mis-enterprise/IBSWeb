@@ -987,6 +987,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #endregion --Audit Trail Recording
 
+                await _dbContext.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 TempData["success"] = "Sales invoice has been Unposted.";
 
