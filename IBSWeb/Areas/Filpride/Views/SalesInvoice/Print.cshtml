@@ -350,7 +350,7 @@
                 <a onclick="confirmPrint(@Model.SalesInvoiceId)" class="btn btn-primary form-control buttons">Print</a>
             </div>
 
-            if (Model.Balance != 0 && Model.Balance > 0)
+            if (Model.Status == nameof(Status.Posted))
             {
                 <div class="col-6 col-md-3">
                     <a class="btn btn-secondary form-control buttons" onclick="confirmUnpost(@Model.SalesInvoiceId)">Unpost</a>
