@@ -437,7 +437,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[currentRow, 11].Style.Numberformat.Format = currencyTwoDecimalFormat;
                         worksheet.Cells[currentRow, 12].Value = firstEntry.Cost;
                         worksheet.Cells[currentRow, 12].Style.Numberformat.Format = currencyFourDecimalFormat;
-                        worksheet.Cells[currentRow, 13].Value = subTotalInventoryBalance;
+                        worksheet.Cells[currentRow, 13].Value = subTotalTotalBalance;
                         worksheet.Cells[currentRow, 13].Style.Numberformat.Format = currencyTwoDecimalFormat;
 
                         worksheet.Cells[currentRow, 1, currentRow, 13].Style.Font.Bold = true;
