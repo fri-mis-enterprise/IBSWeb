@@ -76,6 +76,6 @@ namespace IBS.Models.Filpride.ViewModels
 
         public DateTime MinDate { get; set; }
 
-        public string BatchNumber { get; set; } = null!;
+        public string? BatchNumber { get; set; }
     }
 }

@@ -211,6 +211,6 @@ namespace IBS.Models.Filpride.AccountsReceivable
         public DateOnly? ClearedDate { get; set; }
 
         [StringLength(50)]
-        public string BatchNumber { get; set; } = string.Empty;
+        public string? BatchNumber { get; set; }
     }
 }
