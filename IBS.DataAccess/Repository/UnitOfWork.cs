@@ -396,32 +396,6 @@ namespace IBS.DataAccess.Repository
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<List<SelectListItem>> GetCashierListAsyncByUsernameAsync(CancellationToken cancellationToken = default)
-        {
-            return await _db.ApplicationUsers
-                .OrderBy(p => p.Id)
-                .Where(p => p.Department == SD.Department_StationCashier)
-                .Select(p => new SelectListItem
-                {
-                    Value = p.UserName!.ToString(),
-                    Text = p.UserName.ToString()
-                })
-                .ToListAsync(cancellationToken);
-        }
-
-        public async Task<List<SelectListItem>> GetCashierListAsyncByStationAsync(CancellationToken cancellationToken = default)
-        {
-            return await _db.ApplicationUsers
-                .OrderBy(p => p.Id)
-                .Where(p => p.Department == SD.Department_StationCashier)
-                .Select(p => new SelectListItem
-                {
-                    Value = p.StationAccess!.ToString(),
-                    Text = p.UserName!.ToString()
-                })
-                .ToListAsync(cancellationToken);
-        }
-
         public async Task<List<SelectListItem>> GetChartOfAccountListAsyncById(CancellationToken cancellationToken = default)
         {
             return await _db.FilprideChartOfAccounts
