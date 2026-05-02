@@ -10,8 +10,6 @@ namespace IBS.Models
 
         public string Department { get; set; } = null!;
 
-        public string? StationAccess { get; set; }
-
         public ICollection<UserNotification> UserNotifications { get; set; } = null!;
 
         public string? Position { get; set; }

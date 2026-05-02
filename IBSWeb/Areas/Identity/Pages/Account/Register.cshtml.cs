@@ -148,7 +148,6 @@ namespace IBSWeb.Areas.Identity.Pages.Account
 
                 user.Name = Input.Name;
                 user.Department = Input.Department;
-                user.StationAccess = Input.StationAccess;
                 user.IsActive = true;
                 user.CreatedDate = DateTimeHelper.GetCurrentPhilippineTime();
 

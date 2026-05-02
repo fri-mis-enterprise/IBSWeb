@@ -345,9 +345,6 @@
         });
 
         loadRoles();
-        loadStations();
-
-        $('#department, #role').on('change', toggleStationField);
 
         $('#isActive').on('change', function () {
             $('#statusLabel').text(this.checked ? 'Active' : 'Inactive');
@@ -437,8 +434,7 @@
         $('#modalTitle').text('Create User');
         $('#isActive').prop('checked', true);
         $('#statusLabel').text('Active');
-        $('#stationDiv').hide();
-        $('#department, #role, #stationAccess').val('').trigger('change');
+        $('#department, #role').val('').trigger('change');
 
         if (userId) {
             $.get(`/Admin/User/GetUser?id=${encodeURIComponent(userId)}`)
@@ -449,22 +445,11 @@
                         $('#username').val(user.username).prop('readonly', true);
                         $('#name').val(user.name);
                         $('#department').val(user.department).trigger('change');
-
-                        setTimeout(() => {
-                            $('#role').val(user.role).trigger('change');
-                            setTimeout(() => {
-                                if (user.stationAccess) {
-                                    $('#stationAccess').val(user.stationAccess).trigger('change');
-                                }
-                            }, 100);
-                        }, 100);
-
                         $('#isActive').prop('checked', user.isActive);
                         $('#statusLabel').text(user.isActive ? 'Active' : 'Inactive');
                         $('#modalTitle').text('Edit User');
                         $('#passwordSection').hide();
                         $('#password, #confirmPassword').val('').prop('required', false);
-                        toggleStationField();
                     } else {
                         Swal.fire({
                             icon: 'error',
@@ -532,7 +517,6 @@
             Name: name,
             Department: department,
             Role: role,
-            StationAccess: stationAccess || null,
             Password: userId ? null : password,
             IsActive: isActive
         };

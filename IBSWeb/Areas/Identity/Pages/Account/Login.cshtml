@@ -3,8 +3,6 @@
 
 @{
     ViewData["Title"] = "Log in";
-    var usersList = Model.Users.Select(u => u.Value).ToList();
-    var accessList = Model.StationAccess.Select(u => u.Value).ToList();
 }
 
 <div class="container py-5">
@@ -15,7 +13,7 @@
                     <h2 class="text-center mb-4">Welcome Back</h2>
                     <form id="account" method="post" autocomplete="off">
                         <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
-                        
+
                         <div class="form-floating mb-3">
                             <input asp-for="Input.Username" class="form-control" id="username" placeholder="Username" />
                             <label for="username">Username</label>
@@ -26,24 +24,6 @@
                             <input asp-for="Input.Password" class="form-control" placeholder="Password" type="password" />
                             <label for="Input_Password">Password</label>
                             <span asp-validation-for="Input.Password" class="text-danger small"></span>
-                        </div>
-
-                        <div class="mb-3" id="company-div">
-                            <label asp-for="Input.Company" class="form-label">Select Company</label>
-                            <input type="hidden" id="companyHidden" name="Input.Company">
-                            <select asp-for="Input.Company" asp-items="@Model.Companies" class="form-select js-select2" id="company-select" style="width: 100%" required>
-                                <option value="">Select company</option>
-                            </select>
-                            <span asp-validation-for="Input.Company" class="text-danger"></span>
-                        </div>
-
-                        <div class="mb-3" id="station-div" style="display: none;">
-                            <label for="station" class="form-label">Select Station</label>
-                            <input type="hidden" id="stationHidden" name="Input.StationCode">
-                            <select asp-for="Input.StationCode" asp-items="@Model.Stations" class="form-select js-select2" id="station-select" style="width: 100%" required>
-                                <option value="">Select station</option>
-                            </select>
-                            <span asp-validation-for="Input.StationCode" class="text-danger small"></span>
                         </div>
 
                         <div class="d-grid mt-4">
@@ -64,57 +44,4 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script>
-        $(document).ready(function () {
-            var usersArray = @Html.Raw(Json.Serialize(usersList));
-            var accessArray = @Html.Raw(Json.Serialize(accessList));
-            var companySelect = $('#company-select');
-            var stationSelect = $('#station-select');
-            var companyHidden = $('#companyHidden');
-            var stationHidden = $('#stationHidden');
-
-            function toggleCashierAccess() {
-                var currentUsername = $('#username').val().toLowerCase();
-                var companyDiv = $('#company-div');
-                var stationDiv = $('#station-div');
-                var isCashier = false;
-
-                for (var i = 0; i < usersArray.length; i++) {
-                    if (currentUsername === usersArray[i].toLowerCase()) {
-                        isCashier = true;
-                        companySelect.val('Mobility').trigger("change").prop("disabled", true);
-                        stationSelect.val(accessArray[i]).trigger("change").prop("disabled", true);
-                        companyHidden.val("Mobility").prop("disabled", false);
-                        stationHidden.val(accessArray[i]).prop("disabled", false);
-                        break;
-                    }
-                    else {
-                        companySelect.trigger("change").prop("disabled", false);
-                        stationSelect.trigger("change").prop("disabled", false);
-                        companyHidden.prop("disabled", true);
-                        stationHidden.prop("disabled", true);
-                    } 
-                }
-            }
-
-            setTimeout(toggleCashierAccess, 50);
-            $('#username').on('input', toggleCashierAccess);
-            toggleCashierAccess();
-
-            function toggleStationDiv() {
-                var selectedCompany = companySelect.val();
-                var stationDiv = $('#station-div');
-
-                if (selectedCompany === 'Mobility') {
-                    stationDiv.show();
-                    stationSelect.val(null).trigger("change");
-                } else {
-                    stationDiv.hide();
-                }
-            }
-
-            companySelect.on('change', toggleStationDiv);
-            toggleStationDiv();
-        });
-    </script>
 }
