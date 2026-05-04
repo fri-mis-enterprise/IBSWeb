@@ -2,6 +2,7 @@ using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
 using IBS.Models;
 using IBS.Models.Enums;
+using IBS.Models.Filpride.AccountsPayable;
 using IBS.Models.Filpride.Books;
 using IBS.Services.Attributes;
 using IBS.Utility.Constants;
@@ -187,7 +188,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
             cv.DcpDate = dcpDate;
             cv.DcrDate = null;
 
-            FilprideAuditTrail auditTrailBook = new(GetUserFullName(), $"Update DCP date of CV# {cv.CheckVoucherHeaderNo}", "Disbursement", cv.Company);
+            var connectedInvoices = await GetConnectedInvoicesAsync(cv.CheckVoucherHeaderId, cv.Company, cancellationToken);
+            foreach (var invoice in connectedInvoices)
+            {
+                invoice.DcpDate = dcpDate;
+                invoice.DcrDate = null;
+            }
+
+            var auditMessage = connectedInvoices.Count == 0
+                ? $"Update DCP date of CV# {cv.CheckVoucherHeaderNo}"
+                : $"Update DCP date of CV# {cv.CheckVoucherHeaderNo} and {connectedInvoices.Count} connected invoice(s)";
+
+            FilprideAuditTrail auditTrailBook = new(GetUserFullName(), auditMessage, "Disbursement", cv.Company);
             await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
 
             await _unitOfWork.SaveAsync(cancellationToken);
@@ -234,12 +246,36 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             cv.DcrDate = dcrDate;
 
-            FilprideAuditTrail auditTrailBook = new(GetUserFullName(), $"Update DCR date of CV# {cv.CheckVoucherHeaderNo}", "Disbursement", cv.Company);
+            var connectedInvoices = await GetConnectedInvoicesAsync(cv.CheckVoucherHeaderId, cv.Company, cancellationToken);
+            foreach (var invoice in connectedInvoices)
+            {
+                invoice.DcrDate = dcrDate;
+            }
+
+            var auditMessage = connectedInvoices.Count == 0
+                ? $"Update DCR date of CV# {cv.CheckVoucherHeaderNo}"
+                : $"Update DCR date of CV# {cv.CheckVoucherHeaderNo} and {connectedInvoices.Count} connected invoice(s)";
+
+            FilprideAuditTrail auditTrailBook = new(GetUserFullName(), auditMessage, "Disbursement", cv.Company);
             await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
 
             await _unitOfWork.SaveAsync(cancellationToken);
 
             return Json(new { success = true });
+        }
+
+        private async Task<List<FilprideCheckVoucherHeader>> GetConnectedInvoicesAsync(
+            int paymentCvId,
+            string company,
+            CancellationToken cancellationToken)
+        {
+            return await _dbContext.FilprideCheckVoucherHeaders
+                .Where(invoice => invoice.Company == company &&
+                                  invoice.PostedBy != null &&
+                                  _dbContext.FilprideMultipleCheckVoucherPayments
+                                      .Any(payment => payment.CheckVoucherHeaderPaymentId == paymentCvId &&
+                                                      payment.CheckVoucherHeaderInvoiceId == invoice.CheckVoucherHeaderId))
+                .ToListAsync(cancellationToken);
         }
     }
 }
