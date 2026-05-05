@@ -13,6 +13,7 @@ using QuestPDF.Infrastructure;
 using IBS.Utility.Helpers;
 using Microsoft.EntityFrameworkCore;
 using IBS.Models;
+using IBS.Models.Filpride.AccountsReceivable;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.Integrated;
@@ -2589,12 +2590,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
             try
             {
                 var collectionReceiptReport = await _unitOfWork.FilprideReport
-                    .GetCollectionReceiptReport(model.DateFrom, model.DateTo, companyClaims);
+                    .GetCollectionReceiptReport(model.DateFrom, model.DateTo, companyClaims, cancellationToken: cancellationToken);
 
                 if (!collectionReceiptReport.Any())
                 {
                     TempData["info"] = "No records found";
                     return RedirectToAction(nameof(PostedCollection));
+                }
+
+                var multipleSalesInvoicesByCollectionReceiptId = new Dictionary<int, List<FilprideSalesInvoice>>();
+                foreach (var receipt in collectionReceiptReport.Where(cr => cr.MultipleSIId != null))
+                {
+                    var salesInvoices = await _unitOfWork.FilprideSalesInvoice
+                        .GetAllAsync(x => receipt.MultipleSIId!.Contains(x.SalesInvoiceId), cancellationToken);
+
+                    multipleSalesInvoicesByCollectionReceiptId[receipt.CollectionReceiptId] = salesInvoices.ToList();
                 }
 
                 var document = Document.Create(container =>
@@ -2728,25 +2738,26 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     }
                                     if (record.MultipleSIId != null)
                                     {
-                                        var getSalesInvoice = _unitOfWork.FilprideSalesInvoice.GetAllAsync(x => record.MultipleSIId.Contains(x.SalesInvoiceId));
-                                        foreach (var sales in getSalesInvoice.Result)
-                                        {
-                                            var currentAmount = record.CashAmount + record.CheckAmount;
+                                        var salesInvoices = multipleSalesInvoicesByCollectionReceiptId[record.CollectionReceiptId];
+                                        var currentAmount = record.CashAmount + record.CheckAmount;
+                                        var firstSalesInvoice = salesInvoices.FirstOrDefault();
+                                        var transactionDates = string.Join(", ", salesInvoices.Select(sales => sales.TransactionDate.ToString(SD.Date_Format)));
+                                        var invoiceNumbers = string.Join(", ", salesInvoices.Select(sales => sales.SalesInvoiceNo));
+                                        var dueDates = string.Join(", ", salesInvoices.Select(sales => sales.DueDate.ToString(SD.Date_Format)));
 
-                                            table.Cell().Border(0.5f).Padding(3).Text(record.Customer?.CustomerCode);
-                                            table.Cell().Border(0.5f).Padding(3).Text(sales.CustomerOrderSlip?.CustomerName ?? record.Customer?.CustomerName);
-                                            table.Cell().Border(0.5f).Padding(3).Text(sales.CustomerOrderSlip?.CustomerType ?? record.Customer?.CustomerType);
-                                            table.Cell().Border(0.5f).Padding(3).Text(sales.TransactionDate.ToString(SD.Date_Format));
-                                            table.Cell().Border(0.5f).Padding(3).Text(record.CollectionReceiptNo);
-                                            table.Cell().Border(0.5f).Padding(3).Text(sales.SalesInvoiceNo);
-                                            table.Cell().Border(0.5f).Padding(3).Text(sales.DueDate.ToString(SD.Date_Format));
-                                            table.Cell().Border(0.5f).Padding(3).Text(record.CheckDate?.ToString(SD.Date_Format));
-                                            table.Cell().Border(0.5f).Padding(3).Text($"{record.BankAccount?.Bank} {record.BankAccountNumber}");
-                                            table.Cell().Border(0.5f).Padding(3).Text(record.CheckNo);
-                                            table.Cell().Border(0.5f).Padding(3).AlignRight().Text(currentAmount != 0 ? currentAmount < 0 ? $"({Math.Abs(currentAmount).ToString(SD.Two_Decimal_Format)})" : currentAmount.ToString(SD.Two_Decimal_Format) : null).FontColor(currentAmount < 0 ? Colors.Red.Medium : Colors.Black);
+                                        table.Cell().Border(0.5f).Padding(3).Text(record.Customer?.CustomerCode);
+                                        table.Cell().Border(0.5f).Padding(3).Text(firstSalesInvoice?.CustomerOrderSlip?.CustomerName ?? record.Customer?.CustomerName);
+                                        table.Cell().Border(0.5f).Padding(3).Text(firstSalesInvoice?.CustomerOrderSlip?.CustomerType ?? record.Customer?.CustomerType);
+                                        table.Cell().Border(0.5f).Padding(3).Text(transactionDates);
+                                        table.Cell().Border(0.5f).Padding(3).Text(record.CollectionReceiptNo);
+                                        table.Cell().Border(0.5f).Padding(3).Text(invoiceNumbers);
+                                        table.Cell().Border(0.5f).Padding(3).Text(dueDates);
+                                        table.Cell().Border(0.5f).Padding(3).Text(record.CheckDate?.ToString(SD.Date_Format));
+                                        table.Cell().Border(0.5f).Padding(3).Text($"{record.BankAccount?.Bank} {record.BankAccountNumber}");
+                                        table.Cell().Border(0.5f).Padding(3).Text(record.CheckNo);
+                                        table.Cell().Border(0.5f).Padding(3).AlignRight().Text(currentAmount != 0 ? currentAmount < 0 ? $"({Math.Abs(currentAmount).ToString(SD.Two_Decimal_Format)})" : currentAmount.ToString(SD.Two_Decimal_Format) : null).FontColor(currentAmount < 0 ? Colors.Red.Medium : Colors.Black);
 
-                                            totalAmount += currentAmount;
-                                        }
+                                        totalAmount += currentAmount;
                                     }
                                 }
 
@@ -2874,6 +2885,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var row = 8;
                     var startingRow = row - 1;
                     var currencyFormat = "#,##0.00";
+                    var dateTextFormat = "MMM/dd/yyyy";
                     decimal totalAmount = 0;
 
                     foreach (var cr in collectionReceiptReport)
@@ -2948,41 +2960,40 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         {
                             var getSalesInvoice = await _unitOfWork.FilprideSalesInvoice
                                 .GetAllAsync(x => cr.MultipleSIId.Contains(x.SalesInvoiceId), cancellationToken);
-                            foreach (var sales in getSalesInvoice)
+                            var salesInvoices = getSalesInvoice.ToList();
+                            var firstSalesInvoice = salesInvoices.FirstOrDefault();
+                            var currentAmount = cr.CashAmount + cr.CheckAmount;
+                            var transactionDates = string.Join(Environment.NewLine, salesInvoices.Select(sales => sales.TransactionDate.ToString(dateTextFormat)));
+                            var invoiceNumbers = string.Join(Environment.NewLine, salesInvoices.Select(sales => sales.SalesInvoiceNo));
+                            var dueDates = string.Join(Environment.NewLine, salesInvoices.Select(sales => sales.DueDate.ToString(dateTextFormat)));
+
+                            worksheet.Cells[row, 1].Value = cr.Customer?.CustomerCode;
+                            worksheet.Cells[row, 2].Value = firstSalesInvoice?.CustomerOrderSlip?.CustomerName ?? cr.Customer?.CustomerName;
+                            worksheet.Cells[row, 3].Value = firstSalesInvoice?.CustomerOrderSlip?.CustomerType ?? cr.Customer?.CustomerType;
+                            worksheet.Cells[row, 4].Value = transactionDates;
+                            worksheet.Cells[row, 5].Value = cr.CollectionReceiptNo;
+                            worksheet.Cells[row, 6].Value = invoiceNumbers;
+                            worksheet.Cells[row, 7].Value = dueDates;
+                            worksheet.Cells[row, 8].Value = cr.CheckDate;
+                            worksheet.Cells[row, 9].Value = $"{cr.BankAccount?.Bank} {cr.BankAccountNumber}";
+                            worksheet.Cells[row, 10].Value = cr.CheckNo;
+                            worksheet.Cells[row, 11].Value = currentAmount;
+
+                            worksheet.Cells[row, 8].Style.Numberformat.Format = "MMM/dd/yyyy";
+                            worksheet.Cells[row, 11].Style.Numberformat.Format = currencyFormat;
+
+                            if (showVoidCancelColumns)
                             {
-                                var currentAmount = cr.CashAmount + cr.CheckAmount;
-                                worksheet.Cells[row, 1].Value = cr.Customer?.CustomerCode;
-                                worksheet.Cells[row, 2].Value = sales.CustomerOrderSlip?.CustomerName ?? cr.Customer?.CustomerName;
-                                worksheet.Cells[row, 3].Value = sales.CustomerOrderSlip?.CustomerType ?? cr.Customer?.CustomerType;
-                                worksheet.Cells[row, 4].Value = sales.TransactionDate;
-                                worksheet.Cells[row, 5].Value = cr.CollectionReceiptNo;
-                                worksheet.Cells[row, 6].Value = sales.SalesInvoiceNo;
-                                worksheet.Cells[row, 7].Value = sales.DueDate;
-                                worksheet.Cells[row, 8].Value = cr.CheckDate;
-                                worksheet.Cells[row, 9].Value = $"{cr.BankAccount?.Bank} {cr.BankAccountNumber}";
-                                worksheet.Cells[row, 10].Value = cr.CheckNo;
-                                worksheet.Cells[row, 11].Value = currentAmount;
-
-                                worksheet.Cells[row, 4].Style.Numberformat.Format = "MMM/dd/yyyy";
-                                worksheet.Cells[row, 7].Style.Numberformat.Format = "MMM/dd/yyyy";
-                                worksheet.Cells[row, 8].Style.Numberformat.Format = "MMM/dd/yyyy";
-                                worksheet.Cells[row, 11].Style.Numberformat.Format = currencyFormat;
-
-                                if (showVoidCancelColumns)
+                                worksheet.Cells[row, 12].Value = cr.VoidedBy;
+                                worksheet.Cells[row, 13].Value = cr.VoidedDate;
+                                if (cr.VoidedDate.HasValue)
                                 {
-                                    worksheet.Cells[row, 12].Value = cr.VoidedBy;
-                                    worksheet.Cells[row, 13].Value = cr.VoidedDate;
-                                    if (cr.VoidedDate.HasValue)
-                                        worksheet.Cells[row, 13].Style.Numberformat.Format = "MMM/dd/yyyy";
-                                    worksheet.Cells[row, 14].Value = cr.CanceledBy;
-                                    worksheet.Cells[row, 15].Value = cr.CanceledDate;
-                                    if (cr.CanceledDate.HasValue)
-                                        worksheet.Cells[row, 15].Style.Numberformat.Format = "MMM/dd/yyyy";
+                                    worksheet.Cells[row, 13].Style.Numberformat.Format = "MMM/dd/yyyy";
                                 }
-
-                                totalAmount += currentAmount;
-                                row++;
                             }
+
+                            totalAmount += currentAmount;
+                            row++;
                         }
                     }
 
@@ -3006,12 +3017,31 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     }
 
                     int lastRow = row - 1;
+                    using (var range = worksheet.Cells[8, 1, lastRow, lastColumn])
+                    {
+                        range.Style.VerticalAlignment = ExcelVerticalAlignment.Top;
+                    }
+
+                    using (var range = worksheet.Cells[8, 4, lastRow, 7])
+                    {
+                        range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+                    }
+
                     using (var range = worksheet.Cells[startingRow - 1, 11, lastRow, 11])
                     {
                         range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
                     }
 
                     worksheet.Cells.AutoFitColumns();
+                    worksheet.Column(4).Width = 18;
+                    worksheet.Column(6).Width = 28;
+                    worksheet.Column(7).Width = 18;
+                    worksheet.Column(4).Style.WrapText = true;
+                    worksheet.Column(6).Style.WrapText = true;
+                    worksheet.Column(7).Style.WrapText = true;
+                    worksheet.Column(4).Style.VerticalAlignment = ExcelVerticalAlignment.Top;
+                    worksheet.Column(6).Style.VerticalAlignment = ExcelVerticalAlignment.Top;
+                    worksheet.Column(7).Style.VerticalAlignment = ExcelVerticalAlignment.Top;
                     worksheet.View.FreezePanes(8, 1);
 
                     #region -- Audit Trail --
