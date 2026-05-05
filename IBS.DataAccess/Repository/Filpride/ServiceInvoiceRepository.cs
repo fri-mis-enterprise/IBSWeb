@@ -140,7 +140,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
             if (model.HasEwt)
             {
-                withHoldingTaxAmount = ComputeEwtAmount(netOfVatAmount, 0.01m);
+                withHoldingTaxAmount = ComputeEwtAmount(netOfVatAmount, model.Service!.Percent / 100m);
             }
 
             if (model.HasWvat)
