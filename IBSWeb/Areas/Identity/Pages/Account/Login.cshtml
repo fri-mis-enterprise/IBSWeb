@@ -36,6 +36,25 @@
                         </div>
                         *@
                     </form>
+
+                    @if (Model.CompanyPortalLinks.Count != 0)
+                    {
+                        <div class="border-top mt-4 pt-4">
+                            <p class="text-muted small text-center mb-3">Other company portals</p>
+                            <div class="d-grid gap-2">
+                                @foreach (var companyPortal in Model.CompanyPortalLinks)
+                                {
+                                    <a class="btn btn-outline-secondary d-flex align-items-center justify-content-between"
+                                       href="@companyPortal.Url"
+                                       target="_blank"
+                                       rel="noopener noreferrer">
+                                        <span>@companyPortal.Name</span>
+                                        <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
         </div>

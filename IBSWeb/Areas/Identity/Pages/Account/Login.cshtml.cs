@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using IBS.Models;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 
 namespace IBSWeb.Areas.Identity.Pages.Account
@@ -21,11 +20,13 @@ namespace IBSWeb.Areas.Identity.Pages.Account
     {
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ILogger<LoginModel> _logger;
+        private readonly IConfiguration _configuration;
 
-        public LoginModel(SignInManager<ApplicationUser> signInManager, ILogger<LoginModel> logger)
+        public LoginModel(SignInManager<ApplicationUser> signInManager, ILogger<LoginModel> logger, IConfiguration configuration)
         {
             _signInManager = signInManager;
             _logger = logger;
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -46,6 +47,8 @@ namespace IBSWeb.Areas.Identity.Pages.Account
         ///     directly from your code. This API may change or be removed in future releases.
         /// </summary>
         public string ReturnUrl { get; set; }
+
+        public List<CompanyPortalLink> CompanyPortalLinks { get; private set; } = [];
 
         /// <summary>
         ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
@@ -81,6 +84,13 @@ namespace IBSWeb.Areas.Identity.Pages.Account
             /// </summary>
             [Display(Name = "Remember me?")]
             public bool RememberMe { get; set; }
+        }
+
+        public class CompanyPortalLink
+        {
+            public string Name { get; set; }
+
+            public string Url { get; set; }
         }
 
         public async Task OnGetAsync(string returnUrl = null)
@@ -194,6 +204,14 @@ namespace IBSWeb.Areas.Identity.Pages.Account
         {
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
             ReturnUrl = returnUrl;
+            CompanyPortalLinks = _configuration
+                .GetSection("CompanyPortalLinks")
+                .Get<List<CompanyPortalLink>>()?
+                .Where(link =>
+                    !string.IsNullOrWhiteSpace(link.Name) &&
+                    Uri.TryCreate(link.Url, UriKind.Absolute, out var uri) &&
+                    (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+                .ToList() ?? [];
         }
 
     }
