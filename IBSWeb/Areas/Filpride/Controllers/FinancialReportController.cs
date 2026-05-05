@@ -1204,7 +1204,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
-                var glPeriodBalances = await _dbContext.FilprideGlPeriodBalances
+                var periodBalances = await _dbContext.FilprideGlPeriodBalances
                     .IgnoreQueryFilters()
                     .AsNoTracking()
                     .Include(g => g.Account)
@@ -1214,8 +1214,32 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         pb.PeriodStartDate >= dateFrom &&
                         pb.PeriodEndDate <= dateTo &&
                         pb.Company == companyClaims)
-                    .OrderBy(pb => pb.Account.AccountNumber)
                     .ToListAsync(cancellationToken);
+
+                var glPeriodBalances = periodBalances
+                    .GroupBy(pb => pb.AccountId)
+                    .Select(g =>
+                    {
+                        var first = g
+                            .OrderBy(pb => pb.PeriodStartDate)
+                            .ThenBy(pb => pb.PeriodEndDate)
+                            .First();
+                        var last = g
+                            .OrderByDescending(pb => pb.PeriodEndDate)
+                            .ThenByDescending(pb => pb.PeriodStartDate)
+                            .First();
+
+                        return new
+                        {
+                            first.Account,
+                            first.BeginningBalance,
+                            DebitTotal = g.Sum(pb => pb.DebitTotal),
+                            CreditTotal = g.Sum(pb => pb.CreditTotal),
+                            last.EndingBalance
+                        };
+                    })
+                    .OrderBy(pb => pb.Account.AccountNumber)
+                    .ToList();
 
                 if (!glPeriodBalances.Any())
                 {
