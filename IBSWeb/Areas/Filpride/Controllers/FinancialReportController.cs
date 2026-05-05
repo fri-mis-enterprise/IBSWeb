@@ -1204,27 +1204,77 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
-                var glPeriodBalances = await _dbContext.FilprideGlPeriodBalances
+                var periodBalances = await _dbContext.FilprideGlPeriodBalances
                     .IgnoreQueryFilters()
+                    .AsNoTracking()
                     .Include(g => g.Account)
                     .Where(pb =>
+                        !pb.Account.HasChildren &&
                         pb.IsValid &&
                         pb.PeriodStartDate >= dateFrom &&
                         pb.PeriodEndDate <= dateTo &&
                         pb.Company == companyClaims)
-                    .OrderBy(pb => pb.Account.AccountNumber)
                     .ToListAsync(cancellationToken);
 
-                var chartOfAccounts = await _dbContext.FilprideChartOfAccounts
-                    .IgnoreQueryFilters()
-                    .OrderBy(coa => coa.AccountNumber)
-                    .ToListAsync(cancellationToken);
+                var glPeriodBalances = periodBalances
+                    .GroupBy(pb => pb.AccountId)
+                    .Select(g =>
+                    {
+                        var first = g
+                            .OrderBy(pb => pb.PeriodStartDate)
+                            .ThenBy(pb => pb.PeriodEndDate)
+                            .First();
+                        var last = g
+                            .OrderByDescending(pb => pb.PeriodEndDate)
+                            .ThenByDescending(pb => pb.PeriodStartDate)
+                            .First();
+
+                        return new
+                        {
+                            first.Account,
+                            first.BeginningBalance,
+                            DebitTotal = g.Sum(pb => pb.DebitTotal),
+                            CreditTotal = g.Sum(pb => pb.CreditTotal),
+                            last.EndingBalance
+                        };
+                    })
+                    .OrderBy(pb => pb.Account.AccountNumber)
+                    .ToList();
 
                 if (!glPeriodBalances.Any())
                 {
                     TempData["info"] = "No Record Found";
                     return RedirectToAction(nameof(TrialBalanceReport));
                 }
+
+                var reportSections = new[]
+                {
+                    new
+                    {
+                        Name = "ASSET",
+                        Balances = glPeriodBalances
+                            .Where(pb => pb.Account.AccountType == "Asset")
+                            .ToList(),
+                        IsNotAssetOrLiability = false
+                    },
+                    new
+                    {
+                        Name = "LIABILITIES",
+                        Balances = glPeriodBalances
+                            .Where(pb => pb.Account.AccountType == "Liabilities")
+                            .ToList(),
+                        IsNotAssetOrLiability = false
+                    },
+                    new
+                    {
+                        Name = "STOCKHOLDERS EQUITY",
+                        Balances = glPeriodBalances
+                            .Where(pb => pb.Account.AccountType != "Asset" &&
+                                         pb.Account.AccountType != "Liabilities")
+                            .ToList(),
+                        IsNotAssetOrLiability = true
+                    }
+                };
 
                 // Create the Excel package
                 using var package = new ExcelPackage();
@@ -1286,41 +1336,101 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["E:H"].Style.Numberformat.Format = "#,##0.00_);[Red](#,##0.00)";
 
                 var row = 8;
-                decimal totalBeginning = 0;
-                decimal totalCurrentDr = 0;
-                decimal totalCurrentCr = 0;
-                decimal totalEnding = 0;
+                var totalLiabilitiesBeginning = 0m;
+                var totalLiabilitiesEnding = 0m;
+                var totalStockholdersEquityBeginning = 0m;
+                var totalStockholdersEquityEnding = 0m;
+                var totalCurrentDr = 0m;
+                var totalCurrentCr = 0m;
 
-
-                foreach (var account in chartOfAccounts)
+                foreach (var section in reportSections.Where(s => s.Balances.Any()))
                 {
-                    var accountBalance = glPeriodBalances.FirstOrDefault(x => x.AccountId == account.AccountId);
-                    var beginningBalance = accountBalance?.BeginningBalance ?? 0;
-                    var endingBalance = accountBalance?.EndingBalance ?? 0;
-                    var currentDr = accountBalance?.DebitTotal ?? 0;
-                    var currentCr = accountBalance?.CreditTotal ?? 0;
+                    var sectionBeginningBalance = 0m;
+                    var sectionEndingBalance = 0m;
 
-                    worksheet.Cells[row, 1].Value = account.AccountNumber;
-                    worksheet.Cells[row, 2].Value = account.AccountName;
-                    worksheet.Cells[row, 3].Value = account.NormalBalance;
-                    worksheet.Cells[row, 4].Value = account.Level;
-                    worksheet.Cells[row, 5].Value = beginningBalance != 0 ? beginningBalance : null;
-                    totalBeginning += beginningBalance;
-                    worksheet.Cells[row, 6].Value = currentDr != 0 ? currentDr : null;
-                    totalCurrentDr += currentDr;
-                    worksheet.Cells[row, 7].Value = currentCr != 0 ? currentCr : null;
-                    totalCurrentCr += currentCr;
-                    worksheet.Cells[row, 8].Value = endingBalance != 0 ? endingBalance : null;
-                    totalEnding += endingBalance;
+                    foreach (var record in section.Balances)
+                    {
+                        var account = record.Account;
+                        var beginningBalance = record.BeginningBalance;
+                        var endingBalance = record.EndingBalance;
+                        var currentDr = record.DebitTotal;
+                        var currentCr = record.CreditTotal;
+
+                        if (section.IsNotAssetOrLiability &&
+                            account.NormalBalance != nameof(NormalBalance.Credit))
+                        {
+                            sectionBeginningBalance -= beginningBalance;
+                            sectionEndingBalance -= endingBalance;
+                        }
+                        else
+                        {
+                            sectionBeginningBalance += beginningBalance;
+                            sectionEndingBalance += endingBalance;
+                        }
+
+                        worksheet.Cells[row, 1].Value = account.AccountNumber;
+                        worksheet.Cells[row, 2].Value = account.AccountName;
+                        worksheet.Cells[row, 3].Value = account.NormalBalance;
+                        worksheet.Cells[row, 4].Value = account.Level;
+                        worksheet.Cells[row, 5].Value = beginningBalance != 0 ? beginningBalance : null;
+                        worksheet.Cells[row, 6].Value = currentDr != 0 ? currentDr : null;
+                        worksheet.Cells[row, 7].Value = currentCr != 0 ? currentCr : null;
+                        worksheet.Cells[row, 8].Value = endingBalance != 0 ? endingBalance : null;
+
+                        totalCurrentDr += currentDr;
+                        totalCurrentCr += currentCr;
+                        row++;
+                    }
+
+                    if (section.Name == "LIABILITIES")
+                    {
+                        totalLiabilitiesBeginning = sectionBeginningBalance;
+                        totalLiabilitiesEnding = sectionEndingBalance;
+                    }
+                    else if (section.Name == "STOCKHOLDERS EQUITY")
+                    {
+                        totalStockholdersEquityBeginning = sectionBeginningBalance;
+                        totalStockholdersEquityEnding = sectionEndingBalance;
+                    }
+
+                    worksheet.Cells[row, 1].Value = $"TOTALS {section.Name}";
+                    worksheet.Cells[row, 5].Value = sectionBeginningBalance;
+                    worksheet.Cells[row, 6].Value = null;
+                    worksheet.Cells[row, 7].Value = null;
+                    worksheet.Cells[row, 8].Value = sectionEndingBalance;
+
+                    using (var range = worksheet.Cells[row, 1, row, 8])
+                    {
+                        range.Style.Font.Bold = true;
+                        range.Style.Border.Top.Style = ExcelBorderStyle.Double;
+                        range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                    }
+
                     row++;
+
+                }
+
+                worksheet.Cells[row, 1].Value = "TOTAL LIABILITIES & STOCKHOLDERS EQUITY";
+                worksheet.Cells[row, 5].Value = totalLiabilitiesBeginning + totalStockholdersEquityBeginning;
+                worksheet.Cells[row, 6].Value = null;
+                worksheet.Cells[row, 7].Value = null;
+                worksheet.Cells[row, 8].Value = totalLiabilitiesEnding + totalStockholdersEquityEnding;
+
+                using (var range = worksheet.Cells[row, 1, row, 8])
+                {
+                    range.Style.Font.Bold = true;
+                    range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                    range.Style.Border.Bottom.Style = ExcelBorderStyle.Double;
                 }
 
                 row++;
+
+                row++;
                 worksheet.Cells[row, 2].Value = "TOTALS";
-                worksheet.Cells[row, 5].Value = totalBeginning;
+                worksheet.Cells[row, 5].Value = null;
                 worksheet.Cells[row, 6].Value = totalCurrentDr;
                 worksheet.Cells[row, 7].Value = totalCurrentCr;
-                worksheet.Cells[row, 8].Value = totalEnding;
+                worksheet.Cells[row, 8].Value = null;
 
                 // Auto-fit columns for better readability
                 worksheet.Cells.AutoFitColumns();
