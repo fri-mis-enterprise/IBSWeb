@@ -1393,7 +1393,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         totalStockholdersEquityEnding = sectionEndingBalance;
                     }
 
-                    worksheet.Cells[row, 1].Value = $"TOTALS {section.Name}";
+                    worksheet.Cells[row, 1].Value = $"TOTAL {section.Name}";
                     worksheet.Cells[row, 5].Value = sectionBeginningBalance;
                     worksheet.Cells[row, 6].Value = null;
                     worksheet.Cells[row, 7].Value = null;
@@ -1426,7 +1426,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 row++;
 
                 row++;
-                worksheet.Cells[row, 2].Value = "TOTALS";
+                worksheet.Cells[row, 2].Value = "TOTAL";
                 worksheet.Cells[row, 5].Value = null;
                 worksheet.Cells[row, 6].Value = totalCurrentDr;
                 worksheet.Cells[row, 7].Value = totalCurrentCr;
