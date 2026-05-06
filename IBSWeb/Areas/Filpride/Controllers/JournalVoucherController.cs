@@ -22,7 +22,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
     [CompanyAuthorize(nameof(Filpride))]
-    [DepartmentAuthorize(SD.Department_Accounting, SD.Department_RCD)]
+    [DepartmentAuthorize(SD.Department_Accounting,
+        SD.Department_RCD,
+        SD.Department_ManagementAccounting)]
     public class JournalVoucherController : Controller
     {
         private readonly ApplicationDbContext _dbContext;

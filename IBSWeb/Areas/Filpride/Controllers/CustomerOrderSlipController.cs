@@ -17,7 +17,6 @@ using IBSWeb.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,7 +30,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
         SD.Department_TradeAndSupply,
         SD.Department_Logistics,
         SD.Department_CreditAndCollection,
-        SD.Department_Accounting)]
+        SD.Department_Accounting,
+        SD.Department_ManagementAccounting)]
     public class CustomerOrderSlipController : Controller
     {
         private readonly IUnitOfWork _unitOfWork;
