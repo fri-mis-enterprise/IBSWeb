@@ -730,7 +730,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .GetAsync(sv => sv.ServiceInvoiceId == model.ServiceInvoiceId, cancellationToken);
 
                     var serviceAccountNo = existingSv!.Service!.CurrentAndPreviousNo;
-                    var serviceTitle = accountTitlesDto.Find(c => c.AccountNumber == serviceAccountNo) ?? throw new ArgumentException($"Service account title not found.");
+                    var serviceTitle = accountTitlesDto.Find(c => c.AccountNumber == serviceAccountNo) ?? throw new ArgumentException($"Account title '{serviceAccountNo}' not found.");
 
                     #region --SV Computation--
 
