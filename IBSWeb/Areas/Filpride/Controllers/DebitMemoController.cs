@@ -21,7 +21,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
     [CompanyAuthorize(nameof(Filpride))]
-    [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
+    [DepartmentAuthorize(SD.Department_CreditAndCollection,
+        SD.Department_RCD,
+        SD.Department_ManagementAccounting)]
     public class DebitMemoController : Controller
     {
         private readonly ApplicationDbContext _dbContext;
@@ -556,6 +558,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var existingSv = await _unitOfWork.FilprideServiceInvoice
                         .GetAsync(sv => sv.ServiceInvoiceId == model.ServiceInvoiceId, cancellationToken);
 
+                    var serviceAccountNo = existingSv!.Service!.CurrentAndPreviousNo;
+                    var serviceTitle = accountTitlesDto.Find(c => c.AccountNumber == serviceAccountNo) ?? throw new ArgumentException($"Account title '{serviceAccountNo}' not found.");
+
                     #region -- Computation --
 
                     viewModelDmcm.Period = DateOnly.FromDateTime(model.CreatedDate) >= model.Period ? DateOnly.FromDateTime(model.CreatedDate) : model.Period.AddMonths(1).AddDays(-1);
@@ -691,8 +696,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             Date = model.TransactionDate,
                             Reference = model.DebitMemoNo!,
                             Description = model.ServiceInvoice.ServiceName,
-                            AccountNo = model.ServiceInvoice.Service!.CurrentAndPreviousNo!,
-                            AccountTitle = model.ServiceInvoice.Service.CurrentAndPreviousTitle!,
+                            AccountId = serviceTitle.AccountId,
+                            AccountNo = serviceTitle.AccountNumber,
+                            AccountTitle = serviceTitle.AccountName,
                             Debit = 0,
                             Credit = netOfVatAmount,
                             Company = model.Company,

@@ -21,7 +21,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
     [CompanyAuthorize(nameof(Filpride))]
-    [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_Finance, SD.Department_RCD)]
+    [DepartmentAuthorize(SD.Department_CreditAndCollection,
+        SD.Department_Finance,
+        SD.Department_RCD,
+        SD.Department_ManagementAccounting)]
     public class ServiceInvoiceController : Controller
     {
         private readonly ApplicationDbContext _dbContext;

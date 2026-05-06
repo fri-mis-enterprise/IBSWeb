@@ -23,7 +23,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
     [CompanyAuthorize(nameof(Filpride))]
-    [DepartmentAuthorize(SD.Department_Logistics, SD.Department_TradeAndSupply, SD.Department_Marketing, SD.Department_RCD)]
+    [DepartmentAuthorize(SD.Department_Logistics,
+        SD.Department_TradeAndSupply,
+        SD.Department_Marketing,
+        SD.Department_RCD,
+        SD.Department_ManagementAccounting)]
     public class PurchaseOrderController : Controller
     {
         private readonly ApplicationDbContext _dbContext;
