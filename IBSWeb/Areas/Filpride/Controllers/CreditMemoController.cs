@@ -729,6 +729,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var existingSv = await _unitOfWork.FilprideServiceInvoice
                         .GetAsync(sv => sv.ServiceInvoiceId == model.ServiceInvoiceId, cancellationToken);
 
+                    var serviceTitle = accountTitlesDto.Find(c => c.AccountNumber == existingSv!.Service!.CurrentAndPreviousNo) ?? throw new ArgumentException($"Service account title not found.");
+
                     #region --SV Computation--
 
                     viewModelDmcm.Period = DateOnly.FromDateTime(model.CreatedDate) >= model.Period ? DateOnly.FromDateTime(model.CreatedDate) : model.Period.AddMonths(1).AddDays(-1);
@@ -909,6 +911,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         Reference = model.CreditMemoNo!,
                         Description = model.ServiceInvoice.ServiceName,
                         ///TODO to inquire if needs to store
+                        AccountId = serviceTitle.AccountId,
                         AccountNo = model.ServiceInvoice.Service!.CurrentAndPreviousNo!,
                         AccountTitle = model.ServiceInvoice.Service.CurrentAndPreviousTitle!,
                         Debit = viewModelDmcm.NetAmount,
