@@ -320,20 +320,39 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 // Populate the data rows
                 int row = 8;
                 string currencyFormat = "#,##0.00";
-                var apNtAccount = "202010200";
-                var apTradeAccount = "202010100";
+                var apNonTrade = "202010200";
+                var apTrade = "202010100";
                 var arTrade = "101020100";
                 var advancesToSupplier = "101060100";
                 var advancesToEmployee = "101020400";
+                string[] supplierEntries =
+                [
+                    "501010100",
+                    "501010200",
+                    "501010300",
+                    "101040100",
+                    "101040200",
+                    "101040300"
+                ];
+                string[] haulerEntries =
+                [
+                    "502010100",
+                    "502010200",
+                    "502010300",
+                    "101060200",
+                    "201030220"
+                ];
+                string[] commissionEntries =
+                [
+                    "503010100",
+                    "503010200",
+                    "503010300",
+                    "201030240"
+                ];
 
                 foreach (var gl in generalBooks)
                 {
                     string? subAccountName = null;
-
-                    if (gl.Reference == "CR0000000392")
-                    {
-
-                    }
 
                     if (gl.SubAccountName != null)
                     {
@@ -350,7 +369,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                         subAccountName = generalBooks
                                             .Where(x =>
                                                 x.Reference == gl.Reference &&
-                                                (x.AccountNo == apNtAccount ||
+                                                (x.AccountNo == apNonTrade ||
                                                 x.AccountNo == advancesToSupplier ||
                                                 x.AccountNo == advancesToEmployee))
                                             .Select(x => x.SubAccountName)
@@ -361,7 +380,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                         subAccountName = generalBooks
                                             .Where(x =>
                                                 x.Reference == gl.Reference &&
-                                                x.AccountNo == apTradeAccount)
+                                                x.AccountNo == apTrade)
                                             .Select(x => x.SubAccountName)
                                             .FirstOrDefault();
                                     }
@@ -372,11 +391,58 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 subAccountName = generalBooks
                                     .Where(x =>
                                         x.Reference == gl.Reference &&
-                                        x.AccountNo == apTradeAccount)
+                                        x.AccountNo == apTrade)
                                     .Select(x => x.SubAccountName)
                                     .FirstOrDefault();
                                 break;
                             case nameof(ModuleType.Sales):
+                                {
+                                    if (gl.Reference.StartsWith("DR"))
+                                    {
+                                        var dr = await _dbContext.FilprideDeliveryReceipts
+                                            .Where(x => x.DeliveryReceiptNo == gl.Reference)
+                                            .Select(x => new
+                                            {
+                                                x.CustomerOrderSlip!.CustomerName,
+                                                x.HaulerName,
+                                                x.PurchaseOrder!.SupplierName,
+                                                x.CustomerOrderSlip!.CommissioneeName
+                                            })
+                                            .FirstOrDefaultAsync(cancellationToken);
+
+                                        bool isSupplier = supplierEntries.Contains(gl.AccountNo);
+                                        bool isCommissionee = commissionEntries.Contains(gl.AccountNo);
+                                        bool isHauler = haulerEntries.Contains(gl.AccountNo);
+
+                                        if (isSupplier)
+                                        {
+                                            subAccountName = dr!.SupplierName;
+                                        }
+                                        else if (isHauler)
+                                        {
+                                            subAccountName = dr!.HaulerName;
+                                        }
+                                        else if (isCommissionee)
+                                        {
+                                            subAccountName = dr!.CommissioneeName;
+                                        }
+                                        else
+                                        {
+                                            subAccountName = dr!.CustomerName;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        subAccountName = generalBooks
+                                            .Where(x =>
+                                                x.Reference == gl.Reference &&
+                                                x.AccountNo == arTrade)
+                                            .Select(x => x.SubAccountName)
+                                            .FirstOrDefault();
+                                    }
+
+                                    break;
+                                }
                             case nameof(ModuleType.Collection):
                                 subAccountName = generalBooks
                                     .Where(x =>
