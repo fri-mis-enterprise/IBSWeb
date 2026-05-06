@@ -912,8 +912,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         Description = model.ServiceInvoice.ServiceName,
                         ///TODO to inquire if needs to store
                         AccountId = serviceTitle.AccountId,
-                        AccountNo = model.ServiceInvoice.Service!.CurrentAndPreviousNo!,
-                        AccountTitle = model.ServiceInvoice.Service.CurrentAndPreviousTitle!,
+                        AccountNo = serviceTitle.AccountNumber,
+                        AccountTitle = serviceTitle.AccountName,
                         Debit = viewModelDmcm.NetAmount,
                         Credit = 0,
                         Company = model.Company,
