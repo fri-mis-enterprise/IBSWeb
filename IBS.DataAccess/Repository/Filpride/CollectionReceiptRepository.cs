@@ -129,11 +129,6 @@ namespace IBS.DataAccess.Repository.Filpride
                         Company = collectionReceipt.Company,
                         CreatedBy = collectionReceipt.PostedBy!,
                         CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
-                        SubAccountType = SubAccountType.BankAccount,
-                        SubAccountId = collectionReceipt.BankId,
-                        SubAccountName = collectionReceipt.BankId.HasValue
-                            ? $"{collectionReceipt.BankAccountNumber} {collectionReceipt.BankAccountName}"
-                            : null,
                         ModuleType = nameof(ModuleType.Collection)
                     }
                 );

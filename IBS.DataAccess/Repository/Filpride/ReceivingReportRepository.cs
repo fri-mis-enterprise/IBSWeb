@@ -555,7 +555,7 @@ namespace IBS.DataAccess.Repository.Filpride
             var isIncremental = difference > 0;
             difference = Math.Abs(difference);
             var firstDayOfMonth = DateTimeHelper.GetFirstDayOfCurrentPhilippineMonth();
-            var particulars = $"Update Cost on DR#{model.DeliveryReceipt?.DeliveryReceiptNo}. DR dated {model.DeliveryReceipt?.DeliveredDate}";
+            var particulars = $"Update Cost on RR#{model.ReceivingReportNo}. RR dated {model.Date}";
             var netOfVatAmount = model.PurchaseOrder!.VatType == SD.VatType_Vatable
                 ? ComputeNetOfVat(difference)
                 : difference;
@@ -701,7 +701,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     Company = model.Company,
                     CreatedBy = userName,
                     CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
-                    ModuleType = nameof(ModuleType.Sales)
+                    ModuleType = nameof(ModuleType.Purchase)
                 });
 
                 ledgers.Add(new FilprideGeneralLedgerBook
@@ -717,7 +717,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     Company = model.Company,
                     CreatedBy = userName,
                     CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
-                    ModuleType = nameof(ModuleType.Sales)
+                    ModuleType = nameof(ModuleType.Purchase)
                 });
             }
 
