@@ -142,23 +142,3 @@ $(document).ready(function () {
         processing: true
     });
 });
-
-function clearFilter(table) {
-
-    let shouldTableRefresh = false;
-
-    if ($('#inputDate').val() !== "") {
-        $('#inputDate').val("");
-        localStorage.removeItem('filterDate');
-        shouldTableRefresh = true;
-    }
-
-    if (table.search() !== "") {
-        table.search("");
-        shouldTableRefresh = true;
-    }
-
-    if (shouldTableRefresh) {
-        table.draw();
-    }
-}
