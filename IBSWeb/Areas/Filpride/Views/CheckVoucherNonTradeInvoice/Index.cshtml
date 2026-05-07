@@ -73,7 +73,7 @@
                     $.ajax({
                         url: '@Url.Action("Void", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })/',
                         type: 'POST',
-                        data: { 
+                        data: {
                             id: id,
                         },
                         headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
@@ -304,6 +304,14 @@
                     $(this.api().column(5).footer()).html(formatNumber(totalBalance));
                 }
             });
+
+            let filterType = '@ViewBag.FilterType';
+
+            if (filterType && filterType !== "")
+            {
+                filterValue = "";
+                clearFilter(table);
+            }
 
             $('#inputDate').on('change', function() {
                 filterValue = $(this).val();

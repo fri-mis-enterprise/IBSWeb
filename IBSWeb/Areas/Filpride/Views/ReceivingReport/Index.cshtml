@@ -77,7 +77,7 @@
                         error: function() {
                             Swal.fire('Error', 'Something went wrong.', 'error');
                         }
-                    }); 
+                    });
                 }
             })
         }
@@ -124,7 +124,7 @@
                         error: function() {
                             Swal.fire('Error', 'Something went wrong.', 'error');
                         }
-                    }); 
+                    });
                 }
             })
         }
@@ -133,7 +133,7 @@
         $(document).ready(function() {
             let filterValue = localStorage.getItem('filterDate') || "";
             $('#inputDate').val(filterValue);
-            
+
             let table = $('#paginatedTable').DataTable({
                 "processing": true, // Enable processing indicator
                 "serverSide": true, // Enable server-side processing
@@ -172,7 +172,7 @@
                     $('[data-bs-toggle="tooltip"]').tooltip();
                 },
                 "columns": [
-                    { 
+                    {
                         "data": "receivingReportNo",
                         "name": "receivingReportNo"
                     },
@@ -182,22 +182,22 @@
                         "render": function (data, type, row) {
                             // Assuming 'Date' is in ISO format like "2024-07-12T00:00:00"
                             var date = new Date(data);
-                            return date.toLocaleDateString('en-US', { 
+                            return date.toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'short',
-                                day: '2-digit' 
+                                day: '2-digit'
                             });
                         }
                     },
-                    { 
+                    {
                         "data": "purchaseOrderNo",
                         "name": "purchaseOrder.purchaseOrderNo"
                     },
-                    { 
+                    {
                         "data": "oldRRNo",
                         "name": "oldRRNo"
                     },
-                    { 
+                    {
                         "data": "deliveryReceiptNo",
                         "name": "deliveryReceipt.deliveryReceiptNo",
                         "render" : function (data, type, row){
@@ -211,7 +211,7 @@
                             return row.customerName ?? "" ;
                         }
                     },
-                    { 
+                    {
                         "data": "productName",
                         "name": "purchaseOrder.product.productName"
                     },
@@ -222,7 +222,7 @@
                             return `<span class="d-block fw-medium">${amount}</span>`;
                         }
                     },
-                    { 
+                    {
                         "data": "createdBy",
                         "name": "createdBy"
                     },
@@ -243,9 +243,9 @@
                         "orderable": false,
                         "render": function (data, type, row) {
                             return `<div class="dropdown actions-dropdown" style="${row.voidedBy != null || row.canceledBy != null ? 'display:none;' : ''}">
-                                                <button class="btn btn-light btn-sm dropdown-toggle w-100" 
-                                                        type="button" 
-                                                        data-bs-toggle="dropdown" 
+                                                <button class="btn btn-light btn-sm dropdown-toggle w-100"
+                                                        type="button"
+                                                        data-bs-toggle="dropdown"
                                                         aria-expanded="false">
                                                     <i class="bi bi-three-dots"></i>
                                                 </button>
@@ -267,6 +267,14 @@
                 "order": [[0, "asc"]], // Default sort by TransactionDate
                 "pageLength": 10 // Default number of rows per page
             });
+
+            let filterType = '@ViewBag.FilterType';
+
+            if (filterType && filterType !== "")
+            {
+                filterValue = "";
+                clearFilter(table);
+            }
 
             $('#inputDate').on('change', function() {
                 filterValue = $(this).val();

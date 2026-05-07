@@ -81,7 +81,7 @@
                         error: function() {
                             Swal.fire('Error', 'Something went wrong.', 'error');
                         }
-                    }); 
+                    });
                 }
             })
         }
@@ -128,7 +128,7 @@
                         error: function() {
                             Swal.fire('Error', 'Something went wrong.', 'error');
                         }
-                    });  
+                    });
                 }
             })
         }
@@ -183,10 +183,10 @@
                          "render": function (data, type, row) {
                              // Assuming 'Date' is in ISO format like "2024-07-12T00:00:00"
                              var date = new Date(data);
-                            return date.toLocaleDateString('en-US', { 
+                            return date.toLocaleDateString('en-US', {
                                 year: 'numeric',
-                                month: 'short', 
-                                day: '2-digit' 
+                                month: 'short',
+                                day: '2-digit'
                             });
                          }
                      },
@@ -211,9 +211,9 @@
                          "render": function (data, type, row) {
                              const isAdmin = @User.IsInRole("Admin").ToString().ToLower();
                              return `<div class="dropdown actions-dropdown" style="${row.voidedBy != null || row.canceledBy != null ? 'display:none;' : ''}">
-                                                 <button class="btn btn-light btn-sm dropdown-toggle w-100" 
-                                                        type="button" 
-                                                        data-bs-toggle="dropdown" 
+                                                 <button class="btn btn-light btn-sm dropdown-toggle w-100"
+                                                        type="button"
+                                                        data-bs-toggle="dropdown"
                                                         aria-expanded="false">
                                                     <i class="bi bi-three-dots"></i>
                                                  </button>
@@ -238,6 +238,14 @@
                  "order": [[0, "asc"]], // Default sort by TransactionDate
                  "pageLength": 10 // Default number of rows per page
              });
+
+             let filterType = '@ViewBag.FilterType';
+
+             if (filterType && filterType !== "")
+             {
+                 filterValue = "";
+                 clearFilter(table);
+             }
 
              $('#inputDate').on('change', function() {
                  filterValue = $(this).val();

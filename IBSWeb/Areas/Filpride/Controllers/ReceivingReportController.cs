@@ -103,6 +103,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         public async Task<IActionResult> Index(string? view, string filterType)
         {
             await UpdateFilterTypeClaim(filterType);
+            ViewBag.FilterType = filterType;
             if (view != nameof(DynamicView.ReceivingReport))
             {
                 return View();
