@@ -63,14 +63,32 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
-            let filterValue = localStorage.getItem('filterDate') || "";
-            $('#inputDate').val(filterValue);
+            let filterType = '@ViewBag.FilterType';
+
+            let filterValue = "";
+            if (filterType && filterType !== "") {
+                localStorage.removeItem('filterDate');
+                $('#inputDate').val('');
+            } else {
+                filterValue = localStorage.getItem('filterDate') || "";
+                $('#inputDate').val(filterValue);
+            }
 
             let table = $('#paginatedTable').DataTable({
                 "processing": true,
                 "serverSide": true,
                 "stateSave": true,
                 "stateDuration": 86400,
+                stateLoadCallback: function (settings) {
+
+                    if (filterType && filterType !== "") {
+                        return null;
+                    }
+
+                    return JSON.parse(
+                        localStorage.getItem('DataTables_' + settings.sInstance)
+                    );
+                },
                 "language": {
                     "processing": `<div class="d-flex justify-content-center">
                                     <div class="spinner-border text-primary" role="status">
@@ -306,14 +324,6 @@
                     }
                 ]
             });
-
-            let filterType = @Html.Raw(Json.Serialize(ViewBag.FilterType as string ?? ""));
-
-            if (filterType && filterType !== "")
-            {
-                filterValue = "";
-                clearFilter(table);
-            }
 
             $('#inputDate').on('change', function() {
                 filterValue = $(this).val();
