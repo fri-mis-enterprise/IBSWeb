@@ -59,7 +59,7 @@
         $(document).ready(function () {
             let filterValue = localStorage.getItem('filterDate') || "";
             $('#inputDate').val(filterValue);
-            
+
             let table = $('#paginatedTable').DataTable({
                 "processing": true,
                 "serverSide": true,
@@ -194,9 +194,9 @@
                             var deliveryReceiptId = row.deliveryReceiptId;
                             let actions = `
                                 <div class="dropdown actions-dropdown">
-                                    <button class="btn btn-light btn-sm dropdown-toggle w-100" 
-                                            type="button" 
-                                            data-bs-toggle="dropdown" 
+                                    <button class="btn btn-light btn-sm dropdown-toggle w-100"
+                                            type="button"
+                                            data-bs-toggle="dropdown"
                                             aria-expanded="false">
                                         <i class="bi bi-three-dots"></i>
                                     </button>
@@ -231,6 +231,14 @@
                     }
                 ]
             });
+
+            let filterType = '@ViewBag.FilterType';
+
+            if (filterType && filterType !== "")
+            {
+                filterValue = "";
+                clearFilter(table);
+            }
 
             $('#inputDate').on('change', function() {
                 filterValue = $(this).val();
@@ -276,7 +284,7 @@
                         error: function() {
                             Swal.fire('Error', 'Something went wrong.', 'error');
                         }
-                    }); 
+                    });
                 }
             })
         }
@@ -323,7 +331,7 @@
                         error: function() {
                             Swal.fire('Error', 'Something went wrong.', 'error');
                         }
-                    });                  
+                    });
                 }
             })
         }
@@ -336,7 +344,7 @@
             let minDate = new Date();
             minDate.setDate(minDate.getDate() - 2);
             let minDateString;
-            
+
             if (@User.IsInRole("Admin").ToString().ToLower())
             {
                 minDateString = "1900-01-01";
@@ -345,7 +353,7 @@
             {
                 minDateString = minDate.toISOString().split('T')[0];
             }
-            
+
             // Get the 3rd day of the following month
             let currentDate = new Date();
             let thirdDayNextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 3).toISOString().split('T')[0];
@@ -483,7 +491,7 @@
             });
         }
     </script>
-    
+
     <script>
         async function changeHaulerFreight(deliveryReceiptId) {
             const response = await fetch('@Url.Action("GetHaulers", "DeliveryReceipt", new { area = "Filpride" })');
@@ -491,7 +499,7 @@
                 + '?id=' + encodeURIComponent(deliveryReceiptId));
             const haulers = await response.json();
             const dr = await drResponse.json();
-            
+
             let haulerOptions = `
                 <option value="">Select hauler</option>
                 ${haulers.map(c => `<option value="${c.value}">${c.text}</option>`).join('')}
@@ -511,14 +519,14 @@
                 html: `
                     <div class="form-group py-2">
                         <label for="freight"><b>Freight</b></label></br>
-                        <input 
-                            id="freight" 
-                            type="number" 
-                            class="swal2-input" 
+                        <input
+                            id="freight"
+                            type="number"
+                            class="swal2-input"
                             placeholder="Enter Freight"
                             value="${dr.freight}">
                     </div>
-            
+
                     ${haulerSelect}
                 `,
                 icon: 'warning',

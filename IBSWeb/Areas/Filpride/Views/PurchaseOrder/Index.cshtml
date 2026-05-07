@@ -149,7 +149,7 @@
                         error: function() {
                             Swal.fire('Error', 'Something went wrong.', 'error');
                         }
-                    }); 
+                    });
                 }
             })
         }
@@ -196,7 +196,7 @@
                         error: function() {
                             Swal.fire('Error', 'Something went wrong.', 'error');
                         }
-                    });         
+                    });
                 }
             })
         }
@@ -205,7 +205,7 @@
     $(document).ready(function() {
         let filterValue = localStorage.getItem('filterDate') || "";
         $('#inputDate').val(filterValue);
-        
+
         let table = $('#paginatedTable').DataTable({
             "processing": true, // Enable processing indicator
             "serverSide": true, // Enable server-side processing
@@ -244,7 +244,7 @@
                 $('[data-bs-toggle="tooltip"]').tooltip();
             },
             "columns": [
-                { 
+                {
                     "data": "purchaseOrderNo",
                     "name": "purchaseOrderNo",
                 },
@@ -254,14 +254,14 @@
                     "render": function (data, type, row) {
                         // Assuming 'Date' is in ISO format like "2024-07-12T00:00:00"
                         var date = new Date(data);
-                        return date.toLocaleDateString('en-US', { 
+                        return date.toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'short',
-                            day: '2-digit' 
+                            day: '2-digit'
                         });
                     }
                 },
-                { 
+                {
                     "data": "supplierName",
                     "name": "supplierName"
                 },
@@ -273,11 +273,11 @@
                     "data": "typeOfPurchase",
                     "name": "typeOfPurchase"
                 },
-                { 
+                {
                     "data": "depot",
                     "name": "pickUpPoint.depot"
                 },
-                { 
+                {
                     "data": "productName",
                     "name": "productName"
                 },
@@ -316,7 +316,7 @@
                         return `<span class="d-block fw-medium">${amount}</span>`;
                     }
                 },
-                { 
+                {
                     "data": "createdBy",
                     "name": "createdBy"
                 },
@@ -374,18 +374,18 @@
                                         <li><a class="dropdown-item" href="javascript:void(0);" onclick="showUpdatePriceModal(${data}, ${row.unTriggeredQuantity})">Update Price</a></li>
                                     `;
                                 }
-                                
+
                                 if (!row.isReceived && !row.isSubPo && !row.isClosed) {
                                     dropdownContent += `
                                         <li><a class="dropdown-item" href="javascript:void(0);" onclick="initiateProductTransfer(${data}, '${row.supplierId}', '${row.supplierName}')">Product Transfer</a></li>
                                          <li><a class="dropdown-item" href="javascript:void(0);" onclick="confirmClose(${data})">Close</a></li>
                                     `;
                                 }
-                                
+
                                 if (row.quantityReceived === 0 && !row.isSubPo && !row.isClosed) {
                                     dropdownContent += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="updateSupplierSalesOrderNo(${data})">Update Sales Order#</a></li>`;
                                 }
-                                
+
                                 if (row.quantityReceived === 0 && !row.isSubPo && isAdmin && !row.isClosed) {
                                     dropdownContent += `
                                         <li><a class="dropdown-item" href="javascript:void(0);" onclick="confirmVoid(${data})">Void</a></li>
@@ -396,9 +396,9 @@
 
                         var dropdown = `
                             <div class="dropdown actions-dropdown" style="${row.voidedBy != null || row.canceledBy != null ? 'display:none;' : ''}">
-                                 <button class="btn btn-light btn-sm dropdown-toggle w-100" 
-                                                        type="button" 
-                                                        data-bs-toggle="dropdown" 
+                                 <button class="btn btn-light btn-sm dropdown-toggle w-100"
+                                                        type="button"
+                                                        data-bs-toggle="dropdown"
                                                         aria-expanded="false">
                                                     <i class="bi bi-three-dots"></i>
                                  </button>
@@ -416,6 +416,14 @@
             "order": [[0, "asc"]], // Default sort by TransactionDate
             "pageLength": 10 // Default number of rows per page
         });
+
+        let filterType = '@ViewBag.FilterType';
+
+        if (filterType && filterType !== "")
+        {
+            filterValue = "";
+            clearFilter(table);
+        }
 
         $('#inputDate').on('change', function() {
             filterValue = $(this).val();
@@ -533,7 +541,7 @@
             fetch(`@Url.Action("GetPickUpPoints", "PurchaseOrder", new { area = "Filpride" })?supplierId=${supplierId}`)
                 .then(response => response.json())
                 .then(pickUpPoints => {
-                    
+
                     // Populate pickup points dropdown
                     let pickupDropdown = $("#pickupPointSelect").empty().append('<option value="">Select Pickup Point</option>');
                     pickUpPoints.forEach(item => pickupDropdown.append(`<option value="${item.value}">${item.text}</option>`));

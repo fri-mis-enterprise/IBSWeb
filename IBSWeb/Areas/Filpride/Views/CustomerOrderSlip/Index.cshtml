@@ -14,7 +14,7 @@
             <i class="bi bi-plus-circle"></i> New Order
         </a>
     </div>
-    
+
     <div class="card shadow border-0 mt-3">
         <div class="card-body p-3">
             <div class="me-2">
@@ -65,7 +65,7 @@
         $(document).ready(function () {
             let filterValue = localStorage.getItem('filterDate') || "";
             $('#inputDate').val(filterValue);
-            
+
             let table = $('#paginatedTable').DataTable({
                 "processing": true,
                 "serverSide": true,
@@ -104,11 +104,11 @@
                     $('[data-bs-toggle="tooltip"]').tooltip();
                 },
                 "columns": [
-                    { 
+                    {
                         "data": "customerOrderSlipNo",
                         "name": "CustomerOrderSlipNo",
                     },
-                    { 
+                    {
                         "data": "deliveryOption",
                         "name": "deliveryOption",
                     },
@@ -118,9 +118,9 @@
                         "render": function(data, type, row) {
 
                             if (!row.appointedSupplierPOs || row.appointedSupplierPOs.length === 0) {
-                                return ""; 
+                                return "";
                             }
-                            
+
                             if (row.appointedSupplierPOs.length === 1) {
                                 return `<span>${row.appointedSupplierPOs[0]}</span>`;
                             }
@@ -131,7 +131,7 @@
                                     </span>`;
                         },
                     },
-                    { 
+                    {
                         "data": "depot",
                         "name": "Depot",
                     },
@@ -147,11 +147,11 @@
                             });
                         }
                     },
-                    { 
+                    {
                         "data": "customerName",
                         "name": "CustomerName",
                     },
-                    { 
+                    {
                         "data": "productName",
                         "name": "ProductName",
                     },
@@ -230,16 +230,16 @@
                             var customerOrderSlipId = row.customerOrderSlipId;
                             var actions = `
                                 <div class="dropdown actions-dropdown">
-                                    <button class="btn btn-light btn-sm dropdown-toggle w-100" 
-                                            type="button" 
-                                            data-bs-toggle="dropdown" 
+                                    <button class="btn btn-light btn-sm dropdown-toggle w-100"
+                                            type="button"
+                                            data-bs-toggle="dropdown"
                                             aria-expanded="false">
                                         <i class="bi bi-three-dots"></i>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end shadow-sm">`;
 
                             actions += `<li><a class="dropdown-item" href="@Url.Action("Preview", "CustomerOrderSlip", new { area = "Filpride" })/${customerOrderSlipId}">Preview</a></li>`;
-                            
+
                             switch (status) {
                                 case '@CosStatus.ForApprovalOfCNC':
                                     actions += `<li><a class="dropdown-item" href="@Url.Action("EditCos", "CustomerOrderSlip", new { area = "Filpride" })/${customerOrderSlipId}">Edit COS</a></li>`;
@@ -295,17 +295,25 @@
                                     }
                                     break;
                             }
-                            
+
                             if (isAdmin && row.deliveredQuantity > 0){
                                 actions += `<li><a class="dropdown-item" href="#" onclick="changeCommission('${customerOrderSlipId}')">Change Commission</a></li>`;
                             }
-                            
+
                             actions += `</ul></div>`;
                             return actions;
                         }
                     }
                 ]
             });
+
+            let filterType = '@ViewBag.FilterType';
+
+            if (filterType && filterType !== "")
+            {
+                filterValue = "";
+                clearFilter(table);
+            }
 
             $('#inputDate').on('change', function() {
                 filterValue = $(this).val();
@@ -315,7 +323,7 @@
         });
     </script>
     <script>
-        
+
         // SweetAlert function
         function confirmCloseCos(customerOrderSlipId) {
             Swal.fire({
@@ -415,7 +423,7 @@
             const cos = await cosResponse.json();
             const dr = await drResponse.json();
             console.log("dr: " + dr);
-            
+
             let commissioneeOptions = `
                 <option value="">Select commissionee</option>
                 ${commissionees.map(c => `<option value="${c.value}">${c.text}</option>`).join('')}
@@ -435,31 +443,31 @@
                 html: `
                     <div class="form-group py-2 text-center">
                         <label class="d-block mb-2"><b>Has Commission?</b><span class="required">*</span></label>
-                    
+
                         <div class="d-flex justify-content-center gap-4 my-3">
                             <div>
                                 <input type="radio" name="HasCommission" value="true" id="HasCommissionYes">
                                 <label for="HasCommissionYes">Yes</label>
                             </div>
-                    
+
                             <div>
                                 <input type="radio" name="HasCommission" value="false" id="HasCommissionNo">
                                 <label for="HasCommissionNo">No</label>
                             </div>
                         </div>
                     </div>
-                    
+
                             <div class="form-group py-2">
                                 <label for="commissionRate"><b>Commission Rate</b></label></br>
-                                <input 
-                                    id="commissionRate" 
-                                    type="number" 
-                                    class="swal2-input" 
-                                    min="0.01" 
+                                <input
+                                    id="commissionRate"
+                                    type="number"
+                                    class="swal2-input"
+                                    min="0.01"
                                     placeholder="Enter Commission Rate"
                                     value="${cos.commissionRate}">
                             </div>
-                    
+
                             ${commissioneeSelect}
                         `,
                 icon: 'warning',
@@ -471,7 +479,7 @@
                     const select = Swal.getPopup().querySelector('#swal-input2');
                     const yesRadio = Swal.getPopup().querySelector('#HasCommissionYes');
                     const noRadio  = Swal.getPopup().querySelector('#HasCommissionNo');
-                    
+
                     if (select) {
                         select.value = cos.commissioneeId ?? "";
                     }
@@ -503,7 +511,7 @@
                     else {
                         htmlMessage = "Commission details removed";
                     }
-                    
+
                     Swal.fire({
                         title: 'Apply Commission Changes?',
                         html: htmlMessage,
@@ -514,7 +522,7 @@
                         confirmButtonText: 'Yes',
                         cancelButtonText: 'No'
                     }).then((confirmResult) => {
-                        
+
                         if (confirmResult.isConfirmed) {
                             const formData = new FormData();
                             formData.append('id', customerOrderSlipId);
@@ -522,13 +530,13 @@
                             formData.append('commissioneeId', commissioneeId);
                             formData.append('commissionRate', commissionRate);
                             const form = document.getElementById("changeCommissionForm");
-                            
+
                             if (hasCommission === "true" && commissioneeId !== "" && commissionRate !== "" && commissionRate !== 0) {
                                 form.querySelector("input[name='id']").value = customerOrderSlipId;
                                 form.querySelector("input[name='hasCommission']").value = hasCommission ?? "";
                                 form.querySelector("input[name='commissioneeId']").value = commissioneeId ?? "";
                                 form.querySelector("input[name='commissionRate']").value = commissionRate ?? "";
-                                
+
                                 if (dr.commissionAmountPaid !== 0){
                                     Swal.fire({
                                         title: 'Commission payment detected',
@@ -551,7 +559,7 @@
                             } else if (hasCommission === "false") {
                                 form.querySelector("input[name='id']").value = customerOrderSlipId;
                                 form.querySelector("input[name='hasCommission']").value = hasCommission ?? "";
-                                
+
                                 if (dr.commissionAmountPaid !== 0){
                                     Swal.fire({
                                         title: 'Commission payment detected',

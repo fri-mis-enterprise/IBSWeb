@@ -142,3 +142,10 @@ $(document).ready(function () {
         processing: true
     });
 });
+
+function clearFilter(table) {
+    $('#inputDate').val("");
+    localStorage.removeItem('filterDate');
+    table.search("");
+    table.draw();
+}
