@@ -307,7 +307,7 @@
                 ]
             });
 
-            let filterType = '@ViewBag.FilterType';
+            let filterType = @Html.Raw(Json.Serialize(ViewBag.FilterType as string ?? ""));
 
             if (filterType && filterType !== "")
             {
