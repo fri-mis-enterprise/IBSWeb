@@ -144,8 +144,21 @@ $(document).ready(function () {
 });
 
 function clearFilter(table) {
-    $('#inputDate').val("");
-    localStorage.removeItem('filterDate');
-    table.search("");
-    table.draw();
+
+    let shouldTableRefresh = false;
+
+    if ($('#inputDate').val() !== "") {
+        $('#inputDate').val("");
+        localStorage.removeItem('filterDate');
+        shouldTableRefresh = true;
+    }
+
+    if (table.search() !== "") {
+        table.search("");
+        shouldTableRefresh = true;
+    }
+
+    if (shouldTableRefresh) {
+        table.draw();
+    }
 }
