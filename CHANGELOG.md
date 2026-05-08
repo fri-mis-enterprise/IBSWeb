@@ -6,6 +6,13 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v2.3.1] - 2026-05-08
+### Fixed
+- Fixed inventory balance recalculation for purchase, sales, and cost update flows.
+- Fixed inventory report beginning balance, average cost, total balance, and purchase order selection behavior.
+
+---
+
 ## [v2.3.0] - 2026-03-04
 ### Added
 - Added a navigation feature to provide an overview of tasks pending approval for CV and JV.

@@ -1,10 +1,9 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Filpride.IRepository;
 using IBS.Models.Filpride.AccountsPayable;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.Integrated;
-using IBS.Models.Filpride.ViewModels;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.EntityFrameworkCore;
@@ -20,113 +19,25 @@ namespace IBS.DataAccess.Repository.Filpride
             _db = db;
         }
 
-        public async Task AddActualInventory(ActualInventoryViewModel viewModel, string company, CancellationToken cancellationToken = default)
-        {
-            #region -- Actual Inventory Entry --
-
-            var total = viewModel.Variance * viewModel.AverageCost;
-            var inventoryBalance = viewModel.Variance + viewModel.PerBook;
-            var totalBalance = viewModel.TotalBalance + total;
-            var particular = viewModel.Variance < 0 ? "Actual Inventory(Loss)" : "Actual Inventory(Gain)";
-
-            FilprideInventory inventory = new()
-            {
-                Date = viewModel.Date,
-                ProductId = viewModel.ProductId,
-                Quantity = Math.Abs(viewModel.Variance),
-                Cost = viewModel.AverageCost,
-                Particular = particular,
-                Total = Math.Abs(total),
-                InventoryBalance = inventoryBalance,
-                AverageCost = totalBalance / inventoryBalance,
-                TotalBalance = totalBalance,
-                POId = viewModel.POId,
-                Company = company
-            };
-            await _db.FilprideInventories.AddAsync(inventory, cancellationToken);
-            await _db.SaveChangesAsync(cancellationToken);
-
-            #endregion -- Actual Inventory Entry --
-
-            #region -- General Book Entry --
-
-            var ledger = new List<FilprideGeneralLedgerBook>();
-            for (var i = 0; i < viewModel.AccountNumber.Length; i++)
-            {
-                ledger.Add(
-                    new FilprideGeneralLedgerBook
-                    {
-                        Date = viewModel.Date,
-                        Reference = inventory.InventoryId.ToString(),
-                        AccountNo = viewModel.AccountNumber[i],
-                        AccountTitle = viewModel.AccountTitle[i],
-                        Description = particular,
-                        Debit = Math.Abs(viewModel.Debit[i]),
-                        Credit = Math.Abs(viewModel.Credit[i]),
-                        CreatedBy = viewModel.CurrentUser,
-                        CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
-                        IsPosted = false
-                    });
-            }
-
-            await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledger, cancellationToken);
-            await _db.SaveChangesAsync(cancellationToken);
-
-            #endregion -- General Book Entry --
-        }
-
-        public async Task AddBeginningInventory(BeginningInventoryViewModel viewModel, string company, CancellationToken cancellationToken = default)
-        {
-            FilprideInventory inventory = new()
-            {
-                Date = viewModel.Date,
-                ProductId = viewModel.ProductId,
-                POId = viewModel.POId,
-                Quantity = viewModel.Quantity,
-                Cost = viewModel.Cost,
-                Particular = "Beginning Balance",
-                Total = viewModel.Quantity * viewModel.Cost,
-                InventoryBalance = viewModel.Quantity,
-                AverageCost = viewModel.Cost,
-                TotalBalance = viewModel.Quantity * viewModel.Cost,
-                IsValidated = true,
-                ValidatedBy = viewModel.CurrentUser,
-                ValidatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
-                Company = company
-            };
-
-            await _db.FilprideInventories.AddAsync(inventory, cancellationToken);
-            await _db.SaveChangesAsync(cancellationToken);
-        }
-
         public async Task AddPurchaseToInventoryAsync(FilprideReceivingReport receivingReport, CancellationToken cancellationToken = default)
         {
             var sortedInventory = await _db.FilprideInventories
                 .Where(i => i.Company == receivingReport.Company &&
                             i.ProductId == receivingReport.PurchaseOrder!.Product!.ProductId &&
                             i.POId == receivingReport.POId)
-                .OrderBy(i => i.Date)
-                .ThenBy(i => i.Particular == "Purchases" ? 0 : 1) // Purchases first, then Sales
-                .ThenBy(i => i.Particular)
                 .ToListAsync(cancellationToken);
 
-            // Find the correct insertion point - after all purchases on the same date, but before any sales
+            sortedInventory = OrderInventoryTransactions(sortedInventory).ToList();
+
             var lastIndex = -1;
             for (int i = 0; i < sortedInventory.Count; i++)
             {
                 if (sortedInventory[i].Date > receivingReport.Date)
-                    break;
-
-                if (sortedInventory[i].Date == receivingReport.Date)
                 {
-                    // If same date, include all purchases as "previous"
-                    if (sortedInventory[i].Particular == "Purchases")
-                    {
-                        lastIndex = i;
-                    }
-                    // Don't advance for sales on the same date - they should be subsequent
+                    break;
                 }
-                else if (sortedInventory[i].Date < receivingReport.Date)
+
+                if (sortedInventory[i].Date < receivingReport.Date || IsPurchase(sortedInventory[i]))
                 {
                     lastIndex = i;
                 }
@@ -141,13 +52,10 @@ namespace IBS.DataAccess.Repository.Filpride
                 ? ComputeNetOfVat(receivingReport.PurchaseOrder.FinalPrice)
                 : receivingReport.PurchaseOrder.FinalPrice, 4);
 
-            var total = receivingReport.QuantityReceived * cost;
             var inventoryBalance = (previousInventory?.InventoryBalance ?? 0) + receivingReport.QuantityReceived;
-            var totalBalance = (previousInventory?.TotalBalance ?? 0) + total;
-
-            var averageCost = Math.Round(totalBalance == 0 || inventoryBalance == 0
-                ? cost
-                : totalBalance / inventoryBalance, 4);
+            var averageCost = cost;
+            var total = receivingReport.QuantityReceived * cost;
+            var totalBalance = inventoryBalance * averageCost;
 
             // Create new inventory entry
             var inventory = new FilprideInventory
@@ -158,7 +66,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 Particular = "Purchases",
                 Reference = receivingReport.ReceivingReportNo,
                 Quantity = receivingReport.QuantityReceived,
-                Cost = total / receivingReport.QuantityReceived, // unit cost
+                Cost = cost,
                 IsValidated = true,
                 ValidatedBy = receivingReport.CreatedBy, // Add this if available
                 ValidatedDate = DateTimeHelper.GetCurrentPhilippineTime(), // Add this if available
@@ -169,49 +77,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 Company = receivingReport.Company
             };
 
-            // Update subsequent transactions with running totals
-            var runningInventoryBalance = inventoryBalance;
-            var runningTotalBalance = totalBalance;
-            var runningAverageCost = averageCost;
-
-            foreach (var transaction in subsequentTransactions)
-            {
-                if (transaction.Particular == "Sales")
-                {
-                    transaction.Cost = runningAverageCost;
-                    transaction.Total = transaction.Quantity * runningAverageCost;
-                    transaction.TotalBalance = runningTotalBalance - transaction.Total;
-                    transaction.InventoryBalance = runningInventoryBalance - transaction.Quantity;
-                    transaction.AverageCost = transaction.TotalBalance == 0 ||
-                                              transaction.InventoryBalance == 0
-                        ? transaction.Cost
-                        : Math.Round(transaction.TotalBalance / transaction.InventoryBalance, 4);
-
-                    var costOfGoodsSold = transaction.AverageCost * transaction.Quantity;
-
-                    // Update running totals
-                    runningAverageCost = transaction.AverageCost;
-                    runningTotalBalance = transaction.TotalBalance;
-                    runningInventoryBalance = transaction.InventoryBalance;
-
-                    // Update journal entries efficiently
-                    await UpdateJournalEntriesForCostOfGoodsSoldAsync(transaction.Reference!, costOfGoodsSold, cancellationToken);
-                }
-                else if (transaction.Particular == "Purchases")
-                {
-                    transaction.TotalBalance = runningTotalBalance + transaction.Total;
-                    transaction.InventoryBalance = runningInventoryBalance + transaction.Quantity;
-                    transaction.AverageCost = transaction.TotalBalance == 0 ||
-                                              transaction.InventoryBalance == 0
-                        ? transaction.Cost
-                        : Math.Round(transaction.TotalBalance / transaction.InventoryBalance, 4);
-
-                    // Update running totals
-                    runningAverageCost = transaction.AverageCost;
-                    runningTotalBalance = transaction.TotalBalance;
-                    runningInventoryBalance = transaction.InventoryBalance;
-                }
-            }
+            await RecalculateTransactionsAsync(inventory, subsequentTransactions, cancellationToken);
 
             // Batch updates for better performance
             if (subsequentTransactions.Count != 0)
@@ -258,31 +124,19 @@ namespace IBS.DataAccess.Repository.Filpride
                 .Where(i => i.Company == deliveryReceipt.Company &&
                             i.ProductId == deliveryReceipt.CustomerOrderSlip!.ProductId &&
                             i.POId == deliveryReceipt.PurchaseOrderId)
-                .OrderBy(i => i.Date)
-                .ThenBy(i => i.Particular == "Purchases" ? 0 : 1) // Purchases first, then Sales
-                .ThenBy(i => i.Particular)
                 .ToListAsync(cancellationToken);
 
-            // Find the correct insertion point - after all purchases on the same date
+            sortedInventory = OrderInventoryTransactions(sortedInventory).ToList();
+
             var lastIndex = -1;
             for (int i = 0; i < sortedInventory.Count; i++)
             {
                 if (sortedInventory[i].Date > deliveryReceipt.DeliveredDate)
+                {
                     break;
+                }
 
-                if (sortedInventory[i].Date == deliveryReceipt.DeliveredDate)
-                {
-                    // If same date, only consider it as "previous" if it's a purchase
-                    if (sortedInventory[i].Particular == "Purchases")
-                    {
-                        lastIndex = i;
-                    }
-                    // Don't update lastIndex for sales on the same date
-                }
-                else if (sortedInventory[i].Date < deliveryReceipt.DeliveredDate)
-                {
-                    lastIndex = i;
-                }
+                lastIndex = i;
             }
 
             var previousInventory = lastIndex >= 0 ? sortedInventory[lastIndex] : null;
@@ -312,13 +166,10 @@ namespace IBS.DataAccess.Repository.Filpride
             }
 
             // Calculate initial values for new inventory entry
-            var total = deliveryReceipt.Quantity * cost;
             var inventoryBalance = (previousInventory?.InventoryBalance ?? 0) - deliveryReceipt.Quantity;
-            var totalBalance = (previousInventory?.TotalBalance ?? 0) - total;
-
-            var averageCost = totalBalance == 0 || inventoryBalance == 0
-                ? cost
-                : Math.Round(totalBalance / inventoryBalance, 4);
+            var averageCost = cost;
+            var total = deliveryReceipt.Quantity * cost;
+            var totalBalance = inventoryBalance * averageCost;
 
             // Create new inventory entry
             var inventory = new FilprideInventory
@@ -340,49 +191,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 Company = deliveryReceipt.Company
             };
 
-            // Update subsequent transactions
-            var runningInventoryBalance = inventoryBalance;
-            var runningTotalBalance = totalBalance;
-            var runningAverageCost = averageCost;
-
-            foreach (var transaction in subsequentTransactions)
-            {
-                if (transaction.Particular == "Sales")
-                {
-                    transaction.Cost = runningAverageCost;
-                    transaction.Total = transaction.Quantity * runningAverageCost;
-                    transaction.TotalBalance = runningTotalBalance - transaction.Total;
-                    transaction.InventoryBalance = runningInventoryBalance - transaction.Quantity;
-                    transaction.AverageCost = transaction.TotalBalance == 0 ||
-                                              transaction.InventoryBalance == 0
-                        ? transaction.Cost
-                        : Math.Round(transaction.TotalBalance / transaction.InventoryBalance, 4);
-
-                    var costOfGoodsSold = transaction.AverageCost * transaction.Quantity;
-
-                    // Update running totals
-                    runningAverageCost = transaction.AverageCost;
-                    runningTotalBalance = transaction.TotalBalance;
-                    runningInventoryBalance = transaction.InventoryBalance;
-
-                    // Update journal entries if needed
-                    await UpdateJournalEntriesAsync(transaction.Reference!, costOfGoodsSold, cancellationToken);
-                }
-                else if (transaction.Particular == "Purchases")
-                {
-                    transaction.TotalBalance = runningTotalBalance + transaction.Total;
-                    transaction.InventoryBalance = runningInventoryBalance + transaction.Quantity;
-                    transaction.AverageCost = transaction.TotalBalance == 0 ||
-                                              transaction.InventoryBalance == 0
-                        ? transaction.Cost
-                        : Math.Round(transaction.TotalBalance / transaction.InventoryBalance, 4);
-
-                    // Update running totals
-                    runningAverageCost = transaction.AverageCost;
-                    runningTotalBalance = transaction.TotalBalance;
-                    runningInventoryBalance = transaction.InventoryBalance;
-                }
-            }
+            await RecalculateTransactionsAsync(inventory, subsequentTransactions, cancellationToken);
 
             if (subsequentTransactions.Count != 0)
             {
@@ -420,102 +229,27 @@ namespace IBS.DataAccess.Repository.Filpride
             }
         }
 
-        public async Task<bool> HasAlreadyBeginningInventory(int productId, int poId, string company, CancellationToken cancellationToken = default)
-        {
-            return await _db.FilprideInventories
-                .AnyAsync(i => i.Company == company && i.ProductId == productId && i.POId == poId, cancellationToken);
-        }
-
         public async Task VoidInventory(FilprideInventory model, CancellationToken cancellationToken = default)
         {
             var sortedInventory = await _db.FilprideInventories
             .Where(i => i.Company == model.Company
                         && i.ProductId == model.ProductId
-                        && i.POId == model.POId
-                        && i.Date >= model.Date)
-            .OrderBy(i => i.Date)
-            .ThenBy(i => i.InventoryId)
+                        && i.POId == model.POId)
             .ToListAsync(cancellationToken);
 
-            sortedInventory.Remove(model);
+            sortedInventory = OrderInventoryTransactions(sortedInventory).ToList();
+            var voidedIndex = sortedInventory.FindIndex(i => i.InventoryId == model.InventoryId);
+            var previousInventory = voidedIndex > 0 ? sortedInventory[voidedIndex - 1] : null;
+            var subsequentTransactions = voidedIndex >= 0
+                ? sortedInventory.Skip(voidedIndex + 1).ToList()
+                : [];
 
-            if (sortedInventory.Count != 0)
+            if (subsequentTransactions.Count != 0)
             {
-                var previousInventory = sortedInventory.FirstOrDefault();
-
-                var inventoryBalance = previousInventory!.InventoryBalance;
-                var totalBalance = previousInventory.TotalBalance;
-                var averageCost = inventoryBalance == 0 || totalBalance == 0
-                    ? previousInventory.AverageCost
-                    : totalBalance / inventoryBalance;
-
-                foreach (var transaction in sortedInventory.Skip(1))
-                {
-                    if (transaction.Particular == "Sales")
-                    {
-                        transaction.Cost = averageCost;
-                        transaction.Total = transaction.Quantity * averageCost;
-                        transaction.TotalBalance = totalBalance != 0 ? totalBalance - transaction.Total : transaction.Total;
-                        transaction.InventoryBalance = inventoryBalance != 0 ? inventoryBalance - transaction.Quantity : transaction.Quantity;
-                        transaction.AverageCost = transaction.TotalBalance == 0 || transaction.InventoryBalance == 0
-                            ? previousInventory.AverageCost
-                            : transaction.TotalBalance / transaction.InventoryBalance;
-                        var costOfGoodsSold = transaction.AverageCost * transaction.Quantity;
-
-                        averageCost = transaction.AverageCost;
-                        totalBalance = transaction.TotalBalance;
-                        inventoryBalance = transaction.InventoryBalance;
-
-                        var journalEntries = await _db.FilprideGeneralLedgerBooks
-                            .Where(j => j.Reference == transaction.Reference &&
-                                        (j.AccountNo.StartsWith("50101") || j.AccountNo.StartsWith("10104")))
-                            .ToListAsync(cancellationToken);
-
-                        if (journalEntries.Count != 0)
-                        {
-                            foreach (var journal in journalEntries)
-                            {
-                                if (journal.Debit != 0)
-                                {
-                                    if (journal.Debit == costOfGoodsSold)
-                                    {
-                                        continue;
-                                    }
-
-                                    journal.Debit = costOfGoodsSold;
-                                    journal.Credit = 0;
-                                }
-                                else
-                                {
-                                    if (journal.Credit == costOfGoodsSold)
-                                    {
-                                        continue;
-                                    }
-
-                                    journal.Credit = costOfGoodsSold;
-                                    journal.Debit = 0;
-                                }
-                            }
-                        }
-
-                        _db.FilprideGeneralLedgerBooks.UpdateRange(journalEntries);
-                    }
-                    else if (transaction.Particular == "Purchases")
-                    {
-                        transaction.TotalBalance = totalBalance + transaction.Total;
-                        transaction.InventoryBalance = inventoryBalance + transaction.Quantity;
-                        transaction.AverageCost = transaction.TotalBalance == 0 || transaction.InventoryBalance == 0
-                            ? transaction.Cost
-                            : transaction.TotalBalance / transaction.InventoryBalance;
-
-                        averageCost = transaction.AverageCost;
-                        totalBalance = transaction.TotalBalance;
-                        inventoryBalance = transaction.InventoryBalance;
-                    }
-                }
+                await RecalculateTransactionsAsync(previousInventory, subsequentTransactions, cancellationToken);
+                _db.FilprideInventories.UpdateRange(subsequentTransactions);
             }
 
-            _db.FilprideInventories.UpdateRange(sortedInventory);
             _db.FilprideInventories.Remove(model);
 
             await _db.SaveChangesAsync(cancellationToken);
@@ -523,80 +257,71 @@ namespace IBS.DataAccess.Repository.Filpride
 
         public async Task ReCalculateInventoryAsync(List<FilprideInventory> inventories, CancellationToken cancellationToken = default)
         {
-            var previousInventory = inventories.FirstOrDefault();
-
-            var inventoryBalance = previousInventory!.InventoryBalance;
-            var totalBalance = previousInventory.TotalBalance;
-            var averageCost = inventoryBalance == 0 || totalBalance == 0
-                ? previousInventory.AverageCost
-                : totalBalance / inventoryBalance;
-
-            foreach (var transaction in inventories.Skip(1))
+            if (inventories.Count == 0)
             {
-                if (transaction.Particular == "Sales")
-                {
-                    transaction.Cost = averageCost;
-                    transaction.Total = transaction.Quantity * averageCost;
-                    transaction.TotalBalance = totalBalance != 0 ? totalBalance - transaction.Total : transaction.Total;
-                    transaction.InventoryBalance = inventoryBalance != 0 ? inventoryBalance - transaction.Quantity : transaction.Quantity;
-                    transaction.AverageCost = transaction.TotalBalance == 0 || transaction.InventoryBalance == 0
-                        ? previousInventory.AverageCost
-                        : Math.Round(transaction.TotalBalance / transaction.InventoryBalance, 4);
-                    var costOfGoodsSold = transaction.AverageCost * transaction.Quantity;
-
-                    averageCost = transaction.AverageCost;
-                    totalBalance = transaction.TotalBalance;
-                    inventoryBalance = transaction.InventoryBalance;
-
-                    var journalEntries = await _db.FilprideGeneralLedgerBooks
-                        .Where(j => j.Reference == transaction.Reference &&
-                                    (j.AccountNo.StartsWith("50101") || j.AccountNo.StartsWith("10104")))
-                        .ToListAsync(cancellationToken);
-
-                    if (journalEntries.Count != 0)
-                    {
-                        foreach (var journal in journalEntries)
-                        {
-                            if (journal.Debit != 0)
-                            {
-                                if (journal.Debit == costOfGoodsSold)
-                                {
-                                    continue;
-                                }
-
-                                journal.Debit = costOfGoodsSold;
-                                journal.Credit = 0;
-                            }
-                            else
-                            {
-                                if (journal.Credit == costOfGoodsSold)
-                                {
-                                    continue;
-                                }
-
-                                journal.Credit = costOfGoodsSold;
-                                journal.Debit = 0;
-                            }
-                        }
-                    }
-
-                    _db.FilprideGeneralLedgerBooks.UpdateRange(journalEntries);
-                }
-                else if (transaction.Particular == "Purchases")
-                {
-                    transaction.TotalBalance = totalBalance + transaction.Total;
-                    transaction.InventoryBalance = inventoryBalance + transaction.Quantity;
-                    transaction.AverageCost = transaction.TotalBalance == 0 || transaction.InventoryBalance == 0
-                        ? transaction.Cost
-                        : Math.Round(transaction.TotalBalance / transaction.InventoryBalance, 4);
-
-                    averageCost = transaction.AverageCost;
-                    totalBalance = transaction.TotalBalance;
-                    inventoryBalance = transaction.InventoryBalance;
-                }
+                return;
             }
 
+            var orderedInventories = OrderInventoryTransactions(inventories).ToList();
+            var previousInventory = orderedInventories.First();
+            previousInventory.Total = previousInventory.Quantity * previousInventory.Cost;
+            previousInventory.AverageCost = previousInventory.Cost;
+            previousInventory.TotalBalance = previousInventory.InventoryBalance * previousInventory.AverageCost;
+
+            await RecalculateTransactionsAsync(previousInventory, orderedInventories.Skip(1), cancellationToken);
+
             await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        private async Task RecalculateTransactionsAsync(
+            FilprideInventory? previousInventory,
+            IEnumerable<FilprideInventory> transactions,
+            CancellationToken cancellationToken)
+        {
+            var runningInventoryBalance = previousInventory?.InventoryBalance ?? 0m;
+            var runningAverageCost = previousInventory?.AverageCost ?? 0m;
+
+            foreach (var transaction in OrderInventoryTransactions(transactions))
+            {
+                if (IsSales(transaction))
+                {
+                    transaction.Cost = runningAverageCost != 0 ? runningAverageCost : transaction.Cost;
+                    transaction.Total = transaction.Quantity * transaction.Cost;
+                    transaction.InventoryBalance = runningInventoryBalance - transaction.Quantity;
+                    transaction.AverageCost = transaction.Cost;
+                    transaction.TotalBalance = transaction.InventoryBalance * transaction.AverageCost;
+
+                    await UpdateJournalEntriesAsync(transaction.Reference!, transaction.Total, cancellationToken);
+                }
+                else if (IsPurchase(transaction))
+                {
+                    transaction.Total = transaction.Quantity * transaction.Cost;
+                    transaction.InventoryBalance = runningInventoryBalance + transaction.Quantity;
+                    transaction.AverageCost = transaction.Cost;
+                    transaction.TotalBalance = transaction.InventoryBalance * transaction.AverageCost;
+                }
+
+                runningAverageCost = transaction.AverageCost;
+                runningInventoryBalance = transaction.InventoryBalance;
+            }
+        }
+
+        private static IOrderedEnumerable<FilprideInventory> OrderInventoryTransactions(IEnumerable<FilprideInventory> inventories)
+        {
+            return inventories
+                .OrderBy(i => i.Date)
+                .ThenBy(i => IsPurchase(i) ? 0 : 1)
+                .ThenBy(i => i.InventoryId);
+        }
+
+        private static bool IsPurchase(FilprideInventory inventory)
+        {
+            return inventory.Particular == "Purchases" || inventory.Particular == "Beginning Balance";
+        }
+
+        private static bool IsSales(FilprideInventory inventory)
+        {
+            return inventory.Particular == "Sales";
         }
 
         public override async Task<FilprideInventory?> GetAsync(Expression<Func<FilprideInventory, bool>> filter, CancellationToken cancellationToken = default)

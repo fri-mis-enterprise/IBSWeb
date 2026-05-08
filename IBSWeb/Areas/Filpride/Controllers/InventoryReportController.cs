@@ -30,9 +30,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        private readonly ILogger<InventoryController> _logger;
+        private readonly ILogger<InventoryReportController> _logger;
 
-        public InventoryReportController(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager, IUnitOfWork unitOfWork, IWebHostEnvironment webHostEnvironment, ILogger<InventoryController> logger)
+        public InventoryReportController(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager, IUnitOfWork unitOfWork, IWebHostEnvironment webHostEnvironment, ILogger<InventoryReportController> logger)
         {
             _dbContext = dbContext;
             _userManager = userManager;
@@ -216,7 +216,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     var subTotalTotalBalance = 0m;
 
                                     foreach (var record in group.OrderBy(e => e.Date)
-                                                 .ThenBy(x => x.Particular))
+                                                 .ThenBy(x => x.Particular == "Purchases" ? 0 : 1)
+                                                 .ThenBy(x => x.InventoryId))
                                     {
                                         var getPurchaseOrder  =
                                         _unitOfWork.FilpridePurchaseOrder.GetAsync(x =>
@@ -249,9 +250,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     grandTotalTotalBalance += subTotalTotalBalance;
                                 }
 
-                            var grandTotalAverageCost = grandTotalInventoryBalance != 0
-                                ? grandTotalTotalBalance / grandTotalInventoryBalance
-                                : 0m;
+                            var grandTotalAverageCost = inventories
+                                .SelectMany(group => group)
+                                .OrderBy(e => e.Date)
+                                .ThenBy(x => x.Particular == "Purchases" ? 0 : 1)
+                                .ThenBy(x => x.InventoryId)
+                                .LastOrDefault()?.AverageCost ?? 0m;
                             table.Cell().ColumnSpan(6).Background(Colors.Grey.Lighten1).Border(0.5f);
                                 table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).Text("Grand Total").SemiBold();
                                 table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(grandTotalInventoryBalance != 0 ? grandTotalInventoryBalance < 0 ? $"({Math.Abs(grandTotalInventoryBalance).ToString(SD.Two_Decimal_Format)})" : grandTotalInventoryBalance.ToString(SD.Two_Decimal_Format) : null).FontColor(grandTotalInventoryBalance < 0 ? Colors.Red.Medium : Colors.Black).SemiBold();
@@ -436,10 +440,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var subTotalBegBalAmt = 0m;
                     var subTotalInventoryBalance = 0m;
                     var subTotalTotalBalance = 0m;
-                    var firstEntry = group
-                        .OrderBy(e => e.Date).ThenBy(x => x.Particular)
-                        .ThenBy(x => x.Reference)
-                        .FirstOrDefault();
+                    var orderedGroup = group
+                        .OrderBy(e => e.Date)
+                        .ThenBy(x => x.Particular == "Purchases" ? 0 : 1)
+                        .ThenBy(x => x.InventoryId)
+                        .ToList();
+                    var firstEntry = orderedGroup.FirstOrDefault();
 
                     if (firstEntry != null)
                     {
@@ -450,9 +456,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         subTotalBegBalAmt += !isSales
                             ? firstEntry.TotalBalance - firstEntry.Total
                             : firstEntry.TotalBalance + firstEntry.Total;
-                        var beginningAverageCost = subTotalBegBalQty != 0
-                            ? subTotalBegBalAmt / subTotalBegBalQty
-                            : 0m;
+                        var beginningAverageCost = firstEntry.AverageCost;
 
                         worksheet.Cells[currentRow, 1].Value = "BEGINNING BALANCE";
                         worksheet.Cells[currentRow, 5].Value = subTotalBegBalQty;
@@ -472,10 +476,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         currentRow++;
                     }
 
-                    foreach (var record in group
-                                 .OrderBy(e => e.Date)
-                                 .ThenBy(x => x.Particular)
-                                 .ThenBy(x => x.Reference))
+                    foreach (var record in orderedGroup)
                     {
                         var getPurchaseOrder = await _unitOfWork.FilpridePurchaseOrder
                             .GetAsync(x => x.PurchaseOrderId == record.POId, cancellationToken);
@@ -507,7 +508,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             worksheet.Cells[currentRow, 8].Value = record.Quantity != 0 ? record.Quantity : 0;
                             worksheet.Cells[currentRow, 8].Style.Numberformat.Format = currencyTwoDecimalFormat;
                             subTotalPurchasesQty += record.Quantity;
-                            subTotalInventoryBalance += record.Quantity;
 
                             // Purchases Cost
                             worksheet.Cells[currentRow, 9].Value = record.Cost != 0 ? record.Cost : 0;
@@ -517,7 +517,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             worksheet.Cells[currentRow, 10].Value = record.Total != 0 ? record.Total : 0;
                             worksheet.Cells[currentRow, 10].Style.Numberformat.Format = currencyTwoDecimalFormat;
                             subTotalPurchasesAmt += record.Total;
-                            subTotalTotalBalance += record.Total;
                         }
 
                         worksheet.Cells[currentRow, 8, currentRow, 10].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
@@ -528,7 +527,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             worksheet.Cells[currentRow, 11].Value = record.Quantity != 0 ? record.Quantity : 0;
                             worksheet.Cells[currentRow, 11].Style.Numberformat.Format = currencyTwoDecimalFormat;
                             subTotalSalesQty += record.Quantity;
-                            subTotalInventoryBalance -= record.Quantity;
 
                             // Sales Cost
                             worksheet.Cells[currentRow, 12].Value = record.Cost != 0 ? record.Cost : 0;
@@ -538,27 +536,27 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             worksheet.Cells[currentRow, 13].Value = record.Total != 0 ? record.Total : 0;
                             worksheet.Cells[currentRow, 13].Style.Numberformat.Format = currencyTwoDecimalFormat;
                             subTotalSalesAmt += record.Total;
-                            subTotalTotalBalance -= record.Total;
 
                         }
 
                         worksheet.Cells[currentRow, 11, currentRow, 13].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
 
                         // Inventory Balance
-                        worksheet.Cells[currentRow, 14].Value = subTotalInventoryBalance;
+                        worksheet.Cells[currentRow, 14].Value = record.InventoryBalance;
                         worksheet.Cells[currentRow, 14].Style.Numberformat.Format = currencyTwoDecimalFormat;
 
                         // Unit Cost Average
-                        worksheet.Cells[currentRow, 15].Value = subTotalInventoryBalance > 0
-                            ? subTotalTotalBalance / subTotalInventoryBalance
-                            : 0m;
+                        worksheet.Cells[currentRow, 15].Value = record.AverageCost;
                         worksheet.Cells[currentRow, 15].Style.Numberformat.Format = currencyFourDecimalFormat;
 
                         // Total Balance
-                        worksheet.Cells[currentRow, 16].Value = subTotalTotalBalance;
+                        worksheet.Cells[currentRow, 16].Value = record.TotalBalance;
                         worksheet.Cells[currentRow, 16].Style.Numberformat.Format = currencyTwoDecimalFormat;
 
                         worksheet.Cells[currentRow, 14, currentRow, 16].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
+
+                        subTotalInventoryBalance = record.InventoryBalance;
+                        subTotalTotalBalance = record.TotalBalance;
 
                         currentRow++;
                     }
@@ -587,9 +585,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         : 0, currencyFourDecimalFormat);
                     ApplySubtotalStyle(worksheet.Cells[currentRow, 13], subTotalSalesAmt, currencyTwoDecimalFormat);
                     ApplySubtotalStyle(worksheet.Cells[currentRow, 14], subTotalInventoryBalance, currencyTwoDecimalFormat);
-                    ApplySubtotalStyle(worksheet.Cells[currentRow, 15], subTotalInventoryBalance != 0
-                        ? subTotalTotalBalance / subTotalInventoryBalance
-                        : 0, currencyFourDecimalFormat);
+                    ApplySubtotalStyle(
+                        worksheet.Cells[currentRow, 15],
+                        orderedGroup.LastOrDefault()?.AverageCost ?? 0m,
+                        currencyFourDecimalFormat);
                     ApplySubtotalStyle(worksheet.Cells[currentRow, 16], subTotalTotalBalance, currencyTwoDecimalFormat);
 
                     // Apply borders to subtotal row
@@ -612,9 +611,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 // Calculate averages
-                var grandTotalAverageCost = grandTotalInventoryBalance != 0
-                    ? grandTotalTotalBalance / grandTotalInventoryBalance
-                    : 0m;
+                var grandTotalAverageCost = inventories
+                    .SelectMany(group => group)
+                    .OrderBy(e => e.Date)
+                    .ThenBy(x => x.Particular == "Purchases" ? 0 : 1)
+                    .ThenBy(x => x.InventoryId)
+                    .LastOrDefault()?.AverageCost ?? 0m;
                 var grandTotalPurchasesAverageCost = grandTotalPurchasesQty != 0
                     ? grandTotalPurchasesAmt / grandTotalPurchasesQty
                     : 0m;
