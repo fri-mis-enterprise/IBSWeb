@@ -62,12 +62,17 @@
                     success: function(data) {
                         var poSelect = $('#POId');
                         poSelect.empty();
+                        poSelect.append($('<option>', {
+                            value: '',
+                            text: ''
+                        }));
                         $.each(data, function(index, item) {
                             poSelect.append($('<option>', {
                                 value: item.value,
                                 text: item.text
                             }));
                         });
+                        poSelect.val('').trigger('change');
                     }
                 });
             });

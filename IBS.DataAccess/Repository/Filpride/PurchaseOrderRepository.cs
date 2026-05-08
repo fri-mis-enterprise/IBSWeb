@@ -274,7 +274,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     if (inventories.FirstOrDefault()?.InventoryId == inventory.InventoryId)
                     {
                         inventory.AverageCost = inventory.Cost;
-                        inventory.TotalBalance = inventory.Total;
+                        inventory.TotalBalance = inventory.InventoryBalance * inventory.AverageCost;
                     }
                 }
 
