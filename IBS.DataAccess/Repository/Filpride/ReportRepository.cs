@@ -582,6 +582,7 @@ namespace IBS.DataAccess.Repository.Filpride
             }
 
             var query = _db.FilprideCollectionReceipts
+                .AsNoTracking()
                 .Where(cr => cr.Company == company && cr.TransactionDate >= dateFrom && cr.TransactionDate <= dateTo);
 
             // Apply status filter
@@ -601,6 +602,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .Include(cr => cr.Customer)
                 .Include(cr => cr.ServiceInvoice)
                 .Include(cr => cr.BankAccount)
+                .AsSplitQuery()
                 .OrderBy(cr => cr.Customer!.CustomerCode)
                 .ThenBy(cr => cr.Customer!.CustomerName)
                 .ThenBy(cr => cr.Customer!.CustomerType)

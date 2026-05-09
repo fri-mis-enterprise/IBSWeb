@@ -411,7 +411,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return RedirectToAction(nameof(DispatchReport));
             }
 
-            if (viewModel.DateFrom == default || viewModel.DateTo == default && viewModel.ReportType == "InTransit")
+            if (viewModel.DateFrom == default || (viewModel.DateTo == default && viewModel.ReportType == "InTransit"))
             {
                 TempData["warning"] = "Please enter a valid Date From and To";
                 return RedirectToAction(nameof(DispatchReport));
@@ -2377,7 +2377,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 mergedCellForEnvirogas.Style.Font.Bold = true;
                 worksheet.Cells[rowForSummary - 2, 15, rowForSummary - 2, 17].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
 
-                //inset data/value in excel
+                //inset data/value in Excel
                 worksheet.Cells[rowForSummary - 1, 15].Value = "Volume";
                 worksheet.Cells[rowForSummary - 1, 16].Value = "Sales N. VAT";
                 worksheet.Cells[rowForSummary - 1, 17].Value = "Ave. SP";
@@ -2570,7 +2570,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View();
         }
 
-        #region -- Generated Posted Collection Report as Quest PDF
+        #region -- Generated Collection Report as Quest PDF
 
         public async Task<IActionResult> GeneratePostedCollection(ViewModelBook model, CancellationToken cancellationToken)
         {
@@ -2809,7 +2809,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         #endregion
 
-        #region -- Generate Posted Collection Excel File --
+        #region -- Generate Collection Excel File --
 
             public async Task<IActionResult> GeneratePostedCollectionExcelFile(ViewModelBook model, CancellationToken cancellationToken)
             {
@@ -2834,6 +2834,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     var collectionReceiptReport = await _unitOfWork.FilprideReport
                         .GetCollectionReceiptReport(model.DateFrom, model.DateTo, companyClaims, statusFilter, cancellationToken);
+
+                    var multipleSalesInvoiceIds = collectionReceiptReport
+                        .Where(cr => cr.MultipleSIId is { Length: > 0 })
+                        .SelectMany(cr => cr.MultipleSIId!)
+                        .Distinct()
+                        .ToList();
+
+                    var salesInvoicesById = multipleSalesInvoiceIds.Count == 0
+                        ? new Dictionary<int, FilprideSalesInvoice>()
+                        : await _dbContext.FilprideSalesInvoices
+                            .AsNoTracking()
+                            .Include(si => si.CustomerOrderSlip)
+                            .Where(si => multipleSalesInvoiceIds.Contains(si.SalesInvoiceId))
+                            .ToDictionaryAsync(si => si.SalesInvoiceId, cancellationToken);
 
                     using var package = new ExcelPackage();
                     var worksheet = package.Workbook.Worksheets.Add("COLLECTION");
@@ -2866,14 +2880,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells["I7"].Value = "BANK";
                     worksheet.Cells["J7"].Value = "CHECK No.";
                     worksheet.Cells["K7"].Value = "AMOUNT";
+                    worksheet.Cells["L7"].Value = "DEPOSITED DATE";
 
                     if (showVoidCancelColumns)
                     {
-                        worksheet.Cells["L7"].Value = "VOIDED BY";
-                        worksheet.Cells["M7"].Value = "VOIDED DATE";
+                        worksheet.Cells["M7"].Value = "VOIDED BY";
+                        worksheet.Cells["N7"].Value = "VOIDED DATE";
                     }
 
-                    string headerEndColumn = showVoidCancelColumns ? "M7" : "K7";
+                    string headerEndColumn = showVoidCancelColumns ? "N7" : "L7";
                     var headerCells = worksheet.Cells[$"A7:{headerEndColumn}"];
                     headerCells.Style.Font.Size = 11;
                     headerCells.Style.Fill.PatternType = ExcelFillStyle.Solid;
@@ -2888,116 +2903,127 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var dateTextFormat = "MMM/dd/yyyy";
                     decimal totalAmount = 0;
 
+                    void WriteVoidColumns(int targetRow, FilprideCollectionReceipt collectionReceipt)
+                    {
+                        if (!showVoidCancelColumns)
+                        {
+                            return;
+                        }
+
+                        worksheet.Cells[targetRow, 13].Value = collectionReceipt.VoidedBy;
+                        worksheet.Cells[targetRow, 14].Value = collectionReceipt.VoidedDate;
+                        if (collectionReceipt.VoidedDate.HasValue)
+                        {
+                            worksheet.Cells[targetRow, 14].Style.Numberformat.Format = dateTextFormat;
+                        }
+                    }
+
+                    void WriteCollectionRow(
+                        FilprideCollectionReceipt collectionReceipt,
+                        string? customerName,
+                        string? customerType,
+                        object? transactionDate,
+                        string? invoiceNo,
+                        object? dueDate,
+                        bool formatInvoiceDates)
+                    {
+                        var currentAmount = collectionReceipt.CashAmount + collectionReceipt.CheckAmount;
+
+                        worksheet.Cells[row, 1].Value = collectionReceipt.Customer?.CustomerCode;
+                        worksheet.Cells[row, 2].Value = customerName;
+                        worksheet.Cells[row, 3].Value = customerType;
+                        worksheet.Cells[row, 4].Value = transactionDate;
+                        worksheet.Cells[row, 5].Value = collectionReceipt.CollectionReceiptNo;
+                        worksheet.Cells[row, 6].Value = invoiceNo;
+                        worksheet.Cells[row, 7].Value = dueDate;
+                        worksheet.Cells[row, 8].Value = collectionReceipt.CheckDate;
+                        worksheet.Cells[row, 9].Value = $"{collectionReceipt.BankAccount?.Bank} {collectionReceipt.BankAccountNumber}";
+                        worksheet.Cells[row, 10].Value = collectionReceipt.CheckNo;
+                        worksheet.Cells[row, 11].Value = currentAmount;
+                        worksheet.Cells[row, 12].Value = collectionReceipt.DepositedDate;
+
+                        if (formatInvoiceDates)
+                        {
+                            worksheet.Cells[row, 4].Style.Numberformat.Format = dateTextFormat;
+                            worksheet.Cells[row, 7].Style.Numberformat.Format = dateTextFormat;
+                        }
+
+                        worksheet.Cells[row, 8].Style.Numberformat.Format = dateTextFormat;
+                        worksheet.Cells[row, 11].Style.Numberformat.Format = currencyFormat;
+
+                        if (collectionReceipt.DepositedDate.HasValue)
+                        {
+                            worksheet.Cells[row, 12].Style.Numberformat.Format = dateTextFormat;
+                        }
+
+                        WriteVoidColumns(row, collectionReceipt);
+
+                        totalAmount += currentAmount;
+                        row++;
+                    }
+
                     foreach (var cr in collectionReceiptReport)
                     {
                         if (cr.SalesInvoiceId != null)
                         {
-                            var currentAmount = cr.CashAmount + cr.CheckAmount;
-                            worksheet.Cells[row, 1].Value = cr.Customer?.CustomerCode;
-                            worksheet.Cells[row, 2].Value = cr.SalesInvoice?.CustomerOrderSlip?.CustomerName ?? cr.Customer?.CustomerName;
-                            worksheet.Cells[row, 3].Value = cr.SalesInvoice?.CustomerOrderSlip?.CustomerType ?? cr.Customer?.CustomerType;
-                            worksheet.Cells[row, 4].Value = cr.SalesInvoice?.TransactionDate;
-                            worksheet.Cells[row, 5].Value = cr.CollectionReceiptNo;
-                            worksheet.Cells[row, 6].Value = cr.SalesInvoice?.SalesInvoiceNo;
-                            worksheet.Cells[row, 7].Value = cr.SalesInvoice?.DueDate;
-                            worksheet.Cells[row, 8].Value = cr.CheckDate;
-                            worksheet.Cells[row, 9].Value = $"{cr.BankAccount?.Bank} {cr.BankAccountNumber}";
-                            worksheet.Cells[row, 10].Value = cr.CheckNo;
-                            worksheet.Cells[row, 11].Value = currentAmount;
-
-                            worksheet.Cells[row, 4].Style.Numberformat.Format = "MMM/dd/yyyy";
-                            worksheet.Cells[row, 7].Style.Numberformat.Format = "MMM/dd/yyyy";
-                            worksheet.Cells[row, 8].Style.Numberformat.Format = "MMM/dd/yyyy";
-                            worksheet.Cells[row, 11].Style.Numberformat.Format = currencyFormat;
-
-                            if (showVoidCancelColumns)
-                            {
-                                worksheet.Cells[row, 12].Value = cr.VoidedBy;
-                                worksheet.Cells[row, 13].Value = cr.VoidedDate;
-                                if (cr.VoidedDate.HasValue)
-                                {
-                                    worksheet.Cells[row, 13].Style.Numberformat.Format = "MMM/dd/yyyy";
-                                }
-                            }
-
-                            totalAmount += currentAmount;
-                            row++;
+                            WriteCollectionRow(
+                                cr,
+                                cr.SalesInvoice?.CustomerOrderSlip?.CustomerName ?? cr.Customer?.CustomerName,
+                                cr.SalesInvoice?.CustomerOrderSlip?.CustomerType ?? cr.Customer?.CustomerType,
+                                cr.SalesInvoice?.TransactionDate,
+                                cr.SalesInvoice?.SalesInvoiceNo,
+                                cr.SalesInvoice?.DueDate,
+                                formatInvoiceDates: true);
+                            continue;
                         }
+
                         if (cr.ServiceInvoiceId != null)
                         {
-                            var currentAmount = cr.CashAmount + cr.CheckAmount;
-                            worksheet.Cells[row, 1].Value = cr.Customer?.CustomerCode;
-                            worksheet.Cells[row, 2].Value = cr.ServiceInvoice?.CustomerName;
-                            worksheet.Cells[row, 3].Value = cr.Customer?.CustomerType;
-                            worksheet.Cells[row, 4].Value = cr.ServiceInvoice?.CreatedDate;
-                            worksheet.Cells[row, 5].Value = cr.CollectionReceiptNo;
-                            worksheet.Cells[row, 6].Value = cr.ServiceInvoice?.ServiceInvoiceNo;
-                            worksheet.Cells[row, 7].Value = cr.ServiceInvoice?.DueDate;
-                            worksheet.Cells[row, 8].Value = cr.CheckDate;
-                            worksheet.Cells[row, 9].Value = $"{cr.BankAccount?.Bank} {cr.BankAccountNumber}";
-                            worksheet.Cells[row, 10].Value = cr.CheckNo;
-                            worksheet.Cells[row, 11].Value = currentAmount;
+                            WriteCollectionRow(
+                                cr,
+                                cr.ServiceInvoice?.CustomerName,
+                                cr.Customer?.CustomerType,
+                                cr.ServiceInvoice?.CreatedDate,
+                                cr.ServiceInvoice?.ServiceInvoiceNo,
+                                cr.ServiceInvoice?.DueDate,
+                                formatInvoiceDates: true);
+                            continue;
+                        }
 
-                            worksheet.Cells[row, 4].Style.Numberformat.Format = "MMM/dd/yyyy";
-                            worksheet.Cells[row, 7].Style.Numberformat.Format = "MMM/dd/yyyy";
-                            worksheet.Cells[row, 8].Style.Numberformat.Format = "MMM/dd/yyyy";
-                            worksheet.Cells[row, 11].Style.Numberformat.Format = currencyFormat;
-
-                            if (showVoidCancelColumns)
+                        if (cr.MultipleSIId != null)
+                        {
+                            var salesInvoices = new List<FilprideSalesInvoice>();
+                            foreach (var salesInvoiceId in cr.MultipleSIId)
                             {
-                                worksheet.Cells[row, 12].Value = cr.VoidedBy;
-                                worksheet.Cells[row, 13].Value = cr.VoidedDate;
-                                if (cr.VoidedDate.HasValue)
+                                if (salesInvoicesById.TryGetValue(salesInvoiceId, out var salesInvoice))
                                 {
-                                    worksheet.Cells[row, 13].Style.Numberformat.Format = "MMM/dd/yyyy";
+                                    salesInvoices.Add(salesInvoice);
                                 }
                             }
 
-                            totalAmount += currentAmount;
-                            row++;
-                        }
-                        if (cr.MultipleSIId != null)
-                        {
-                            var getSalesInvoice = await _unitOfWork.FilprideSalesInvoice
-                                .GetAllAsync(x => cr.MultipleSIId.Contains(x.SalesInvoiceId), cancellationToken);
-                            var salesInvoices = getSalesInvoice.ToList();
                             var firstSalesInvoice = salesInvoices.FirstOrDefault();
-                            var currentAmount = cr.CashAmount + cr.CheckAmount;
                             var transactionDates = string.Join(Environment.NewLine, salesInvoices.Select(sales => sales.TransactionDate.ToString(dateTextFormat)));
                             var invoiceNumbers = string.Join(Environment.NewLine, salesInvoices.Select(sales => sales.SalesInvoiceNo));
                             var dueDates = string.Join(Environment.NewLine, salesInvoices.Select(sales => sales.DueDate.ToString(dateTextFormat)));
 
-                            worksheet.Cells[row, 1].Value = cr.Customer?.CustomerCode;
-                            worksheet.Cells[row, 2].Value = firstSalesInvoice?.CustomerOrderSlip?.CustomerName ?? cr.Customer?.CustomerName;
-                            worksheet.Cells[row, 3].Value = firstSalesInvoice?.CustomerOrderSlip?.CustomerType ?? cr.Customer?.CustomerType;
-                            worksheet.Cells[row, 4].Value = transactionDates;
-                            worksheet.Cells[row, 5].Value = cr.CollectionReceiptNo;
-                            worksheet.Cells[row, 6].Value = invoiceNumbers;
-                            worksheet.Cells[row, 7].Value = dueDates;
-                            worksheet.Cells[row, 8].Value = cr.CheckDate;
-                            worksheet.Cells[row, 9].Value = $"{cr.BankAccount?.Bank} {cr.BankAccountNumber}";
-                            worksheet.Cells[row, 10].Value = cr.CheckNo;
-                            worksheet.Cells[row, 11].Value = currentAmount;
-
-                            worksheet.Cells[row, 8].Style.Numberformat.Format = "MMM/dd/yyyy";
-                            worksheet.Cells[row, 11].Style.Numberformat.Format = currencyFormat;
-
-                            if (showVoidCancelColumns)
-                            {
-                                worksheet.Cells[row, 12].Value = cr.VoidedBy;
-                                worksheet.Cells[row, 13].Value = cr.VoidedDate;
-                                if (cr.VoidedDate.HasValue)
-                                {
-                                    worksheet.Cells[row, 13].Style.Numberformat.Format = "MMM/dd/yyyy";
-                                }
-                            }
-
-                            totalAmount += currentAmount;
-                            row++;
+                            WriteCollectionRow(
+                                cr,
+                                firstSalesInvoice?.CustomerOrderSlip?.CustomerName ?? cr.Customer?.CustomerName,
+                                firstSalesInvoice?.CustomerOrderSlip?.CustomerType ?? cr.Customer?.CustomerType,
+                                transactionDates,
+                                invoiceNumbers,
+                                dueDates,
+                                formatInvoiceDates: false);
                         }
                     }
 
-                    int lastColumn = showVoidCancelColumns ? 13 : 11;
+                    int lastColumn = showVoidCancelColumns ? 14 : 12;
+
+                    if (row == 8)
+                    {
+                        TempData["info"] = "No records found!";
+                        return RedirectToAction(nameof(PostedCollection));
+                    }
 
                     worksheet.Cells[row, 10].Value = "Total:";
                     worksheet.Cells[row, 11].Value = totalAmount;
@@ -4214,7 +4240,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 24].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[row, 25].Style.Numberformat.Format = currencyFormatTwoDecimal;
 
-                    // Apply style to sub total row
+                    // Apply style to sub-total row
                     int lastColumn = showVoidCancelColumns ? 27 : 25;
                     using (var range = worksheet.Cells[row, 1, row, lastColumn])
                     {
@@ -5175,7 +5201,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 var dateFrom = model.DateFrom;
                 var dateTo = model.DateTo;
-                var extractedBy = _userManager.GetUserName(User)!;
                 var companyClaims = await GetCompanyClaimAsync();
                 if (companyClaims == null)
                 {
@@ -5238,7 +5263,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells["C8"].Value = "ACCT TYPE";
                     worksheet.Cells["D8"].Value = "COS #";
                     worksheet.Cells["E8"].Value = "OTC COS #";
-                    worksheet.Cells["F8"].Value = "DR #"; ;
+                    worksheet.Cells["F8"].Value = "DR #";
                     worksheet.Cells["G8"].Value = "OTC DR #";
                     worksheet.Cells["H8"].Value = "ITEMS";
                     worksheet.Cells["I8"].Value = "VOLUME";
@@ -5249,8 +5274,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     #region == Initialize condition variables ==
                     int row = 9;
                     string currencyFormat = "#,##0.00";
-                    var totalVolume = 0m;
-                    var totalAmount = 0m;
                     var grandTotalVolume = 0m;
                     var grandTotalAmount = 0m;
                     #endregion
@@ -5265,8 +5288,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             .OrderBy(c => c.DeliveryReceipt.DeliveredDate)
                             .ToList();
 
-                        totalVolume = 0m;
-                        totalAmount = 0m;
+                        decimal totalVolume = 0m;
+                        decimal totalAmount = 0m;
 
                         foreach (var transaction in sortedByDateCustomer)
                         {
@@ -5298,7 +5321,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             row++;
                         }
 
-                        // put total at the buttom of customer list
+                        // put total at the bottom of customer list
                         worksheet.Cells[row, 9].Value = totalVolume;
                         worksheet.Cells[row, 10].Value = totalAmount;
 
@@ -5328,7 +5351,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     worksheet.Cells[row, 8].Value = "Grand Total:";
 
-                    // put total at the buttom of customer list
+                    // put total at the bottom of customer list
                     worksheet.Cells[row, 9].Value = grandTotalVolume;
                     worksheet.Cells[row, 10].Value = grandTotalAmount;
 
@@ -5428,8 +5451,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     #region == Initialize condition variables ==
                     int row = 9;
                     string currencyFormat = "#,##0.00";
-                    var totalVolume = 0m;
-                    var totalAmount = 0m;
                     var grandTotalVolume = 0m;
                     var grandTotalAmount = 0m;
                     #endregion
@@ -5443,8 +5464,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     // shows by product
                     foreach (var product in groupedByProductReport)
                     {
-                        totalVolume = 0m;
-                        totalAmount = 0m;
+                        decimal totalVolume = 0m;
+                        decimal totalAmount = 0m;
 
                         foreach (var transaction in product)
                         {
@@ -5455,9 +5476,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             worksheet.Cells[row, 3].Value = transaction.DeliveryReceipt.Customer?.CustomerType; // Account Type
                             worksheet.Cells[row, 4].Value = transaction.DeliveryReceipt.CustomerOrderSlip?.CustomerOrderSlipNo; // New COS #
                             worksheet.Cells[row, 5].Value = transaction.DeliveryReceipt.CustomerOrderSlip?.OldCosNo; // Old COS #
-                            worksheet.Cells[row, 6].Value = transaction.DeliveryReceipt?.DeliveryReceiptNo; // New DR #
-                            worksheet.Cells[row, 7].Value = transaction.DeliveryReceipt?.ManualDrNo; // Old DR #
-                            worksheet.Cells[row, 8].Value = transaction.DeliveryReceipt!.CustomerOrderSlip!.Product?.ProductName; // Items
+                            worksheet.Cells[row, 6].Value = transaction.DeliveryReceipt.DeliveryReceiptNo; // New DR #
+                            worksheet.Cells[row, 7].Value = transaction.DeliveryReceipt.ManualDrNo; // Old DR #
+                            worksheet.Cells[row, 8].Value = transaction.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName; // Items
                             worksheet.Cells[row, 9].Value = transaction.DeliveryReceipt.Quantity; // Volume
                             worksheet.Cells[row, 10].Value = transaction.DeliveryReceipt.TotalAmount; // Total
                             worksheet.Cells[row, 11].Value = transaction.DeliveryReceipt.Remarks; // Remarks
@@ -5476,7 +5497,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             row++;
                         }
 
-                        // put total at the buttom of customer list
+                        // put total at the bottom of customer list
                         worksheet.Cells[row, 9].Value = totalVolume;
                         worksheet.Cells[row, 10].Value = totalAmount;
 
@@ -5495,7 +5516,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             range.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(204, 156, 252));
                         }
 
-                        // incrementing for grandtotal
+                        // incrementing for grand total
                         grandTotalVolume += totalVolume;
                         grandTotalAmount += totalAmount;
 
@@ -5505,16 +5526,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     row++;
 
                     #region == Grandtotal ==
-                    // showing grandtotal
+                    // showing grand total
                     worksheet.Cells[row, 8].Value = "Grand Total:";
                     worksheet.Cells[row, 9].Value = grandTotalVolume;
                     worksheet.Cells[row, 10].Value = grandTotalAmount;
 
-                    //format grantotal
+                    //format gran total
                     worksheet.Cells[row, 9].Style.Numberformat.Format = currencyFormat;
                     worksheet.Cells[row, 10].Style.Numberformat.Format = currencyFormat;
 
-                    // additional formatting for the grandtotal
+                    // additional formatting for the grand total
                     using (var range = worksheet.Cells[row, 9, row, 10])
                     {
                         range.Style.Font.Bold = true;
@@ -5807,7 +5828,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #endregion == Month to Date Sales ==
 
-                var excelBytes = package.GetAsByteArray();
+                var excelBytes = await package.GetAsByteArrayAsync(cancellationToken);
 
                 return File(excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     $"OTC Fuel Sales Report_{DateTime.UtcNow.AddHours(8):yyyyddMMHHmmss}.xlsx");

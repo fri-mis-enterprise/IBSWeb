@@ -6,6 +6,22 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v2.4.0] - 2026-05-09
+
+### Added
+- Added deposited date to the Filpride collection Excel report.
+
+### Changed
+- Improved Filpride collection report export performance by using no-tracking/split queries and preloading multiple-sales-invoice details.
+- Updated Filpride report Excel generation to use async package output.
+
+### Fixed
+- Fixed Filpride collection Excel report column alignment when void/cancel columns are shown.
+- Fixed Filpride collection Excel report handling when no records are found.
+- Fixed Dispatch Report date validation precedence for in-transit reports.
+
+---
+
 ## [v2.3.1] - 2026-05-08
 ### Fixed
 - Fixed inventory balance recalculation for purchase, sales, and cost update flows.
@@ -152,9 +168,3 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 - Fixed session retrieval inconsistencies on user login.
 - Fixed bugs in DataTables initialization and hidden column searching.
 - Fixed authentication redirect issues in restricted pages.
-
----
-
-## [Unreleased]
-
-
