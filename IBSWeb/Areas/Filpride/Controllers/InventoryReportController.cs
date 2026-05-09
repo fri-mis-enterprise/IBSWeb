@@ -250,12 +250,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     grandTotalTotalBalance += subTotalTotalBalance;
                                 }
 
-                            var grandTotalAverageCost = inventories
-                                .SelectMany(group => group)
-                                .OrderBy(e => e.Date)
-                                .ThenBy(x => x.Particular == "Purchases" ? 0 : 1)
-                                .ThenBy(x => x.InventoryId)
-                                .LastOrDefault()?.AverageCost ?? 0m;
+                            var grandTotalAverageCost = grandTotalTotalBalance != 0
+                                ? grandTotalTotalBalance / grandTotalInventoryBalance
+                                : 0m;
                             table.Cell().ColumnSpan(6).Background(Colors.Grey.Lighten1).Border(0.5f);
                                 table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).Text("Grand Total").SemiBold();
                                 table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(grandTotalInventoryBalance != 0 ? grandTotalInventoryBalance < 0 ? $"({Math.Abs(grandTotalInventoryBalance).ToString(SD.Two_Decimal_Format)})" : grandTotalInventoryBalance.ToString(SD.Two_Decimal_Format) : null).FontColor(grandTotalInventoryBalance < 0 ? Colors.Red.Medium : Colors.Black).SemiBold();
@@ -611,12 +608,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 // Calculate averages
-                var grandTotalAverageCost = inventories
-                    .SelectMany(group => group)
-                    .OrderBy(e => e.Date)
-                    .ThenBy(x => x.Particular == "Purchases" ? 0 : 1)
-                    .ThenBy(x => x.InventoryId)
-                    .LastOrDefault()?.AverageCost ?? 0m;
+                var grandTotalAverageCost = grandTotalTotalBalance != 0
+                    ? grandTotalTotalBalance / grandTotalInventoryBalance
+                    : 0m;
                 var grandTotalPurchasesAverageCost = grandTotalPurchasesQty != 0
                     ? grandTotalPurchasesAmt / grandTotalPurchasesQty
                     : 0m;
