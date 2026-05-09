@@ -608,8 +608,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 // Calculate averages
-                var grandTotalAverageCost = grandTotalBegbalQty != 0
-                    ? grandTotalBegbalAmt / grandTotalBegbalQty
+                var grandTotalAverageCost = grandTotalTotalBalance != 0
+                    ? grandTotalTotalBalance / grandTotalInventoryBalance
                     : 0m;
                 var grandTotalPurchasesAverageCost = grandTotalPurchasesQty != 0
                     ? grandTotalPurchasesAmt / grandTotalPurchasesQty
