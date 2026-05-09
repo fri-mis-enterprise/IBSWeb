@@ -79,13 +79,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
+                var previousMonth = monthDate.AddMonths(-1);
+
                 if (category == "Sales")
                 {
                     var lockedSales = await _dbContext.FilprideSalesLockedRecordsQueues
                         .Include(x => x.DeliveryReceipt)
                         .ThenInclude(x => x.CustomerOrderSlip)
-                        .Where(x => x.LockedDate.Month == monthDate.Month
-                                    && x.LockedDate.Year == monthDate.Year)
+                        .Where(x => x.LockedDate.Month == previousMonth.Month
+                                    && x.LockedDate.Year == previousMonth.Year)
                         .OrderBy(x => x.DeliveryReceiptId)
                         .ToListAsync(cancellationToken);
 
@@ -207,6 +209,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     var priceDifference = currentPrice - previousPrice;
                                     var totalDifference = currentTotal - previousTotal;
 
+                                    if (quantityDifference == 0 && priceDifference == 0 && totalDifference ==0)
+                                    {
+                                        continue;
+                                    }
 
                                     sumCurrentQuantity += currentQuantity;
 
@@ -290,8 +296,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .Include(x => x.ReceivingReport)
                         .ThenInclude(x => x.PurchaseOrder)
                         .ThenInclude(x => x!.ActualPrices)
-                        .Where(x => x.LockedDate.Month == monthDate.Month
-                                    && x.LockedDate.Year == monthDate.Year)
+                        .Where(x => x.LockedDate.Month == previousMonth.Month
+                                    && x.LockedDate.Year == previousMonth.Year)
                         .OrderBy(x => x.ReceivingReportId)
                         .ToListAsync(cancellationToken);
 
@@ -413,6 +419,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     var priceDifference = currentPrice - previousPrice;
                                     var totalDifference = currentTotal - previousTotal;
 
+                                    if (quantityDifference == 0 && priceDifference == 0 && totalDifference == 0)
+                                    {
+                                        continue;
+                                    }
 
                                     sumCurrentQuantity += currentQuantity;
 
