@@ -164,20 +164,12 @@
                 "serverSide": true,
                 "stateSave": true,
                 "stateDuration": 86400,
-                initComplete: function () {
-
+                stateLoadParams: function (settings, data) {
                     if (filterType && filterType.trim() !== "") {
-
-                        // Clear DataTables internal search
-                        this.api().search('');
-
-                        // Clear search input UI
-                        $('div.dt-search input').val('');
-
-                        // Redraw without search
-                        this.api().draw();
+                        data.search.search = '';
+                        data.start = 0;
                     }
-                },
+},
                 "language": {
                     "processing": `<div class="d-flex justify-content-center">
                                     <div class="spinner-border text-primary" role="status">
