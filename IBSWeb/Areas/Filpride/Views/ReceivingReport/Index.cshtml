@@ -148,15 +148,19 @@
                 "serverSide": true, // Enable server-side processing
                 "stateSave" : true,
                 "stateDuration": 86400,
-                stateLoadCallback: function (settings) {
+                initComplete: function () {
 
-                    if (filterType && filterType !== "") {
-                        return null;
+                    if (filterType && filterType.trim() !== "") {
+
+                        // Clear DataTables internal search
+                        this.api().search('');
+
+                        // Clear search input UI
+                        $('div.dt-search input').val('');
+
+                        // Redraw without search
+                        this.api().draw();
                     }
-
-                    return JSON.parse(
-                        localStorage.getItem('DataTables_' + settings.sInstance)
-                    );
                 },
                 "language": {
                     "processing": `<div class="d-flex justify-content-center">
