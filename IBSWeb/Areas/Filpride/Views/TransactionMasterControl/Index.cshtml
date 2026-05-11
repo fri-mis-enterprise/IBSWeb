@@ -1,0 +1,45 @@
+@model IBS.Models.Filpride.ViewModels.TransactionMasterControlViewModel
+@{
+    ViewData["Title"] = "Entries Master Control";
+}
+
+<div class="container-fluid mt-4">
+    <div class="bg-secondary p-3 rounded shadow mb-3">
+        <h2 class="text-white m-0">@ViewData["Title"]</h2>
+    </div>
+
+    <div class="card shadow border-0">
+        <div class="card-body p-4">
+            <form asp-action="Index" method="post">
+                <div class="row align-items-end">
+                    <div class="col-md-6">
+                        <label asp-for="ReferenceNo" class="form-label fw-bold"></label>
+                        <input asp-for="ReferenceNo" class="form-control" placeholder="Enter CV# or JV# (e.g. CV26-0001)" autocomplete="off" />
+                        <span asp-validation-for="ReferenceNo" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+            </form>
+            
+            <div class="mt-4">
+                <p class="text-muted">
+                    <i class="bi bi-info-circle"></i> This tool allows you to update transaction particulars and other metadata across the header, books, and general ledger in a single operation. Use this when a posted transaction needs a correction in its descriptive fields.
+                </p>
+                <ul class="text-muted small">
+                    <li>Supports <strong>Check Vouchers (CV)</strong>, <strong>Journal Vouchers (JV)</strong>, <strong>Sales Invoices (SI)</strong>, <strong>Service Invoices (SV)</strong>, and <strong>Collection Receipts (CR)</strong>.</li>
+                    <li>Updates will be applied to the <strong>Header</strong>, <strong>General Ledger</strong>, and <strong>Books</strong> (Sales/Cash Receipt/Disbursement/Journal).</li>
+                    <li>For <strong>Check Vouchers</strong>, the "Payment for" suffix is managed in a separate field for convenience.</li>
+                    <li>All changes are logged in the <strong>Audit Trail</strong>.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
