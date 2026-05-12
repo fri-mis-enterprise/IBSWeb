@@ -380,7 +380,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region == Column Header ==
 
-                using (var range = worksheet.Cells[row, 1, row, 8])
+                using (var range = worksheet.Cells[row, 1, row, 6])
                 {
                     range.Merge = true;
                     range.Value = "FILPRIDE RESOURCES INC.";
@@ -402,14 +402,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 worksheet.Row(row).Height = 80;
 
-                using (var range = worksheet.Cells[row, 1, row, 7])
+                using (var range = worksheet.Cells[row, 1, row, 6])
                 {
                     range.Merge = true;
                 }
                 row++;
 
 
-                using (var range = worksheet.Cells[row, 1, row, 7])
+                using (var range = worksheet.Cells[row, 1, row, 6])
                 {
                     range.Merge = true;
                     range.Value = "PNL REPORT";
@@ -418,7 +418,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 row++;
 
-                using (var range = worksheet.Cells[row, 1, row, 7])
+                using (var range = worksheet.Cells[row, 1, row, 6])
                 {
                     range.Merge = true;
                     range.Value = "As of " + monthDate.ToString("MMM yyyy");
@@ -426,7 +426,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 row++;
 
-                using (var range = worksheet.Cells[row, 1, row, 7])
+                using (var range = worksheet.Cells[row, 1, row, 6])
+                {
+                    range.Merge = true;
+                    range.Value = $"Date and Time Generated: {DateTimeHelper.GetCurrentPhilippineTime()}";
+                    range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                }
+                row++;
+
+                using (var range = worksheet.Cells[row, 1, row, 6])
                 {
                     range.Merge = true;
                     range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
@@ -857,6 +865,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     range.Merge = true;
                     range.Value = "As of " + monthDate.ToString("MMM yyyy");
+                }
+                row++;
+
+                using (var range = worksheet.Cells[row, 1, row, 4])
+                {
+                    range.Merge = true;
+                    range.Value = $"Date and Time Generated: {DateTimeHelper.GetCurrentPhilippineTime()}";
                 }
                 row++;
                 using (var range = worksheet.Cells[1, 1, row, 4])
@@ -1303,6 +1318,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["B3"].Style.HorizontalAlignment = alignmentCenter;
                 worksheet.Cells["B4"].Value = $"For the Period {dateFrom.ToString("MMM dd")} to {dateTo.ToString("MMM dd, yyyy")}";
                 worksheet.Cells["B4"].Style.HorizontalAlignment = alignmentCenter;
+                worksheet.Cells["B5"].Value = $"Date and Time Generated: {DateTimeHelper.GetCurrentPhilippineTime()}";
+                worksheet.Cells["B5"].Style.HorizontalAlignment = alignmentCenter;
 
                 worksheet.Cells["A7"].Value = "ACCOUNT NUMBER";
                 worksheet.Cells["B7"].Value = "ACCOUNT NAME";
@@ -1864,6 +1881,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 using (var range = worksheet.Cells[row, 1, row, 6])
                 {
                     range.Merge = true;
+                    range.Value = $"Date and Time Generated: {DateTimeHelper.GetCurrentPhilippineTime()}";
+                    range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                }
+                row++;
+
+                using (var range = worksheet.Cells[row, 1, row, 6])
+                {
+                    range.Merge = true;
                     range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
                 }
                 row += 2;
@@ -2297,6 +2322,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     range.Merge = true;
                     range.Value = "As of " + monthDate.ToString("MMM dd, yyyy");
+                    range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                }
+                row++;
+
+                using (var range = worksheet.Cells[row, 1, row, 6])
+                {
+                    range.Merge = true;
+                    range.Value = $"Date and Time Generated: {DateTimeHelper.GetCurrentPhilippineTime()}";
                     range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
                 }
                 row++;
