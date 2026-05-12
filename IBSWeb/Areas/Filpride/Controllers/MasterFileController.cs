@@ -1,14 +1,11 @@
-using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
 using IBS.Models;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.MasterFile;
 using IBS.Services.Attributes;
-using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using System.Drawing;
@@ -165,6 +162,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 Alignment = ExcelHorizontalAlignment.Right
             },
             new() { Header = "STATION CODE", ValueSelector = c => ((FilprideCustomer)c).StationCode ?? "" },
+            new() { Header = "VAT TYPE", ValueSelector = c => ((FilprideCustomer)c).VatType },
+            new() { Header = "2306", ValueSelector = c => ((FilprideCustomer)c).WithHoldingTax },
+            new() { Header = "2307", ValueSelector = c => ((FilprideCustomer)c).WithHoldingVat },
             new() { Header = "TYPE", ValueSelector = c => ((FilprideCustomer)c).Type },
             new() { Header = "DEFAULT COMMISION RATE", ValueSelector = c => ((FilprideCustomer)c).CommissionRate },
             new() { Header = "DEFAULT COMMISIONEE", ValueSelector = c => ((FilprideCustomer)c).Commissionee?.SupplierName ?? ""},
