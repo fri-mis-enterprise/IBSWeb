@@ -6,6 +6,7 @@ using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.ViewModels;
 using IBS.Services.Attributes;
 using IBS.Utility.Constants;
+using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -356,6 +357,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["A3"].Style.Font.Size = 14;
                 worksheet.Cells["A3"].Style.Font.Bold = true;
                 worksheet.Cells["A3"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+
+                worksheet.Cells["A4:P4"].Merge = true;
+                worksheet.Cells["A4"].Value = $"Date and Time Generated: {DateTimeHelper.GetCurrentPhilippineTime()}";
+                worksheet.Cells["A4"].Style.Font.Size = 12;
+                worksheet.Cells["A4"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
 
                 // Add some spacing
                 int currentRow = 6;
