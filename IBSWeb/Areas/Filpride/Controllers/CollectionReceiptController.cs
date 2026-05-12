@@ -181,6 +181,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             .Select(a => a.InvoiceNo)
                             .ToList(),
                         c.Customer!.CustomerName,
+                        PaymentAmount = c.CheckAmount + c.CashAmount + c.ManagersCheckAmount,
                         c.Total,
                         c.CreatedBy,
                         c.Status,

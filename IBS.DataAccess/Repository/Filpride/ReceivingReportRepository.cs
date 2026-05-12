@@ -555,7 +555,8 @@ namespace IBS.DataAccess.Repository.Filpride
             var isIncremental = difference > 0;
             difference = Math.Abs(difference);
             var firstDayOfMonth = DateTimeHelper.GetFirstDayOfCurrentPhilippineMonth();
-            var particulars = $"Update Cost on RR#{model.ReceivingReportNo}. RR dated {model.Date}";
+            var particulars = $"Update Cost on DR#{model.DeliveryReceipt!.DeliveryReceiptNo}. " +
+                              $"DR dated {model.DeliveryReceipt!.DeliveredDate}";
             var netOfVatAmount = model.PurchaseOrder!.VatType == SD.VatType_Vatable
                 ? ComputeNetOfVat(difference)
                 : difference;

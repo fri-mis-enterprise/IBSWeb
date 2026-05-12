@@ -316,7 +316,10 @@ namespace IBS.DataAccess.Repository.Filpride
             var hasTriggeredPrice = purchaseOrder.ActualPrices?.Count > 0 && purchaseOrder.ActualPrices.Any(x => x.IsApproved);
 
             return hasTriggeredPrice
-                ? purchaseOrder.ActualPrices!.OrderByDescending(x => x.ApprovedDate).First(x => x.IsApproved).TriggeredPrice
+                ? purchaseOrder.ActualPrices!
+                    .OrderByDescending(x => x.ApprovedDate)
+                    .First(x => x.IsApproved)
+                    .TriggeredPrice
                 : purchaseOrder.Price;
         }
     }
