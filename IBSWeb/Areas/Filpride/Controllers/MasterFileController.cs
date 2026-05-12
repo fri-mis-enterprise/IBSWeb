@@ -462,7 +462,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             worksheet.Cells["B3"].Value = company;
             worksheet.Cells["A4"].Value = "Date and Time Generated: ";
             worksheet.Cells["B4"].Value = DateTimeHelper.GetCurrentPhilippineTime();
-            worksheet.Cells["B4"].Style.Numberformat.Format = "mm/dd/yyyy";
+            worksheet.Cells["B4"].Style.Numberformat.Format = "mm/dd/yyyy hh:mm:ss AM/PM";
             worksheet.Cells["B4"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
 
             // Set column headers (Row 6)

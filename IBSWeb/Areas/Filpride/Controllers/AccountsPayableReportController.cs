@@ -623,7 +623,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 worksheet.Cells.AutoFitColumns();
-                worksheet.View.FreezePanes(7, 1);
+                worksheet.View.FreezePanes(8, 1);
 
                 #region -- Audit Trail --
 
@@ -886,7 +886,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 worksheet.Cells.AutoFitColumns();
 
-                worksheet.View.FreezePanes(7, 1);
+                worksheet.View.FreezePanes(8, 1);
 
                 #region -- Audit Trail --
 
