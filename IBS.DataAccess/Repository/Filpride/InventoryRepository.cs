@@ -202,33 +202,6 @@ namespace IBS.DataAccess.Repository.Filpride
             await _db.SaveChangesAsync(cancellationToken);
         }
 
-        private async Task UpdateJournalEntriesAsync(string reference, decimal costOfGoodsSold, CancellationToken cancellationToken)
-        {
-            var journalEntries = await _db.FilprideGeneralLedgerBooks
-                .Where(j => j.Reference == reference &&
-                            (j.AccountNo.StartsWith("50101") || j.AccountNo.StartsWith("10104")))
-                .ToListAsync(cancellationToken);
-
-            foreach (var journal in journalEntries)
-            {
-                if (journal.Debit != 0 && journal.Debit != costOfGoodsSold)
-                {
-                    journal.Debit = costOfGoodsSold;
-                    journal.Credit = 0;
-                }
-                else if (journal.Credit != 0 && journal.Credit != costOfGoodsSold)
-                {
-                    journal.Credit = costOfGoodsSold;
-                    journal.Debit = 0;
-                }
-            }
-
-            if (journalEntries.Count != 0)
-            {
-                _db.FilprideGeneralLedgerBooks.UpdateRange(journalEntries);
-            }
-        }
-
         public async Task VoidInventory(FilprideInventory model, CancellationToken cancellationToken = default)
         {
             var sortedInventory = await _db.FilprideInventories
@@ -290,8 +263,6 @@ namespace IBS.DataAccess.Repository.Filpride
                     transaction.InventoryBalance = runningInventoryBalance - transaction.Quantity;
                     transaction.AverageCost = transaction.Cost;
                     transaction.TotalBalance = transaction.InventoryBalance * transaction.AverageCost;
-
-                    await UpdateJournalEntriesAsync(transaction.Reference!, transaction.Total, cancellationToken);
                 }
                 else if (IsPurchase(transaction))
                 {

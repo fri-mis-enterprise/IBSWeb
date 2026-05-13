@@ -18,7 +18,7 @@
 
     var userName = UserManager.GetUserName(this.User);
 
-    ViewBag.AppVersion = "2.4.0";
+    ViewBag.AppVersion = "2.5.0";
 }
 
 <!DOCTYPE html>
@@ -209,11 +209,19 @@
                                                         </a>
                                                         <ul class="dropdown-menu">
                                                             <li class="nav-item dropend">
-                                                                <a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="GeneralLedgerReport" asp-action="JournalVoucherPriceReport">Due to updating selling price</a>
+                                                                <a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="GeneralLedgerReport" asp-action="JournalVoucherSellingPriceReport">Selling Price Updates</a>
                                                             </li>
                                                             <li><hr class="dropdown-divider"></li>
                                                             <li class="nav-item dropend">
-                                                                <a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="GeneralLedgerReport" asp-action="JournalVoucherUnitCostReport">Due to updating unit cost</a>
+                                                                <a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="GeneralLedgerReport" asp-action="JournalVoucherUnitCostReport">Unit Cost Updates</a>
+                                                            </li>
+                                                            <li><hr class="dropdown-divider"></li>
+                                                            <li class="nav-item dropend">
+                                                                <a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="GeneralLedgerReport" asp-action="JournalVoucherCommissionReport">Commission Updates</a>
+                                                            </li>
+                                                            <li><hr class="dropdown-divider"></li>
+                                                            <li class="nav-item dropend">
+                                                                <a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="GeneralLedgerReport" asp-action="JournalVoucherFreightReport">Freight Updates</a>
                                                             </li>
                                                         </ul>
                                                     </li>
