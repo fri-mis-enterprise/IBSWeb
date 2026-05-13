@@ -147,7 +147,11 @@ app.UseStaticFiles();
 // Enable serving files from local storage in development
 if (app.Environment.IsDevelopment())
 {
-    var localStoragePath = Path.Combine(app.Environment.ContentRootPath, "App_Data", "LocalStorage");
+    var localStoragePathConfig = app.Configuration["LocalStoragePath"] ?? "App_Data/LocalStorage";
+    var localStoragePath = Path.IsPathRooted(localStoragePathConfig)
+        ? localStoragePathConfig
+        : Path.Combine(app.Environment.ContentRootPath, localStoragePathConfig);
+
     if (!Directory.Exists(localStoragePath))
     {
         Directory.CreateDirectory(localStoragePath);

@@ -8,8 +8,9 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=ibs_staging;Username=postgres;Password=mis123
+      - LocalStoragePath=/tmp/LocalStorage
     volumes:
-      - app_data:/app/App_Data
+      - app_data:/tmp/LocalStorage
     depends_on:
       db:
         condition: service_healthy

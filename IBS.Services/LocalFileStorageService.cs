@@ -1,6 +1,7 @@
 using IBS.Utility;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -12,14 +13,20 @@ namespace IBS.Services
         private readonly ILogger<LocalFileStorageService> _logger;
         private readonly string _storagePath;
 
-        public LocalFileStorageService(IOptions<GCSConfigOptions> options, ILogger<LocalFileStorageService> logger, IWebHostEnvironment environment)
+        public LocalFileStorageService(IOptions<GCSConfigOptions> options, 
+            ILogger<LocalFileStorageService> logger, 
+            IWebHostEnvironment environment,
+            IConfiguration configuration)
         {
             _options = options.Value;
             _logger = logger;
 
             // Use a local folder within the project for development storage
             // Cross-platform: works on Windows and Linux
-            _storagePath = Path.Combine(environment.ContentRootPath, "App_Data", "LocalStorage");
+            var localStoragePathConfig = configuration["LocalStoragePath"] ?? "App_Data/LocalStorage";
+            _storagePath = Path.IsPathRooted(localStoragePathConfig)
+                ? localStoragePathConfig
+                : Path.Combine(environment.ContentRootPath, localStoragePathConfig);
 
             if (!Directory.Exists(_storagePath))
             {
