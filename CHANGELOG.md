@@ -6,6 +6,24 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v2.5.0] - 2026-05-13
+
+### Added
+- Added Journal Voucher generation/report outputs for freight and commission updates.
+- Added comparative report queue tracking for updated timestamps and duplicate-prevention support.
+
+### Changed
+- Finalized comparative report data processing and queue handling.
+- Renamed the selling price Journal Voucher report view for consistency with the generated output.
+
+### Fixed
+- Fixed selling price GL record dates to follow the open-book check.
+- Fixed commission and freight update flows to respect open-book validation.
+- Fixed cost update flows to respect open-book validation.
+- Fixed comparative report persistence behavior.
+
+---
+
 ## [v2.4.0] - 2026-05-09
 
 ### Added
