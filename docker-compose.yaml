@@ -1,0 +1,30 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: IBSWeb/Dockerfile
+    ports:
+      - '5000:8080'
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=mmsi_ibs_dev;Username=postgres;Password=mis123
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: 'postgres:16-alpine'
+    environment:
+      POSTGRES_DB: mmsi_ibs_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: mis123
+    volumes:
+      - 'postgres_data:/var/lib/postgresql/data'
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'pg_isready -U postgres'
+      interval: 5s
+      timeout: 5s
+      retries: 5
+volumes:
+  postgres_data: null
