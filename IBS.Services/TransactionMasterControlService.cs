@@ -25,7 +25,7 @@ namespace IBS.Services
         ILogger<TransactionMasterControlService> logger)
         : ITransactionMasterControlService
     {
-        private const string PaymentForSeparator = ". Payment for ";
+        private const string _paymentForSeparator = ". Payment for ";
 
         public async Task<(string Type, string ReferenceNo)?> FindTransactionAsync(string referenceNo, string? company, CancellationToken cancellationToken)
         {
@@ -33,23 +33,33 @@ namespace IBS.Services
 
             // Try to find in CV
             if (await dbContext.FilprideCheckVoucherHeaders.AnyAsync(x => x.CheckVoucherHeaderNo == referenceNo && x.Company == company, cancellationToken))
+            {
                 return ("CV", referenceNo);
+            }
 
             // Try to find in JV
             if (await dbContext.FilprideJournalVoucherHeaders.AnyAsync(x => x.JournalVoucherHeaderNo == referenceNo && x.Company == company, cancellationToken))
+            {
                 return ("JV", referenceNo);
+            }
 
             // Try to find in SI
             if (await dbContext.FilprideSalesInvoices.AnyAsync(x => x.SalesInvoiceNo == referenceNo && x.Company == company, cancellationToken))
+            {
                 return ("SI", referenceNo);
+            }
 
             // Try to find in SV
             if (await dbContext.FilprideServiceInvoices.AnyAsync(x => x.ServiceInvoiceNo == referenceNo && x.Company == company, cancellationToken))
+            {
                 return ("SV", referenceNo);
+            }
 
             // Try to find in CR
             if (await dbContext.FilprideCollectionReceipts.AnyAsync(x => x.CollectionReceiptNo == referenceNo && x.Company == company, cancellationToken))
+            {
                 return ("CR", referenceNo);
+            }
 
             return null;
         }
@@ -63,15 +73,18 @@ namespace IBS.Services
                 var header = await dbContext.FilprideCheckVoucherHeaders
                     .FirstOrDefaultAsync(x => x.CheckVoucherHeaderNo == referenceNo && x.Company == company, cancellationToken);
 
-                if (header == null) return null;
+                if (header == null)
+                {
+                    return null;
+                }
 
                 model.Date = header.Date;
                 var particulars = header.Particulars ?? string.Empty;
-                var index = particulars.IndexOf(PaymentForSeparator, StringComparison.Ordinal);
+                var index = particulars.IndexOf(_paymentForSeparator, StringComparison.Ordinal);
                 if (index >= 0)
                 {
                     model.Particulars = particulars.Substring(0, index).Trim();
-                    model.PaymentFor = particulars.Substring(index + PaymentForSeparator.Length).Trim();
+                    model.PaymentFor = particulars.Substring(index + _paymentForSeparator.Length).Trim();
                 }
                 else
                 {
@@ -88,10 +101,13 @@ namespace IBS.Services
                 var header = await dbContext.FilprideJournalVoucherHeaders
                     .FirstOrDefaultAsync(x => x.JournalVoucherHeaderNo == referenceNo && x.Company == company, cancellationToken);
 
-                if (header == null) return null;
+                if (header == null)
+                {
+                    return null;
+                }
 
                 model.Date = header.Date;
-                model.Particulars = header.Particulars ?? string.Empty;
+                model.Particulars = header.Particulars;
                 model.IsFound = true;
             }
             else if (type == "SI")
@@ -99,10 +115,13 @@ namespace IBS.Services
                 var header = await dbContext.FilprideSalesInvoices
                     .FirstOrDefaultAsync(x => x.SalesInvoiceNo == referenceNo && x.Company == company, cancellationToken);
 
-                if (header == null) return null;
+                if (header == null)
+                {
+                    return null;
+                }
 
                 model.Date = header.TransactionDate;
-                model.Particulars = header.Remarks ?? string.Empty;
+                model.Particulars = header.Remarks;
                 model.IsFound = true;
             }
             else if (type == "SV")
@@ -110,10 +129,13 @@ namespace IBS.Services
                 var header = await dbContext.FilprideServiceInvoices
                     .FirstOrDefaultAsync(x => x.ServiceInvoiceNo == referenceNo && x.Company == company, cancellationToken);
 
-                if (header == null) return null;
+                if (header == null)
+                {
+                    return null;
+                }
 
                 model.Date = header.Period;
-                model.Particulars = header.Instructions ?? string.Empty;
+                model.Particulars = header.Instructions;
                 model.IsFound = true;
             }
             else if (type == "CR")
@@ -121,7 +143,10 @@ namespace IBS.Services
                 var header = await dbContext.FilprideCollectionReceipts
                     .FirstOrDefaultAsync(x => x.CollectionReceiptNo == referenceNo && x.Company == company, cancellationToken);
 
-                if (header == null) return null;
+                if (header == null)
+                {
+                    return null;
+                }
 
                 model.Date = header.TransactionDate;
                 model.Particulars = header.Remarks ?? string.Empty;
@@ -151,10 +176,13 @@ namespace IBS.Services
                     var header = await dbContext.FilprideCheckVoucherHeaders
                         .FirstOrDefaultAsync(x => x.CheckVoucherHeaderNo == model.ReferenceNo && x.Company == company, cancellationToken);
 
-                    if (header == null) throw new Exception("CV Header not found.");
+                    if (header == null)
+                    {
+                        throw new Exception("CV Header not found.");
+                    }
 
                     var finalParticulars = !string.IsNullOrWhiteSpace(model.PaymentFor)
-                        ? $"{model.Particulars}{PaymentForSeparator}{model.PaymentFor}"
+                        ? $"{model.Particulars}{_paymentForSeparator}{model.PaymentFor}"
                         : model.Particulars;
 
                     // Update Header
@@ -165,28 +193,23 @@ namespace IBS.Services
                     header.EditedBy = userFullName;
                     header.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
 
-                    // Update Disbursement Books
-                    var disbursementBooks = await dbContext.FilprideDisbursementBooks
+                    // Remove ToListAsync + foreach, replace with:
+                    await dbContext.FilprideDisbursementBooks
                         .Where(x => x.CVNo == model.ReferenceNo && x.Company == company)
-                        .ToListAsync(cancellationToken);
+                        .ExecuteUpdateAsync(setters => setters
+                                .SetProperty(x => x.Particulars, finalParticulars)
+                                .SetProperty(x => x.Payee, model.Payee ?? "")
+                                .SetProperty(x => x.CheckNo, model.CheckNo ?? "")
+                                .SetProperty(x => x.CheckDate, model.CheckDate != null
+                                    ? model.CheckDate.Value.ToString("MM/dd/yyyy")
+                                    : ""),
+                            cancellationToken);
 
-                    foreach (var book in disbursementBooks)
-                    {
-                        book.Particulars = finalParticulars;
-                        book.Payee = model.Payee ?? book.Payee;
-                        book.CheckNo = model.CheckNo ?? book.CheckNo;
-                        book.CheckDate = model.CheckDate?.ToString("MM/dd/yyyy") ?? book.CheckDate;
-                    }
-
-                    // Update GL Books
-                    var glBooks = await dbContext.FilprideGeneralLedgerBooks
+                    await dbContext.FilprideGeneralLedgerBooks
                         .Where(x => x.Reference == model.ReferenceNo && x.Company == company)
-                        .ToListAsync(cancellationToken);
-
-                    foreach (var gl in glBooks)
-                    {
-                        gl.Description = finalParticulars;
-                    }
+                        .ExecuteUpdateAsync(setters => setters
+                                .SetProperty(x => x.Description, finalParticulars),
+                            cancellationToken);
 
                     // Cascading update
                     if (header.CvType == nameof(CVType.Invoicing))
@@ -201,34 +224,42 @@ namespace IBS.Services
                             var paymentHeader = await dbContext.FilprideCheckVoucherHeaders
                                 .FirstOrDefaultAsync(x => x.CheckVoucherHeaderId == paymentId, cancellationToken);
 
-                            if (paymentHeader != null)
+                            if (paymentHeader == null)
                             {
-                                var oldPaymentParticulars = paymentHeader.Particulars ?? "";
-                                var paymentIndex = oldPaymentParticulars.IndexOf(PaymentForSeparator, StringComparison.Ordinal);
-
-                                if (paymentIndex >= 0)
-                                {
-                                    var suffix = oldPaymentParticulars.Substring(paymentIndex);
-                                    var newPaymentParticulars = model.Particulars + suffix;
-
-                                    if (paymentHeader.Particulars != newPaymentParticulars)
-                                    {
-                                        paymentHeader.Particulars = newPaymentParticulars;
-                                        paymentHeader.EditedBy = userFullName;
-                                        paymentHeader.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
-
-                                        var pBooks = await dbContext.FilprideDisbursementBooks
-                                            .Where(x => x.CVNo == paymentHeader.CheckVoucherHeaderNo && x.Company == company)
-                                            .ToListAsync(cancellationToken);
-                                        foreach (var b in pBooks) b.Particulars = newPaymentParticulars;
-
-                                        var pGls = await dbContext.FilprideGeneralLedgerBooks
-                                            .Where(x => x.Reference == paymentHeader.CheckVoucherHeaderNo && x.Company == company)
-                                            .ToListAsync(cancellationToken);
-                                        foreach (var gl in pGls) gl.Description = newPaymentParticulars;
-                                    }
-                                }
+                                continue;
                             }
+
+                            var oldPaymentParticulars = paymentHeader.Particulars ?? "";
+                            var paymentIndex = oldPaymentParticulars.IndexOf(_paymentForSeparator, StringComparison.Ordinal);
+
+                            if (paymentIndex < 0)
+                            {
+                                continue;
+                            }
+
+                            var suffix = oldPaymentParticulars.Substring(paymentIndex);
+                            var newPaymentParticulars = model.Particulars + suffix;
+
+                            if (paymentHeader.Particulars == newPaymentParticulars)
+                            {
+                                continue;
+                            }
+
+                            paymentHeader.Particulars = newPaymentParticulars;
+                            paymentHeader.EditedBy = userFullName;
+                            paymentHeader.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
+
+                            await dbContext.FilprideDisbursementBooks
+                                .Where(x => x.CVNo == paymentHeader.CheckVoucherHeaderNo && x.Company == company)
+                                .ExecuteUpdateAsync(setters => setters
+                                        .SetProperty(x => x.Particulars, newPaymentParticulars),
+                                    cancellationToken);
+
+                            await dbContext.FilprideGeneralLedgerBooks
+                                .Where(x => x.Reference == paymentHeader.CheckVoucherHeaderNo && x.Company == company)
+                                .ExecuteUpdateAsync(setters => setters
+                                        .SetProperty(x => x.Description, newPaymentParticulars),
+                                    cancellationToken);
                         }
                     }
                 }
@@ -236,7 +267,10 @@ namespace IBS.Services
                 {
                     var header = await dbContext.FilprideJournalVoucherHeaders
                         .FirstOrDefaultAsync(x => x.JournalVoucherHeaderNo == model.ReferenceNo && x.Company == company, cancellationToken);
-                    if (header == null) throw new Exception("JV Header not found.");
+                    if (header == null)
+                    {
+                        throw new Exception("JV Header not found.");
+                    }
 
                     header.Particulars = model.Particulars;
                     await UpdateCommonBooksAsync(header, model.ReferenceNo, model.Particulars, company, userFullName, cancellationToken);
@@ -245,7 +279,10 @@ namespace IBS.Services
                 {
                     var header = await dbContext.FilprideSalesInvoices
                         .FirstOrDefaultAsync(x => x.SalesInvoiceNo == model.ReferenceNo && x.Company == company, cancellationToken);
-                    if (header == null) throw new Exception("SI Header not found.");
+                    if (header == null)
+                    {
+                        throw new Exception("SI Header not found.");
+                    }
 
                     header.Remarks = model.Particulars;
                     await UpdateCommonBooksAsync(header, model.ReferenceNo, model.Particulars, company, userFullName, cancellationToken);
@@ -254,7 +291,10 @@ namespace IBS.Services
                 {
                     var header = await dbContext.FilprideServiceInvoices
                         .FirstOrDefaultAsync(x => x.ServiceInvoiceNo == model.ReferenceNo && x.Company == company, cancellationToken);
-                    if (header == null) throw new Exception("SV Header not found.");
+                    if (header == null)
+                    {
+                        throw new Exception("SV Header not found.");
+                    }
 
                     header.Instructions = model.Particulars;
                     await UpdateCommonBooksAsync(header, model.ReferenceNo, model.Particulars, company, userFullName, cancellationToken);
@@ -263,7 +303,10 @@ namespace IBS.Services
                 {
                     var header = await dbContext.FilprideCollectionReceipts
                         .FirstOrDefaultAsync(x => x.CollectionReceiptNo == model.ReferenceNo && x.Company == company, cancellationToken);
-                    if (header == null) throw new Exception("CR Header not found.");
+                    if (header == null)
+                    {
+                        throw new Exception("CR Header not found.");
+                    }
 
                     header.Remarks = model.Particulars;
                     await UpdateCommonBooksAsync(header, model.ReferenceNo, model.Particulars, company, userFullName, cancellationToken);
@@ -285,7 +328,7 @@ namespace IBS.Services
             catch (Exception ex)
             {
                 await transaction.RollbackAsync(cancellationToken);
-                var safeRefNo = model.ReferenceNo?.Replace("\r", string.Empty).Replace("\n", string.Empty);
+                var safeRefNo = model.ReferenceNo.Replace("\r", string.Empty).Replace("\n", string.Empty);
                 logger.LogError(ex, "Error updating transaction via Master Control. Ref: {Ref}", safeRefNo);
                 throw;
             }
@@ -302,37 +345,41 @@ namespace IBS.Services
             // Update Journal Books (for JV)
             if (header is FilprideJournalVoucherHeader)
             {
-                var journalBooks = await dbContext.FilprideJournalBooks
+                await dbContext.FilprideJournalBooks
                     .Where(x => x.Reference == referenceNo && x.Company == company)
-                    .ToListAsync(cancellationToken);
-                foreach (var book in journalBooks) book.Description = particulars;
+                    .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(x => x.Description, particulars),
+                        cancellationToken);
             }
 
             // Update Sales Books (for SI, SV)
             if (header is FilprideSalesInvoice || header is FilprideServiceInvoice)
             {
-                var salesBooks = await dbContext.FilprideSalesBooks
+                await dbContext.FilprideSalesBooks
                     .Where(x => x.SerialNo == referenceNo && x.Company == company)
-                    .ToListAsync(cancellationToken);
-                foreach (var book in salesBooks) book.Description = particulars;
+                    .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(x => x.Description, particulars),
+                        cancellationToken);
             }
 
             // Update Collection Receipt Books (for CR)
             if (header is FilprideCollectionReceipt)
             {
-                var cashReceiptBooks = await dbContext.FilprideCashReceiptBooks
+                await dbContext.FilprideCashReceiptBooks
                     .Where(x => x.RefNo == referenceNo && x.Company == company)
-                    .ToListAsync(cancellationToken);
-                foreach (var book in cashReceiptBooks) book.Particulars = particulars;
+                    .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(x => x.Particulars, particulars),
+                        cancellationToken);
             }
 
             // Update GL Books (Common)
             if (header is not (FilprideSalesInvoice or FilprideServiceInvoice or FilprideCollectionReceipt))
             {
-                var glBooks = await dbContext.FilprideGeneralLedgerBooks
+                await dbContext.FilprideGeneralLedgerBooks
                     .Where(x => x.Reference == referenceNo && x.Company == company)
-                    .ToListAsync(cancellationToken);
-                foreach (var gl in glBooks) gl.Description = particulars;
+                    .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(x => x.Description, particulars),
+                        cancellationToken);
             }
         }
     }

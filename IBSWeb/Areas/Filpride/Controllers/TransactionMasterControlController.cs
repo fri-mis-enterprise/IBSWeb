@@ -104,7 +104,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
             catch (Exception ex)
             {
-                var safeRefNo = model.ReferenceNo?.Replace("\r", string.Empty).Replace("\n", string.Empty);
+                var safeRefNo = model.ReferenceNo.Replace("\r", string.Empty).Replace("\n", string.Empty);
                 logger.LogError(ex, "Error updating transaction via Master Control. Ref: {Ref}", safeRefNo);
                 TempData["error"] = "An error occurred while updating the transaction. Please contact support.";
                 return View(model);

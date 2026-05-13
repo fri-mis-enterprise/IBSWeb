@@ -393,14 +393,18 @@
                                             </li>
                                         </ul>
                                     </li>
-                                    <li class="nav-item dropdown">
-                                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Utility</a>
-                                        <ul class="dropdown-menu">
-                                            <li class="nav-item">
-                                                <a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="TransactionMasterControl" asp-action="Index">Entries Master Control</a>
-                                            </li>
-                                        </ul>
-                                    </li>
+
+                                    if (User.IsInRole("Admin"))
+                                    {
+                                        <li class="nav-item dropdown">
+                                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Utility</a>
+                                            <ul class="dropdown-menu">
+                                                <li class="nav-item">
+                                                    <a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="TransactionMasterControl" asp-action="Index">Entries Master Control</a>
+                                                </li>
+                                            </ul>
+                                        </li>
+                                    }
                                 }
 
                                 if (selectedCompany == "Bienes")
