@@ -312,6 +312,8 @@ namespace IBS.Services
                     return;
                 }
 
+                await RecordUpdatedSales(periodMonth, company, cancellationToken);
+
                 var cosNotUpdatedPrice = await _dbContext.FilprideCustomerOrderSlips
                     .Include(x => x.DeliveryReceipts)
                     .Where(x =>
@@ -366,6 +368,8 @@ namespace IBS.Services
                     return;
                 }
 
+                await RecordUpdatedPurchases(periodMonth, company, cancellationToken);
+
                 var poNotUpdatedPrice = await _dbContext.FilpridePurchaseOrders
                     .Include(x => x.ReceivingReports)
                     .Where(x =>
@@ -405,6 +409,60 @@ namespace IBS.Services
             {
                 _logger.LogError(ex, "An error occurred while recording the not updated sales for the month.");
                 throw;
+            }
+        }
+
+        private async Task RecordUpdatedSales(DateOnly periodMonth, string company, CancellationToken cancellationToken)
+        {
+            var lockedSales = await _dbContext.FilprideSalesLockedRecordsQueues
+                .Include(x => x.DeliveryReceipt)
+                .ThenInclude(x => x.CustomerOrderSlip)
+                .Where(x => x.UpdatedDate == null
+                            && x.DeliveryReceipt.Company == company
+                            && x.DeliveryReceipt.CustomerOrderSlip != null)
+                .ToListAsync(cancellationToken);
+
+            if (lockedSales.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var record in lockedSales)
+            {
+                var currentQuantity = record.DeliveryReceipt.Quantity;
+                var currentPrice = record.DeliveryReceipt.CustomerOrderSlip!.DeliveredPrice;
+
+                if (currentQuantity != record.Quantity || currentPrice != record.Price)
+                {
+                    record.UpdatedDate = periodMonth;
+                }
+            }
+        }
+
+        private async Task RecordUpdatedPurchases(DateOnly periodMonth, string company, CancellationToken cancellationToken)
+        {
+            var lockedPurchases = await _dbContext.FilpridePurchaseLockedRecordsQueues
+                .Include(x => x.ReceivingReport)
+                .ThenInclude(x => x.PurchaseOrder)
+                .Where(x => x.UpdatedDate == null
+                            && x.ReceivingReport.Company == company
+                            && x.ReceivingReport.QuantityReceived != 0)
+                .ToListAsync(cancellationToken);
+
+            if (lockedPurchases.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var record in lockedPurchases)
+            {
+                var currentQuantity = record.ReceivingReport.QuantityReceived;
+                var currentPrice = record.ReceivingReport.Amount / currentQuantity;
+
+                if (currentQuantity != record.Quantity || currentPrice != record.Price)
+                {
+                    record.UpdatedDate = periodMonth;
+                }
             }
         }
 
