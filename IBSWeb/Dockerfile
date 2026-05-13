@@ -28,7 +28,10 @@ RUN dotnet publish "./IBSWeb.csproj" \
 
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=publish --chown=app:app /app/publish .
+
+# Create the storage directory and set ownership to the non-root 'app' user
+RUN mkdir -p /app/App_Data/LocalStorage && chown -R app:app /app/App_Data
 
 USER app
 
