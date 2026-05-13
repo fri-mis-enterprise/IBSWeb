@@ -84,6 +84,17 @@ builder.Services.AddMemoryCache(options =>
     options.SizeLimit = 1024 * 1024 * 100; // 100MB cap
 });
 
+// Use LocalFileStorageService for Development, CloudStorageService for Production
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddSingleton<ICloudStorageService, LocalFileStorageService>();
+}
+else
+{
+    builder.Services.AddSingleton<ICloudStorageService, CloudStorageService>();
+}
+
+
 if (builder.Environment.IsProduction())
 {
     var bucketName = builder.Configuration["GoogleCloudStorageBucketName"]!;
@@ -132,6 +143,23 @@ if (!app.Environment.IsDevelopment())
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 app.UseStaticFiles();
+
+// Enable serving files from local storage in development
+if (app.Environment.IsDevelopment())
+{
+    var localStoragePath = Path.Combine(app.Environment.ContentRootPath, "App_Data", "LocalStorage");
+    if (!Directory.Exists(localStoragePath))
+    {
+        Directory.CreateDirectory(localStoragePath);
+    }
+    
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(localStoragePath),
+        RequestPath = "/local-storage"
+    });
+}
+
 app.UseRouting();
 app.UseMiddleware<MaintenanceMiddleware>();
 app.UseAuthentication();
