@@ -8,6 +8,8 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=ibs_staging;Username=postgres;Password=mis123
+    volumes:
+      - app_data:/app/App_Data
     depends_on:
       db:
         condition: service_healthy
@@ -30,3 +32,4 @@ services:
       retries: 5
 volumes:
   postgres_data: null
+  app_data: null
