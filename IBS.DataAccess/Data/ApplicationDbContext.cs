@@ -325,6 +325,9 @@ namespace IBS.DataAccess.Data
                     .HasForeignKey(s => s.DeliveryReceiptId)
                     .OnDelete(DeleteBehavior.Restrict);
                 x.HasIndex(s => s.LockedDate);
+                x.HasIndex(s => s.UpdatedDate);
+                x.HasIndex(s => s.DeliveryReceiptId)
+                    .IsUnique();
             });
 
             builder.Entity<FilpridePurchaseLockedRecordsQueue>(x =>
@@ -334,6 +337,9 @@ namespace IBS.DataAccess.Data
                     .HasForeignKey(s => s.ReceivingReportId)
                     .OnDelete(DeleteBehavior.Restrict);
                 x.HasIndex(s => s.LockedDate);
+                x.HasIndex(s => s.UpdatedDate);
+                x.HasIndex(s => s.ReceivingReportId)
+                    .IsUnique();
             });
 
             #region-- Master File

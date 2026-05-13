@@ -3,6 +3,7 @@ using System;
 using IBS.DataAccess.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IBS.DataAccess.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260513060744_AddUpdatedDateToComparativeQueues")]
+    partial class AddUpdatedDateToComparativeQueues
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3606,7 +3609,6 @@ namespace IBS.DataAccess.Migrations
                         .HasDatabaseName("ix_filpride_purchase_locked_records_queues_locked_date");
 
                     b.HasIndex("ReceivingReportId")
-                        .IsUnique()
                         .HasDatabaseName("ix_filpride_purchase_locked_records_queues_receiving_report_id");
 
                     b.HasIndex("UpdatedDate")
@@ -3648,7 +3650,6 @@ namespace IBS.DataAccess.Migrations
                         .HasName("pk_filpride_sales_locked_records_queues");
 
                     b.HasIndex("DeliveryReceiptId")
-                        .IsUnique()
                         .HasDatabaseName("ix_filpride_sales_locked_records_queues_delivery_receipt_id");
 
                     b.HasIndex("LockedDate")
