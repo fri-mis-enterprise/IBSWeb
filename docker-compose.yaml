@@ -18,7 +18,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: mis123
     volumes:
-      - 'postgres_data:/var/lib/postgresql/data'
+      - 'postgres_data:/var/lib/postgresql'
     healthcheck:
       test:
         - CMD-SHELL
