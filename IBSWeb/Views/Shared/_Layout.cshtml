@@ -18,7 +18,7 @@
 
     var userName = UserManager.GetUserName(this.User);
 
-    ViewBag.AppVersion = "2.5.0";
+    ViewBag.AppVersion = "2.5.1";
 }
 
 <!DOCTYPE html>
@@ -209,11 +209,19 @@
                                                         </a>
                                                         <ul class="dropdown-menu">
                                                             <li class="nav-item dropend">
-                                                                <a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="GeneralLedgerReport" asp-action="JournalVoucherPriceReport">Due to updating selling price</a>
+                                                                <a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="GeneralLedgerReport" asp-action="JournalVoucherSellingPriceReport">Selling Price Updates</a>
                                                             </li>
                                                             <li><hr class="dropdown-divider"></li>
                                                             <li class="nav-item dropend">
-                                                                <a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="GeneralLedgerReport" asp-action="JournalVoucherUnitCostReport">Due to updating unit cost</a>
+                                                                <a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="GeneralLedgerReport" asp-action="JournalVoucherUnitCostReport">Unit Cost Updates</a>
+                                                            </li>
+                                                            <li><hr class="dropdown-divider"></li>
+                                                            <li class="nav-item dropend">
+                                                                <a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="GeneralLedgerReport" asp-action="JournalVoucherCommissionReport">Commission Updates</a>
+                                                            </li>
+                                                            <li><hr class="dropdown-divider"></li>
+                                                            <li class="nav-item dropend">
+                                                                <a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="GeneralLedgerReport" asp-action="JournalVoucherFreightReport">Freight Updates</a>
                                                             </li>
                                                         </ul>
                                                     </li>
@@ -504,6 +512,44 @@
                             @if ((userDepartment == SD.Department_RCD || User.IsInRole("Admin")) && selectedCompany == "Filpride")
                             {
                                 <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Export to AAS</a>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="SalesInvoice" asp-action="Index" asp-route-view="@nameof(DynamicView.SalesInvoice)">Sales Invoice</a></li>
+                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
+                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="ServiceInvoice" asp-action="Index" asp-route-view="@nameof(DynamicView.ServiceInvoice)">Service Invoice</a></li>
+                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
+                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="CollectionReceipt" asp-action="Index" asp-route-view="@nameof(DynamicView.CollectionReceipt)">Collection Receipt</a></li>
+                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
+                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="DebitMemo" asp-action="Index" asp-route-view="@nameof(DynamicView.DebitMemo)">Debit Memo</a></li>
+                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
+                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="CreditMemo" asp-action="Index" asp-route-view="@nameof(DynamicView.CreditMemo)">Credit Memo</a></li>
+                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
+                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="PurchaseOrder" asp-action="Index" asp-route-view="@nameof(DynamicView.PurchaseOrder)">Purchase Order</a></li>
+                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
+                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="ReceivingReport" asp-action="Index" asp-route-view="@nameof(DynamicView.ReceivingReport)">Receiving Report</a></li>
+                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
+                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="CheckVoucherTrade" asp-action="Index" asp-route-view="@nameof(DynamicView.CheckVoucher)">Check Voucher</a></li>
+                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
+                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="JournalVoucher" asp-action="Index" asp-route-view="@nameof(DynamicView.JournalVoucher)">Journal Voucher</a></li>
+                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
+                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="Customer" asp-action="Index" asp-route-view="@nameof(DynamicView.Customer)">Customer Master File</a></li>
+                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
+                                        <li><a class="dropdown-item text-dark" asp-area="User" asp-controller="Product" asp-action="Index" asp-route-view="@nameof(DynamicView.Product)">Product Master File</a></li>
+                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
+                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="Supplier" asp-action="Index" asp-route-view="@nameof(DynamicView.Supplier)">Supplier Master File</a></li>
+                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
+                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="Service" asp-action="Index" asp-route-view="@nameof(DynamicView.Service)">Service Master File</a></li>
+                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
+                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="BankAccount" asp-action="Index" asp-route-view="@nameof(DynamicView.BankAccount)">Bank Account Master File</a></li>
+                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
+                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="ChartOfAccount" asp-action="Index" asp-route-view="@nameof(DynamicView.ChartOfAccount)">Chart Of Account</a></li>
+                                    </ul>
+                                </li>
+                            }
+
+                            @if (User.IsInRole("Admin") && selectedCompany == "Filpride")
+                            {
+                                <li class="nav-item dropdown">
                                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Filpride Master File</a>
                                     <ul class="dropdown-menu">
                                         <li class="nav-item">
@@ -544,44 +590,6 @@
                                     </ul>
                                 </li>
 
-                                <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Export to AAS</a>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="SalesInvoice" asp-action="Index" asp-route-view="@nameof(DynamicView.SalesInvoice)">Sales Invoice</a></li>
-                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
-                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="ServiceInvoice" asp-action="Index" asp-route-view="@nameof(DynamicView.ServiceInvoice)">Service Invoice</a></li>
-                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
-                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="CollectionReceipt" asp-action="Index" asp-route-view="@nameof(DynamicView.CollectionReceipt)">Collection Receipt</a></li>
-                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
-                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="DebitMemo" asp-action="Index" asp-route-view="@nameof(DynamicView.DebitMemo)">Debit Memo</a></li>
-                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
-                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="CreditMemo" asp-action="Index" asp-route-view="@nameof(DynamicView.CreditMemo)">Credit Memo</a></li>
-                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
-                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="PurchaseOrder" asp-action="Index" asp-route-view="@nameof(DynamicView.PurchaseOrder)">Purchase Order</a></li>
-                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
-                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="ReceivingReport" asp-action="Index" asp-route-view="@nameof(DynamicView.ReceivingReport)">Receiving Report</a></li>
-                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
-                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="CheckVoucherTrade" asp-action="Index" asp-route-view="@nameof(DynamicView.CheckVoucher)">Check Voucher</a></li>
-                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
-                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="JournalVoucher" asp-action="Index" asp-route-view="@nameof(DynamicView.JournalVoucher)">Journal Voucher</a></li>
-                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
-                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="Customer" asp-action="Index" asp-route-view="@nameof(DynamicView.Customer)">Customer Master File</a></li>
-                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
-                                        <li><a class="dropdown-item text-dark" asp-area="User" asp-controller="Product" asp-action="Index" asp-route-view="@nameof(DynamicView.Product)">Product Master File</a></li>
-                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
-                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="Supplier" asp-action="Index" asp-route-view="@nameof(DynamicView.Supplier)">Supplier Master File</a></li>
-                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
-                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="Service" asp-action="Index" asp-route-view="@nameof(DynamicView.Service)">Service Master File</a></li>
-                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
-                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="BankAccount" asp-action="Index" asp-route-view="@nameof(DynamicView.BankAccount)">Bank Account Master File</a></li>
-                                        <li><hr class="dropdown-divider  mt-0 mb-0"></li>
-                                        <li><a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="ChartOfAccount" asp-action="Index" asp-route-view="@nameof(DynamicView.ChartOfAccount)">Chart Of Account</a></li>
-                                    </ul>
-                                </li>
-                            }
-
-                            @if (User.IsInRole("Admin") && selectedCompany == "Filpride")
-                            {
                                 <li class="nav-item dropdown">
                                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">General Master File</a>
                                     <ul class="dropdown-menu">

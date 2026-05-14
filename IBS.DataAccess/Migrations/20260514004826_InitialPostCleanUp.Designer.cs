@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IBS.DataAccess.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260502022834_MakeSomeFieldNullable")]
-    partial class MakeSomeFieldNullable
+    [Migration("20260514004826_InitialPostCleanUp")]
+    partial class InitialPostCleanUp
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -3598,6 +3598,10 @@ namespace IBS.DataAccess.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("receiving_report_id");
 
+                    b.Property<DateOnly?>("UpdatedDate")
+                        .HasColumnType("date")
+                        .HasColumnName("updated_date");
+
                     b.HasKey("Id")
                         .HasName("pk_filpride_purchase_locked_records_queues");
 
@@ -3605,7 +3609,11 @@ namespace IBS.DataAccess.Migrations
                         .HasDatabaseName("ix_filpride_purchase_locked_records_queues_locked_date");
 
                     b.HasIndex("ReceivingReportId")
+                        .IsUnique()
                         .HasDatabaseName("ix_filpride_purchase_locked_records_queues_receiving_report_id");
+
+                    b.HasIndex("UpdatedDate")
+                        .HasDatabaseName("ix_filpride_purchase_locked_records_queues_updated_date");
 
                     b.ToTable("filpride_purchase_locked_records_queues", (string)null);
                 });
@@ -3635,14 +3643,22 @@ namespace IBS.DataAccess.Migrations
                         .HasColumnType("numeric(18,4)")
                         .HasColumnName("quantity");
 
+                    b.Property<DateOnly?>("UpdatedDate")
+                        .HasColumnType("date")
+                        .HasColumnName("updated_date");
+
                     b.HasKey("Id")
                         .HasName("pk_filpride_sales_locked_records_queues");
 
                     b.HasIndex("DeliveryReceiptId")
+                        .IsUnique()
                         .HasDatabaseName("ix_filpride_sales_locked_records_queues_delivery_receipt_id");
 
                     b.HasIndex("LockedDate")
                         .HasDatabaseName("ix_filpride_sales_locked_records_queues_locked_date");
+
+                    b.HasIndex("UpdatedDate")
+                        .HasDatabaseName("ix_filpride_sales_locked_records_queues_updated_date");
 
                     b.ToTable("filpride_sales_locked_records_queues", (string)null);
                 });

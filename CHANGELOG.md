@@ -6,6 +6,36 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v2.5.1] - 2026-05-14
+
+### Changed
+- Expanded the `Export to AAS` navigation access in the shared layout for Filpride RCD users and admins.
+- Revised the Filpride collection Excel report layout to show collection date, invoice date, check amount, EWT, WVAT, and previous/current/advance allocation columns.
+
+### Fixed
+- Fixed Filpride collection Excel totals and column placement for the revised export format, including voided receipt columns.
+- Fixed Filpride collection Excel month-based allocation reporting for sales, service, and multiple-sales-invoice collections.
+
+---
+
+## [v2.5.0] - 2026-05-13
+
+### Added
+- Added Journal Voucher generation/report outputs for freight and commission updates.
+- Added comparative report queue tracking for updated timestamps and duplicate-prevention support.
+
+### Changed
+- Finalized comparative report data processing and queue handling.
+- Renamed the selling price Journal Voucher report view for consistency with the generated output.
+
+### Fixed
+- Fixed selling price GL record dates to follow the open-book check.
+- Fixed commission and freight update flows to respect open-book validation.
+- Fixed cost update flows to respect open-book validation.
+- Fixed comparative report persistence behavior.
+
+---
+
 ## [v2.4.0] - 2026-05-09
 
 ### Added
