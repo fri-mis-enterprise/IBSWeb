@@ -6,6 +6,14 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v2.5.2] - 2026-05-14
+
+### Fixed
+- Fixed Filpride trade check voucher advance setup to accumulate all available posted advance vouchers for COD and prepaid purchase orders instead of using only the first matching advance voucher.
+- Fixed Filpride trade check voucher advance validation, posting, and reversal flows to support multiple referenced advance vouchers with combined available balances.
+
+---
+
 ## [v2.5.1] - 2026-05-14
 
 ### Changed
