@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IBS.DataAccess.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260513060744_AddUpdatedDateToComparativeQueues")]
-    partial class AddUpdatedDateToComparativeQueues
+    [Migration("20260514004826_InitialPostCleanUp")]
+    partial class InitialPostCleanUp
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -3609,6 +3609,7 @@ namespace IBS.DataAccess.Migrations
                         .HasDatabaseName("ix_filpride_purchase_locked_records_queues_locked_date");
 
                     b.HasIndex("ReceivingReportId")
+                        .IsUnique()
                         .HasDatabaseName("ix_filpride_purchase_locked_records_queues_receiving_report_id");
 
                     b.HasIndex("UpdatedDate")
@@ -3650,6 +3651,7 @@ namespace IBS.DataAccess.Migrations
                         .HasName("pk_filpride_sales_locked_records_queues");
 
                     b.HasIndex("DeliveryReceiptId")
+                        .IsUnique()
                         .HasDatabaseName("ix_filpride_sales_locked_records_queues_delivery_receipt_id");
 
                     b.HasIndex("LockedDate")
