@@ -2892,18 +2892,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells["J7"].Value = "BANK";
                     worksheet.Cells["K7"].Value = "CHECK No.";
                     worksheet.Cells["L7"].Value = "CHECK AMOUNT.";
-                    worksheet.Cells["M7"].Value = "PREVIOUS";
-                    worksheet.Cells["N7"].Value = "CURRENT";
-                    worksheet.Cells["O7"].Value = "ADVANCE";
-                    worksheet.Cells["P7"].Value = "TOTAL";
+                    worksheet.Cells["M7"].Value = "EWT";
+                    worksheet.Cells["N7"].Value = "WVAT";
+                    worksheet.Cells["O7"].Value = "PREVIOUS";
+                    worksheet.Cells["P7"].Value = "CURRENT";
+                    worksheet.Cells["Q7"].Value = "ADVANCE";
+                    worksheet.Cells["R7"].Value = "TOTAL";
 
                     if (showVoidCancelColumns)
                     {
-                        worksheet.Cells["Q7"].Value = "VOIDED BY";
-                        worksheet.Cells["R7"].Value = "VOIDED DATE";
+                        worksheet.Cells["S7"].Value = "VOIDED BY";
+                        worksheet.Cells["T7"].Value = "VOIDED DATE";
                     }
 
-                    string headerEndColumn = showVoidCancelColumns ? "R7" : "P7";
+                    string headerEndColumn = showVoidCancelColumns ? "T7" : "R7";
                     var headerCells = worksheet.Cells[$"A7:{headerEndColumn}"];
                     headerCells.Style.Font.Size = 11;
                     headerCells.Style.Fill.PatternType = ExcelFillStyle.Solid;
@@ -2919,6 +2921,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var currencyFormat = "#,##0.00";
                     var dateTextFormat = "MMM/dd/yyyy";
                     decimal totalCheckAmount = 0;
+                    decimal totalEwtAmount = 0;
+                    decimal totalWvatAmount = 0;
                     decimal totalAmount = 0;
                     decimal totalPreviousAmount = 0;
                     decimal totalCurrentAmount = 0;
@@ -2931,11 +2935,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             return;
                         }
 
-                        worksheet.Cells[targetRow, 17].Value = collectionReceipt.VoidedBy;
-                        worksheet.Cells[targetRow, 18].Value = collectionReceipt.VoidedDate;
+                        worksheet.Cells[targetRow, 19].Value = collectionReceipt.VoidedBy;
+                        worksheet.Cells[targetRow, 20].Value = collectionReceipt.VoidedDate;
                         if (collectionReceipt.VoidedDate.HasValue)
                         {
-                            worksheet.Cells[targetRow, 18].Style.Numberformat.Format = dateTextFormat;
+                            worksheet.Cells[targetRow, 20].Style.Numberformat.Format = dateTextFormat;
                         }
                     }
 
@@ -2990,7 +2994,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 ref advanceAmount);
                         }
 
-                        var totalCollectionAmount = previousAmount + currentAmount + advanceAmount;
+                        var totalCollectionAmount = collectionReceipt.Total;
 
                         worksheet.Cells[row, 1].Value = collectionReceipt.Customer?.CustomerCode;
                         worksheet.Cells[row, 2].Value = customerName;
@@ -3004,10 +3008,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[row, 10].Value = $"{collectionReceipt.BankAccount?.Bank} {collectionReceipt.BankAccountNumber}";
                         worksheet.Cells[row, 11].Value = collectionReceipt.CheckNo;
                         worksheet.Cells[row, 12].Value = collectionReceipt.CheckAmount != 0 ? collectionReceipt.CheckAmount : null;
-                        worksheet.Cells[row, 13].Value = previousAmount != 0 ? previousAmount : null;
-                        worksheet.Cells[row, 14].Value = currentAmount != 0 ? currentAmount : null;
-                        worksheet.Cells[row, 15].Value = advanceAmount != 0 ? advanceAmount : null;
-                        worksheet.Cells[row, 16].Value = totalCollectionAmount != 0 ? totalCollectionAmount : null;
+                        worksheet.Cells[row, 13].Value = collectionReceipt.EWT != 0 ? collectionReceipt.EWT : null;
+                        worksheet.Cells[row, 14].Value = collectionReceipt.WVAT != 0 ? collectionReceipt.WVAT : null;
+                        worksheet.Cells[row, 15].Value = previousAmount != 0 ? previousAmount : null;
+                        worksheet.Cells[row, 16].Value = currentAmount != 0 ? currentAmount : null;
+                        worksheet.Cells[row, 17].Value = advanceAmount != 0 ? advanceAmount : null;
+                        worksheet.Cells[row, 18].Value = totalCollectionAmount != 0 ? totalCollectionAmount : null;
 
                         worksheet.Cells[row, 4].Style.Numberformat.Format = dateTextFormat;
 
@@ -3031,10 +3037,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[row, 14].Style.Numberformat.Format = currencyFormat;
                         worksheet.Cells[row, 15].Style.Numberformat.Format = currencyFormat;
                         worksheet.Cells[row, 16].Style.Numberformat.Format = currencyFormat;
+                        worksheet.Cells[row, 17].Style.Numberformat.Format = currencyFormat;
+                        worksheet.Cells[row, 18].Style.Numberformat.Format = currencyFormat;
 
                         WriteVoidColumns(row, collectionReceipt);
 
                         totalCheckAmount += collectionReceipt.CheckAmount;
+                        totalEwtAmount += collectionReceipt.EWT;
+                        totalWvatAmount += collectionReceipt.WVAT;
                         totalPreviousAmount += previousAmount;
                         totalCurrentAmount += currentAmount;
                         totalAdvanceAmount += advanceAmount;
@@ -3056,7 +3066,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     {
                                         (
                                             cr.SalesInvoice.TransactionDate,
-                                            cr.CashAmount + cr.CheckAmount
+                                            cr.Total
                                         )
                                     },
                                 cr.SalesInvoice?.TransactionDate,
@@ -3079,7 +3089,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     {
                                         (
                                             DateOnly.FromDateTime(cr.ServiceInvoice.CreatedDate),
-                                            cr.CashAmount + cr.CheckAmount
+                                            cr.Total
                                         )
                                     },
                                 cr.ServiceInvoice?.CreatedDate,
@@ -3126,7 +3136,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         }
                     }
 
-                    int lastColumn = showVoidCancelColumns ? 18 : 16;
+                    int lastColumn = showVoidCancelColumns ? 20 : 18;
 
                     if (row == 8)
                     {
@@ -3136,15 +3146,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     worksheet.Cells[row, 11].Value = "Total:";
                     worksheet.Cells[row, 12].Value = totalCheckAmount;
-                    worksheet.Cells[row, 13].Value = totalPreviousAmount;
-                    worksheet.Cells[row, 14].Value = totalCurrentAmount;
-                    worksheet.Cells[row, 15].Value = totalAdvanceAmount;
-                    worksheet.Cells[row, 16].Value = totalAmount;
+                    worksheet.Cells[row, 13].Value = totalEwtAmount;
+                    worksheet.Cells[row, 14].Value = totalWvatAmount;
+                    worksheet.Cells[row, 15].Value = totalPreviousAmount;
+                    worksheet.Cells[row, 16].Value = totalCurrentAmount;
+                    worksheet.Cells[row, 17].Value = totalAdvanceAmount;
+                    worksheet.Cells[row, 18].Value = totalAmount;
                     worksheet.Cells[row, 12].Style.Numberformat.Format = currencyFormat;
                     worksheet.Cells[row, 13].Style.Numberformat.Format = currencyFormat;
                     worksheet.Cells[row, 14].Style.Numberformat.Format = currencyFormat;
                     worksheet.Cells[row, 15].Style.Numberformat.Format = currencyFormat;
                     worksheet.Cells[row, 16].Style.Numberformat.Format = currencyFormat;
+                    worksheet.Cells[row, 17].Style.Numberformat.Format = currencyFormat;
+                    worksheet.Cells[row, 18].Style.Numberformat.Format = currencyFormat;
 
                     using (var range = worksheet.Cells[row, 1, row, lastColumn])
                     {
@@ -3152,7 +3166,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         range.Style.Fill.BackgroundColor.SetColor(Color.Yellow);
                         range.Style.Border.BorderAround(ExcelBorderStyle.Thin);
                     }
-                    using (var range = worksheet.Cells[row, 11, row, 16])
+                    using (var range = worksheet.Cells[row, 11, row, 18])
                     {
                         range.Style.Border.Bottom.Style = ExcelBorderStyle.Double;
                         range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
@@ -3170,7 +3184,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
                     }
 
-                    using (var range = worksheet.Cells[startingRow - 1, 12, lastRow, 16])
+                    using (var range = worksheet.Cells[startingRow - 1, 12, lastRow, 18])
                     {
                         range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
                     }
