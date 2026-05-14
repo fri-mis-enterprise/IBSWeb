@@ -1,0 +1,86 @@
+@model IBS.Models.Filpride.ViewModels.TransactionMasterControlViewModel
+@{
+    ViewData["Title"] = $"Edit {Model.TransactionType}# {Model.ReferenceNo}";
+}
+
+<div class="container-fluid mt-4">
+    <div class="bg-secondary p-3 rounded shadow mb-3">
+        <h2 class="text-white m-0">@ViewData["Title"]</h2>
+    </div>
+
+    <div class="card shadow border-0">
+        <div class="card-body p-4">
+            <form asp-action="Edit" method="post">
+                <input type="hidden" asp-for="ReferenceNo" />
+                <input type="hidden" asp-for="TransactionType" />
+                <input type="hidden" asp-for="Date" />
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Transaction Date</label>
+                        <input class="form-control" value="@Model.Date.ToString("MMM dd, yyyy")" disabled />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Reference No</label>
+                        <input class="form-control" value="@Model.ReferenceNo" disabled />
+                    </div>
+                </div>
+
+                @if (Model.TransactionType == "CV")
+                {
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label asp-for="Payee" class="form-label fw-bold"></label>
+                            <input asp-for="Payee" class="form-control" />
+                            <span asp-validation-for="Payee" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="CheckNo" class="form-label fw-bold"></label>
+                            <input asp-for="CheckNo" class="form-control" />
+                            <span asp-validation-for="CheckNo" class="text-danger" ></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="CheckDate" class="form-label fw-bold"></label>
+                            <input asp-for="CheckDate" type="date" class="form-control" />
+                            <span asp-validation-for="CheckDate" class="text-danger"></span>
+                        </div>
+                    </div>
+                }
+
+                <div class="mb-3">
+                    <label asp-for="Particulars" class="form-label fw-bold">@(Model.TransactionType == "CV" || Model.TransactionType == "JV" ? "Particulars" : "Remarks")</label>
+                    <textarea asp-for="Particulars" class="form-control" rows="4"></textarea>
+                    <span asp-validation-for="Particulars" class="text-danger"></span>
+                </div>
+
+                @if (Model.TransactionType == "CV")
+                {
+                    <div class="mb-3">
+                        <label asp-for="PaymentFor" class="form-label fw-bold"></label>
+                        <div class="input-group">
+                            <span class="input-group-text">Payment for</span>
+                            <input asp-for="PaymentFor" class="form-control" placeholder="INVU00002165, etc." />
+                        </div>
+                        <span asp-validation-for="PaymentFor" class="text-danger"></span>
+                        <small class="text-muted">This will be appended as ". Payment for [Value]" to the particulars.</small>
+                    </div>
+                }
+
+                <div class="d-flex justify-content-between mt-4">
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Search
+                    </a>
+                    <button type="submit" class="btn btn-success px-5">
+                        <i class="bi bi-save"></i> Update All Records
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

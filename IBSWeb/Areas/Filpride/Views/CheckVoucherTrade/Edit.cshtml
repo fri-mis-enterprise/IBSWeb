@@ -451,6 +451,16 @@
         const initialAppliedAdvanceAmount = Number(@Html.Raw(Json.Serialize(Model.AppliedAdvanceAmount)));
         let isInitialAdvanceLoad = true;
 
+        function hasAdvancePayment() {
+            return parseNumber($("#AppliedAdvanceAmount").val()) > 0 && $("#AdvancesCVNo").val().trim() !== "";
+        }
+
+        function resetCheckNoValidation() {
+            $('input[name="CheckNo"]').removeClass('is-invalid');
+            $('.check-no-exists').remove();
+            $("button[type='submit']").prop("disabled", false);
+        }
+
         function displayAdvances(poNumber){
             if (poNumber && poNumber.length > 0) {
                 $.ajax({
@@ -474,6 +484,7 @@
                                 : parseNumber($("#AppliedAdvanceAmount").val())));
                             $("#AdvancesCVNo").val(shouldPreserveInitialAdvance ? initialAdvancesCVNo : response.advanceCVNo);
                             $("#advance-limit-message").text(`Available advance: ${formatNumberToFour(availableAdvanceAmount)}`).show();
+                            resetCheckNoValidation();
                             updateAmounts();
                         } else if (shouldPreserveInitialAdvance) {
                             availableAdvanceAmount = initialAppliedAdvanceAmount;
@@ -483,6 +494,7 @@
                             $("#AdvancesCVNo").val(initialAdvancesCVNo);
                             $("#AppliedAdvanceAmount").val(formatNumberToFour(initialAppliedAdvanceAmount));
                             $("#advance-limit-message").text(`Previously applied advance: ${formatNumberToFour(initialAppliedAdvanceAmount)}`).show();
+                            resetCheckNoValidation();
                             updateAmounts();
                         } else {
                             availableAdvanceAmount = 0;
@@ -833,6 +845,11 @@
         $('input[name="CheckNo"]').on('blur', function() {
             var checkNo = $(this).val();
             var cvId = $('input[name="CvId"]').val();
+            if (hasAdvancePayment()) {
+                resetCheckNoValidation();
+                return;
+            }
+
             if (checkNo) {
                 $.ajax({
                     url: '@Url.Action("CheckNoIsExist", "CheckVoucherTrade", new { area = "Filpride" })',

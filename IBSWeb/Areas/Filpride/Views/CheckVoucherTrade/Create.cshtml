@@ -417,6 +417,16 @@
 
         let availableAdvanceAmount = 0;
 
+        function hasAdvancePayment() {
+            return parseNumber($("#AppliedAdvanceAmount").val()) > 0 && $("#AdvancesCVNo").val().trim() !== "";
+        }
+
+        function resetCheckNoValidation() {
+            $('input[name="CheckNo"]').removeClass('is-invalid');
+            $('.check-no-exists').remove();
+            $("button[type='submit']").prop("disabled", false);
+        }
+
         function displayAdvances(poNumber){
             if (poNumber && poNumber.length > 0) {
                 $.ajax({
@@ -433,6 +443,7 @@
                             $("#advancesCredit").val(initialAdvance);
                             $("#AdvancesCVNo").val(response.advanceCVNo);
                             $("#advance-limit-message").text(`Available advance: ${formatNumberToFour(availableAdvanceAmount)}`).show();
+                            resetCheckNoValidation();
                             updateAmounts();
                         } else {
                             availableAdvanceAmount = 0;
@@ -763,6 +774,11 @@
 
         $('input[name="CheckNo"]').on('blur', function() {
             var checkNo = $(this).val();
+            if (hasAdvancePayment()) {
+                resetCheckNoValidation();
+                return;
+            }
+
             if (checkNo) {
                 $.ajax({
                     url: '@Url.Action("CheckNoIsExist", "CheckVoucherTrade", new { area = "Filpride" })',
