@@ -3206,7 +3206,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Column(7).Style.VerticalAlignment = ExcelVerticalAlignment.Top;
                     worksheet.Column(8).Style.VerticalAlignment = ExcelVerticalAlignment.Top;
                     worksheet.Column(10).Style.VerticalAlignment = ExcelVerticalAlignment.Top;
-                    worksheet.Row(7).Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                    worksheet.Row(7).Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
                     worksheet.Row(7).Style.VerticalAlignment = ExcelVerticalAlignment.Center;
                     worksheet.Row(7).Style.WrapText = false;
                     worksheet.Cells[$"A7:{headerEndColumn}"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
