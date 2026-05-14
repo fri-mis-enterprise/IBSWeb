@@ -6,6 +6,18 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v2.5.1] - 2026-05-14
+
+### Changed
+- Expanded the `Export to AAS` navigation access in the shared layout for Filpride RCD users and admins.
+- Revised the Filpride collection Excel report layout to show collection date, invoice date, check amount, EWT, WVAT, and previous/current/advance allocation columns.
+
+### Fixed
+- Fixed Filpride collection Excel totals and column placement for the revised export format, including voided receipt columns.
+- Fixed Filpride collection Excel month-based allocation reporting for sales, service, and multiple-sales-invoice collections.
+
+---
+
 ## [v2.5.0] - 2026-05-13
 
 ### Added
