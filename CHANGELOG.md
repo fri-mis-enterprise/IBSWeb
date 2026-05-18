@@ -6,6 +6,18 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v2.5.3] - 2026-05-18
+
+### Changed
+- Updated the Filpride dispatch report Delivered filter UI to use an explicit report mode selection for `As Of` and `Date Range`.
+- Simplified the Filpride dispatch report date form so Delivered `As Of` uses a single date field and hides `Date To`.
+
+### Fixed
+- Fixed Filpride dispatch report Excel output to include the delivery receipt selling price from the related customer order slip after `PRODUCTS`.
+- Fixed Filpride dispatch report date validation to align controller behavior with the selected Delivered report mode.
+
+---
+
 ## [v2.5.2] - 2026-05-14
 
 ### Fixed

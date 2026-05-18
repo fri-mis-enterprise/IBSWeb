@@ -35,9 +35,25 @@
                 </div>
             </div>
 
+            <div class="form-group row mt-4" id="reportModeGroup">
+                <label asp-for="ReportMode" class="col-sm-4 col-form-label text-right">
+                    Report Mode
+                </label>
+                <div class="col-sm-6">
+                    <select id="reportMode"
+                            asp-for="ReportMode"
+                            class="form-control js-select2"
+                            required
+                            style="width: 100%;">
+                        <option value="AsOf">As Of</option>
+                        <option value="DateRange">Date Range</option>
+                    </select>
+                </div>
+            </div>
+
             <!-- Date From -->
             <div class="form-group row mt-4">
-                <label asp-for="DateFrom" class="col-sm-4 col-form-label text-right">
+                <label asp-for="DateFrom" id="dateFromLabel" class="col-sm-4 col-form-label text-right">
                     Date From
                 </label>
                 <div class="col-sm-6">
@@ -51,7 +67,7 @@
             </div>
 
             <!-- Date To -->
-            <div class="form-group row mt-4">
+            <div class="form-group row mt-4" id="dateToGroup">
                 <label asp-for="DateTo" class="col-sm-4 col-form-label text-right">
                     Date To
                 </label>
@@ -60,11 +76,9 @@
                            id="dateTo"
                            class="form-control"
                            asp-for="DateTo" />
-                    <small id="dateToHelp" class="text-muted">
-                        Optional for Delivered reports
-                    </small>
                 </div>
             </div>
+
             <!-- Status Filter (Delivered only) -->
             <div class="form-group row mt-4" id="statusFilterGroup">
                 <label asp-for="DRStatusFilter" class="col-sm-4 col-form-label text-right"></label>
@@ -99,41 +113,52 @@
     <script>
         $(document).ready(function () {
             const reportType = $("#reportType");
+            const reportMode = $("#reportMode");
+            const reportModeGroup = $("#reportModeGroup");
 
             const dateFromGroup = $("#dateFrom").closest(".form-group");
-            const dateToGroup = $("#dateTo").closest(".form-group");
+            const dateToGroup = $("#dateToGroup");
 
             const dateFrom = $("#dateFrom");
             const dateTo = $("#dateTo");
-            const dateToHelp = $("#dateToHelp");
+            const dateFromLabel = $("#dateFromLabel");
 
             function updateUI() {
-                const value = reportType.val();
+                const type = reportType.val();
+                const mode = reportMode.val();
 
-                if (value === "InTransit") {
+                if (type === "InTransit") {
                     // Hide date filters
+                    reportModeGroup.hide();
                     dateFromGroup.hide();
                     dateToGroup.hide();
                     $("#statusFilterGroup").hide();
+
                     // Remove validation
                     dateFrom.prop("required", false).val("");
                     dateTo.prop("required", false).val("");
                 } else {
                     // Delivered
+                    reportModeGroup.show();
                     dateFromGroup.show();
-                    dateToGroup.show();
-
                     dateFrom.prop("required", true);
-                    dateTo.prop("required", false);
                     $("#statusFilterGroup").show();
 
-                    dateTo.addClass("bg-light");
-                    dateToHelp.text("Optional for Delivered reports");
+                    if (mode === "DateRange") {
+                        dateFromLabel.text("Date From");
+                        dateToGroup.show();
+                        dateTo.prop("required", true);
+                    } else {
+                        dateFromLabel.text("As Of Date");
+                        dateToGroup.hide();
+                        dateTo.prop("required", false).val("");
+                    }
                 }
             }
 
             // Select2-safe change event
             reportType.on("change.select2", updateUI);
+            reportMode.on("change", updateUI);
 
             // Initial state
             updateUI();
