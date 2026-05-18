@@ -452,14 +452,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     if (dateRangeType == "AsOf")
                     {
                         filter = i => i.Company == companyClaims
-                                      && i.Date <= viewModel.DateFrom
+                                      && i.DeliveredDate <= viewModel.DateFrom
                                       && (i.Status == nameof(DRStatus.Invoiced) || i.Status == nameof(DRStatus.ForInvoicing));
                     }
                     else
                     {
                         filter = i => i.Company == companyClaims
-                                      && i.Date >= viewModel.DateFrom
-                                      && i.Date <= viewModel.DateTo
+                                      && i.DeliveredDate >= viewModel.DateFrom
+                                      && i.DeliveredDate <= viewModel.DateTo
                                       && (i.Status == nameof(DRStatus.Invoiced) || i.Status == nameof(DRStatus.ForInvoicing));
                     }
                 }
@@ -620,7 +620,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                         var liftedQuantity = 0m;
 
                                         if (viewModel.ReportType == "Delivered" && dateRangeType == "AsOf" &&
-                                            record.Date != viewModel.DateFrom)
+                                            record.DeliveredDate != viewModel.DateFrom)
                                         {
                                             // Don't show record of other dates if entry is "as of" and "delivered"
                                         }
@@ -679,7 +679,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     if (viewModel.ReportType == "Delivered" && dateRangeType == "AsOf")
                                     {
                                         // Don't add record of other dates if entry is "as of" and "delivered"
-                                        var entriesToday = deliveryReceipts.Where(t => t.Date == viewModel.DateFrom).ToList();
+                                        var entriesToday = deliveryReceipts.Where(t => t.DeliveredDate == viewModel.DateFrom).ToList();
                                         table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(entriesToday.Sum(dr => dr.Quantity) != 0 ? entriesToday.Sum(dr => dr.Quantity) < 0 ? $"({Math.Abs(entriesToday.Sum(dr => dr.Quantity)).ToString(SD.Two_Decimal_Format)})" : entriesToday.Sum(dr => dr.Quantity).ToString(SD.Two_Decimal_Format) : null).FontColor(entriesToday.Sum(dr => dr.Quantity) < 0 ? Colors.Red.Medium : Colors.Black).SemiBold();
                                         table.Cell().ColumnSpan(9).Background(Colors.Grey.Lighten1).Border(0.5f);
                                         table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(entriesToday.Sum(dr => dr.FreightAmount) != 0 ? entriesToday.Sum(dr => dr.FreightAmount) < 0 ? $"({Math.Abs(entriesToday.Sum(dr => dr.FreightAmount)).ToString(SD.Two_Decimal_Format)})" : entriesToday.Sum(dr => dr.Quantity * dr.Freight).ToString(SD.Two_Decimal_Format) : null).FontColor(entriesToday.Sum(dr => dr.Quantity * dr.Freight) < 0 ? Colors.Red.Medium : Colors.Black).SemiBold();
@@ -1256,67 +1256,65 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     if (viewModel.ReportType == "Delivered" && dateRangeType == "AsOf" &&
                         dr.DeliveredDate != viewModel.DateFrom)
                     {
-                        // Don't show record of other dates if entry is "as of" and "delivered"
+                        continue;
+                    }
+
+                    worksheet.Cells[currentRow, 1].Value = dr.Date;
+                    worksheet.Cells[currentRow, 1].Style.Numberformat.Format = "MMM/dd/yyyy";
+                    worksheet.Cells[currentRow, 2].Value = dr.CustomerOrderSlip?.CustomerName;
+                    worksheet.Cells[currentRow, 3].Value = dr.CustomerOrderSlip?.CustomerType;
+                    worksheet.Cells[currentRow, 4].Value = dr.DeliveryReceiptNo;
+                    worksheet.Cells[currentRow, 5].Value = dr.PurchaseOrder!.ProductName;
+                    worksheet.Cells[currentRow, 6].Value = dr.CustomerOrderSlip?.DeliveredPrice;
+                    worksheet.Cells[currentRow, 7].Value = dr.Quantity;
+                    worksheet.Cells[currentRow, 8].Value = dr.CustomerOrderSlip?.Depot;
+                    worksheet.Cells[currentRow, 9].Value = dr.PurchaseOrder?.PurchaseOrderNo;
+                    worksheet.Cells[currentRow, 10].Value = dr.AuthorityToLoadNo;
+                    worksheet.Cells[currentRow, 11].Value = dr.CustomerOrderSlip?.CustomerOrderSlipNo;
+                    worksheet.Cells[currentRow, 12].Value = dr.Hauler?.SupplierName;
+                    worksheet.Cells[currentRow, 13].Value = dr.PurchaseOrder?.SupplierName;
+                    worksheet.Cells[currentRow, 14].Value = dr.CustomerOrderSlip?.DeliveryOption;
+                    worksheet.Cells[currentRow, 15].Value = freightCharge;
+                    worksheet.Cells[currentRow, 16].Value = ecc;
+                    worksheet.Cells[currentRow, 17].Value = totalFreightAmount;
+                    worksheet.Cells[currentRow, 18].Value = dr.CustomerOrderSlip?.OldCosNo;
+                    worksheet.Cells[currentRow, 19].Value = dr.ManualDrNo;
+                    worksheet.Cells[currentRow, 20].Value = rr?.ReceivingReportNo;
+                    worksheet.Cells[currentRow, 21].Value = rr?.QuantityReceived != 0
+                        ? rr?.Amount / rr?.QuantityReceived
+                        : 0m;
+                    worksheet.Cells[currentRow, 22].Value = rr?.SupplierInvoiceNumber;
+                    worksheet.Cells[currentRow, 23].Value = rr?.WithdrawalCertificate;
+
+                    if (viewModel.ReportType == "Delivered")
+                    {
+                        worksheet.Cells[currentRow, 24].Value = dr.DeliveredDate;
+                        worksheet.Cells[currentRow, 24].Style.Numberformat.Format = "MMM/dd/yyyy";
+                        worksheet.Cells[currentRow, 25].Value = dr.Status == nameof(DRStatus.PendingDelivery) ? "IN TRANSIT" : dr.Status.ToUpper();
                     }
                     else
                     {
-                        worksheet.Cells[currentRow, 1].Value = dr.Date;
-                        worksheet.Cells[currentRow, 1].Style.Numberformat.Format = "MMM/dd/yyyy";
-                        worksheet.Cells[currentRow, 2].Value = dr.CustomerOrderSlip?.CustomerName;
-                        worksheet.Cells[currentRow, 3].Value = dr.CustomerOrderSlip?.CustomerType;
-                        worksheet.Cells[currentRow, 4].Value = dr.DeliveryReceiptNo;
-                        worksheet.Cells[currentRow, 5].Value = dr.PurchaseOrder!.ProductName;
-                        worksheet.Cells[currentRow, 6].Value = dr.CustomerOrderSlip?.DeliveredPrice;
-                        worksheet.Cells[currentRow, 7].Value = dr.Quantity;
-                        worksheet.Cells[currentRow, 8].Value = dr.CustomerOrderSlip?.Depot;
-                        worksheet.Cells[currentRow, 9].Value = dr.PurchaseOrder?.PurchaseOrderNo;
-                        worksheet.Cells[currentRow, 10].Value = dr.AuthorityToLoadNo;
-                        worksheet.Cells[currentRow, 11].Value = dr.CustomerOrderSlip?.CustomerOrderSlipNo;
-                        worksheet.Cells[currentRow, 12].Value = dr.Hauler?.SupplierName;
-                        worksheet.Cells[currentRow, 13].Value = dr.PurchaseOrder?.SupplierName;
-                        worksheet.Cells[currentRow, 14].Value = dr.CustomerOrderSlip?.DeliveryOption;
-                        worksheet.Cells[currentRow, 15].Value = freightCharge;
-                        worksheet.Cells[currentRow, 16].Value = ecc;
-                        worksheet.Cells[currentRow, 17].Value = totalFreightAmount;
-                        worksheet.Cells[currentRow, 18].Value = dr.CustomerOrderSlip?.OldCosNo;
-                        worksheet.Cells[currentRow, 19].Value = dr.ManualDrNo;
-                        worksheet.Cells[currentRow, 20].Value = rr?.ReceivingReportNo;
-                        worksheet.Cells[currentRow, 21].Value = rr?.QuantityReceived != 0
-                            ? rr?.Amount / rr?.QuantityReceived
-                            : 0m;
-                        worksheet.Cells[currentRow, 22].Value = rr?.SupplierInvoiceNumber;
-                        worksheet.Cells[currentRow, 23].Value = rr?.WithdrawalCertificate;
-
-                        if (viewModel.ReportType == "Delivered")
+                        if (dr.HasReceivingReport)
                         {
-                            worksheet.Cells[currentRow, 24].Value = dr.DeliveredDate;
+                            liftedQuantity = rr?.QuantityReceived ?? 0m;
+                            worksheet.Cells[currentRow, 24].Value = rr?.Date;
                             worksheet.Cells[currentRow, 24].Style.Numberformat.Format = "MMM/dd/yyyy";
-                            worksheet.Cells[currentRow, 25].Value = dr.Status == nameof(DRStatus.PendingDelivery) ? "IN TRANSIT" : dr.Status.ToUpper();
+                            worksheet.Cells[currentRow, 25].Value = liftedQuantity;
+                            worksheet.Cells[currentRow, 25].Style.Numberformat.Format = currencyFormatTwoDecimal;
                         }
-                        else
-                        {
-                            if (dr.HasReceivingReport)
-                            {
-                                liftedQuantity = rr?.QuantityReceived ?? 0m;
-                                worksheet.Cells[currentRow, 24].Value = rr?.Date;
-                                worksheet.Cells[currentRow, 24].Style.Numberformat.Format = "MMM/dd/yyyy";
-                                worksheet.Cells[currentRow, 25].Value = liftedQuantity;
-                                worksheet.Cells[currentRow, 25].Style.Numberformat.Format = currencyFormatTwoDecimal;
-                            }
-                        }
-
-                        worksheet.Cells[currentRow, 26].Value = totalAmount;
-                        worksheet.Cells[currentRow, 26].Style.Numberformat.Format = currencyFormatTwoDecimal;
-
-                        if (showVoidCancelColumns)
-                        {
-                            worksheet.Cells[currentRow, 27].Value = dr.VoidedBy;
-                            worksheet.Cells[currentRow, 28].Value = dr.VoidedDate;
-                            worksheet.Cells[currentRow, 28].Style.Numberformat.Format = "MMM/dd/yyyy";
-                        }
-
-                        currentRow++;
                     }
+
+                    worksheet.Cells[currentRow, 26].Value = totalAmount;
+                    worksheet.Cells[currentRow, 26].Style.Numberformat.Format = currencyFormatTwoDecimal;
+
+                    if (showVoidCancelColumns)
+                    {
+                        worksheet.Cells[currentRow, 27].Value = dr.VoidedBy;
+                        worksheet.Cells[currentRow, 28].Value = dr.VoidedDate;
+                        worksheet.Cells[currentRow, 28].Style.Numberformat.Format = "MMM/dd/yyyy";
+                    }
+
+                    currentRow++;
 
                     grandTotalQuantity += quantity;
                     grandSumOfTotalFreightAmount += totalFreightAmount;
@@ -1327,28 +1325,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 // Grand Total row
                 worksheet.Cells[currentRow, 5].Value = "GRAND TOTAL";
 
-                if (viewModel.ReportType == "Delivered" && dateRangeType == "AsOf")
-                {
-                    // Don't add record of other dates if entry is "as of" and "delivered"
-                    var entriesToday = deliveryReceipts.Where(t => t.Date == viewModel.DateFrom).ToList();
-                    worksheet.Cells[currentRow, 7].Value = entriesToday.Sum(dr => dr.Quantity);
-                    worksheet.Cells[currentRow, 17].Value = entriesToday.Sum(dr => dr.FreightAmount);
-                }
-                else
-                {
-                    worksheet.Cells[currentRow, 7].Value = grandTotalQuantity;
-                    worksheet.Cells[currentRow, 17].Value = grandSumOfTotalFreightAmount;
+                worksheet.Cells[currentRow, 7].Value = grandTotalQuantity;
+                worksheet.Cells[currentRow, 17].Value = grandSumOfTotalFreightAmount;
 
-                    if (viewModel.ReportType != "Delivered" && totalLiftedQuantity != 0)
-                    {
-                        worksheet.Cells[currentRow, 25].Value = totalLiftedQuantity;
-                        worksheet.Cells[currentRow, 25].Style.Numberformat.Format = currencyFormatTwoDecimal;
-                    }
-                    if (grandTotalAmount != 0)
-                    {
-                        worksheet.Cells[currentRow, 26].Value = grandTotalAmount;
-                        worksheet.Cells[currentRow, 26].Style.Numberformat.Format = currencyFormatTwoDecimal;
-                    }
+                if (viewModel.ReportType != "Delivered" && totalLiftedQuantity != 0)
+                {
+                    worksheet.Cells[currentRow, 25].Value = totalLiftedQuantity;
+                    worksheet.Cells[currentRow, 25].Style.Numberformat.Format = currencyFormatTwoDecimal;
+                }
+                if (grandTotalAmount != 0)
+                {
+                    worksheet.Cells[currentRow, 26].Value = grandTotalAmount;
+                    worksheet.Cells[currentRow, 26].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 }
 
                 // Adding borders and bold styling to the total row
@@ -1423,14 +1411,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[startOfSummary, 11].Value = "TOTAL TODAY";
                         worksheet.Cells[startOfSummary, 11].Style.Font.Bold = true;
 
-                        var totalToday = customerType.Where(t => t.Date == viewModel.DateFrom).Sum(dr => dr.Quantity);
+                        var totalToday = customerType.Where(t => t.DeliveredDate == viewModel.DateFrom).Sum(dr => dr.Quantity);
                         worksheet.Cells[startOfSummary, 12].Value = totalToday != 0 ? totalToday : 0m;
                         worksheet.Cells[startOfSummary, 12].Style.Numberformat.Format = currencyFormatTwoDecimal;
 
                         int columnOne = 13;
                         foreach (var productName in productList)
                         {
-                            var totalProductToday = customerType.Where(x => x.Date == viewModel.DateFrom && x.PurchaseOrder?.Product?.ProductName == productName)
+                            var totalProductToday = customerType.Where(x => x.DeliveredDate == viewModel.DateFrom && x.PurchaseOrder?.Product?.ProductName == productName)
                                 .Sum(dr => dr.Quantity);
                             worksheet.Cells[startOfSummary, columnOne].Value = totalProductToday != 0 ? totalProductToday : 0m;
                             worksheet.Cells[startOfSummary, columnOne].Style.Numberformat.Format = currencyFormatTwoDecimal;
@@ -1445,14 +1433,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[startOfSummary, 11].Value = "CUM. AS OF YESTERDAY";
                         worksheet.Cells[startOfSummary, 11].Style.Font.Bold = true;
 
-                        var totalYesterday = customerType.Where(t => t.Date < viewModel.DateFrom).Sum(dr => dr.Quantity);
+                        var totalYesterday = customerType.Where(t => t.DeliveredDate < viewModel.DateFrom).Sum(dr => dr.Quantity);
                         worksheet.Cells[startOfSummary, 12].Value = totalYesterday != 0 ? totalYesterday : 0m;
                         worksheet.Cells[startOfSummary, 12].Style.Numberformat.Format = currencyFormatTwoDecimal;
 
                         int columnTwo = 13;
                         foreach (var productName in productList)
                         {
-                            var totalProductYesterday = customerType.Where(x => x.Date < viewModel.DateFrom && x.PurchaseOrder?.Product?.ProductName == productName).Sum(dr => dr.Quantity);
+                            var totalProductYesterday = customerType.Where(x => x.DeliveredDate < viewModel.DateFrom && x.PurchaseOrder?.Product?.ProductName == productName).Sum(dr => dr.Quantity);
                             worksheet.Cells[startOfSummary, columnTwo].Value = totalProductYesterday != 0 ? totalProductYesterday : 0m;
                             worksheet.Cells[startOfSummary, columnTwo].Style.Numberformat.Format = currencyFormatTwoDecimal;
                             columnTwo++;
@@ -1508,14 +1496,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[startOfSummary, 11].Value = "TOTAL TODAY";
                     worksheet.Cells[startOfSummary, 11].Style.Font.Bold = true;
 
-                    var totalTodayOverAll = deliveryReceipts.Where(t => t.Date == viewModel.DateFrom).Sum(dr => dr.Quantity);
+                    var totalTodayOverAll = deliveryReceipts.Where(t => t.DeliveredDate == viewModel.DateFrom).Sum(dr => dr.Quantity);
                     worksheet.Cells[startOfSummary, 12].Value = totalTodayOverAll != 0 ? totalTodayOverAll : 0m;
                     worksheet.Cells[startOfSummary, 12].Style.Numberformat.Format = currencyFormatTwoDecimal;
 
                     int columnOneOverAll = 13;
                     foreach (var productName in productList)
                     {
-                        var totalProductToday = deliveryReceipts.Where(x => x.Date == viewModel.DateFrom && x.PurchaseOrder?.Product?.ProductName == productName)
+                        var totalProductToday = deliveryReceipts.Where(x => x.DeliveredDate == viewModel.DateFrom && x.PurchaseOrder?.Product?.ProductName == productName)
                             .Sum(dr => dr.Quantity);
                         worksheet.Cells[startOfSummary, columnOneOverAll].Value = totalProductToday != 0 ? totalProductToday : 0m;
                         worksheet.Cells[startOfSummary, columnOneOverAll].Style.Numberformat.Format = currencyFormatTwoDecimal;
@@ -1530,14 +1518,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[startOfSummary, 11].Value = "CUM. AS OF YESTERDAY";
                     worksheet.Cells[startOfSummary, 11].Style.Font.Bold = true;
 
-                    var totalYesterdayOverAll = deliveryReceipts.Where(t => t.Date < viewModel.DateFrom).Sum(dr => dr.Quantity);
+                    var totalYesterdayOverAll = deliveryReceipts.Where(t => t.DeliveredDate < viewModel.DateFrom).Sum(dr => dr.Quantity);
                     worksheet.Cells[startOfSummary, 12].Value = totalYesterdayOverAll != 0 ? totalYesterdayOverAll : 0m;
                     worksheet.Cells[startOfSummary, 12].Style.Numberformat.Format = currencyFormatTwoDecimal;
 
                     int columnTwoOverAll = 13;
                     foreach (var productName in productList)
                     {
-                        var totalProductYesterday = deliveryReceipts.Where(x => x.Date < viewModel.DateFrom && x.PurchaseOrder?.Product?.ProductName == productName).Sum(dr => dr.Quantity);
+                        var totalProductYesterday = deliveryReceipts.Where(x => x.DeliveredDate < viewModel.DateFrom && x.PurchaseOrder?.Product?.ProductName == productName).Sum(dr => dr.Quantity);
                         worksheet.Cells[startOfSummary, columnTwoOverAll].Value = totalProductYesterday != 0 ? totalProductYesterday : 0m;
                         worksheet.Cells[startOfSummary, columnTwoOverAll].Style.Numberformat.Format = currencyFormatTwoDecimal;
                         columnTwoOverAll++;
