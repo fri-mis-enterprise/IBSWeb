@@ -236,6 +236,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
+            if (modelHeader.PostedBy != null)
+            {
+                TempData["info"] = "Check Voucher has already been posted.";
+                return RedirectToAction(nameof(Print), new { id });
+            }
+
             var modelDetails = await _dbContext.FilprideCheckVoucherDetails
                 .Where(cvd => cvd.CheckVoucherHeaderId == modelHeader.CheckVoucherHeaderId && !cvd.IsDisplayEntry)
                 .ToListAsync(cancellationToken);

@@ -304,13 +304,15 @@ namespace IBS.Services
         {
             try
             {
-                var isAlreadyLocked = await _dbContext.FilprideSalesLockedRecordsQueues
-                    .AnyAsync(x => x.LockedDate >= periodMonth, cancellationToken);
+                var hasLockedSalesForPeriod = await _dbContext.FilprideSalesLockedRecordsQueues
+                    .AnyAsync(x => x.LockedDate == periodMonth, cancellationToken);
 
-                if (isAlreadyLocked)
+                if (hasLockedSalesForPeriod)
                 {
                     return;
                 }
+
+                await RecordUpdatedSales(periodMonth, company, cancellationToken);
 
                 var cosNotUpdatedPrice = await _dbContext.FilprideCustomerOrderSlips
                     .Include(x => x.DeliveryReceipts)
@@ -327,6 +329,10 @@ namespace IBS.Services
                     return;
                 }
 
+                var existingDeliveryReceiptIds = await _dbContext.FilprideSalesLockedRecordsQueues
+                    .Select(x => x.DeliveryReceiptId)
+                    .ToHashSetAsync(cancellationToken);
+
                 var lockedRecordQueues = new List<FilprideSalesLockedRecordsQueue>();
                 var lockedDate = periodMonth;
 
@@ -334,6 +340,11 @@ namespace IBS.Services
                 {
                     foreach (var dr in cos.DeliveryReceipts!)
                     {
+                        if (existingDeliveryReceiptIds.Contains(dr.DeliveryReceiptId))
+                        {
+                            continue;
+                        }
+
                         lockedRecordQueues.Add(new FilprideSalesLockedRecordsQueue
                         {
                             LockedDate = lockedDate,
@@ -341,7 +352,14 @@ namespace IBS.Services
                             Quantity = dr.Quantity,
                             Price = cos.DeliveredPrice
                         });
+
+                        existingDeliveryReceiptIds.Add(dr.DeliveryReceiptId);
                     }
+                }
+
+                if (lockedRecordQueues.Count == 0)
+                {
+                    return;
                 }
 
                 await _dbContext.FilprideSalesLockedRecordsQueues.AddRangeAsync(lockedRecordQueues, cancellationToken);
@@ -358,13 +376,15 @@ namespace IBS.Services
         {
             try
             {
-                var isAlreadyLocked = await _dbContext.FilpridePurchaseLockedRecordsQueues
-                    .AnyAsync(x => x.LockedDate >= periodMonth, cancellationToken);
+                var hasLockedPurchasesForPeriod = await _dbContext.FilpridePurchaseLockedRecordsQueues
+                    .AnyAsync(x => x.LockedDate == periodMonth, cancellationToken);
 
-                if (isAlreadyLocked)
+                if (hasLockedPurchasesForPeriod)
                 {
                     return;
                 }
+
+                await RecordUpdatedPurchases(periodMonth, company, cancellationToken);
 
                 var poNotUpdatedPrice = await _dbContext.FilpridePurchaseOrders
                     .Include(x => x.ReceivingReports)
@@ -381,21 +401,36 @@ namespace IBS.Services
                     return;
                 }
 
+                var existingReceivingReportIds = await _dbContext.FilpridePurchaseLockedRecordsQueues
+                    .Select(x => x.ReceivingReportId)
+                    .ToHashSetAsync(cancellationToken);
+
                 var lockedRecordQueues = new List<FilpridePurchaseLockedRecordsQueue>();
-                var lockedDate = periodMonth;
 
                 foreach (var po in poNotUpdatedPrice)
                 {
                     foreach (var rr in po.ReceivingReports!)
                     {
+                        if (existingReceivingReportIds.Contains(rr.ReceivingReportId))
+                        {
+                            continue;
+                        }
+
                         lockedRecordQueues.Add(new FilpridePurchaseLockedRecordsQueue
                         {
-                            LockedDate = lockedDate,
+                            LockedDate = periodMonth,
                             ReceivingReportId = rr.ReceivingReportId,
                             Quantity = rr.QuantityReceived,
                             Price = po.Price
                         });
+
+                        existingReceivingReportIds.Add(rr.ReceivingReportId);
                     }
+                }
+
+                if (lockedRecordQueues.Count == 0)
+                {
+                    return;
                 }
 
                 await _dbContext.FilpridePurchaseLockedRecordsQueues.AddRangeAsync(lockedRecordQueues, cancellationToken);
@@ -403,8 +438,62 @@ namespace IBS.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred while recording the not updated sales for the month.");
+                _logger.LogError(ex, "An error occurred while recording the not updated purchases for the month.");
                 throw;
+            }
+        }
+
+        private async Task RecordUpdatedSales(DateOnly periodMonth, string company, CancellationToken cancellationToken)
+        {
+            var lockedSales = await _dbContext.FilprideSalesLockedRecordsQueues
+                .Include(x => x.DeliveryReceipt)
+                .ThenInclude(x => x.CustomerOrderSlip)
+                .Where(x => x.UpdatedDate == null
+                            && x.DeliveryReceipt.Company == company
+                            && x.DeliveryReceipt.CustomerOrderSlip != null)
+                .ToListAsync(cancellationToken);
+
+            if (lockedSales.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var record in lockedSales)
+            {
+                var currentQuantity = record.DeliveryReceipt.Quantity;
+                var currentPrice = record.DeliveryReceipt.CustomerOrderSlip!.DeliveredPrice;
+
+                if (currentQuantity != record.Quantity || currentPrice != record.Price)
+                {
+                    record.UpdatedDate = periodMonth;
+                }
+            }
+        }
+
+        private async Task RecordUpdatedPurchases(DateOnly periodMonth, string company, CancellationToken cancellationToken)
+        {
+            var lockedPurchases = await _dbContext.FilpridePurchaseLockedRecordsQueues
+                .Include(x => x.ReceivingReport)
+                .ThenInclude(x => x.PurchaseOrder)
+                .Where(x => x.UpdatedDate == null
+                            && x.ReceivingReport.Company == company
+                            && x.ReceivingReport.QuantityReceived != 0)
+                .ToListAsync(cancellationToken);
+
+            if (lockedPurchases.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var record in lockedPurchases)
+            {
+                var currentQuantity = record.ReceivingReport.QuantityReceived;
+                var currentPrice = record.ReceivingReport.Amount / currentQuantity;
+
+                if (currentQuantity != record.Quantity || currentPrice != record.Price)
+                {
+                    record.UpdatedDate = periodMonth;
+                }
             }
         }
 

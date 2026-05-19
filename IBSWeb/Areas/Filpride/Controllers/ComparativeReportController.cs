@@ -78,15 +78,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var previousMonth = monthDate.AddMonths(-1);
-
                 if (category == "Sales")
                 {
                     var lockedSales = await _dbContext.FilprideSalesLockedRecordsQueues
                         .Include(x => x.DeliveryReceipt)
                         .ThenInclude(x => x.CustomerOrderSlip)
-                        .Where(x => x.LockedDate.Month == previousMonth.Month
-                                    && x.LockedDate.Year == previousMonth.Year)
+                        .Where(x => x.UpdatedDate.HasValue
+                                    && x.UpdatedDate.Value.Month == monthDate.Month
+                                    && x.UpdatedDate.Value.Year == monthDate.Year)
                         .OrderBy(x => x.DeliveryReceiptId)
                         .ToListAsync(cancellationToken);
 
@@ -148,6 +147,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     columns.RelativeColumn();
                                     columns.RelativeColumn();
                                     columns.RelativeColumn();
+                                    columns.RelativeColumn();
                                     columns.ConstantColumn(5);
                                     columns.RelativeColumn();
                                     columns.RelativeColumn();
@@ -164,12 +164,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                 table.Header(header =>
                                 {
-                                    header.Cell().ColumnSpan(4).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("CURRENT").SemiBold();
+                                    header.Cell().ColumnSpan(5).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("CURRENT").SemiBold();
                                     header.Cell();
                                     header.Cell().ColumnSpan(3).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("PREVIOUS").SemiBold();
                                     header.Cell();
                                     header.Cell().ColumnSpan(3).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("INCREASE/(DECREASE)").SemiBold();
 
+                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Delivered Date").SemiBold();
                                     header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Reference").SemiBold();
                                     header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Quantity").SemiBold();
                                     header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Price").SemiBold();
@@ -208,7 +209,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     var priceDifference = currentPrice - previousPrice;
                                     var totalDifference = currentTotal - previousTotal;
 
-                                    if (quantityDifference == 0 && priceDifference == 0 && totalDifference ==0)
+                                    if (quantityDifference == 0 && priceDifference == 0 && totalDifference == 0)
                                     {
                                         continue;
                                     }
@@ -223,6 +224,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     sumPriceDifference += priceDifference;
                                     sumTotalDifference += totalDifference;
 
+                                    table.Cell().Border(0.5f).Padding(3).Text(record.DeliveryReceipt.DeliveredDate?.ToString("MM/dd/yyyy"));
                                     table.Cell().Border(0.5f).Padding(3).Text(record.DeliveryReceipt.DeliveryReceiptNo);
                                     table.Cell().Border(0.5f).Padding(3).AlignRight().Text(currentQuantity.ToString(SD.Two_Decimal_Format));
                                     table.Cell().Border(0.5f).Padding(3).AlignRight().Text(currentPrice.ToString(SD.Four_Decimal_Format));
@@ -245,6 +247,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                 #region -- Create Table Cell for Totals
 
+                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3);
                                 table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text("TOTALS").SemiBold();
                                 table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumCurrentQuantity.ToString(SD.Two_Decimal_Format));
                                 table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumCurrentPrice.ToString(SD.Four_Decimal_Format));
@@ -295,8 +298,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .Include(x => x.ReceivingReport)
                         .ThenInclude(x => x.PurchaseOrder)
                         .ThenInclude(x => x!.ActualPrices)
-                        .Where(x => x.LockedDate.Month == previousMonth.Month
-                                    && x.LockedDate.Year == previousMonth.Year)
+                        .Where(x => x.UpdatedDate.HasValue
+                                    && x.UpdatedDate.Value.Month == monthDate.Month
+                                    && x.UpdatedDate.Value.Year == monthDate.Year)
                         .OrderBy(x => x.ReceivingReportId)
                         .ToListAsync(cancellationToken);
 
@@ -358,6 +362,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     columns.RelativeColumn();
                                     columns.RelativeColumn();
                                     columns.RelativeColumn();
+                                    columns.RelativeColumn();
                                     columns.ConstantColumn(5);
                                     columns.RelativeColumn();
                                     columns.RelativeColumn();
@@ -374,12 +379,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                 table.Header(header =>
                                 {
-                                    header.Cell().ColumnSpan(4).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("CURRENT").SemiBold();
+                                    header.Cell().ColumnSpan(5).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("CURRENT").SemiBold();
                                     header.Cell();
                                     header.Cell().ColumnSpan(3).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("PREVIOUS").SemiBold();
                                     header.Cell();
                                     header.Cell().ColumnSpan(3).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("INCREASE/(DECREASE)").SemiBold();
 
+                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Lifting Date").SemiBold();
                                     header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Reference").SemiBold();
                                     header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Quantity").SemiBold();
                                     header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Price").SemiBold();
@@ -433,6 +439,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     sumPriceDifference += priceDifference;
                                     sumTotalDifference += totalDifference;
 
+                                    table.Cell().Border(0.5f).Padding(3).Text(record.ReceivingReport.Date.ToString("MM/dd/yyyy"));
                                     table.Cell().Border(0.5f).Padding(3).Text(record.ReceivingReport.ReceivingReportNo);
                                     table.Cell().Border(0.5f).Padding(3).AlignRight().Text(currentQuantity.ToString(SD.Two_Decimal_Format));
                                     table.Cell().Border(0.5f).Padding(3).AlignRight().Text(currentPrice.ToString(SD.Four_Decimal_Format));
@@ -455,6 +462,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                 #region -- Create Table Cell for Totals
 
+                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3);
                                 table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text("TOTALS").SemiBold();
                                 table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumCurrentQuantity.ToString(SD.Two_Decimal_Format));
                                 table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumCurrentPrice.ToString(SD.Four_Decimal_Format));

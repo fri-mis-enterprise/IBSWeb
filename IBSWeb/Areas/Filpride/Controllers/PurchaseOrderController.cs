@@ -535,6 +535,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return NotFound();
                 }
 
+                if (model.PostedBy != null)
+                {
+                    TempData["info"] = "Purchase Order has already been posted.";
+                    return RedirectToAction(nameof(Print), new { id });
+                }
+
                 model.PostedBy = GetUserFullName();
                 model.PostedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.Status = nameof(Status.Posted);

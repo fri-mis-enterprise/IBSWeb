@@ -105,6 +105,134 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .SumAsync(d => (decimal?)d.Credit, cancellationToken) ?? 0m;
         }
 
+        private static List<string> ParseAdvanceReferenceNumbers(string? advancesCvNo)
+        {
+            return advancesCvNo?
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList() ?? [];
+        }
+
+        private async Task<List<FilprideCheckVoucherHeader>> GetAdvanceHeadersAsync(
+            IEnumerable<string> referenceNumbers,
+            string company,
+            int? supplierId,
+            CancellationToken cancellationToken)
+        {
+            var references = referenceNumbers
+                .Where(reference => !string.IsNullOrWhiteSpace(reference))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (references.Count == 0)
+            {
+                return [];
+            }
+
+            return await _dbContext.FilprideCheckVoucherHeaders
+                .Where(cv =>
+                    references.Contains(cv.CheckVoucherHeaderNo!) &&
+                    cv.Company == company &&
+                    (!supplierId.HasValue || cv.SupplierId == supplierId) &&
+                    cv.IsAdvances &&
+                    cv.Status == nameof(CheckVoucherPaymentStatus.Posted))
+                .OrderBy(cv => cv.Date)
+                .ThenBy(cv => cv.CheckVoucherHeaderNo)
+                .ToListAsync(cancellationToken);
+        }
+
+        private static decimal GetAvailableAdvanceAmount(IEnumerable<FilprideCheckVoucherHeader> advanceHeaders)
+        {
+            return advanceHeaders.Sum(advance => Math.Max(0m, advance.CheckAmount - advance.AmountPaid));
+        }
+
+        private async Task ApplyAdvanceAmountToReferencesAsync(
+            string? advancesReference,
+            string company,
+            decimal appliedAdvanceAmount,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(advancesReference) || appliedAdvanceAmount <= 0)
+            {
+                return;
+            }
+
+            var references = ParseAdvanceReferenceNumbers(advancesReference);
+            var advanceHeaders = await GetAdvanceHeadersAsync(references, company, null, cancellationToken);
+
+            if (advanceHeaders.Count != references.Count)
+            {
+                throw new NullReferenceException($"One or more advance check vouchers were not found. Reference: {advancesReference}");
+            }
+
+            var remainingAmount = appliedAdvanceAmount;
+            foreach (var advance in advanceHeaders)
+            {
+                if (remainingAmount <= 0)
+                {
+                    break;
+                }
+
+                var availableAdvanceAmount = Math.Max(0m, advance.CheckAmount - advance.AmountPaid);
+                if (availableAdvanceAmount <= 0)
+                {
+                    continue;
+                }
+
+                var amountToApply = Math.Min(availableAdvanceAmount, remainingAmount);
+                advance.AmountPaid += amountToApply;
+                remainingAmount -= amountToApply;
+            }
+
+            if (remainingAmount > 0)
+            {
+                throw new InvalidOperationException("Applied advance amount exceeds the available advance balance.");
+            }
+        }
+
+        private async Task RevertAdvanceAmountFromReferencesAsync(
+            string? advancesReference,
+            string company,
+            decimal appliedAdvanceAmount,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(advancesReference) || appliedAdvanceAmount <= 0)
+            {
+                return;
+            }
+
+            var references = ParseAdvanceReferenceNumbers(advancesReference);
+            var advanceHeaders = await GetAdvanceHeadersAsync(references, company, null, cancellationToken);
+
+            if (advanceHeaders.Count != references.Count)
+            {
+                throw new NullReferenceException($"One or more advance check vouchers were not found. Reference: {advancesReference}");
+            }
+
+            var remainingAmount = appliedAdvanceAmount;
+            foreach (var advance in advanceHeaders.OrderByDescending(cv => cv.Date).ThenByDescending(cv => cv.CheckVoucherHeaderNo))
+            {
+                if (remainingAmount <= 0)
+                {
+                    break;
+                }
+
+                if (advance.AmountPaid <= 0)
+                {
+                    continue;
+                }
+
+                var amountToRevert = Math.Min(advance.AmountPaid, remainingAmount);
+                advance.AmountPaid = Math.Max(0m, advance.AmountPaid - amountToRevert);
+                remainingAmount -= amountToRevert;
+            }
+
+            if (remainingAmount > 0)
+            {
+                throw new InvalidOperationException("Applied advance amount exceeds the posted advance balance.");
+            }
+        }
+
         private static decimal GetDetailAccountAmount(IEnumerable<FilprideCheckVoucherDetail> details, string accountNumber, bool isDebit)
         {
             return details
@@ -363,24 +491,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return View(viewModel);
                 }
 
-                FilprideCheckVoucherHeader? advanceHeader = null;
                 if (!string.IsNullOrWhiteSpace(viewModel.AdvancesCVNo) && appliedAdvanceAmount > 0)
                 {
-                    advanceHeader = await _unitOfWork.FilprideCheckVoucher.GetAsync(cv =>
-                        cv.CheckVoucherHeaderNo == viewModel.AdvancesCVNo &&
-                        cv.Company == companyClaims &&
-                        cv.SupplierId == viewModel.SupplierId &&
-                        cv.IsAdvances &&
-                        cv.Status == nameof(CheckVoucherPaymentStatus.Posted), cancellationToken);
+                    var advanceReferences = ParseAdvanceReferenceNumbers(viewModel.AdvancesCVNo);
+                    var advanceHeaders = await GetAdvanceHeadersAsync(advanceReferences, companyClaims, viewModel.SupplierId, cancellationToken);
 
-                    if (advanceHeader == null)
+                    if (advanceHeaders.Count != advanceReferences.Count)
                     {
-                        ModelState.AddModelError(nameof(viewModel.AdvancesCVNo), "Selected advances voucher was not found or is no longer available.");
+                        ModelState.AddModelError(nameof(viewModel.AdvancesCVNo), "One or more selected advances vouchers were not found or are no longer available.");
                         TempData["warning"] = "The information provided was invalid.";
                         return View(viewModel);
                     }
 
-                    var availableAdvanceAmount = Math.Max(0m, advanceHeader.CheckAmount - advanceHeader.AmountPaid);
+                    var availableAdvanceAmount = GetAvailableAdvanceAmount(advanceHeaders);
                     if (appliedAdvanceAmount > availableAdvanceAmount)
                     {
                         ModelState.AddModelError(nameof(viewModel.AppliedAdvanceAmount), "Applied advance amount cannot exceed available advances.");
@@ -1057,24 +1180,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return View(viewModel);
                 }
 
-                FilprideCheckVoucherHeader? advanceHeader = null;
                 if (!string.IsNullOrWhiteSpace(viewModel.AdvancesCVNo) && appliedAdvanceAmount > 0)
                 {
-                    advanceHeader = await _unitOfWork.FilprideCheckVoucher.GetAsync(cv =>
-                        cv.CheckVoucherHeaderNo == viewModel.AdvancesCVNo &&
-                        cv.Company == companyClaims &&
-                        cv.SupplierId == viewModel.SupplierId &&
-                        cv.IsAdvances &&
-                        cv.Status == nameof(CheckVoucherPaymentStatus.Posted), cancellationToken);
+                    var advanceReferences = ParseAdvanceReferenceNumbers(viewModel.AdvancesCVNo);
+                    var advanceHeaders = await GetAdvanceHeadersAsync(advanceReferences, companyClaims, viewModel.SupplierId, cancellationToken);
 
-                    if (advanceHeader == null)
+                    if (advanceHeaders.Count != advanceReferences.Count)
                     {
-                        ModelState.AddModelError(nameof(viewModel.AdvancesCVNo), "Selected advances voucher was not found or is no longer available.");
+                        ModelState.AddModelError(nameof(viewModel.AdvancesCVNo), "One or more selected advances vouchers were not found or are no longer available.");
                         TempData["warning"] = "The information provided was invalid.";
                         return View(viewModel);
                     }
 
-                    var availableAdvanceAmount = Math.Max(0m, advanceHeader.CheckAmount - advanceHeader.AmountPaid);
+                    var availableAdvanceAmount = GetAvailableAdvanceAmount(advanceHeaders);
                     if (appliedAdvanceAmount > availableAdvanceAmount)
                     {
                         ModelState.AddModelError(nameof(viewModel.AppliedAdvanceAmount), "Applied advance amount cannot exceed available advances.");
@@ -1538,6 +1656,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
+            if (modelHeader.PostedBy != null)
+            {
+                TempData["info"] = "Check Voucher has already been posted.";
+                return RedirectToAction(nameof(Print), new { id });
+            }
+
             var modelDetails = await _dbContext.FilprideCheckVoucherDetails
                 .Where(cvd => cvd.CheckVoucherHeaderId == modelHeader.CheckVoucherHeaderId && !cvd.IsDisplayEntry)
                 .ToListAsync(cancellationToken);
@@ -1623,27 +1747,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #region Add amount paid for the advances if applicable
 
                 var appliedAdvanceAmount = GetAppliedAdvanceAmount(modelDetails);
-                if (modelHeader.Reference != null && appliedAdvanceAmount > 0)
-                {
-                    var advances = await _unitOfWork.FilprideCheckVoucher
-                        .GetAsync(cv =>
-                                cv.CheckVoucherHeaderNo == modelHeader.Reference &&
-                                cv.Company == modelHeader.Company,
-                            cancellationToken);
-
-                    if (advances == null)
-                    {
-                        throw new NullReferenceException($"Advance check voucher not found. Check Voucher Header No: {modelHeader.Reference}");
-                    }
-
-                    var availableAdvanceAmount = Math.Max(0m, advances.CheckAmount - advances.AmountPaid);
-                    if (appliedAdvanceAmount > availableAdvanceAmount)
-                    {
-                        throw new InvalidOperationException("Applied advance amount exceeds the available advance balance.");
-                    }
-
-                    advances.AmountPaid += appliedAdvanceAmount;
-                }
+                await ApplyAdvanceAmountToReferencesAsync(modelHeader.Reference, modelHeader.Company, appliedAdvanceAmount, cancellationToken);
 
                 #endregion Add amount paid for the advances if applicable
 
@@ -1845,21 +1949,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #region -- Revert the amount paid of advances
 
                 var appliedAdvanceAmount = await GetAppliedAdvanceAmountAsync(model.CheckVoucherHeaderId, cancellationToken);
-                if (model.Reference != null && appliedAdvanceAmount > 0)
-                {
-                    var advances = await _unitOfWork.FilprideCheckVoucher
-                        .GetAsync(cv =>
-                                cv.CheckVoucherHeaderNo == model.Reference &&
-                                cv.Company == model.Company,
-                            cancellationToken);
-
-                    if (advances == null)
-                    {
-                        return NotFound();
-                    }
-
-                    advances.AmountPaid = Math.Max(0m, advances.AmountPaid - appliedAdvanceAmount);
-                }
+                await RevertAdvanceAmountFromReferencesAsync(model.Reference, model.Company, appliedAdvanceAmount, cancellationToken);
 
                 #endregion -- Revert the amount paid of advances
 
@@ -1951,21 +2041,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #region -- Revert the amount paid of advances
 
                 var appliedAdvanceAmount = await GetAppliedAdvanceAmountAsync(cvHeader.CheckVoucherHeaderId, cancellationToken);
-                if (cvHeader.Reference != null && appliedAdvanceAmount > 0)
-                {
-                    var advances = await _unitOfWork.FilprideCheckVoucher
-                        .GetAsync(cv =>
-                                cv.CheckVoucherHeaderNo == cvHeader.Reference &&
-                                cv.Company == cvHeader.Company,
-                            cancellationToken);
-
-                    if (advances == null)
-                    {
-                        return NotFound();
-                    }
-
-                    advances.AmountPaid = Math.Max(0m, advances.AmountPaid - appliedAdvanceAmount);
-                }
+                await RevertAdvanceAmountFromReferencesAsync(cvHeader.Reference, cvHeader.Company, appliedAdvanceAmount, cancellationToken);
 
                 #endregion -- Revert the amount paid of advances
 
@@ -4292,55 +4368,75 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             bool hasCodOrPrepaid = false;
             decimal advanceAmount = 0;
-            string advanceCvNo = string.Empty;
+            var advanceCvNos = new List<string>();
 
             var companyClaims = await GetCompanyClaimAsync();
+            var processedSupplierIds = new HashSet<int>();
 
             foreach (var poNumber in poNumbers)
             {
                 var po = await _unitOfWork.FilpridePurchaseOrder
                     .GetAsync(p => p.PurchaseOrderNo == poNumber && p.Company == companyClaims, cancellationToken);
 
-                if (po == null || (po.Terms != SD.Terms_Cod && po.Terms != SD.Terms_Prepaid) || advanceAmount != 0)
+                if (po == null || (po.Terms != SD.Terms_Cod && po.Terms != SD.Terms_Prepaid))
                 {
                     continue;
                 }
 
-                var (cvNo, amount) = await CalculateAdvanceAmount(po.SupplierId);
-                advanceAmount += amount;
-                advanceCvNo = cvNo;
-
-                if (string.IsNullOrEmpty(advanceCvNo) || amount <= 0)
-                {
-                    continue;
-                }
-
-                advanceCvNo = cvNo;
                 hasCodOrPrepaid = true;
+                if (!processedSupplierIds.Add(po.SupplierId))
+                {
+                    continue;
+                }
+
+                var (cvNos, amount) = await CalculateAdvanceAmount(po.SupplierId, cancellationToken);
+                advanceAmount += amount;
+
+                if (amount <= 0)
+                {
+                    continue;
+                }
+
+                advanceCvNos.AddRange(ParseAdvanceReferenceNumbers(cvNos));
             }
 
-            return Json(new { hasCodOrPrepaid, advanceAmount, advanceCVNo = advanceCvNo });
+            return Json(new
+            {
+                hasCodOrPrepaid,
+                advanceAmount,
+                advanceCVNo = string.Join(", ", advanceCvNos.Distinct(StringComparer.OrdinalIgnoreCase))
+            });
         }
 
-        private async Task<(string CVNo, decimal Amount)> CalculateAdvanceAmount(int supplierId)
+        private async Task<(string CVNo, decimal Amount)> CalculateAdvanceAmount(int supplierId, CancellationToken cancellationToken)
         {
             var companyClaims = await GetCompanyClaimAsync();
-            var advancesVoucher = await _dbContext.FilprideCheckVoucherDetails
+            var advancesVouchers = await _dbContext.FilprideCheckVoucherDetails
                 .Include(cv => cv.CheckVoucherHeader)
-                .FirstOrDefaultAsync(cv =>
-                        cv.CheckVoucherHeader!.SupplierId == supplierId &&
-                        cv.CheckVoucherHeader.IsAdvances &&
-                        cv.CheckVoucherHeader.Total > cv.CheckVoucherHeader.AmountPaid &&
-                        cv.CheckVoucherHeader.Status == nameof(CheckVoucherPaymentStatus.Posted) &&
-                        cv.AccountNo == _advancesToSupplierAccountNo &&
-                        cv.CheckVoucherHeader.Company == companyClaims);
+                .Where(cv =>
+                    cv.CheckVoucherHeader!.SupplierId == supplierId &&
+                    cv.CheckVoucherHeader.IsAdvances &&
+                    cv.CheckVoucherHeader.Total > cv.CheckVoucherHeader.AmountPaid &&
+                    cv.CheckVoucherHeader.Status == nameof(CheckVoucherPaymentStatus.Posted) &&
+                    cv.AccountNo == _advancesToSupplierAccountNo &&
+                    cv.CheckVoucherHeader.Company == companyClaims)
+                .OrderBy(cv => cv.CheckVoucherHeader!.Date)
+                .ThenBy(cv => cv.CheckVoucherHeader!.CheckVoucherHeaderNo)
+                .ToListAsync(cancellationToken);
 
-            if (advancesVoucher == null)
+            if (advancesVouchers.Count == 0)
             {
                 return (string.Empty, 0);
             }
 
-            return (advancesVoucher.CheckVoucherHeader!.CheckVoucherHeaderNo!, advancesVoucher.CheckVoucherHeader.CheckAmount - advancesVoucher.CheckVoucherHeader.AmountPaid);
+            var advanceHeaders = advancesVouchers
+                .Select(cv => cv.CheckVoucherHeader!)
+                .DistinctBy(cv => cv.CheckVoucherHeaderId)
+                .ToList();
+
+            return (
+                string.Join(", ", advanceHeaders.Select(cv => cv.CheckVoucherHeaderNo)),
+                GetAvailableAdvanceAmount(advanceHeaders));
         }
 
         public IActionResult CheckNoIsExist(string checkNo, int? cvId)

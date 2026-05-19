@@ -3,6 +3,7 @@ using System;
 using IBS.DataAccess.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IBS.DataAccess.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260514004826_InitialPostCleanUp")]
+    partial class InitialPostCleanUp
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -5543,52 +5546,6 @@ namespace IBS.DataAccess.Migrations
                         .HasDatabaseName("ix_companies_company_name");
 
                     b.ToTable("companies", (string)null);
-                });
-
-            modelBuilder.Entity("IBS.Models.MasterFile.DepartmentAccess", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("action");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("created_date");
-
-                    b.PrimitiveCollection<string[]>("Department")
-                        .IsRequired()
-                        .HasColumnType("text[]")
-                        .HasColumnName("department");
-
-                    b.Property<string>("EditedBy")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("edited_by");
-
-                    b.Property<DateTime>("EditedDate")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("edited_date");
-
-                    b.Property<string>("Module")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("module");
-
-                    b.HasKey("Id")
-                        .HasName("pk_department_accesses");
-
-                    b.ToTable("department_accesses", (string)null);
                 });
 
             modelBuilder.Entity("IBS.Models.MasterFile.Product", b =>

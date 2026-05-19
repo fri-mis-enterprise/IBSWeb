@@ -14,6 +14,9 @@ namespace IBS.Models.Filpride
         [Column(TypeName = "date")]
         public DateOnly LockedDate { get; set; }
 
+        [Column(TypeName = "date")]
+        public DateOnly? UpdatedDate { get; set; }
+
         public int ReceivingReportId { get; set; }
 
         [ForeignKey(nameof(ReceivingReportId))]

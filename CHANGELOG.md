@@ -6,6 +6,81 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v2.6.1] - 2026-05-19
+
+### Changed
+- Added duplicate-action guards to prevent reposting or re-approving records across affected Placement and Filpride posting workflows, including check vouchers, collection receipts, credit/debit memos, delivery receipts, journal vouchers, provisional receipts, purchase orders, receiving reports, sales invoices, and service invoices.
+- Added duplicate-action guards for Filpride delivery receipt delivered and lifting-date recording flows to stop repeated processing once those actions have already been completed.
+
+### Fixed
+- Fixed the Sales Invoice posting closed-period validation message to say `Cannot post this record` instead of `Cannot unpost this record`.
+
+---
+
+## [v2.6.0] - 2026-05-19
+
+### Added
+- Added support for generating the Filpride inventory report for all products, including grouped product sections and per-product totals in the PDF and Excel outputs.
+
+### Changed
+- Updated the Filpride inventory report filters so product and PO selection can be left blank to generate all matching records for the selected month.
+
+### Fixed
+- Fixed Filpride dispatch report delivered `As Of` filtering to use `DeliveredDate` in the PDF and Excel outputs instead of the transaction date.
+- Fixed Filpride dispatch report delivered `As Of` totals and summary sections to include only records delivered on the selected date.
+
+---
+
+## [v2.5.3] - 2026-05-18
+
+### Changed
+- Updated the Filpride dispatch report Delivered filter UI to use an explicit report mode selection for `As Of` and `Date Range`.
+- Simplified the Filpride dispatch report date form so Delivered `As Of` uses a single date field and hides `Date To`.
+
+### Fixed
+- Fixed Filpride dispatch report Excel output to include the delivery receipt selling price from the related customer order slip after `PRODUCTS`.
+- Fixed Filpride dispatch report date validation to align controller behavior with the selected Delivered report mode.
+
+---
+
+## [v2.5.2] - 2026-05-14
+
+### Fixed
+- Fixed Filpride trade check voucher advance setup to accumulate all available posted advance vouchers for COD and prepaid purchase orders instead of using only the first matching advance voucher.
+- Fixed Filpride trade check voucher advance validation, posting, and reversal flows to support multiple referenced advance vouchers with combined available balances.
+
+---
+
+## [v2.5.1] - 2026-05-14
+
+### Changed
+- Expanded the `Export to AAS` navigation access in the shared layout for Filpride RCD users and admins.
+- Revised the Filpride collection Excel report layout to show collection date, invoice date, check amount, EWT, WVAT, and previous/current/advance allocation columns.
+
+### Fixed
+- Fixed Filpride collection Excel totals and column placement for the revised export format, including voided receipt columns.
+- Fixed Filpride collection Excel month-based allocation reporting for sales, service, and multiple-sales-invoice collections.
+
+---
+
+## [v2.5.0] - 2026-05-13
+
+### Added
+- Added Journal Voucher generation/report outputs for freight and commission updates.
+- Added comparative report queue tracking for updated timestamps and duplicate-prevention support.
+
+### Changed
+- Finalized comparative report data processing and queue handling.
+- Renamed the selling price Journal Voucher report view for consistency with the generated output.
+
+### Fixed
+- Fixed selling price GL record dates to follow the open-book check.
+- Fixed commission and freight update flows to respect open-book validation.
+- Fixed cost update flows to respect open-book validation.
+- Fixed comparative report persistence behavior.
+
+---
+
 ## [v2.4.0] - 2026-05-09
 
 ### Added

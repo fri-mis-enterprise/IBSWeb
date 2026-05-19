@@ -1051,13 +1051,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         #endregion -- Generate General Ledger as .Txt file
 
+        #region -- Generate General Ledger Journal Voucher Report for Selling Price Updates as Excel File
+
         [HttpGet]
-        public IActionResult JournalVoucherPriceReport()
+        public IActionResult JournalVoucherSellingPriceReport()
         {
             return View();
         }
-
-        #region -- Generate General Ledger Journal Voucher Report Due To Updating Selling Price as Excel File
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -1076,23 +1076,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
             if (!ModelState.IsValid)
             {
                 TempData["warning"] = "The submitted information is invalid.";
-                return RedirectToAction(nameof(JournalVoucherPriceReport));
+                return RedirectToAction(nameof(JournalVoucherSellingPriceReport));
             }
 
-            // Validate date range
             if (model.DateFrom > model.DateTo)
             {
                 TempData["warning"] = "Date From cannot be greater than Date To.";
-                return RedirectToAction(nameof(JournalVoucherPriceReport));
+                return RedirectToAction(nameof(JournalVoucherSellingPriceReport));
             }
 
             try
             {
-                // Get general ledger books data
                 var generalBooks = await _unitOfWork.FilprideReport
                     .GetGeneralLedgerBooks(model.DateFrom, model.DateTo, companyClaims, cancellationToken);
 
-                // Filter for "Update Price" in description (case-insensitive)
                 var filteredData = generalBooks
                     .Where(gb => gb.Description.Contains("update price", StringComparison.CurrentCultureIgnoreCase))
                     .ToList();
@@ -1100,22 +1097,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (filteredData.Count == 0)
                 {
                     TempData["info"] = "No records found for updating selling price in the selected date range.";
-                    return RedirectToAction(nameof(JournalVoucherPriceReport));
+                    return RedirectToAction(nameof(JournalVoucherSellingPriceReport));
                 }
 
                 var totalDebit = filteredData.Sum(gb => gb.Debit);
                 var totalCredit = filteredData.Sum(gb => gb.Credit);
 
-                // Create the Excel package
                 using var package = new ExcelPackage();
 
-                // Add a new worksheet to the Excel package
-                var worksheet = package.Workbook.Worksheets.Add("JV Due to Updating Selling Price");
+                var worksheet = package.Workbook.Worksheets.Add("JV Selling Price Updates");
 
-                // Set the column headers
                 var mergedCells = worksheet.Cells["A1:C1"];
                 mergedCells.Merge = true;
-                mergedCells.Value = "JV DUE TO UPDATING SELLING PRICE";
+                mergedCells.Value = "JOURNAL VOUCHER REPORT FOR SELLING PRICE UPDATES";
                 mergedCells.Style.Font.Size = 13;
                 mergedCells.Style.Font.Bold = true;
 
@@ -1139,7 +1133,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["H7"].Value = "Credit";
                 worksheet.Cells["I7"].Value = "Posted By";
 
-                // Apply styling to the header row
                 using (var range = worksheet.Cells["A7:I7"])
                 {
                     range.Style.Font.Bold = true;
@@ -1151,7 +1144,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
                 }
 
-                // Populate the data rows
                 int row = 8;
                 string currencyFormat = "#,##0.00";
 
@@ -1181,7 +1173,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 7].Style.Numberformat.Format = currencyFormat;
                 worksheet.Cells[row, 8].Style.Numberformat.Format = currencyFormat;
 
-                // Apply style to subtotal row
                 using (var range = worksheet.Cells[row, 1, row, 9])
                 {
                     range.Style.Font.Bold = true;
@@ -1192,11 +1183,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 using (var range = worksheet.Cells[row, 6, row, 8])
                 {
                     range.Style.Font.Bold = true;
-                    range.Style.Border.Top.Style = ExcelBorderStyle.Thin; // Single top border
-                    range.Style.Border.Bottom.Style = ExcelBorderStyle.Double; // Double bottom border
+                    range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                    range.Style.Border.Bottom.Style = ExcelBorderStyle.Double;
                 }
 
-                // Auto-fit columns for better readability
                 worksheet.Cells.AutoFitColumns();
                 worksheet.View.FreezePanes(8, 1);
 
@@ -1211,7 +1201,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #endregion -- Audit Trail
 
-                // Convert the Excel package to a byte array
                 var excelBytes = await package.GetAsByteArrayAsync(cancellationToken);
 
                 return File(excelBytes,
@@ -1223,13 +1212,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 TempData["error"] = ex.Message;
                 _logger.LogError(ex, "Failed to generate JV updating selling price report excel. Error: {ErrorMessage}, Stack: {StackTrace}. Generated by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
-                return RedirectToAction(nameof(JournalVoucherPriceReport));
+                return RedirectToAction(nameof(JournalVoucherSellingPriceReport));
             }
         }
 
-        #endregion -- Generate General Ledger Journal Voucher Report Due To Updating Selling Price as Excel File
+        #endregion -- Generate General Ledger Journal Voucher Report for Selling Price Updates as Excel File
 
-        #region -- Generate General Ledger Journal Voucher Report Due To Updating Unit Cost as Excel File
+        #region -- Generate General Ledger Journal Voucher Report for Unit Cost Updates as Excel File
 
         [HttpGet]
         public IActionResult JournalVoucherUnitCostReport()
@@ -1257,7 +1246,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return RedirectToAction(nameof(JournalVoucherUnitCostReport));
             }
 
-            // Validate date range
             if (model.DateFrom > model.DateTo)
             {
                 TempData["warning"] = "Date From cannot be greater than Date To.";
@@ -1266,11 +1254,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                // Get general ledger books data
                 var generalBooks = await _unitOfWork.FilprideReport
                     .GetGeneralLedgerBooks(model.DateFrom, model.DateTo, companyClaims, cancellationToken);
 
-                // Filter for "Update Cost" in description (case-insensitive)
                 var filteredData = generalBooks
                     .Where(gb => gb.Description.Contains("update cost", StringComparison.CurrentCultureIgnoreCase))
                     .ToList();
@@ -1284,16 +1270,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var totalDebit = filteredData.Sum(gb => gb.Debit);
                 var totalCredit = filteredData.Sum(gb => gb.Credit);
 
-                // Create the Excel package
                 using var package = new ExcelPackage();
 
-                // Add a new worksheet to the Excel package
-                var worksheet = package.Workbook.Worksheets.Add("JV Due to Updating Unit Cost");
+                var worksheet = package.Workbook.Worksheets.Add("JV Unit Cost Updates");
 
-                // Set the column headers
                 var mergedCells = worksheet.Cells["A1:C1"];
                 mergedCells.Merge = true;
-                mergedCells.Value = "JV DUE TO UPDATING UNIT COST";
+                mergedCells.Value = "JOURNAL VOUCHER REPORT FOR UNIT COST UPDATES";
                 mergedCells.Style.Font.Size = 13;
                 mergedCells.Style.Font.Bold = true;
 
@@ -1317,7 +1300,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["H7"].Value = "Credit";
                 worksheet.Cells["I7"].Value = "Posted By";
 
-                // Apply styling to the header row
                 using (var range = worksheet.Cells["A7:I7"])
                 {
                     range.Style.Font.Bold = true;
@@ -1329,7 +1311,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
                 }
 
-                // Populate the data rows
                 int row = 8;
                 string currencyFormat = "#,##0.00";
 
@@ -1359,7 +1340,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 7].Style.Numberformat.Format = currencyFormat;
                 worksheet.Cells[row, 8].Style.Numberformat.Format = currencyFormat;
 
-                // Apply style to subtotal row
                 using (var range = worksheet.Cells[row, 1, row, 9])
                 {
                     range.Style.Font.Bold = true;
@@ -1370,11 +1350,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 using (var range = worksheet.Cells[row, 6, row, 8])
                 {
                     range.Style.Font.Bold = true;
-                    range.Style.Border.Top.Style = ExcelBorderStyle.Thin; // Single top border
-                    range.Style.Border.Bottom.Style = ExcelBorderStyle.Double; // Double bottom border
+                    range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                    range.Style.Border.Bottom.Style = ExcelBorderStyle.Double;
                 }
 
-                // Auto-fit columns for better readability
                 worksheet.Cells.AutoFitColumns();
                 worksheet.View.FreezePanes(8, 1);
 
@@ -1389,7 +1368,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #endregion -- Audit Trail
 
-                // Convert the Excel package to a byte array
                 var excelBytes = await package.GetAsByteArrayAsync(cancellationToken);
 
                 return File(excelBytes,
@@ -1405,7 +1383,341 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        #endregion -- Generate General Ledger Journal Voucher Report Due To Updating Unit Cost as Excel File
+        #endregion -- Generate General Ledger Journal Voucher Report for Unit Cost Updates as Excel File
+
+        #region -- Generate General Ledger Journal Voucher Report for Commission Updates as Excel File
+
+        [HttpGet]
+        public IActionResult JournalVoucherCommissionReport()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> JournalVoucherCommissionReportExcel(ViewModelBook model, CancellationToken cancellationToken)
+        {
+            var dateFrom = model.DateFrom;
+            var dateTo = model.DateTo;
+            var extractedBy = GetUserFullName();
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            if (!ModelState.IsValid)
+            {
+                TempData["warning"] = "The submitted information is invalid.";
+                return RedirectToAction(nameof(JournalVoucherCommissionReport));
+            }
+
+            if (model.DateFrom > model.DateTo)
+            {
+                TempData["warning"] = "Date From cannot be greater than Date To.";
+                return RedirectToAction(nameof(JournalVoucherCommissionReport));
+            }
+
+            try
+            {
+                var generalBooks = await _unitOfWork.FilprideReport
+                    .GetGeneralLedgerBooks(model.DateFrom, model.DateTo, companyClaims, cancellationToken);
+
+                var filteredData = generalBooks
+                    .Where(gb => gb.Description.Contains("update commission", StringComparison.CurrentCultureIgnoreCase))
+                    .ToList();
+
+                if (filteredData.Count == 0)
+                {
+                    TempData["info"] = "No records found for updating commission in the selected date range.";
+                    return RedirectToAction(nameof(JournalVoucherCommissionReport));
+                }
+
+                var totalDebit = filteredData.Sum(gb => gb.Debit);
+                var totalCredit = filteredData.Sum(gb => gb.Credit);
+
+                using var package = new ExcelPackage();
+
+                var worksheet = package.Workbook.Worksheets.Add("JV Commission Updates");
+
+                var mergedCells = worksheet.Cells["A1:C1"];
+                mergedCells.Merge = true;
+                mergedCells.Value = "JOURNAL VOUCHER REPORT FOR COMMISSION UPDATES";
+                mergedCells.Style.Font.Size = 13;
+                mergedCells.Style.Font.Bold = true;
+
+                worksheet.Cells["A2"].Value = "Date Range:";
+                worksheet.Cells["A3"].Value = "Generated By:";
+                worksheet.Cells["A4"].Value = "Company:";
+                worksheet.Cells["A5"].Value = "Date and Time Generated:";
+
+                worksheet.Cells["B2"].Value = $"{dateFrom} - {dateTo}";
+                worksheet.Cells["B3"].Value = $"{extractedBy}";
+                worksheet.Cells["B4"].Value = $"{companyClaims}";
+                worksheet.Cells["B5"].Value = $"{DateTimeHelper.GetCurrentPhilippineTime()}";
+
+                worksheet.Cells["A7"].Value = "Date";
+                worksheet.Cells["B7"].Value = "Reference";
+                worksheet.Cells["C7"].Value = "Description";
+                worksheet.Cells["D7"].Value = "Account No";
+                worksheet.Cells["E7"].Value = "Account Name";
+                worksheet.Cells["F7"].Value = "Sub-Account";
+                worksheet.Cells["G7"].Value = "Debit";
+                worksheet.Cells["H7"].Value = "Credit";
+                worksheet.Cells["I7"].Value = "Posted By";
+
+                using (var range = worksheet.Cells["A7:I7"])
+                {
+                    range.Style.Font.Bold = true;
+                    range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                    range.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
+                    range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                    range.Style.Border.Left.Style = ExcelBorderStyle.Thin;
+                    range.Style.Border.Right.Style = ExcelBorderStyle.Thin;
+                    range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                }
+
+                int row = 8;
+                string currencyFormat = "#,##0.00";
+
+                foreach (var gl in filteredData)
+                {
+                    worksheet.Cells[row, 1].Value = gl.Date;
+                    worksheet.Cells[row, 2].Value = gl.Reference;
+                    worksheet.Cells[row, 3].Value = gl.Description;
+                    worksheet.Cells[row, 4].Value = gl.AccountNo;
+                    worksheet.Cells[row, 5].Value = gl.AccountTitle;
+                    worksheet.Cells[row, 6].Value = gl.SubAccountName;
+                    worksheet.Cells[row, 7].Value = gl.Debit;
+                    worksheet.Cells[row, 8].Value = gl.Credit;
+                    worksheet.Cells[row, 9].Value = gl.CreatedBy.ToUpper();
+
+                    worksheet.Cells[row, 1].Style.Numberformat.Format = "MMM/dd/yyyy";
+                    worksheet.Cells[row, 7].Style.Numberformat.Format = currencyFormat;
+                    worksheet.Cells[row, 8].Style.Numberformat.Format = currencyFormat;
+
+                    row++;
+                }
+
+                worksheet.Cells[row, 6].Value = "Total ";
+                worksheet.Cells[row, 7].Value = totalDebit;
+                worksheet.Cells[row, 8].Value = totalCredit;
+
+                worksheet.Cells[row, 7].Style.Numberformat.Format = currencyFormat;
+                worksheet.Cells[row, 8].Style.Numberformat.Format = currencyFormat;
+
+                using (var range = worksheet.Cells[row, 1, row, 9])
+                {
+                    range.Style.Font.Bold = true;
+                    range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                    range.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(172, 185, 202));
+                }
+
+                using (var range = worksheet.Cells[row, 6, row, 8])
+                {
+                    range.Style.Font.Bold = true;
+                    range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                    range.Style.Border.Bottom.Style = ExcelBorderStyle.Double;
+                }
+
+                worksheet.Cells.AutoFitColumns();
+                worksheet.View.FreezePanes(8, 1);
+
+                #region -- Audit Trail
+
+                FilprideAuditTrail auditTrailBook = new(
+                    GetUserFullName(),
+                    "Generate general ledger journal voucher - updating commission report excel file",
+                    "General Ledger JV Report",
+                    companyClaims);
+                await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
+
+                #endregion -- Audit Trail
+
+                var excelBytes = await package.GetAsByteArrayAsync(cancellationToken);
+
+                return File(excelBytes,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    $"JV_UpdatingCommission_{dateFrom:yyyyMMdd}_{dateTo:yyyyMMdd}.xlsx");
+            }
+            catch (Exception ex)
+            {
+                TempData["error"] = ex.Message;
+                _logger.LogError(ex, "Failed to generate JV updating commission report excel. Error: {ErrorMessage}, Stack: {StackTrace}. Generated by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+                return RedirectToAction(nameof(JournalVoucherCommissionReport));
+            }
+        }
+
+        #endregion -- Generate General Ledger Journal Voucher Report for Commission Updates as Excel File
+
+        #region -- Generate General Ledger Journal Voucher Report for Freight Updates as Excel File
+
+        [HttpGet]
+        public IActionResult JournalVoucherFreightReport()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> JournalVoucherFreightReportExcel(ViewModelBook model, CancellationToken cancellationToken)
+        {
+            var dateFrom = model.DateFrom;
+            var dateTo = model.DateTo;
+            var extractedBy = GetUserFullName();
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            if (!ModelState.IsValid)
+            {
+                TempData["warning"] = "The submitted information is invalid.";
+                return RedirectToAction(nameof(JournalVoucherFreightReport));
+            }
+
+            if (model.DateFrom > model.DateTo)
+            {
+                TempData["warning"] = "Date From cannot be greater than Date To.";
+                return RedirectToAction(nameof(JournalVoucherFreightReport));
+            }
+
+            try
+            {
+                var generalBooks = await _unitOfWork.FilprideReport
+                    .GetGeneralLedgerBooks(model.DateFrom, model.DateTo, companyClaims, cancellationToken);
+
+                var filteredData = generalBooks
+                    .Where(gb => gb.Description.Contains("update freight", StringComparison.CurrentCultureIgnoreCase))
+                    .ToList();
+
+                if (filteredData.Count == 0)
+                {
+                    TempData["info"] = "No records found for updating freight in the selected date range.";
+                    return RedirectToAction(nameof(JournalVoucherFreightReport));
+                }
+
+                var totalDebit = filteredData.Sum(gb => gb.Debit);
+                var totalCredit = filteredData.Sum(gb => gb.Credit);
+
+                using var package = new ExcelPackage();
+
+                var worksheet = package.Workbook.Worksheets.Add("JV Freight Updates");
+
+                var mergedCells = worksheet.Cells["A1:C1"];
+                mergedCells.Merge = true;
+                mergedCells.Value = "JOURNAL VOUCHER REPORT FOR FREIGHT UPDATES";
+                mergedCells.Style.Font.Size = 13;
+                mergedCells.Style.Font.Bold = true;
+
+                worksheet.Cells["A2"].Value = "Date Range:";
+                worksheet.Cells["A3"].Value = "Generated By:";
+                worksheet.Cells["A4"].Value = "Company:";
+                worksheet.Cells["A5"].Value = "Date and Time Generated:";
+
+                worksheet.Cells["B2"].Value = $"{dateFrom} - {dateTo}";
+                worksheet.Cells["B3"].Value = $"{extractedBy}";
+                worksheet.Cells["B4"].Value = $"{companyClaims}";
+                worksheet.Cells["B5"].Value = $"{DateTimeHelper.GetCurrentPhilippineTime()}";
+
+                worksheet.Cells["A7"].Value = "Date";
+                worksheet.Cells["B7"].Value = "Reference";
+                worksheet.Cells["C7"].Value = "Description";
+                worksheet.Cells["D7"].Value = "Account No";
+                worksheet.Cells["E7"].Value = "Account Name";
+                worksheet.Cells["F7"].Value = "Sub-Account";
+                worksheet.Cells["G7"].Value = "Debit";
+                worksheet.Cells["H7"].Value = "Credit";
+                worksheet.Cells["I7"].Value = "Posted By";
+
+                using (var range = worksheet.Cells["A7:I7"])
+                {
+                    range.Style.Font.Bold = true;
+                    range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                    range.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
+                    range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                    range.Style.Border.Left.Style = ExcelBorderStyle.Thin;
+                    range.Style.Border.Right.Style = ExcelBorderStyle.Thin;
+                    range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                }
+
+                int row = 8;
+                string currencyFormat = "#,##0.00";
+
+                foreach (var gl in filteredData)
+                {
+                    worksheet.Cells[row, 1].Value = gl.Date;
+                    worksheet.Cells[row, 2].Value = gl.Reference;
+                    worksheet.Cells[row, 3].Value = gl.Description;
+                    worksheet.Cells[row, 4].Value = gl.AccountNo;
+                    worksheet.Cells[row, 5].Value = gl.AccountTitle;
+                    worksheet.Cells[row, 6].Value = gl.SubAccountName;
+                    worksheet.Cells[row, 7].Value = gl.Debit;
+                    worksheet.Cells[row, 8].Value = gl.Credit;
+                    worksheet.Cells[row, 9].Value = gl.CreatedBy.ToUpper();
+
+                    worksheet.Cells[row, 1].Style.Numberformat.Format = "MMM/dd/yyyy";
+                    worksheet.Cells[row, 7].Style.Numberformat.Format = currencyFormat;
+                    worksheet.Cells[row, 8].Style.Numberformat.Format = currencyFormat;
+
+                    row++;
+                }
+
+                worksheet.Cells[row, 6].Value = "Total ";
+                worksheet.Cells[row, 7].Value = totalDebit;
+                worksheet.Cells[row, 8].Value = totalCredit;
+
+                worksheet.Cells[row, 7].Style.Numberformat.Format = currencyFormat;
+                worksheet.Cells[row, 8].Style.Numberformat.Format = currencyFormat;
+
+                using (var range = worksheet.Cells[row, 1, row, 9])
+                {
+                    range.Style.Font.Bold = true;
+                    range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                    range.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(172, 185, 202));
+                }
+
+                using (var range = worksheet.Cells[row, 6, row, 8])
+                {
+                    range.Style.Font.Bold = true;
+                    range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                    range.Style.Border.Bottom.Style = ExcelBorderStyle.Double;
+                }
+
+                worksheet.Cells.AutoFitColumns();
+                worksheet.View.FreezePanes(8, 1);
+
+                #region -- Audit Trail
+
+                FilprideAuditTrail auditTrailBook = new(
+                    GetUserFullName(),
+                    "Generate general ledger journal voucher - updating freight report excel file",
+                    "General Ledger JV Report",
+                    companyClaims);
+                await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
+
+                #endregion -- Audit Trail
+
+                var excelBytes = await package.GetAsByteArrayAsync(cancellationToken);
+
+                return File(excelBytes,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    $"JV_UpdatingFreight_{dateFrom:yyyyMMdd}_{dateTo:yyyyMMdd}.xlsx");
+            }
+            catch (Exception ex)
+            {
+                TempData["error"] = ex.Message;
+                _logger.LogError(ex, "Failed to generate JV updating freight report excel. Error: {ErrorMessage}, Stack: {StackTrace}. Generated by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+                return RedirectToAction(nameof(JournalVoucherFreightReport));
+            }
+        }
+
+        #endregion -- Generate General Ledger Journal Voucher Report for Freight Updates as Excel File
 
         #region -- Generate Subsidiary Ledger as Excel File
 
