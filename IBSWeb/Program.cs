@@ -74,6 +74,7 @@ builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
 builder.Services.AddSingleton<ICloudStorageService, CloudStorageService>();
 builder.Services.AddScoped<ISubAccountResolver, SubAccountResolver>();
 builder.Services.AddScoped<ITransactionMasterControlService, TransactionMasterControlService>();
+builder.Services.AddScoped<IDbSyncService, DbSyncService>();
 builder.Services.AddScoped<StartOfTheMonthService>();
 builder.Services.AddScoped<DailyService>();
 

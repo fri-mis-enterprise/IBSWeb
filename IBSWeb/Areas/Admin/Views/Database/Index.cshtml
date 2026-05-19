@@ -1,0 +1,108 @@
+@model IBSWeb.Areas.Admin.ViewModels.DbSyncViewModel
+@{
+    ViewData["Title"] = "Database Synchronization";
+}
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center bg-secondary p-3 rounded shadow">
+        <h2 class="text-white m-0">@ViewData["Title"]</h2>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6 offset-md-3">
+            <div class="card shadow border-0">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-arrow-repeat"></i> Sync from Production</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        This utility will synchronize your current database with a remote production database. 
+                        <strong>All current data in the local database will be overwritten.</strong>
+                    </p>
+                    
+                    <form asp-action="Sync" method="post" id="syncForm">
+                        <div class="row">
+                            <div class="col-md-9 mb-3">
+                                <label asp-for="Server" class="form-label">Production Server / Host</label>
+                                <input asp-for="Server" class="form-control" placeholder="e.g. 1.2.3.4 or prod-db.example.com" />
+                                <span asp-validation-for="Server" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label asp-for="Port" class="form-label">Port</label>
+                                <input asp-for="Port" class="form-control" />
+                                <span asp-validation-for="Port" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Database" class="form-label">Database Name</label>
+                            <input asp-for="Database" class="form-control" placeholder="e.g. ibs_prod" />
+                            <span asp-validation-for="Database" class="text-danger"></span>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Username" class="form-label">Username</label>
+                                <input asp-for="Username" class="form-control" placeholder="postgres" />
+                                <span asp-validation-for="Username" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Password" class="form-label">Password</label>
+                                <input asp-for="Password" class="form-control" />
+                                <span asp-validation-for="Password" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="form-text text-danger mb-3">
+                            <i class="bi bi-exclamation-triangle-fill"></i> Warning: This will COMPLETELY OVERWRITE your local data.
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-danger" id="btnSync">
+                                <i class="bi bi-cloud-download"></i> Start Synchronization
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow border-0 mt-4 d-none" id="loadingCard">
+                <div class="card-body text-center p-5">
+                    <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h4>Synchronizing...</h4>
+                    <p class="text-muted">This may take a few minutes depending on the database size. Please do not close this window.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#syncForm').on('submit', function (e) {
+                const form = this;
+                e.preventDefault();
+
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: "Your current local data will be COMPLETELY OVERWRITTEN with data from the source. This action cannot be undone!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Yes, sync it!',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $('#syncForm').addClass('d-none');
+                        $('#loadingCard').removeClass('d-none');
+                        form.submit();
+                    }
+                });
+            });
+        });
+    </script>
+}
