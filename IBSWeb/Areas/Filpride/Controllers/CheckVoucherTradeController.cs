@@ -22,11 +22,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
     [CompanyAuthorize(nameof(Filpride))]
-    [DepartmentAuthorize(
-        SD.Department_Accounting,
-        SD.Department_RCD,
-        SD.Department_ManagementAccounting,
-        SD.Department_Finance)]
     public class CheckVoucherTradeController : Controller
     {
         private readonly ApplicationDbContext _dbContext;
@@ -244,10 +239,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [DepartmentAuthorize(
-            SD.Department_Accounting,
-            SD.Department_RCD,
-            SD.Department_ManagementAccounting)]
+        [Authorize(Policy = nameof(CheckVoucherTrade.CheckVoucherTradeCreate))]
         [HttpGet]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
@@ -866,10 +858,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             });
         }
 
-        [DepartmentAuthorize(
-            SD.Department_Accounting,
-            SD.Department_RCD,
-            SD.Department_ManagementAccounting)]
+        [Authorize(Policy = nameof(CheckVoucherTrade.CheckVoucherTradeEdit))]
         [HttpGet]
         public async Task<IActionResult> Edit(int? id, CancellationToken cancellationToken)
         {
@@ -1431,6 +1420,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CheckVoucherTrade.CheckVoucherTradePreview))]
         [HttpGet]
         public async Task<IActionResult> Print(int? id, int? supplierId, CancellationToken cancellationToken)
         {
@@ -1538,10 +1528,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return RedirectToAction(nameof(Print), new { id, supplierId });
         }
 
-        [DepartmentAuthorize(
-            SD.Department_Accounting,
-            SD.Department_RCD,
-            SD.Department_ManagementAccounting)]
+        [Authorize(Policy = nameof(CheckVoucherTrade.CheckVoucherTradePost))]
         public async Task<IActionResult> Post(int id, int? supplierId, CancellationToken cancellationToken)
         {
             var modelHeader = await _unitOfWork.FilprideCheckVoucher.GetAsync(cv => cv.CheckVoucherHeaderId == id, cancellationToken);
@@ -1715,10 +1702,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [DepartmentAuthorize(
-            SD.Department_Accounting,
-            SD.Department_RCD,
-            SD.Department_ManagementAccounting)]
+        [Authorize(Policy = nameof(CheckVoucherTrade.CheckVoucherTradeCancel))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancel(int id, string? cancellationRemarks, CancellationToken cancellationToken)
@@ -1899,10 +1883,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [DepartmentAuthorize(
-            SD.Department_Accounting,
-            SD.Department_RCD,
-            SD.Department_ManagementAccounting)]
+        [Authorize(Policy = nameof(CheckVoucherTrade.CheckVoucherTradeUnpost))]
         public async Task<IActionResult> Unpost(int id, CancellationToken cancellationToken)
         {
             var cvHeader = await _unitOfWork.FilprideCheckVoucher.GetAsync(cv => cv.CheckVoucherHeaderId == id, cancellationToken);
@@ -2505,10 +2486,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return Json(cvIds);
         }
 
-        [DepartmentAuthorize(
-            SD.Department_Accounting,
-            SD.Department_RCD,
-            SD.Department_ManagementAccounting)]
+        [Authorize(Policy = nameof(CheckVoucherTrade.CheckVoucherTradeCreateCommissionPayment))]
         [HttpGet]
         public async Task<IActionResult> CreateCommissionPayment(CancellationToken cancellationToken)
         {
@@ -2876,10 +2854,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [DepartmentAuthorize(
-            SD.Department_Accounting,
-            SD.Department_RCD,
-            SD.Department_ManagementAccounting)]
+        [Authorize(Policy = nameof(CheckVoucherTrade.CheckVoucherTradeCreateHaulerPayment))]
         [HttpGet]
         public async Task<IActionResult> CreateHaulerPayment(CancellationToken cancellationToken)
         {
@@ -3415,10 +3390,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return Json(drList);
         }
 
-        [DepartmentAuthorize(
-            SD.Department_Accounting,
-            SD.Department_RCD,
-            SD.Department_ManagementAccounting)]
+        [Authorize(Policy = nameof(CheckVoucherTrade.CheckVoucherTradeEditCommissionPayment))]
         [HttpGet]
         public async Task<IActionResult> EditCommissionPayment(int? id, CancellationToken cancellationToken)
         {
@@ -3867,10 +3839,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [DepartmentAuthorize(
-            SD.Department_Accounting,
-            SD.Department_RCD,
-            SD.Department_ManagementAccounting)]
+        [Authorize(Policy = nameof(CheckVoucherTrade.CheckVoucherTradeEditHaulerPayment))]
         [HttpGet]
         public async Task<IActionResult> EditHaulerPayment(int? id, CancellationToken cancellationToken)
         {

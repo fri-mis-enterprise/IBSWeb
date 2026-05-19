@@ -21,9 +21,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
     [CompanyAuthorize(nameof(Filpride))]
-    [DepartmentAuthorize(SD.Department_CreditAndCollection,
-        SD.Department_RCD,
-        SD.Department_ManagementAccounting)]
     public class DebitMemoController : Controller
     {
         private readonly ApplicationDbContext _dbContext;
@@ -141,6 +138,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(DebitMemo.DebitMemoCreate))]
         [HttpGet]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
@@ -313,6 +311,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(DebitMemo.DebitMemoPreview))]
         [HttpGet]
         public async Task<IActionResult> Print(int? id, CancellationToken cancellationToken)
         {
@@ -339,6 +338,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(debitMemo);
         }
 
+        [Authorize(Policy = nameof(DebitMemo.DebitMemoPost))]
         public async Task<IActionResult> Post(int id, ViewModelDMCM viewModelDmcm, CancellationToken cancellationToken)
         {
             var model = await _unitOfWork.FilprideDebitMemo.GetAsync(dm => dm.DebitMemoId == id, cancellationToken);
@@ -805,6 +805,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(DebitMemo.DebitMemoCancel))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancel(int id, string? cancellationRemarks, CancellationToken cancellationToken)
@@ -862,6 +863,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return Json(null);
         }
 
+        [Authorize(Policy = nameof(DebitMemo.DebitMemoEdit))]
         [HttpGet]
         public async Task<IActionResult> Edit(int? id, CancellationToken cancellationToken)
         {
@@ -1434,6 +1436,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return Json(dmIds);
         }
 
+        [Authorize(Policy = nameof(DebitMemo.DebitMemoUnpost))]
         public async Task<IActionResult> Unpost(int id, CancellationToken cancellationToken)
         {
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);

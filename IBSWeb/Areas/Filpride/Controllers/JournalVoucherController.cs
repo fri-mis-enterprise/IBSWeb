@@ -22,9 +22,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
     [CompanyAuthorize(nameof(Filpride))]
-    [DepartmentAuthorize(SD.Department_Accounting,
-        SD.Department_RCD,
-        SD.Department_ManagementAccounting)]
     public class JournalVoucherController : Controller
     {
         private readonly ApplicationDbContext _dbContext;
@@ -245,6 +242,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherCreateLiquidation))]
         [HttpGet]
         public async Task<IActionResult> CreateLiquidation(CancellationToken cancellationToken)
         {
@@ -431,6 +429,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return Json(selectList);
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherPreview))]
         [HttpGet]
         public async Task<IActionResult> Print(int? id, CancellationToken cancellationToken)
         {
@@ -473,6 +472,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherPost))]
         public async Task<IActionResult> Post(int id, CancellationToken cancellationToken)
         {
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
@@ -576,6 +576,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherCancel))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancel(int id, string? cancellationRemarks, CancellationToken cancellationToken)
@@ -624,6 +625,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherEditLiquidation))]
         [HttpGet]
         public async Task<IActionResult> EditLiquidation(int id, CancellationToken cancellationToken)
         {
@@ -1504,6 +1506,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherCreateAccrual))]
         [HttpGet]
         public async Task<IActionResult> CreateAccrual(CancellationToken cancellationToken)
         {
@@ -1651,6 +1654,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherEditAccrual))]
         [HttpGet]
         public async Task<IActionResult> EditAccrual(int id, CancellationToken cancellationToken)
         {
@@ -1899,6 +1903,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             await _dbContext.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherCreateAmortization))]
         [HttpGet]
         public async Task<IActionResult> CreateAmortization(CancellationToken cancellationToken)
         {
@@ -2084,6 +2089,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherEditAmortization))]
         [HttpGet]
         public async Task<IActionResult> EditAmortization(int id, CancellationToken cancellationToken)
         {
@@ -2330,6 +2336,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherCreateReclass))]
         [HttpGet]
         public async Task<IActionResult> CreateReclass(CancellationToken cancellationToken)
         {
@@ -2470,6 +2477,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherEditReclass))]
         [HttpGet]
         public async Task<IActionResult> EditReclass(int id, CancellationToken cancellationToken)
         {
@@ -2653,6 +2661,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherUnpost))]
         public async Task<IActionResult> Unpost(int id, CancellationToken cancellationToken)
         {
             var jvHeader = await _unitOfWork.FilprideJournalVoucher.GetAsync(jv => jv.JournalVoucherHeaderId == id, cancellationToken);
