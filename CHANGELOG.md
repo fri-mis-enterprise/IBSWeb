@@ -6,6 +6,17 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v2.6.1] - 2026-05-19
+
+### Changed
+- Added duplicate-action guards to prevent reposting or re-approving records across affected Placement and Filpride posting workflows, including check vouchers, collection receipts, credit/debit memos, delivery receipts, journal vouchers, provisional receipts, purchase orders, receiving reports, sales invoices, and service invoices.
+- Added duplicate-action guards for Filpride delivery receipt delivered and lifting-date recording flows to stop repeated processing once those actions have already been completed.
+
+### Fixed
+- Fixed the Sales Invoice posting closed-period validation message to say `Cannot post this record` instead of `Cannot unpost this record`.
+
+---
+
 ## [v2.6.0] - 2026-05-19
 
 ### Added
