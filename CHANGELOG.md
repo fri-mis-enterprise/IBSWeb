@@ -6,6 +6,20 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v2.6.0] - 2026-05-19
+
+### Added
+- Added support for generating the Filpride inventory report for all products, including grouped product sections and per-product totals in the PDF and Excel outputs.
+
+### Changed
+- Updated the Filpride inventory report filters so product and PO selection can be left blank to generate all matching records for the selected month.
+
+### Fixed
+- Fixed Filpride dispatch report delivered `As Of` filtering to use `DeliveredDate` in the PDF and Excel outputs instead of the transaction date.
+- Fixed Filpride dispatch report delivered `As Of` totals and summary sections to include only records delivered on the selected date.
+
+---
+
 ## [v2.5.3] - 2026-05-18
 
 ### Changed
