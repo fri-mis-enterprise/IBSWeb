@@ -1956,6 +1956,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
+            bool isMultipleSi = model.MultipleSIId?.Length > 0;
+
+            if (model.PostedBy != null || model.Status == nameof(CollectionReceiptStatus.Posted))
+            {
+                TempData["info"] = "Collection Receipt has already been posted.";
+                return RedirectToAction(isMultipleSi ? nameof(MultipleCollectionPrint) : nameof(Print), new { id });
+            }
+
             if (await _unitOfWork.IsPeriodPostedAsync(Module.CollectionReceipt, model.TransactionDate, cancellationToken))
             {
                 throw new ArgumentException($"Cannot post this record because the period {model.TransactionDate:MMM yyyy} is already closed.");
@@ -1968,7 +1976,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.PostedBy = GetUserFullName();
                 model.PostedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.Status = nameof(CollectionReceiptStatus.Posted);
-                bool isMultipleSi = model.MultipleSIId?.Length > 0;
 
                 await _unitOfWork.FilprideCollectionReceipt.PostAsync(model, cancellationToken);
 

@@ -487,9 +487,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
+            if (model.PostedBy != null || model.Status == nameof(Status.Posted))
+            {
+                TempData["info"] = "Sales Invoice has already been posted.";
+                return RedirectToAction(nameof(Print), new { id });
+            }
+
             if (await _unitOfWork.IsPeriodPostedAsync(Module.SalesInvoice, model.TransactionDate, cancellationToken))
             {
-                TempData["error"] = $"Cannot unpost this record because the period {model.TransactionDate:MMM yyyy} is already closed.";
+                TempData["error"] = $"Cannot post this record because the period {model.TransactionDate:MMM yyyy} is already closed.";
                 return RedirectToAction(nameof(Print), new { id });
             }
 

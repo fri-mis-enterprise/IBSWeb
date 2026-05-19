@@ -405,6 +405,12 @@ namespace IBSWeb.Areas.Bienes.Controllers
                     return RedirectToAction(nameof(Preview), new { id });
                 }
 
+                if (existingRecord.IsPosted || !string.IsNullOrEmpty(existingRecord.PostedBy))
+                {
+                    TempData["info"] = "Placement has already been posted.";
+                    return RedirectToAction(nameof(Preview), new { id });
+                }
+
                 existingRecord.PostedBy = User.Identity!.Name!;
                 existingRecord.PostedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 existingRecord.Status = nameof(PlacementStatus.Posted);

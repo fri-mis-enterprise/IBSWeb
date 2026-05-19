@@ -297,15 +297,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var model = await _unitOfWork.FilprideServiceInvoice
                 .GetAsync(s => s.ServiceInvoiceId == id, cancellationToken);
 
+            if (model == null)
+            {
+                return NotFound();
+            }
+
+            if (model.PostedBy != null || model.Status == nameof(Status.Posted))
+            {
+                TempData["info"] = "Service invoice has already been posted.";
+                return RedirectToAction(nameof(Print), new { id });
+            }
+
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             try
             {
-                if (model == null)
-                {
-                    return NotFound();
-                }
-
                 model.PostedBy = GetUserFullName();
                 model.PostedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.Status = nameof(Status.Posted);
