@@ -511,6 +511,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
+            if (model.PostedBy != null)
+            {
+                TempData["info"] = "Credit Memo has already been posted.";
+                return RedirectToAction(nameof(Print), new { id });
+            }
+
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             try

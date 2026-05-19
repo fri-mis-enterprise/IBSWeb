@@ -487,6 +487,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return NotFound();
                 }
 
+                if (modelHeader.PostedBy != null)
+                {
+                    TempData["info"] = "Journal Voucher has already been posted.";
+                    return RedirectToAction(nameof(Print), new { id });
+                }
+
                 if (await _unitOfWork.IsPeriodPostedAsync(Module.JournalVoucher, modelHeader.Date, cancellationToken))
                 {
                     throw new ArgumentException(

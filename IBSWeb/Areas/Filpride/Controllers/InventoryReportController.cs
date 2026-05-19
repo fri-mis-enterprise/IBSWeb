@@ -101,24 +101,36 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var inventories = await _dbContext.FilprideInventories
-                    .OrderBy(i => i.POId)
+                var inventoryRecords = await _dbContext.FilprideInventories
+                    .AsNoTracking()
+                    .Include(i => i.Product)
+                    .Include(i => i.PurchaseOrder)
                     .Where(i => i.Date >= viewModel.DateTo
                                 && i.Date <= viewModel.DateTo.AddMonths(1).AddDays(-1)
                                 && i.Company == companyClaims
-                                && i.ProductId == viewModel.ProductId
+                                && (viewModel.ProductId == null || i.ProductId == viewModel.ProductId)
                                 && (viewModel.POId == null || i.POId == viewModel.POId))
-                    .GroupBy(x => x.POId)
+                    .OrderBy(i => i.Product.ProductName)
+                    .ThenBy(i => i.POId)
+                    .ThenBy(i => i.Date)
                     .ToListAsync(cancellationToken);
 
-                var product = await _unitOfWork.Product
-                    .GetAsync(x => x.ProductId == viewModel.ProductId, cancellationToken);
-
-                if (inventories.Count == 0)
+                if (inventoryRecords.Count == 0)
                 {
                     TempData["info"] = "No records found!";
                     return RedirectToAction(nameof(InventoryReport));
                 }
+
+                var inventories = inventoryRecords
+                    .GroupBy(x => new { x.ProductId, x.POId })
+                    .OrderBy(g => g.First().Product.ProductName)
+                    .ThenBy(g => g.Key.POId)
+                    .ToList();
+
+                var showProductSections = viewModel.ProductId == null;
+                var productName = viewModel.ProductId == null
+                    ? "ALL PRODUCTS"
+                    : inventoryRecords.First().Product.ProductName;
 
                 var document = Document.Create(container =>
                 {
@@ -153,7 +165,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 column.Item().PaddingTop(10).Text(text =>
                                 {
                                     text.Span("Product Name: ").FontSize(16).SemiBold();
-                                    text.Span(product!.ProductName).FontSize(16);
+                                    text.Span(productName).FontSize(16);
                                 });
                             });
 
@@ -209,9 +221,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                 var grandTotalInventoryBalance = 0m;
                                 var grandTotalTotalBalance = 0m;
+                                string? previousProductName = null;
+                                var productTotalInventoryBalance = 0m;
+                                var productTotalTotalBalance = 0m;
 
-                                foreach (var group in inventories)
+                                for (var groupIndex = 0; groupIndex < inventories.Count; groupIndex++)
                                 {
+                                    var group = inventories[groupIndex];
+                                    var currentProductName = group.First().Product.ProductName;
+
+                                    if (showProductSections && !string.Equals(previousProductName, currentProductName, StringComparison.Ordinal))
+                                    {
+                                        table.Cell().ColumnSpan(10)
+                                            .Background(Colors.Grey.Lighten2)
+                                            .Border(0.5f)
+                                            .PaddingVertical(5)
+                                            .PaddingHorizontal(3)
+                                            .Text($"PRODUCT: {currentProductName}")
+                                            .FontColor(Colors.Black)
+                                            .SemiBold();
+                                        previousProductName = currentProductName;
+                                    }
+
                                     var subTotalInventoryBalance = 0m;
                                     var subTotalAverageCost = 0m;
                                     var subTotalTotalBalance = 0m;
@@ -220,13 +251,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                                  .ThenBy(x => x.Particular == "Purchases" ? 0 : 1)
                                                  .ThenBy(x => x.InventoryId))
                                     {
-                                        var getPurchaseOrder  =
-                                        _unitOfWork.FilpridePurchaseOrder.GetAsync(x =>
-                                            x.PurchaseOrderId == record.POId, cancellationToken);
-
                                         table.Cell().Border(0.5f).Padding(3).Text(record.Date.ToString(SD.Date_Format));
                                         table.Cell().Border(0.5f).Padding(3).Text(record.Particular);
-                                        table.Cell().Border(0.5f).Padding(3).Text(getPurchaseOrder.Result?.PurchaseOrderNo);
+                                        table.Cell().Border(0.5f).Padding(3).Text(record.PurchaseOrder?.PurchaseOrderNo);
                                         table.Cell().Border(0.5f).Padding(3).Text(record.Reference);
                                         table.Cell().Border(0.5f).Padding(3).AlignRight().Text(record.Quantity != 0 ? record.Quantity < 0 ? $"({Math.Abs(record.Quantity).ToString(SD.Two_Decimal_Format)})" : record.Quantity.ToString(SD.Two_Decimal_Format) : null).FontColor(record.Quantity < 0 ? Colors.Red.Medium : Colors.Black);
                                         table.Cell().Border(0.5f).Padding(3).AlignRight().Text(record.Cost != 0 ? record.Cost < 0 ? $"({Math.Abs(record.Cost).ToString(SD.Four_Decimal_Format)})" : record.Cost.ToString(SD.Four_Decimal_Format) : null).FontColor(record.Cost < 0 ? Colors.Red.Medium : Colors.Black);
@@ -249,6 +276,30 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                     grandTotalInventoryBalance += subTotalInventoryBalance;
                                     grandTotalTotalBalance += subTotalTotalBalance;
+                                    productTotalInventoryBalance += subTotalInventoryBalance;
+                                    productTotalTotalBalance += subTotalTotalBalance;
+
+                                    var isLastGroupForProduct = groupIndex == inventories.Count - 1 ||
+                                        !string.Equals(
+                                            inventories[groupIndex + 1].First().Product.ProductName,
+                                            currentProductName,
+                                            StringComparison.Ordinal);
+
+                                    if (showProductSections && isLastGroupForProduct)
+                                    {
+                                        var productAverageCost = productTotalInventoryBalance != 0
+                                            ? productTotalTotalBalance / productTotalInventoryBalance
+                                            : 0m;
+
+                                        table.Cell().ColumnSpan(6).Background(Colors.Grey.Lighten2).Border(0.5f);
+                                        table.Cell().Background(Colors.Grey.Lighten2).Border(0.5f).Padding(3).Text($"Product Total - {currentProductName}").SemiBold();
+                                        table.Cell().Background(Colors.Grey.Lighten2).Border(0.5f).Padding(3).AlignRight().Text(productTotalInventoryBalance != 0 ? productTotalInventoryBalance < 0 ? $"({Math.Abs(productTotalInventoryBalance).ToString(SD.Two_Decimal_Format)})" : productTotalInventoryBalance.ToString(SD.Two_Decimal_Format) : null).FontColor(productTotalInventoryBalance < 0 ? Colors.Red.Medium : Colors.Black).SemiBold();
+                                        table.Cell().Background(Colors.Grey.Lighten2).Border(0.5f).Padding(3).AlignRight().Text(productAverageCost != 0 ? productAverageCost < 0 ? $"({Math.Abs(productAverageCost).ToString(SD.Four_Decimal_Format)})" : productAverageCost.ToString(SD.Four_Decimal_Format) : null).FontColor(productAverageCost < 0 ? Colors.Red.Medium : Colors.Black).SemiBold();
+                                        table.Cell().Background(Colors.Grey.Lighten2).Border(0.5f).Padding(3).AlignRight().Text(productTotalTotalBalance != 0 ? productTotalTotalBalance < 0 ? $"({Math.Abs(productTotalTotalBalance).ToString(SD.Two_Decimal_Format)})" : productTotalTotalBalance.ToString(SD.Two_Decimal_Format) : null).FontColor(productTotalTotalBalance < 0 ? Colors.Red.Medium : Colors.Black).SemiBold();
+
+                                        productTotalInventoryBalance = 0m;
+                                        productTotalTotalBalance = 0m;
+                                    }
                                 }
 
                             var grandTotalAverageCost = grandTotalTotalBalance != 0
@@ -316,25 +367,37 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var inventories = await _dbContext.FilprideInventories
-                    .OrderBy(i => i.POId)
+                var inventoryRecords = await _dbContext.FilprideInventories
+                    .AsNoTracking()
+                    .Include(i => i.Product)
+                    .Include(i => i.PurchaseOrder)
                     .Where(i =>
                         i.Date >= viewModel.DateTo &&
                         i.Date <= viewModel.DateTo.AddMonths(1).AddDays(-1) &&
                         i.Company == companyClaims &&
-                        i.ProductId == viewModel.ProductId &&
+                        (viewModel.ProductId == null || i.ProductId == viewModel.ProductId) &&
                         (viewModel.POId == null || i.POId == viewModel.POId))
-                    .GroupBy(x => x.POId)
+                    .OrderBy(i => i.Product.ProductName)
+                    .ThenBy(i => i.POId)
+                    .ThenBy(i => i.Date)
                     .ToListAsync(cancellationToken);
 
-                var product = await _unitOfWork.Product
-                    .GetAsync(x => x.ProductId == viewModel.ProductId, cancellationToken);
-
-                if (inventories.Count == 0)
+                if (inventoryRecords.Count == 0)
                 {
                     TempData["info"] = "No records found!";
                     return RedirectToAction(nameof(InventoryReport));
                 }
+
+                var inventories = inventoryRecords
+                    .GroupBy(x => new { x.ProductId, x.POId })
+                    .OrderBy(g => g.First().Product.ProductName)
+                    .ThenBy(g => g.Key.POId)
+                    .ToList();
+
+                var showProductSections = viewModel.ProductId == null;
+                var productName = viewModel.ProductId == null
+                    ? "ALL PRODUCTS"
+                    : inventoryRecords.First().Product.ProductName;
 
                 // Create Excel package
                 using var package = new ExcelPackage();
@@ -353,7 +416,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["A2"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
 
                 worksheet.Cells["A3:P3"].Merge = true;
-                worksheet.Cells["A3"].Value = $"Product Name: {product!.ProductName}";
+                worksheet.Cells["A3"].Value = $"Product Name: {productName}";
                 worksheet.Cells["A3"].Style.Font.Size = 14;
                 worksheet.Cells["A3"].Style.Font.Bold = true;
                 worksheet.Cells["A3"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
@@ -431,10 +494,35 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var grandTotalBegbalAmt = 0m;
                 var grandTotalInventoryBalance = 0m;
                 var grandTotalTotalBalance = 0m;
+                string? previousProductName = null;
+                var productTotalPurchasesQty = 0m;
+                var productTotalPurchasesAmt = 0m;
+                var productTotalSalesQty = 0m;
+                var productTotalSalesAmt = 0m;
+                var productTotalBegBalQty = 0m;
+                var productTotalBegBalAmt = 0m;
+                var productTotalInventoryBalance = 0m;
+                var productTotalTotalBalance = 0m;
 
                 // Loop through inventory groups
-                foreach (var group in inventories)
+                for (var groupIndex = 0; groupIndex < inventories.Count; groupIndex++)
                 {
+                    var group = inventories[groupIndex];
+                    var currentProductName = group.First().Product.ProductName;
+
+                    if (showProductSections && !string.Equals(previousProductName, currentProductName, StringComparison.Ordinal))
+                    {
+                        worksheet.Cells[currentRow, 1, currentRow, 16].Merge = true;
+                        worksheet.Cells[currentRow, 1].Value = $"PRODUCT: {currentProductName}";
+                        worksheet.Cells[currentRow, 1, currentRow, 16].Style.Font.Bold = true;
+                        worksheet.Cells[currentRow, 1, currentRow, 16].Style.Font.Color.SetColor(System.Drawing.Color.Black);
+                        worksheet.Cells[currentRow, 1, currentRow, 16].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                        worksheet.Cells[currentRow, 1, currentRow, 16].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.Gainsboro);
+                        worksheet.Cells[currentRow, 1, currentRow, 16].Style.Border.BorderAround(ExcelBorderStyle.Thin);
+                        currentRow++;
+                        previousProductName = currentProductName;
+                    }
+
                     var subTotalPurchasesQty = 0m;
                     var subTotalPurchasesAmt = 0m;
                     var subTotalSalesQty = 0m;
@@ -481,9 +569,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     foreach (var record in orderedGroup)
                     {
-                        var getPurchaseOrder = await _unitOfWork.FilpridePurchaseOrder
-                            .GetAsync(x => x.PurchaseOrderId == record.POId, cancellationToken);
-
                         // Date
                         worksheet.Cells[currentRow, 1].Value = record.Date.ToString(SD.Date_Format);
                         worksheet.Cells[currentRow, 1].Style.Border.BorderAround(ExcelBorderStyle.Thin);
@@ -493,7 +578,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[currentRow, 2].Style.Border.BorderAround(ExcelBorderStyle.Thin);
 
                         // PO No.
-                        worksheet.Cells[currentRow, 3].Value = getPurchaseOrder?.PurchaseOrderNo;
+                        worksheet.Cells[currentRow, 3].Value = record.PurchaseOrder?.PurchaseOrderNo;
                         worksheet.Cells[currentRow, 3].Style.Border.BorderAround(ExcelBorderStyle.Thin);
 
                         // Reference
@@ -609,8 +694,74 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     grandTotalBegbalQty += subTotalBegBalQty;
                     grandTotalInventoryBalance += subTotalInventoryBalance;
                     grandTotalTotalBalance += subTotalTotalBalance;
+                    productTotalPurchasesAmt += subTotalPurchasesAmt;
+                    productTotalPurchasesQty += subTotalPurchasesQty;
+                    productTotalSalesAmt += subTotalSalesAmt;
+                    productTotalSalesQty += subTotalSalesQty;
+                    productTotalBegBalAmt += subTotalBegBalAmt;
+                    productTotalBegBalQty += subTotalBegBalQty;
+                    productTotalInventoryBalance += subTotalInventoryBalance;
+                    productTotalTotalBalance += subTotalTotalBalance;
 
                     currentRow++;
+
+                    var isLastGroupForProduct = groupIndex == inventories.Count - 1 ||
+                        !string.Equals(
+                            inventories[groupIndex + 1].First().Product.ProductName,
+                            currentProductName,
+                            StringComparison.Ordinal);
+
+                    if (showProductSections && isLastGroupForProduct)
+                    {
+                        var productTotalAverageCost = productTotalInventoryBalance != 0
+                            ? productTotalTotalBalance / productTotalInventoryBalance
+                            : 0m;
+                        var productTotalPurchasesAverageCost = productTotalPurchasesQty != 0
+                            ? productTotalPurchasesAmt / productTotalPurchasesQty
+                            : 0m;
+                        var productTotalSalesAverageCost = productTotalSalesQty != 0
+                            ? productTotalSalesAmt / productTotalSalesQty
+                            : 0m;
+                        var productTotalBegBalAverageCost = productTotalBegBalQty != 0
+                            ? productTotalBegBalAmt / productTotalBegBalQty
+                            : 0m;
+
+                        worksheet.Cells[currentRow, 1, currentRow, 3].Merge = true;
+                        worksheet.Cells[currentRow, 4].Value = $"Product Total - {currentProductName}";
+                        worksheet.Cells[currentRow, 4].Style.Font.Bold = true;
+                        worksheet.Cells[currentRow, 4].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                        worksheet.Cells[currentRow, 4].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.Gainsboro);
+
+                        ApplySubtotalStyle(worksheet.Cells[currentRow, 5], productTotalBegBalQty, currencyTwoDecimalFormat);
+                        ApplySubtotalStyle(worksheet.Cells[currentRow, 6], productTotalBegBalAverageCost, currencyFourDecimalFormat);
+                        ApplySubtotalStyle(worksheet.Cells[currentRow, 7], productTotalBegBalAmt, currencyTwoDecimalFormat);
+                        ApplySubtotalStyle(worksheet.Cells[currentRow, 8], productTotalPurchasesQty, currencyTwoDecimalFormat);
+                        ApplySubtotalStyle(worksheet.Cells[currentRow, 9], productTotalPurchasesAverageCost, currencyFourDecimalFormat);
+                        ApplySubtotalStyle(worksheet.Cells[currentRow, 10], productTotalPurchasesAmt, currencyTwoDecimalFormat);
+                        ApplySubtotalStyle(worksheet.Cells[currentRow, 11], productTotalSalesQty, currencyTwoDecimalFormat);
+                        ApplySubtotalStyle(worksheet.Cells[currentRow, 12], productTotalSalesAverageCost, currencyFourDecimalFormat);
+                        ApplySubtotalStyle(worksheet.Cells[currentRow, 13], productTotalSalesAmt, currencyTwoDecimalFormat);
+                        ApplySubtotalStyle(worksheet.Cells[currentRow, 14], productTotalInventoryBalance, currencyTwoDecimalFormat);
+                        ApplySubtotalStyle(worksheet.Cells[currentRow, 15], productTotalAverageCost, currencyFourDecimalFormat);
+                        ApplySubtotalStyle(worksheet.Cells[currentRow, 16], productTotalTotalBalance, currencyTwoDecimalFormat);
+
+                        for (int i = 1; i <= 16; i++)
+                        {
+                            worksheet.Cells[currentRow, i].Style.Border.BorderAround(ExcelBorderStyle.Thin);
+                            worksheet.Cells[currentRow, i].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                            worksheet.Cells[currentRow, i].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.Gainsboro);
+                        }
+
+                        currentRow += 2;
+                        productTotalPurchasesQty = 0m;
+                        productTotalPurchasesAmt = 0m;
+                        productTotalSalesQty = 0m;
+                        productTotalSalesAmt = 0m;
+                        productTotalBegBalQty = 0m;
+                        productTotalBegBalAmt = 0m;
+                        productTotalInventoryBalance = 0m;
+                        productTotalTotalBalance = 0m;
+                    }
                 }
 
                 // Calculate averages
@@ -667,7 +818,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 // Generate Excel file
                 var excelBytes = await package.GetAsByteArrayAsync(cancellationToken);
-                var fileName = $"Inventory_Report_{viewModel.DateTo:yyyyMM}_{product.ProductName.Replace(" ", "_")}.xlsx";
+                var sanitizedProductName = productName.Replace(" ", "_");
+                var fileName = $"Inventory_Report_{viewModel.DateTo:yyyyMM}_{sanitizedProductName}.xlsx";
 
                 return File(excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
             }
@@ -703,7 +855,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             if (productId == null)
             {
-                return Json(null);
+                return Json(Array.Empty<SelectListItem>());
             }
 
             var companyClaims = await GetCompanyClaimAsync();

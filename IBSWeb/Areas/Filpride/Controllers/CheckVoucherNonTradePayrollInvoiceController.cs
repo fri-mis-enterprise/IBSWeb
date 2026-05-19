@@ -983,6 +983,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
+            if (modelHeader.PostedBy != null)
+            {
+                TempData["info"] = "Check Voucher has already been posted.";
+                return RedirectToAction(nameof(Print), new { id, supplierId });
+            }
+
             if (modelHeader.Status != nameof(CheckVoucherInvoiceStatus.ForPosting))
             {
                 TempData["error"] = "This invoice must be approved before it can be posted.";

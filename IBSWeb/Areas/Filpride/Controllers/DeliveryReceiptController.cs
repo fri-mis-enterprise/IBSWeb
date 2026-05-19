@@ -801,6 +801,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
+                if (existingRecord.Status == nameof(DRStatus.PendingDelivery))
+                {
+                    TempData["info"] = "Delivery receipt has already been approved.";
+                    return RedirectToAction(nameof(Preview), new { id });
+                }
+
                 existingRecord.Status = nameof(DRStatus.PendingDelivery);
 
                 FilprideAuditTrail auditTrailBook = new(GetUserFullName(), $"Approved delivery receipt# {existingRecord.DeliveryReceiptNo}", "Delivery Receipt", existingRecord.Company);
@@ -945,6 +951,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
             if (existingRecord == null)
             {
                 return BadRequest();
+            }
+
+            if (existingRecord.PostedBy != null || existingRecord.DeliveredDate != null)
+            {
+                TempData["info"] = "Delivery Receipt has already been marked as delivered.";
+                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
             }
 
             var minDate = DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime()).AddDays(-2);
@@ -1242,6 +1254,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
             if (liftingDate < DateOnly.FromDateTime(minDate) && !User.IsInRole("Admin"))
             {
                 TempData["error"] = $"The selected date cannot be before {minDate:MM/dd/yyyy}.";
+                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
+            }
+
+            if (model.HasReceivingReport)
+            {
+                TempData["info"] = "Delivery Receipt lifting date has already been recorded.";
                 return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
             }
 
