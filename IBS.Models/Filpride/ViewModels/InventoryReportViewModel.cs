@@ -7,8 +7,7 @@ namespace IBS.Models.Filpride.ViewModels
     {
         public List<SelectListItem>? Products { get; set; }
 
-        [Required(ErrorMessage = "Product is required")]
-        public int ProductId { get; set; }
+        public int? ProductId { get; set; }
 
         [Display(Name = "Date To")]
         [Required]
