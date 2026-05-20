@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -58,7 +59,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
         }
 
-        [DepartmentAuthorize(SD.Department_RCD, SD.Department_TradeAndSupply, SD.Department_Logistics)]
         public IActionResult Index()
         {
             return View();
@@ -147,8 +147,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(AuthorityToLoad.AuthorityToLoadCreate))]
         [HttpGet]
-        [DepartmentAuthorize(SD.Department_RCD, SD.Department_TradeAndSupply)]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
             var companyClaims = await GetCompanyClaimAsync();
@@ -171,7 +171,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [DepartmentAuthorize(SD.Department_RCD, SD.Department_TradeAndSupply)]
         public async Task<IActionResult> Create(BookATLViewModel viewModel, CancellationToken cancellationToken)
         {
             var companyClaims = await GetCompanyClaimAsync();
@@ -280,8 +279,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(AuthorityToLoad.AuthorityToLoadPreview))]
         [HttpGet]
-        [DepartmentAuthorize(SD.Department_RCD, SD.Department_TradeAndSupply, SD.Department_Logistics)]
         public async Task<IActionResult> Print(int? id, CancellationToken cancellationToken)
         {
             if (id == null)
@@ -445,6 +444,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return Json(haulerDetails);
         }
 
+        [Authorize(Policy = nameof(AuthorityToLoad.AuthorityToLoadUpdateValidUntil))]
         [HttpPost]
         public async Task<IActionResult> UpdateValidityDate(int id, DateOnly newValidUntil, CancellationToken cancellationToken)
         {
@@ -485,8 +485,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(AuthorityToLoad.AuthorityToLoadEdit))]
         [HttpGet]
-        [DepartmentAuthorize(SD.Department_RCD, SD.Department_TradeAndSupply)]
         public async Task<IActionResult> Edit(int? id, CancellationToken cancellationToken)
         {
             if (id == null)

@@ -18,10 +18,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
     [CompanyAuthorize(nameof(Filpride))]
-    [DepartmentAuthorize(SD.Department_CreditAndCollection,
-        SD.Department_Finance,
-        SD.Department_RCD,
-        SD.Department_ManagementAccounting)]
     public class ProvisionalReceiptController : Controller
     {
         private readonly ApplicationDbContext _dbContext;
@@ -256,6 +252,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(ProvisionalReceipt.ProvisionalReceiptCreate))]
         [HttpGet]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
@@ -342,6 +339,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(ProvisionalReceipt.ProvisionalReceiptEdit))]
         [HttpGet]
         public async Task<IActionResult> Edit(int? id, CancellationToken cancellationToken)
         {
@@ -439,6 +437,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(ProvisionalReceipt.ProvisionalReceiptPreview))]
         public async Task<IActionResult> Print(int id, CancellationToken cancellationToken)
         {
             var companyClaims = await GetCompanyClaimAsync();
@@ -511,6 +510,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return RedirectToAction(nameof(Print), new { id });
         }
 
+        [Authorize(Policy = nameof(ProvisionalReceipt.ProvisionalReceiptPost))]
         public async Task<IActionResult> Post(int id, CancellationToken cancellationToken)
         {
             var companyClaims = await GetCompanyClaimAsync();
@@ -605,6 +605,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [Authorize(Policy = nameof(ProvisionalReceipt.ProvisionalReceiptCancel))]
         public async Task<IActionResult> Cancel(int id, string? cancellationRemarks, CancellationToken cancellationToken)
         {
             var companyClaims = await GetCompanyClaimAsync();
@@ -650,6 +651,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [Authorize(Policy = nameof(ProvisionalReceipt.ProvisionalReceiptAddDepositInfo))]
         [HttpGet]
         public async Task<IActionResult> Deposit(int id, int bankId, DateOnly depositDate, CancellationToken cancellationToken)
         {
@@ -701,6 +703,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [Authorize(Policy = nameof(ProvisionalReceipt.ProvisionalReceiptReturnCheck))]
         [HttpGet]
         public async Task<IActionResult> Return(int id, CancellationToken cancellationToken)
         {
@@ -752,6 +755,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [Authorize(Policy = nameof(ProvisionalReceipt.ProvisionalReceiptRedeposit))]
         [HttpGet]
         public async Task<IActionResult> Redeposit(int id, DateOnly redepositDate, CancellationToken cancellationToken)
         {
@@ -799,6 +803,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [Authorize(Policy = nameof(ProvisionalReceipt.ProvisionalReceiptApplyClearingDate))]
         [HttpGet]
         public async Task<IActionResult> ApplyClearingDate(int id, DateOnly clearingDate, CancellationToken cancellationToken)
         {
@@ -843,6 +848,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [Authorize(Policy = nameof(ProvisionalReceipt.ProvisionalReceiptUnpost))]
         public async Task<IActionResult> Unpost(int id, CancellationToken cancellationToken)
         {
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);

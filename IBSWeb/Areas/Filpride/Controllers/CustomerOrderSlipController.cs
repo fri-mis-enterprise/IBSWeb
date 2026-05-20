@@ -24,14 +24,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
     [CompanyAuthorize(nameof(Filpride))]
-    [DepartmentAuthorize(SD.Department_RCD,
-        SD.Department_Finance,
-        SD.Department_Marketing,
-        SD.Department_TradeAndSupply,
-        SD.Department_Logistics,
-        SD.Department_CreditAndCollection,
-        SD.Department_Accounting,
-        SD.Department_ManagementAccounting)]
     public class CustomerOrderSlipController : Controller
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -261,7 +253,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [DepartmentAuthorize(SD.Department_Marketing, SD.Department_RCD)]
+        [Authorize(Policy = nameof(CustomerOrderSlip.CustomerOrderSlipCreate))]
         [HttpGet]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
@@ -432,7 +424,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [DepartmentAuthorize(SD.Department_Marketing, SD.Department_RCD)]
+        [Authorize(Policy = nameof(CustomerOrderSlip.CustomerOrderSlipEdit))]
         [HttpGet]
         public async Task<IActionResult> EditCos(int? id, CancellationToken cancellationToken)
         {
@@ -824,6 +816,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         }
 
+        [Authorize(Policy = nameof(CustomerOrderSlip.CustomerOrderSlipPreview))]
         public async Task<IActionResult> Preview(int? id, CancellationToken cancellationToken)
         {
             if (id == null)
@@ -1309,7 +1302,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             });
         }
 
-        [DepartmentAuthorize(SD.Department_TradeAndSupply, SD.Department_RCD)]
+        [Authorize(Policy = nameof(CustomerOrderSlip.CustomerOrderSlipAppointSupplier))]
         [HttpGet]
         public async Task<IActionResult> AppointSupplier(int? id, CancellationToken cancellationToken)
         {
@@ -1456,7 +1449,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [DepartmentAuthorize(SD.Department_TradeAndSupply, SD.Department_RCD)]
+        [Authorize(Policy = nameof(CustomerOrderSlip.CustomerOrderSlipReAppointSupplier))]
         [HttpGet]
         public async Task<IActionResult> ReAppointSupplier(int? id, CancellationToken cancellationToken)
         {
@@ -1710,7 +1703,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return Json(balance);
         }
 
-        [DepartmentAuthorize(SD.Department_TradeAndSupply, SD.Department_RCD)]
+        [Authorize(Policy = nameof(CustomerOrderSlip.CustomerOrderSlipClose))]
         public async Task<IActionResult> Close(int? id, CancellationToken cancellationToken)
         {
             if (id == null)
@@ -1745,7 +1738,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [DepartmentAuthorize(SD.Department_Marketing, SD.Department_RCD)]
+        [Authorize(Policy = nameof(CustomerOrderSlip.CustomerOrderSlipChangePrice))]
         public async Task<IActionResult> ChangePrice(int? id, decimal newPrice, string referenceNo, IFormFile? file,  CancellationToken cancellationToken)
         {
             if (id == null)
@@ -1887,6 +1880,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return Json(dr);
         }
 
+        [Authorize(Policy = nameof(CustomerOrderSlip.CustomerOrderSlipChangeCommission))]
         public async Task<IActionResult> ChangeCommission (int? id, decimal? commissionRate, string? commissioneeId, string? hasCommission,  CancellationToken cancellationToken)
         {
             if (id == null)

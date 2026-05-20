@@ -23,11 +23,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
     [CompanyAuthorize(nameof(Filpride))]
-    [DepartmentAuthorize(SD.Department_Logistics,
-        SD.Department_TradeAndSupply,
-        SD.Department_Marketing,
-        SD.Department_RCD,
-        SD.Department_ManagementAccounting)]
     public class PurchaseOrderController : Controller
     {
         private readonly ApplicationDbContext _dbContext;
@@ -225,6 +220,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(PurchaseOrder.PurchaseOrderCreate))]
         [HttpGet]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
@@ -341,6 +337,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(PurchaseOrder.PurchaseOrderEdit))]
         [HttpGet]
         public async Task<IActionResult> Edit(int? id, CancellationToken cancellationToken)
         {
@@ -489,6 +486,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(PurchaseOrder.PurchaseOrderPreview))]
         [HttpGet]
         public async Task<IActionResult> Print(int? id, CancellationToken cancellationToken)
         {
@@ -522,6 +520,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(purchaseOrder);
         }
 
+        [Authorize(Policy = nameof(PurchaseOrder.PurchaseOrderPost))]
         public async Task<IActionResult> Post(int id, CancellationToken cancellationToken)
         {
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
@@ -625,6 +624,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(PurchaseOrder.PurchaseOrderCancel))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancel(int id, string? cancellationRemarks, CancellationToken cancellationToken)
@@ -800,6 +800,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return Json(poIds);
         }
 
+        [Authorize(Policy = nameof(PurchaseOrder.PurchaseOrderUpdatePrice))]
         [HttpPost]
         public async Task<IActionResult> UpdatePrice(int purchaseOrderId, decimal volume, decimal price, CancellationToken cancellationToken)
         {
@@ -958,6 +959,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return Json(pickUpPoints);
         }
 
+        [Authorize(Policy = nameof(PurchaseOrder.PurchaseOrderProductTransfer))]
         [HttpPost]
         public async Task<IActionResult> ProcessProductTransfer(int purchaseOrderId, int pickupPointId, string notes, CancellationToken cancellationToken)
         {
@@ -999,6 +1001,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(PurchaseOrder.PurchaseOrderUpdateSupplierSalesOrderNo))]
         [HttpPost]
         public async Task<IActionResult> UpdateSupplierSalesOrderNo(int purchaseOrderId, string supplierSalesOrderNo, CancellationToken cancellationToken)
         {
@@ -1038,6 +1041,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(PurchaseOrder.PurchaseOrderClose))]
         public async Task<IActionResult> Close(int id, CancellationToken cancellationToken)
         {
             var model = await _unitOfWork.FilpridePurchaseOrder

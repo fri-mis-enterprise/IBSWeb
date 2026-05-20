@@ -1,0 +1,128 @@
+@using IBS.Models.Enums
+@using IBS.Utility.Constants
+@model IBS.Models.DepartmentAccessViewModel
+
+@{
+    ViewData["Title"] = "Department Access - Edit";
+}
+
+<link rel="stylesheet" href="~/css/form-style.css">
+
+<div class="loader-container">
+    <div class="loader"></div>
+    <div class="loader-text">Loading...</div>
+</div>
+<div class="card shadow border-0 mt-4">
+    <div class="card-header bg-secondary bg-gradient ml-0 py-3">
+        <div class="row">
+            <div class="col-12 text-center">
+                <h2 class="text-white py-2">@ViewData["Title"]</h2>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-4">
+        <form asp-action="Edit">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" value="@Model.Id" />
+            <div class="mb-3">
+                <div class="row">
+                    <div class="form-group mb-3">
+                        <label class="control-label">Module<span class="required">*</span></label>
+                        <select asp-for="Module" class="form-select js-select2 border-0 shadow GetModuleAccess" style="width:100%; max-height: 200px;" required>
+                            <option value="" selected disabled>Select Module</option>
+                            @foreach (var module in Enum.GetValues<AccessModule>())
+                            {
+                                <option value="@module">@module.ToString()</option>
+                            }
+                        </select>
+                        <span asp-validation-for="Module" class="text-danger"></span>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="control-label">Action<span class="required">*</span></label>
+                        <input type="hidden" id="SelectedAction" value="@Model.Action" />
+                        <select asp-for="Action" class="form-select js-select2 border-0 shadow" style="width:100%; max-height: 200px;" required>
+                        </select>
+                        <span asp-validation-for="Action" class="text-danger"></span>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="control-label">Department<span class="required">*</span></label>
+                        <select asp-for="Department" class="form-select js-multiple" style="width: 100%" required>
+                            <option value="@SD.Department_Accounting">@SD.Department_Accounting</option>
+                            <option value="@SD.Department_CreditAndCollection">@SD.Department_CreditAndCollection</option>
+                            <option value="@SD.Department_Engineering">@SD.Department_Engineering</option>
+                            <option value="@SD.Department_Finance">@SD.Department_Finance</option>
+                            <option value="@SD.Department_HRAndAdminOrLegal">@SD.Department_HRAndAdminOrLegal</option>
+                            <option value="@SD.Department_Logistics">@SD.Department_Logistics</option>
+                            <option value="@SD.Department_Marketing">@SD.Department_Marketing</option>
+                            <option value="@SD.Department_ManagementAccounting">@SD.Department_ManagementAccounting</option>
+                            <option value="@SD.Department_MIS">@SD.Department_MIS</option>
+                            <option value="@SD.Department_Operation">@SD.Department_Operation</option>
+                            <option value="@SD.Department_RCD">@SD.Department_RCD</option>
+                            <option value="@SD.Department_RetailAdmin">@SD.Department_RetailAdmin</option>
+                            <option value="@SD.Department_RetailAudit">@SD.Department_RetailAudit</option>
+                            <option value="@SD.Department_SiteDevAndSiteAcquisition">@SD.Department_SiteDevAndSiteAcquisition</option>
+                            <option value="@SD.Department_StationCashier">@SD.Department_StationCashier</option>
+                            <option value="@SD.Department_TradeAndSupply">@SD.Department_TradeAndSupply</option>
+                            <option value="@SD.Department_TrainingAndCompliance">@SD.Department_TrainingAndCompliance</option>
+                        </select>
+                        <span asp-validation-for="Department" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row pt-2">
+                <div class="col-6 col-md-3">
+                    <button type="submit" class="btn btn-primary form-control">Save</button>
+                </div>
+                <div class="col-6 col-md-3">
+                    <a asp-area="Filpride" asp-controller="DepartmentAccessConfiguration" asp-action="Index" class="btn btn-outline-primary border  form-control ">Back to List</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        $(document).ready(function () {
+            $(".GetModuleAccess").change(function () {
+                let moduleName = $(this).val();
+                let selectedAction = $("#SelectedAction").val();
+
+                if (moduleName !== "") {
+                    $.ajax({
+                        url: "@Url.Action("GetModuleAccess", "DepartmentAccessConfiguration")",
+                        method: "GET",
+                        data: { moduleName: moduleName },
+                        success: function (data) {
+                            if (data) {
+                                $("#Action").empty();
+                                $.each(data, function (index, action) {
+                                    if (action) {
+                                        let isSelected = (action === selectedAction) ? "selected" : "";
+
+                                        $('#Action').append('<option value="' + action + '" ' + isSelected + '>' + action + '</option>');
+                                    } else {
+                                        console.error("Invalid Module Access object:", action);
+                                    }
+                                });
+                            } else {
+                                $("#Action").empty();
+                            }
+                        },
+                        error: function (xhr, status, error) {
+                            console.error('Error fetching Module Access:', error);
+                        }
+                    });
+                } else {
+                    $("#Action").empty();
+                }
+            });
+            $(".GetModuleAccess").trigger("change");
+        })
+    </script>
+}
