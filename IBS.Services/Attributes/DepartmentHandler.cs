@@ -22,6 +22,12 @@ namespace IBS.Services.Attributes
                 return;
             }
 
+            if (context.User.IsInRole("Admin"))
+            {
+                context.Succeed(requirement);
+                return;
+            }
+
             var user = await _userManager.FindByNameAsync(context.User.Identity.Name);
 
             if (user is null)

@@ -45,7 +45,7 @@ namespace IBS.Services.Attributes
             if (!matchedAccess.Any())
             {
                 return new AuthorizationPolicyBuilder()
-                    .RequireAssertion(_ => false)
+                    .AddRequirements(new RequiredDepartment(new List<string>()))
                     .Build();
             }
 
