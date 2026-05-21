@@ -172,6 +172,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.DebitMemo, cancellationToken);
         }
 
+        [Authorize(Policy = nameof(DebitMemo.DebitMemoCreate))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(DebitMemoViewModel viewModel, CancellationToken cancellationToken)
@@ -923,6 +924,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(DebitMemo.DebitMemoEdit))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(DebitMemoViewModel viewModel, CancellationToken cancellationToken)
@@ -1024,6 +1026,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(DebitMemo.DebitMemoPreview))]
         public async Task<IActionResult> Printed(int id, CancellationToken cancellationToken)
         {
             var dm = await _unitOfWork.FilprideDebitMemo

@@ -268,6 +268,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(DeliveryReceipts.DeliveryReceiptsCreate))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(DeliveryReceiptViewModel viewModel, CancellationToken cancellationToken)
@@ -536,6 +537,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(DeliveryReceipts.DeliveryReceiptsEdit))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(DeliveryReceiptViewModel viewModel, CancellationToken cancellationToken)
@@ -705,6 +707,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(DeliveryReceipts.DeliveryReceiptsPreview))]
         public async Task<IActionResult> Printed(int id, CancellationToken cancellationToken)
         {
             var dr = await _unitOfWork.FilprideDeliveryReceipt

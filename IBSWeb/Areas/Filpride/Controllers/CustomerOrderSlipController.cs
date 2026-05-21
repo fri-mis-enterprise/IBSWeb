@@ -277,6 +277,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(CustomerOrderSlip.CustomerOrderSlipCreate))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CustomerOrderSlipViewModel viewModel, CancellationToken cancellationToken)
@@ -522,6 +523,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CustomerOrderSlip.CustomerOrderSlipEdit))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditCos(CustomerOrderSlipViewModel viewModel, CancellationToken cancellationToken)
@@ -902,6 +904,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CustomerOrderSlip.CustomerOrderSlipPreview))]
         public async Task<IActionResult> Printed(int id, CancellationToken cancellationToken)
         {
             var cos = await _unitOfWork.FilprideCustomerOrderSlip.GetAsync(x => x.CustomerOrderSlipId == id, cancellationToken);
@@ -1356,6 +1359,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CustomerOrderSlip.CustomerOrderSlipAppointSupplier))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AppointSupplier(CustomerOrderSlipAppointingSupplierViewModel viewModel, CancellationToken cancellationToken)
@@ -1525,6 +1529,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CustomerOrderSlip.CustomerOrderSlipReAppointSupplier))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ReAppointSupplier(CustomerOrderSlipAppointingSupplierViewModel viewModel, CancellationToken cancellationToken)

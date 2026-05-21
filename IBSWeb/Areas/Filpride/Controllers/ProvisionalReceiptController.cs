@@ -272,6 +272,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(ProvisionalReceipt.ProvisionalReceiptCreate))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(PRCreateViewModel viewModel, CancellationToken cancellationToken)
@@ -374,6 +375,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(ProvisionalReceipt.ProvisionalReceiptEdit))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(PREditViewModel viewModel, CancellationToken cancellationToken)
@@ -458,6 +460,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(model);
         }
 
+        [Authorize(Policy = nameof(ProvisionalReceipt.ProvisionalReceiptPreview))]
         public async Task<IActionResult> Printed(int id, CancellationToken cancellationToken)
         {
             var companyClaims = await GetCompanyClaimAsync();

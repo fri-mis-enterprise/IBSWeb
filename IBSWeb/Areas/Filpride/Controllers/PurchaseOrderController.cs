@@ -247,6 +247,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(PurchaseOrder.PurchaseOrderCreate))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(PurchaseOrderViewModel viewModel, CancellationToken cancellationToken)
@@ -388,6 +389,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(PurchaseOrder.PurchaseOrderEdit))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(PurchaseOrderViewModel viewModel, CancellationToken cancellationToken)
@@ -666,6 +668,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(PurchaseOrder.PurchaseOrderPreview))]
         public async Task<IActionResult> Printed(int id, CancellationToken cancellationToken)
         {
             var po = await _unitOfWork.FilpridePurchaseOrder

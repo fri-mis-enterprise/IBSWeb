@@ -171,6 +171,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(CreditMemo.CreditMemoCreate))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CreditMemoViewModel viewModel, CancellationToken cancellationToken)
@@ -365,6 +366,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CreditMemo.CreditMemoEdit))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(CreditMemoViewModel viewModel, CancellationToken cancellationToken)
@@ -1086,6 +1088,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             });
         }
 
+        [Authorize(Policy = nameof(CreditMemo.CreditMemoPreview))]
         public async Task<IActionResult> Printed(int id, CancellationToken cancellationToken)
         {
             var cm = await _unitOfWork.FilprideCreditMemo

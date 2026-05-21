@@ -191,6 +191,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(CheckVoucherNonTradePayment.CheckVoucherNonTradePaymentPreview))]
         public async Task<IActionResult> Printed(int id, CancellationToken cancellationToken)
         {
             var cv = await _unitOfWork.FilprideCheckVoucher
@@ -666,6 +667,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CheckVoucherNonTradePayment.CheckVoucherNonTradePaymentEdit))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(CheckVoucherNonTradePaymentViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
@@ -1149,6 +1151,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(CheckVoucherNonTradePayment.CheckVoucherNonTradePaymentCreate))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CheckVoucherNonTradePaymentViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
@@ -1742,6 +1745,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(CheckVoucherNonTradePayment.CheckVoucherNonTradePaymentCreateAdvancesToEmployee))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateAdvancesToEmployee(AdvancesToEmployeeViewModel viewModel, CancellationToken cancellationToken)
@@ -1959,6 +1963,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CheckVoucherNonTradePayment.CheckVoucherNonTradePaymentEditAdvancesToEmployee))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditAdvancesToEmployee(AdvancesToEmployeeViewModel viewModel, CancellationToken cancellationToken)
@@ -2146,6 +2151,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(CheckVoucherNonTradePayment.CheckVoucherNonTradePaymentCreateAdvancesToSupplier))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateAdvancesToSupplier(AdvancesToSupplierViewModel viewModel, CancellationToken cancellationToken)
@@ -2396,6 +2402,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CheckVoucherNonTradePayment.CheckVoucherNonTradePaymentEditAdvancesToSupplier))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditAdvancesToSupplier(AdvancesToSupplierViewModel viewModel, CancellationToken cancellationToken)

@@ -389,6 +389,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(model);
         }
 
+        [Authorize(Policy = nameof(CheckVoucherTrade.CheckVoucherTradeCreate))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CheckVoucherTradeViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
@@ -1101,6 +1102,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CheckVoucherTrade.CheckVoucherTradeEdit))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(CheckVoucherTradeViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
@@ -1611,6 +1613,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(CheckVoucherTrade.CheckVoucherTradePreview))]
         public async Task<IActionResult> Printed(int id, int? supplierId, CancellationToken cancellationToken)
         {
             var cv = await _unitOfWork.FilprideCheckVoucher
@@ -2584,6 +2587,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(model);
         }
 
+        [Authorize(Policy = nameof(CheckVoucherTrade.CheckVoucherTradeCreateCommissionPayment))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateCommissionPayment(CommissionPaymentViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
@@ -2952,6 +2956,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(model);
         }
 
+        [Authorize(Policy = nameof(CheckVoucherTrade.CheckVoucherTradeCreateHaulerPayment))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateHaulerPayment(HaulerPaymentViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
@@ -3566,6 +3571,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CheckVoucherTrade.CheckVoucherTradeEditCommissionPayment))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditCommissionPayment(CommissionPaymentViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
@@ -4015,6 +4021,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CheckVoucherTrade.CheckVoucherTradeEditHaulerPayment))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditHaulerPayment(HaulerPaymentViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)

@@ -169,6 +169,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(AuthorityToLoad.AuthorityToLoadCreate))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(BookATLViewModel viewModel, CancellationToken cancellationToken)
@@ -317,6 +318,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(AuthorityToLoad.AuthorityToLoadPreview))]
         public async Task<IActionResult> Printed(int id, CancellationToken cancellationToken)
         {
             var atl = await _unitOfWork.FilprideAuthorityToLoad
@@ -543,6 +545,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(AuthorityToLoad.AuthorityToLoadEdit))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(BookATLViewModel viewModel, CancellationToken cancellationToken)

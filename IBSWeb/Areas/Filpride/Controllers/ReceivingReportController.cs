@@ -244,6 +244,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(ReceivingReport.ReceivingReportCreate))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(ReceivingReportViewModel viewModel, CancellationToken cancellationToken)
@@ -404,6 +405,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(ReceivingReport.ReceivingReportEdit))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(ReceivingReportViewModel viewModel, CancellationToken cancellationToken)
@@ -730,6 +732,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             });
         }
 
+        [Authorize(Policy = nameof(ReceivingReport.ReceivingReportPreview))]
         public async Task<IActionResult> Printed(int id, CancellationToken cancellationToken)
         {
             var rr = await _unitOfWork.FilprideReceivingReport

@@ -337,6 +337,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptSingleCreateForSales))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SingleCollectionCreateForSales(CollectionReceiptSingleSiViewModel viewModel, CancellationToken cancellationToken)
@@ -501,6 +502,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptMultipleCollectionCreateForSales))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> MultipleCollectionCreateForSales(CollectionReceiptMultipleSiViewModel viewModel, CancellationToken cancellationToken)
@@ -773,6 +775,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptMultipleCollectionEditForSales))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> MultipleCollectionEdit(CollectionReceiptMultipleSiViewModel viewModel, CancellationToken cancellationToken)
@@ -972,6 +975,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptCreateForService))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateForService(CollectionReceiptServiceViewModel viewModel, CancellationToken cancellationToken)
@@ -1509,6 +1513,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptEditForSales))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditForSales(CollectionReceiptSingleSiViewModel viewModel, CancellationToken cancellationToken)
@@ -1772,6 +1777,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptEditForService))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditForService(CollectionReceiptServiceViewModel viewModel, CancellationToken cancellationToken)
@@ -2066,9 +2072,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptCancel))]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptCancel))]
         public async Task<IActionResult> Cancel(int id, string? cancellationRemarks, CancellationToken cancellationToken)
         {
             var model = await _unitOfWork.FilprideCollectionReceipt
@@ -2142,6 +2148,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptPreview))]
         public async Task<IActionResult> Printed(int id, CancellationToken cancellationToken)
         {
             var cr = await _unitOfWork.FilprideCollectionReceipt
@@ -2244,6 +2251,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(cr);
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptMultipleCollectionPreview))]
         public async Task<IActionResult> PrintedMultipleCR(int id, CancellationToken cancellationToken)
         {
             var findIdOfCr = await _unitOfWork.FilprideCollectionReceipt.GetAsync(cr => cr.CollectionReceiptId == id, cancellationToken);

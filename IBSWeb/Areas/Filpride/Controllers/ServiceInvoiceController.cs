@@ -157,6 +157,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(ServiceInvoice.ServiceInvoiceCreate))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(ServiceInvoiceViewModel viewModel, CancellationToken cancellationToken)
@@ -507,6 +508,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(ServiceInvoice.ServiceInvoiceEdit))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(ServiceInvoiceViewModel viewModel, CancellationToken cancellationToken)
@@ -624,6 +626,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(ServiceInvoice.ServiceInvoicePreview))]
         public async Task<IActionResult> Printed(int id, CancellationToken cancellationToken)
         {
             var sv = await _unitOfWork.FilprideServiceInvoice

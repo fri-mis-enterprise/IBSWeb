@@ -64,6 +64,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> GetDepartments([FromForm] DataTablesParameters parameters, CancellationToken cancellationToken)
         {
             try
@@ -150,6 +151,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 #region Saving Default Entries
 
+                var validateIfModuleActionIsAlreadyExist = await _unitOfWork.DepartmentAccess.GetAllAsync(x => x.Action == viewModel.Action, cancellationToken);
+                if (validateIfModuleActionIsAlreadyExist.Any())
+                {
+                    TempData["error"] = "The action for this module has already been created. Please edit the existing entry to add access.";
+                    return RedirectToAction(nameof(Index));
+                }
+
                 var model = new DepartmentAccess
                 {
                     Department = viewModel.Department,
@@ -213,6 +221,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(DepartmentAccessViewModel viewModel, CancellationToken cancellationToken)
         {
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);

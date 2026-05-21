@@ -260,6 +260,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherCreateLiquidation))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateLiquidation(JournalVoucherViewModel viewModel, CancellationToken cancellationToken)
@@ -700,6 +701,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherEditLiquidation))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditLiquidation(JournalVoucherViewModel viewModel, CancellationToken cancellationToken)
@@ -810,6 +812,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherPreview))]
         public async Task<IActionResult> Printed(int id, CancellationToken cancellationToken)
         {
             var cv = await _unitOfWork.FilprideJournalVoucher.GetAsync(x => x.JournalVoucherHeaderId == id, cancellationToken);
@@ -1539,6 +1542,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherCreateAccrual))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateAccrual(JvCreateAccrualViewModel viewModel, CancellationToken cancellationToken)
@@ -1734,6 +1738,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherEditAccrual))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditAccrual(JvEditAccrualViewModel viewModel, CancellationToken cancellationToken)
@@ -1945,6 +1950,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherCreateAmortization))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateAmortization(JvCreateAmortizationViewModel viewModel, CancellationToken cancellationToken)
@@ -2189,6 +2195,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherEditAmortization))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditAmortization(JvEditAmortizationViewModel viewModel, CancellationToken cancellationToken)
@@ -2371,6 +2378,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherCreateReclass))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateReclass(JvCreateReclassViewModel viewModel, CancellationToken cancellationToken)
@@ -2552,6 +2560,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(JournalVoucher.JournalVoucherEditReclass))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditReclass(JvEditReclassViewModel viewModel, CancellationToken cancellationToken)

@@ -237,6 +237,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(CheckVoucherNonTradePayrollInvoice.CheckVoucherNonTradePayrollInvoiceCreate))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CheckVoucherNonTradeInvoicingViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
@@ -483,6 +484,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CheckVoucherNonTradePayrollInvoice.CheckVoucherNonTradePayrollInvoiceEdit))]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(CheckVoucherNonTradeInvoicingViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
         {
@@ -851,6 +853,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CheckVoucherNonTradePayrollInvoice.CheckVoucherNonTradePayrollInvoicePreview))]
         public async Task<IActionResult> Printed(int id, int? supplierId, CancellationToken cancellationToken)
         {
             var cv = await _unitOfWork.FilprideCheckVoucher
