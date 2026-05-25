@@ -21,9 +21,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
     [CompanyAuthorize(nameof(Filpride))]
-    [DepartmentAuthorize(SD.Department_CreditAndCollection,
-        SD.Department_RCD,
-        SD.Department_ManagementAccounting)]
     public class DebitMemoController : Controller
     {
         private readonly ApplicationDbContext _dbContext;
@@ -141,6 +138,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(DebitMemo.DebitMemoCreate))]
         [HttpGet]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
@@ -174,6 +172,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.DebitMemo, cancellationToken);
         }
 
+        [Authorize(Policy = nameof(DebitMemo.DebitMemoCreate))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(DebitMemoViewModel viewModel, CancellationToken cancellationToken)
@@ -313,6 +312,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(DebitMemo.DebitMemoPreview))]
         [HttpGet]
         public async Task<IActionResult> Print(int? id, CancellationToken cancellationToken)
         {
@@ -339,6 +339,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(debitMemo);
         }
 
+        [Authorize(Policy = nameof(DebitMemo.DebitMemoPost))]
         public async Task<IActionResult> Post(int id, ViewModelDMCM viewModelDmcm, CancellationToken cancellationToken)
         {
             var model = await _unitOfWork.FilprideDebitMemo.GetAsync(dm => dm.DebitMemoId == id, cancellationToken);
@@ -811,6 +812,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(DebitMemo.DebitMemoCancel))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancel(int id, string? cancellationRemarks, CancellationToken cancellationToken)
@@ -868,6 +870,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return Json(null);
         }
 
+        [Authorize(Policy = nameof(DebitMemo.DebitMemoEdit))]
         [HttpGet]
         public async Task<IActionResult> Edit(int? id, CancellationToken cancellationToken)
         {
@@ -921,6 +924,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(DebitMemo.DebitMemoEdit))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(DebitMemoViewModel viewModel, CancellationToken cancellationToken)
@@ -1022,6 +1026,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(DebitMemo.DebitMemoPreview))]
         public async Task<IActionResult> Printed(int id, CancellationToken cancellationToken)
         {
             var dm = await _unitOfWork.FilprideDebitMemo
@@ -1440,6 +1445,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return Json(dmIds);
         }
 
+        [Authorize(Policy = nameof(DebitMemo.DebitMemoUnpost))]
         public async Task<IActionResult> Unpost(int id, CancellationToken cancellationToken)
         {
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
@@ -1460,7 +1466,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 debitMemo.PostedDate = null;
                 debitMemo.Status = nameof(Status.Pending);
 
-                if (debitMemo.SalesInvoiceId != null || debitMemo.SalesInvoiceId != 0)
+                if (debitMemo.SalesInvoiceId.HasValue)
                 {
                     await _unitOfWork.FilprideSalesInvoice.RemoveRecords<FilprideSalesBook>(x => x.SerialNo == debitMemo.DebitMemoNo, cancellationToken);
                     await _unitOfWork.FilprideSalesInvoice.RemoveRecords<FilprideGeneralLedgerBook>(x => x.Reference == debitMemo.DebitMemoNo, cancellationToken);

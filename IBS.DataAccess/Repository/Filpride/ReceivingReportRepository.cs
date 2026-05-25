@@ -577,30 +577,13 @@ namespace IBS.DataAccess.Repository.Filpride
 
             if (model.PurchaseOrder.Terms == SD.Terms_Cod || model.PurchaseOrder.Terms == SD.Terms_Prepaid)
             {
-                var advancesVoucher = await _db.FilprideCheckVoucherDetails
-                    .Include(cv => cv.CheckVoucherHeader)
-                    .FirstOrDefaultAsync(cv =>
-                        cv.CheckVoucherHeader!.SupplierId == model.PurchaseOrder.SupplierId &&
-                        cv.CheckVoucherHeader.IsAdvances &&
-                        cv.CheckVoucherHeader.Status == nameof(CheckVoucherPaymentStatus.Posted) &&
-                        cv.AccountName.Contains("Expanded Withholding Tax") &&
-                        cv.Credit > cv.AmountPaid,
-                        cancellationToken);
-
-                if (advancesVoucher != null)
+                if (isIncremental)
                 {
-                    var affectedEwt = Math.Min(advancesVoucher.Credit, ewtAmount);
-
-                    if (isIncremental)
-                    {
-                        ewtAmount -= affectedEwt;
-                        advancesVoucher.AmountPaid += affectedEwt;
-                    }
-                    else
-                    {
-                        ewtAmount += affectedEwt;
-                        advancesVoucher.AmountPaid -= affectedEwt;
-                    }
+                    ewtAmount = await ApplyAdvanceEwtOffsetAsync(model, ewtAmount, isReversal: false, cancellationToken);
+                }
+                else
+                {
+                    await ApplyAdvanceEwtOffsetAsync(model, ewtAmount, isReversal: true, cancellationToken);
                 }
             }
 
@@ -698,9 +681,6 @@ namespace IBS.DataAccess.Repository.Filpride
                 var cogsPostingDate = isDeliveredPeriodPosted
                     ? firstDayOfMonth
                     : deliveredDate;
-                var priceAdjustment = difference / model.QuantityReceived;
-                var cogsAmount = model.DeliveryReceipt.Quantity * priceAdjustment;
-                var cogsNetOfVat = ComputeNetOfVat(cogsAmount);
 
                 ledgers.Add(new FilprideGeneralLedgerBook
                 {
@@ -710,8 +690,8 @@ namespace IBS.DataAccess.Repository.Filpride
                     AccountId = cogsTitle.AccountId,
                     AccountNo = cogsTitle.AccountNumber,
                     AccountTitle = cogsTitle.AccountName,
-                    Debit = isIncremental ? cogsNetOfVat : 0,
-                    Credit = !isIncremental ? cogsNetOfVat : 0,
+                    Debit = isIncremental ? netOfVatAmount : 0,
+                    Credit = !isIncremental ? netOfVatAmount : 0,
                     Company = model.Company,
                     CreatedBy = userName,
                     CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
@@ -726,8 +706,8 @@ namespace IBS.DataAccess.Repository.Filpride
                     AccountId = inventoryTitle.AccountId,
                     AccountNo = inventoryTitle.AccountNumber,
                     AccountTitle = inventoryTitle.AccountName,
-                    Debit = !isIncremental ? cogsNetOfVat : 0,
-                    Credit = isIncremental ? cogsNetOfVat : 0,
+                    Debit = !isIncremental ? netOfVatAmount : 0,
+                    Credit = isIncremental ? netOfVatAmount : 0,
                     Company = model.Company,
                     CreatedBy = userName,
                     CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),

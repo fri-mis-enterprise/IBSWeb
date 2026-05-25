@@ -41,6 +41,7 @@ namespace IBS.DataAccess.Repository.IRepository
         ITermsRepository FilprideTerms { get; }
         Filpride.IRepository.IGeneralLedgerRepository GeneralLedger { get; }
         IProvisionalReceiptRepository ProvisionalReceipt { get; }
+        IDepartmentAccessRepository DepartmentAccess { get; }
 
         Task<List<SelectListItem>> GetFilprideCustomerListAsyncById(string company, CancellationToken cancellationToken = default);
 
