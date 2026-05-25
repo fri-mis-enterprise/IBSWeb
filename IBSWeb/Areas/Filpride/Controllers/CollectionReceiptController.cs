@@ -30,10 +30,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
     [CompanyAuthorize(nameof(Filpride))]
-    [DepartmentAuthorize(SD.Department_CreditAndCollection,
-        SD.Department_Finance,
-        SD.Department_RCD,
-        SD.Department_ManagementAccounting)]
     public class CollectionReceiptController : Controller
     {
         private readonly ApplicationDbContext _dbContext;
@@ -210,7 +206,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptSingleCreateForSales))]
         [HttpGet]
         public async Task<IActionResult> SingleCollectionCreateForSales(CancellationToken cancellationToken)
         {
@@ -245,6 +241,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return Json(await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken));
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptAddDepositInfo))]
         [HttpGet]
         public async Task<IActionResult> Deposit(int id, int bankId, DateOnly depositDate, CancellationToken cancellationToken)
         {
@@ -340,6 +337,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptSingleCreateForSales))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SingleCollectionCreateForSales(CollectionReceiptSingleSiViewModel viewModel, CancellationToken cancellationToken)
@@ -481,7 +479,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptMultipleCollectionCreateForSales))]
         [HttpGet]
         public async Task<IActionResult> MultipleCollectionCreateForSales(CancellationToken cancellationToken)
         {
@@ -504,6 +502,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptMultipleCollectionCreateForSales))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> MultipleCollectionCreateForSales(CollectionReceiptMultipleSiViewModel viewModel, CancellationToken cancellationToken)
@@ -666,7 +665,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptMultipleCollectionEditForSales))]
         [HttpGet]
         public async Task<IActionResult> MultipleCollectionEdit(int? id, CancellationToken cancellationToken)
         {
@@ -776,6 +775,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptMultipleCollectionEditForSales))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> MultipleCollectionEdit(CollectionReceiptMultipleSiViewModel viewModel, CancellationToken cancellationToken)
@@ -955,7 +955,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptCreateForService))]
         [HttpGet]
         public async Task<IActionResult> CreateForService(CancellationToken cancellationToken)
         {
@@ -975,6 +975,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptCreateForService))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateForService(CollectionReceiptServiceViewModel viewModel, CancellationToken cancellationToken)
@@ -1122,6 +1123,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptPreview))]
         public async Task<IActionResult> Print(int id, CancellationToken cancellationToken)
         {
             var cr = await _unitOfWork.FilprideCollectionReceipt.GetAsync(cr => cr.CollectionReceiptId == id, cancellationToken);
@@ -1419,7 +1421,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptEditForSales))]
         [HttpGet]
         public async Task<IActionResult> EditForSales(int? id, CancellationToken cancellationToken)
         {
@@ -1511,6 +1513,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptEditForSales))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditForSales(CollectionReceiptSingleSiViewModel viewModel, CancellationToken cancellationToken)
@@ -1681,7 +1684,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptEditForService))]
         [HttpGet]
         public async Task<IActionResult> EditForService(int? id, CancellationToken cancellationToken)
         {
@@ -1774,6 +1777,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptEditForService))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditForService(CollectionReceiptServiceViewModel viewModel, CancellationToken cancellationToken)
@@ -1945,7 +1949,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptPost))]
         public async Task<IActionResult> Post(int id, CancellationToken cancellationToken)
         {
             var model = await _unitOfWork.FilprideCollectionReceipt
@@ -2068,9 +2072,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptCancel))]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
         public async Task<IActionResult> Cancel(int id, string? cancellationRemarks, CancellationToken cancellationToken)
         {
             var model = await _unitOfWork.FilprideCollectionReceipt
@@ -2144,6 +2148,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptPreview))]
         public async Task<IActionResult> Printed(int id, CancellationToken cancellationToken)
         {
             var cr = await _unitOfWork.FilprideCollectionReceipt
@@ -2232,6 +2237,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             });
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptMultipleCollectionPreview))]
         public async Task<IActionResult> MultipleCollectionPrint(int id, CancellationToken cancellationToken)
         {
             var cr = await _unitOfWork.FilprideCollectionReceipt
@@ -2245,6 +2251,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(cr);
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptMultipleCollectionPreview))]
         public async Task<IActionResult> PrintedMultipleCR(int id, CancellationToken cancellationToken)
         {
             var findIdOfCr = await _unitOfWork.FilprideCollectionReceipt.GetAsync(cr => cr.CollectionReceiptId == id, cancellationToken);
@@ -2641,6 +2648,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return Json(crIds);
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptReturnCheck))]
         [HttpGet]
         public async Task<IActionResult> Return(int id, CancellationToken cancellationToken)
         {
@@ -2695,6 +2703,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptRedeposit))]
         [HttpGet]
         public async Task<IActionResult> Redeposit(int id, DateOnly redepositDate, CancellationToken cancellationToken)
         {
@@ -2749,7 +2758,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [DepartmentAuthorize(SD.Department_CreditAndCollection, SD.Department_RCD)]
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptApplyClearingDate))]
         [HttpGet]
         public async Task<IActionResult> ApplyClearingDate(int id, DateOnly clearingDate, CancellationToken cancellationToken)
         {
@@ -2920,6 +2929,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptUnpost))]
         public async Task<IActionResult> Unpost(int id, CancellationToken cancellationToken)
         {
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);

@@ -16,7 +16,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
     [CompanyAuthorize(nameof(Filpride))]
-    [DepartmentAuthorize(SD.Department_ManagementAccounting, SD.Department_RCD)]
     public class ComparativeReportController : Controller
     {
         private readonly ILogger<ComparativeReportController> _logger;

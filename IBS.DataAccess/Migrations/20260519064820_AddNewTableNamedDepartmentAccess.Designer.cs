@@ -3,6 +3,7 @@ using System;
 using IBS.DataAccess.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IBS.DataAccess.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260519064820_AddNewTableNamedDepartmentAccess")]
+    partial class AddNewTableNamedDepartmentAccess
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3595,10 +3598,6 @@ namespace IBS.DataAccess.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("receiving_report_id");
 
-                    b.Property<DateOnly?>("UpdatedDate")
-                        .HasColumnType("date")
-                        .HasColumnName("updated_date");
-
                     b.HasKey("Id")
                         .HasName("pk_filpride_purchase_locked_records_queues");
 
@@ -3606,11 +3605,7 @@ namespace IBS.DataAccess.Migrations
                         .HasDatabaseName("ix_filpride_purchase_locked_records_queues_locked_date");
 
                     b.HasIndex("ReceivingReportId")
-                        .IsUnique()
                         .HasDatabaseName("ix_filpride_purchase_locked_records_queues_receiving_report_id");
-
-                    b.HasIndex("UpdatedDate")
-                        .HasDatabaseName("ix_filpride_purchase_locked_records_queues_updated_date");
 
                     b.ToTable("filpride_purchase_locked_records_queues", (string)null);
                 });
@@ -3640,22 +3635,14 @@ namespace IBS.DataAccess.Migrations
                         .HasColumnType("numeric(18,4)")
                         .HasColumnName("quantity");
 
-                    b.Property<DateOnly?>("UpdatedDate")
-                        .HasColumnType("date")
-                        .HasColumnName("updated_date");
-
                     b.HasKey("Id")
                         .HasName("pk_filpride_sales_locked_records_queues");
 
                     b.HasIndex("DeliveryReceiptId")
-                        .IsUnique()
                         .HasDatabaseName("ix_filpride_sales_locked_records_queues_delivery_receipt_id");
 
                     b.HasIndex("LockedDate")
                         .HasDatabaseName("ix_filpride_sales_locked_records_queues_locked_date");
-
-                    b.HasIndex("UpdatedDate")
-                        .HasDatabaseName("ix_filpride_sales_locked_records_queues_updated_date");
 
                     b.ToTable("filpride_sales_locked_records_queues", (string)null);
                 });
@@ -5554,14 +5541,12 @@ namespace IBS.DataAccess.Migrations
 
                     b.Property<string>("Action")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("text")
                         .HasColumnName("action");
 
                     b.Property<string>("CreatedBy")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("text")
                         .HasColumnName("created_by");
 
                     b.Property<DateTime>("CreatedDate")
@@ -5574,18 +5559,17 @@ namespace IBS.DataAccess.Migrations
                         .HasColumnName("department");
 
                     b.Property<string>("EditedBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .IsRequired()
+                        .HasColumnType("text")
                         .HasColumnName("edited_by");
 
-                    b.Property<DateTime?>("EditedDate")
+                    b.Property<DateTime>("EditedDate")
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("edited_date");
 
                     b.Property<string>("Module")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("text")
                         .HasColumnName("module");
 
                     b.HasKey("Id")

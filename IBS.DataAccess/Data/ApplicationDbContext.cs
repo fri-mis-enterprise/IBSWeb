@@ -37,6 +37,8 @@ namespace IBS.DataAccess.Data
 
         public DbSet<PostedPeriod> PostedPeriods { get; set; }
 
+        public DbSet<DepartmentAccess> DepartmentAccesses { get; set; }
+
         #region--FILPRIDE
 
         public DbSet<FilprideCustomerOrderSlip> FilprideCustomerOrderSlips { get; set; }

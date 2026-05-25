@@ -246,7 +246,7 @@ namespace IBS.DataAccess.Repository.Filpride
             await _db.SaveChangesAsync(cancellationToken);
         }
 
-        private async Task RecalculateTransactionsAsync(
+        private Task RecalculateTransactionsAsync(
             FilprideInventory? previousInventory,
             IEnumerable<FilprideInventory> transactions,
             CancellationToken cancellationToken)
@@ -275,6 +275,8 @@ namespace IBS.DataAccess.Repository.Filpride
                 runningAverageCost = transaction.AverageCost;
                 runningInventoryBalance = transaction.InventoryBalance;
             }
+
+            return Task.CompletedTask;
         }
 
         private static IOrderedEnumerable<FilprideInventory> OrderInventoryTransactions(IEnumerable<FilprideInventory> inventories)

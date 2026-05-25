@@ -2,14 +2,18 @@ using Google.Cloud.Storage.V1;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository;
 using IBS.DataAccess.Repository.IRepository;
+using IBS.DataAccess.Repository.MasterFile;
+using IBS.DataAccess.Repository.MasterFile.IRepository;
 using IBS.Models;
 using IBS.Services;
+using IBS.Services.Attributes;
 using IBS.Utility;
 using IBSWeb.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using QuestPDF;
 using QuestPDF.Infrastructure;
 using Serilog;
@@ -101,6 +105,14 @@ if (builder.Environment.IsProduction())
             );
         });
 }
+
+builder.Services.AddScoped<IAuthorizationHandler, DepartmentHandler>();
+
+builder.Services.AddScoped<IDepartmentAccessRepository, DepartmentAccessRepository>();
+
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, DynamicPolicyProvider>();
+
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
