@@ -24,6 +24,7 @@ namespace IBS.DataAccess.Repository
 
         public IProductRepository Product { get; private set; }
         public ICompanyRepository Company { get; private set; }
+        public IDepartmentAccessRepository DepartmentAccess { get; }
 
         public INotificationRepository Notifications { get; private set; }
 
@@ -146,6 +147,7 @@ namespace IBS.DataAccess.Repository
             Product = new ProductRepository(_db);
             Company = new CompanyRepository(_db);
             Notifications = new NotificationRepository(_db);
+            DepartmentAccess = new DepartmentAccessRepository(_db);
 
             #region--Filpride
 

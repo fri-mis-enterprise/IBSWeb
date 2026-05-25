@@ -6,6 +6,23 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v2.7.0] - 2026-05-25
+
+### Added
+- Added a Department Access configuration module for admins to manage per-action department access across Filpride entry modules.
+- Added dynamic policy-based authorization backed by department access records, including the required repositories, authorization handler, policy provider, and database migrations.
+
+### Changed
+- Replaced hard-coded department authorization on Filpride entry actions with policy-based authorization for create, edit, preview, post, unpost, cancel, close, update, and related operational workflows.
+- Added the Department Access admin navigation entry and updated the application version display to `v2.7.0`.
+
+### Fixed
+- Fixed Department Access listing search to avoid filtering on created and edited date fields.
+- Fixed policy-based authorization so Admin users bypass department validation.
+- Fixed repeated posting flows in affected modules by adding duplicate-post guards for records that were already posted.
+
+---
+
 ## [v2.6.1] - 2026-05-19
 
 ### Changed

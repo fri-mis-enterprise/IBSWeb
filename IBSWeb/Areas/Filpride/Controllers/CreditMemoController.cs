@@ -21,9 +21,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
     [CompanyAuthorize(nameof(Filpride))]
-    [DepartmentAuthorize(SD.Department_CreditAndCollection,
-        SD.Department_RCD,
-        SD.Department_ManagementAccounting)]
     public class CreditMemoController : Controller
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -166,6 +163,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CreditMemo, cancellationToken);
         }
 
+        [Authorize(Policy = nameof(CreditMemo.CreditMemoCreate))]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
             var viewModel = new CreditMemoViewModel();
@@ -173,6 +171,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(CreditMemo.CreditMemoCreate))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CreditMemoViewModel viewModel, CancellationToken cancellationToken)
@@ -312,6 +311,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CreditMemo.CreditMemoEdit))]
         [HttpGet]
         public async Task<IActionResult> Edit(int? id, CancellationToken cancellationToken)
         {
@@ -366,6 +366,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CreditMemo.CreditMemoEdit))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(CreditMemoViewModel viewModel, CancellationToken cancellationToken)
@@ -470,6 +471,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CreditMemo.CreditMemoPreview))]
         [HttpGet]
         public async Task<IActionResult> Print(int? id, CancellationToken cancellationToken)
         {
@@ -502,6 +504,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(creditMemo);
         }
 
+        [Authorize(Policy = nameof(CreditMemo.CreditMemoPost))]
         public async Task<IActionResult> Post(int id, CancellationToken cancellationToken, ViewModelDMCM viewModelDmcm)
         {
             var model = await _unitOfWork.FilprideCreditMemo.GetAsync(c => c.CreditMemoId == id, cancellationToken);
@@ -1026,6 +1029,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CreditMemo.CreditMemoCancel))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancel(int id, string? cancellationRemarks, CancellationToken cancellationToken)
@@ -1084,6 +1088,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             });
         }
 
+        [Authorize(Policy = nameof(CreditMemo.CreditMemoPreview))]
         public async Task<IActionResult> Printed(int id, CancellationToken cancellationToken)
         {
             var cm = await _unitOfWork.FilprideCreditMemo
@@ -1503,6 +1508,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return Json(cmIds);
         }
 
+        [Authorize(Policy = nameof(CreditMemo.CreditMemoUnpost))]
         public async Task<IActionResult> Unpost(int id, CancellationToken cancellationToken)
         {
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
@@ -1523,7 +1529,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 creditMemo.PostedDate = null;
                 creditMemo.Status = nameof(Status.Pending);
 
-                if (creditMemo.SalesInvoiceId != null || creditMemo.SalesInvoiceId != 0)
+                if (creditMemo.SalesInvoiceId.HasValue)
                 {
                     await _unitOfWork.FilprideSalesInvoice.RemoveRecords<FilprideSalesBook>(x => x.SerialNo == creditMemo.CreditMemoNo, cancellationToken);
                     await _unitOfWork.FilprideSalesInvoice.RemoveRecords<FilprideGeneralLedgerBook>(x => x.Reference == creditMemo.CreditMemoNo, cancellationToken);

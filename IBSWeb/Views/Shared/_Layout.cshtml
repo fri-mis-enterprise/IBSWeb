@@ -18,7 +18,17 @@
 
     var userName = UserManager.GetUserName(this.User);
 
-    ViewBag.AppVersion = "2.6.1";
+    var assembly = typeof(Program).Assembly;
+    var informationalVersion = System.Reflection.CustomAttributeExtensions
+        .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(assembly)?
+        .InformationalVersion;
+    var appVersion = informationalVersion?.Split('+')[0]
+                     ?? assembly.GetName().Version?.ToString()
+                     ?? "0.0.0";
+    var currentYear = DateTime.UtcNow.Year;
+    var copyrightYears = currentYear > 2024
+        ? $"2024-{currentYear}"
+        : "2024";
 }
 
 <!DOCTYPE html>
@@ -608,6 +618,10 @@
                                         <li class="nav-item">
                                             <a class="dropdown-item text-dark" asp-area="Admin" asp-controller="User" asp-action="Index">User</a>
                                         </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li class="nav-item">
+                                            <a class="dropdown-item text-dark" asp-area="Filpride" asp-controller="DepartmentAccessConfiguration" asp-action="Index">Department Access</a>
+                                        </li>
                                     </ul>
                                 </li>
                                 <li class="nav-item">
@@ -642,7 +656,7 @@
 
     <footer b-q5eydxz0xc class="border-top footer bg-primary text-light">
         <div class="container text-center">
-            &copy; 2024 - Filpride <i class="bi bi-r-circle"></i> &middot; @($"v{ViewBag.AppVersion}")
+            &copy; @copyrightYears - Filpride <i class="bi bi-r-circle"></i> &middot; @($"v{appVersion}")
         </div>
     </footer>
 

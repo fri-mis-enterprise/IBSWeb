@@ -25,12 +25,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
     [CompanyAuthorize(nameof(Filpride))]
-    [DepartmentAuthorize(
-        SD.Department_Accounting,
-        SD.Department_RCD,
-        SD.Department_HRAndAdminOrLegal,
-        SD.Department_ManagementAccounting,
-        SD.Department_Finance)]
     public class CheckVoucherNonTradeInvoiceController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;
@@ -251,11 +245,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         }
 
-        [DepartmentAuthorize(
-            SD.Department_Accounting,
-            SD.Department_RCD,
-            SD.Department_HRAndAdminOrLegal,
-            SD.Department_ManagementAccounting)]
+        [Authorize(Policy = nameof(CheckVoucherNonTradeInvoice.CheckVoucherNonTradeInvoiceCreate))]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
             _logger.LogInformation("Starting CheckVoucherNonTradeInvoice/Create GET for user {UserName}.",
@@ -295,6 +285,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(viewModel);
         }
 
+        [Authorize(Policy = nameof(CheckVoucherNonTradeInvoice.CheckVoucherNonTradeInvoiceCreate))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CheckVoucherNonTradeInvoicingViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
@@ -759,11 +750,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [DepartmentAuthorize(
-            SD.Department_Accounting,
-            SD.Department_RCD,
-            SD.Department_HRAndAdminOrLegal,
-            SD.Department_ManagementAccounting)]
+        [Authorize(Policy = nameof(CheckVoucherNonTradeInvoice.CheckVoucherNonTradeInvoiceEdit))]
         [HttpGet]
         public async Task<IActionResult> Edit(int id, CancellationToken cancellationToken)
         {
@@ -864,6 +851,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CheckVoucherNonTradeInvoice.CheckVoucherNonTradeInvoiceEdit))]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(CheckVoucherNonTradeInvoicingViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
@@ -1298,6 +1286,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CheckVoucherNonTradeInvoice.CheckVoucherNonTradeInvoicePreview))]
         [HttpGet]
         public async Task<IActionResult> Print(int? id, int? supplierId, int? employeeId, CancellationToken cancellationToken)
         {
@@ -1355,11 +1344,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return Json(null);
         }
 
-        [DepartmentAuthorize(
-            SD.Department_Accounting,
-            SD.Department_RCD,
-            SD.Department_HRAndAdminOrLegal,
-            SD.Department_ManagementAccounting)]
+        [Authorize(Policy = nameof(CheckVoucherNonTradeInvoice.CheckVoucherNonTradeInvoicePost))]
         public async Task<IActionResult> Post(int id, int? supplierId, CancellationToken cancellationToken)
         {
             FilprideCheckVoucherHeader? modelHeader = await _unitOfWork.FilprideCheckVoucher.GetAsync(cv => cv.CheckVoucherHeaderId == id, cancellationToken);
@@ -1423,13 +1408,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CheckVoucherNonTradeInvoice.CheckVoucherNonTradeInvoiceCancel))]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [DepartmentAuthorize(
-            SD.Department_Accounting,
-            SD.Department_RCD,
-            SD.Department_HRAndAdminOrLegal,
-            SD.Department_ManagementAccounting)]
         public async Task<IActionResult> Cancel(int id, string? cancellationRemarks, CancellationToken cancellationToken)
         {
             FilprideCheckVoucherHeader? model = await _unitOfWork.FilprideCheckVoucher
@@ -1514,11 +1495,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [DepartmentAuthorize(
-            SD.Department_Accounting,
-            SD.Department_RCD,
-            SD.Department_HRAndAdminOrLegal,
-            SD.Department_ManagementAccounting)]
+        [Authorize(Policy = nameof(CheckVoucherNonTradeInvoice.CheckVoucherNonTradeInvoiceUnpost))]
         public async Task<IActionResult> Unpost(int id, int? supplierId, CancellationToken cancellationToken)
         {
             await using IDbContextTransaction transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
@@ -1571,6 +1548,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [Authorize(Policy = nameof(CheckVoucherNonTradeInvoice.CheckVoucherNonTradeInvoicePreview))]
         public async Task<IActionResult> Printed(int id, int? supplierId, CancellationToken cancellationToken)
         {
             FilprideCheckVoucherHeader? cv = await _unitOfWork.FilprideCheckVoucher
