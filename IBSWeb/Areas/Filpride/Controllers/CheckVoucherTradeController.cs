@@ -162,7 +162,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             if (advanceHeaders.Count != references.Count)
             {
-                throw new NullReferenceException($"One or more advance check vouchers were not found. Reference: {advancesReference}");
+                throw new InvalidOperationException($"One or more advance check vouchers were not found. Reference: {advancesReference}");
             }
 
             var remainingAmount = appliedAdvanceAmount;

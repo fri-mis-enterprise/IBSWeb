@@ -6,9 +6,10 @@ namespace IBS.Services.Attributes
     {
         public RequiredDepartment(List<string> department)
         {
-            Department = department;
+            ArgumentNullException.ThrowIfNull(department);
+            Department = department.ToList().AsReadOnly();
         }
 
-        public List<string> Department { get; }
+        public IReadOnlyList<string> Department { get; }
     }
 }

@@ -1,4 +1,5 @@
 using IBS.DataAccess.Repository.MasterFile;
+using IBS.DataAccess.Repository.MasterFile.IRepository;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -32,7 +33,7 @@ namespace IBS.Services.Attributes
             using var scope = _scopeFactory.CreateScope();
 
             var repo = scope.ServiceProvider
-                .GetRequiredService<DepartmentAccessRepository>();
+                .GetRequiredService<IDepartmentAccessRepository>();
 
             var departmentAccessList =
                 await repo.GetDepartmentAccessListAsync();
