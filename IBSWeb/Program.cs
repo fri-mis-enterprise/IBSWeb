@@ -108,7 +108,7 @@ if (builder.Environment.IsProduction())
 
 builder.Services.AddScoped<IAuthorizationHandler, DepartmentHandler>();
 
-builder.Services.AddScoped<DepartmentAccessRepository>();
+builder.Services.AddScoped<IDepartmentAccessRepository, DepartmentAccessRepository>();
 
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, DynamicPolicyProvider>();
 
