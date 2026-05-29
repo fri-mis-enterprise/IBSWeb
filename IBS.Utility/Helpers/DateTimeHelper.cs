@@ -12,13 +12,13 @@ namespace IBS.Utility.Helpers
         private static DateTime? _lastGeneratedTime;
         private static readonly HttpClient _httpClient = new();
         private static string _calendarificApiKey = string.Empty;
+        private static readonly Dictionary<(string country, int year), List<DateOnly>> _holidayCache = new();
 
         public static void Initialize(IConfiguration configuration)
         {
             _calendarificApiKey = configuration["Calendarific:ApiKey"]
                                   ?? throw new InvalidOperationException("Calendarific API key is not configured.");
         }
-
 
         public static DateTime GetCurrentPhilippineTime()
         {
@@ -33,36 +33,31 @@ namespace IBS.Utility.Helpers
 
         public static DateTime GenerateRandomTransactionDateTime(DateOnly date)
         {
-            lock (_lock) // ensures thread safety
+            lock (_lock)
             {
                 var baseDate = date.ToDateTime(TimeOnly.MinValue);
 
-                var workStart = baseDate.AddHours(8).AddMinutes(30); // 8:30 AM
-                var workEnd = baseDate.AddHours(17).AddMinutes(30);  // 5:30 PM
+                var workStart = baseDate.AddHours(8).AddMinutes(30);
+                var workEnd = baseDate.AddHours(17).AddMinutes(30);
 
                 var random = Random.Shared;
 
-                // First record OR new date
                 if (_lastGeneratedTime == null || _lastGeneratedTime.Value.Date != baseDate.Date)
                 {
                     var initial = workStart
-                        .AddMinutes(random.Next(2, 6))   // 2–5 mins
-                        .AddSeconds(random.Next(0, 60)); // 0–59 secs
+                        .AddMinutes(random.Next(2, 6))
+                        .AddSeconds(random.Next(0, 60));
 
                     _lastGeneratedTime = initial;
                     return initial;
                 }
 
-                // Increment from last value
                 var next = _lastGeneratedTime.Value
                     .AddMinutes(random.Next(2, 6))
                     .AddSeconds(random.Next(0, 60));
 
-                // Cap at end of working hours
                 if (next > workEnd)
-                {
                     next = workEnd;
-                }
 
                 _lastGeneratedTime = next;
                 return next;
@@ -81,9 +76,14 @@ namespace IBS.Utility.Helpers
 
             var jsonSerializerOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
-            // Get holidays for all years in the range
             for (int year = startDate.Year; year <= endDate.Year; year++)
             {
+                if (_holidayCache.TryGetValue((countryCode, year), out var cached))
+                {
+                    nonWorkingDays.AddRange(cached);
+                    continue;
+                }
+
                 var url = $"https://calendarific.com/api/v2/holidays?api_key={_calendarificApiKey}&country={countryCode}&year={year}";
 
                 using var response = await _httpClient.GetAsync(url);
@@ -96,15 +96,18 @@ namespace IBS.Utility.Helpers
                 await using var jsonStream = await response.Content.ReadAsStreamAsync();
                 var result = JsonSerializer.Deserialize<CalendarificResponse>(jsonStream, jsonSerializerOptions);
 
-                if (result?.Response?.Holidays is not null)
+                if (result?.Response.Holidays is not null)
                 {
-                    nonWorkingDays.AddRange(
-                        result.Response.Holidays
-                            .Where(h =>
-                                h.Type.Contains("National holiday") ||
-                                h.Type.Contains("Special holiday")) // Filter to national/public holidays only
-                            .Select(h => DateOnly.Parse(h.Date.Iso))
-                    );
+                    var holidays = result.Response.Holidays
+                        .Where(h =>
+                            h.Type.Contains("National holiday") ||
+                            h.Type.Contains("Special holiday"))
+                        .Select(h => DateOnly.Parse(h.Date.Iso))
+                        .ToList();
+
+                    _holidayCache[(countryCode, year)] = holidays;
+
+                    nonWorkingDays.AddRange(holidays);
                 }
             }
 
@@ -114,7 +117,7 @@ namespace IBS.Utility.Helpers
                 .Distinct()
                 .ToList();
 
-            // Add weekends that are not already in the list
+            // Add weekends
             for (var date = startDate; date <= endDate; date = date.AddDays(1))
             {
                 if ((date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)

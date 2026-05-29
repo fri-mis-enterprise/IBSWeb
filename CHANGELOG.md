@@ -6,6 +6,16 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v2.8.0] - 2026-05-29
+
+### Changed
+- Changed the API used when getting the holidays from Date.Nager to Calendarific
+
+### Added
+- Added caching for the captured holidays based on the year to prevent bloating the API 
+
+---
+
 ## [v2.7.1] - 2026-05-25
 
 ### Fixed
