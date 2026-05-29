@@ -2758,20 +2758,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .GetAsync(x => x.SalesInvoiceNo == receipt.InvoiceNo
                                        && x.Company == model.Company, cancellationToken);
 
-                    if (salesInvoice == null)
-                    {
-                        continue;
-                    }
-
-                    var getHolidays = await DateTimeHelper.GetNonWorkingDays(salesInvoice.DueDate, model.DepositedDate.Value);
-                    var daysDelayed = model.DepositedDate.Value.DayNumber - salesInvoice.DueDate.DayNumber - getHolidays.Count;
-
-                    if (daysDelayed <= 0 || salesInvoice.DeliveryReceipt == null || salesInvoice.DeliveryReceipt?.CommissionAmount <= 0)
+                    if (salesInvoice?.DeliveryReceipt == null)
                     {
                         continue;
                     }
 
                     var dr = salesInvoice.DeliveryReceipt!;
+                    var getHolidays = await DateTimeHelper.GetNonWorkingDays(salesInvoice.DueDate, model.DepositedDate.Value);
+                    var daysDelayed = model.DepositedDate.Value.DayNumber - salesInvoice.DueDate.DayNumber - getHolidays.Count;
+
+                    if (daysDelayed <= 0 || dr.CommissionAmount <= 0)
+                    {
+                        continue;
+                    }
+
                     var paymentAmount = model.CashAmount + model.CheckAmount + model.ManagersCheckAmount;
 
                     //Formula: Payment Amount x 3% x Days Delayed / 360
