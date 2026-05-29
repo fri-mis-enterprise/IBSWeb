@@ -19,8 +19,12 @@ using System.Collections.Concurrent;
 
         public static void Initialize(IConfiguration configuration)
         {
-            _calendarificApiKey = configuration["Calendarific:ApiKey"]
-                                  ?? throw new InvalidOperationException("Calendarific API key is not configured.");
+            var apiKey = configuration["Calendarific:ApiKey"];
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                throw new InvalidOperationException("Calendarific API key is not configured.");
+            }
+            _calendarificApiKey = apiKey;
         }
 
         public static DateTime GetCurrentPhilippineTime()
