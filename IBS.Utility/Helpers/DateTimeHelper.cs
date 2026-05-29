@@ -12,7 +12,10 @@ namespace IBS.Utility.Helpers
         private static DateTime? _lastGeneratedTime;
         private static readonly HttpClient _httpClient = new();
         private static string _calendarificApiKey = string.Empty;
-        private static readonly Dictionary<(string country, int year), List<DateOnly>> _holidayCache = new();
+using System.Collections.Concurrent;
+// ... other usings ...
+
+        private static readonly ConcurrentDictionary<(string country, int year), List<DateOnly>> _holidayCache = new();
 
         public static void Initialize(IConfiguration configuration)
         {
