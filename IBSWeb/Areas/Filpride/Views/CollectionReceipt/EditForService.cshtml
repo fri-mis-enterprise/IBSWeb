@@ -32,7 +32,7 @@
         </div>
     </div>
     <div class="card-body p-4">
-        <form id="myForm" method="post" enctype="multipart/form-data">
+        <form method="post" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <div class="row mb-2">
                 <div class="col-12 col-md-8">
@@ -428,23 +428,14 @@ Balance:        <span id="balance"></span>
         function checkIfExceed (event){
             let balanceValue = parseFloat($("#balance").text().replace(/,/g, "")) || 0;
             let checkTotal = parseFloat($("#checkTotal").text().replace(/,/g, "")) || 0;
-            event.preventDefault();
-            const form = document.getElementById("myForm");
-
-            if (!form.checkValidity()) {
-                form.reportValidity();
-                return;
-            }
 
             if (checkTotal > balanceValue){
+                event.preventDefault();
                 Swal.fire({
                     title: "Error",
                     text: "Total payment amount cannot exceed the balance",
                     icon: "error"
                 });
-            }
-            else{
-                form.submit();
             }
         }
     </script>

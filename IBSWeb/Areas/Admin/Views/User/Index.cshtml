@@ -450,6 +450,7 @@
                         $('#modalTitle').text('Edit User');
                         $('#passwordSection').hide();
                         $('#password, #confirmPassword').val('').prop('required', false);
+                        $('#role').val(user.role).trigger('change');
                     } else {
                         Swal.fire({
                             icon: 'error',
