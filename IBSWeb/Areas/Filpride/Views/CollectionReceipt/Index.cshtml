@@ -42,6 +42,8 @@
                     <tr>
                         <th class="text-start">CR#</th>
                         <th class="text-start">Date</th>
+                        <th class="text-start">Deposited Date</th>
+                        <th class="text-start">Cleared Date</th>
                         <th class="text-start">Invoice#</th>
                         <th class="text-start">Customer</th>
                         <th class="text-start">Payment Amount</th>
@@ -418,6 +420,32 @@
                         "data": "transactionDate",
                         "name": "transactionDate",
                         "render": function (data, type, row) {
+                            var date = new Date(data);
+                            return date.toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: '2-digit'
+                            });
+                        }
+                    },
+                    {
+                        "data": "depositedDate",
+                        "name": "depositedDate",
+                        "render": function (data, type, row) {
+                            if (!data) return '';
+                            var date = new Date(data);
+                            return date.toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: '2-digit'
+                            });
+                        }
+                    },
+                    {
+                        "data": "clearedDate",
+                        "name": "clearedDate",
+                        "render": function (data, type, row) {
+                            if (!data) return '';
                             var date = new Date(data);
                             return date.toLocaleDateString('en-US', {
                                 year: 'numeric',

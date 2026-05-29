@@ -6,6 +6,20 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v2.8.0] - 2026-05-29
+
+### Changed
+- Changed the API used when getting the holidays from Date.Nager to Calendarific
+- Updated collection receipt deposit flow to calculate delay using DueDate + 1 as the comparison point
+- Revised cost-of-money calculation to use payment components (cash, check, manager's check) instead of commission
+
+### Added
+- Added caching for the captured holidays based on the year to prevent bloating the API
+- Added Deposited Date and Cleared Date columns to the collection receipt listing view
+- Added ClearedDate tracking for collection receipts, with reset on return flow
+
+---
+
 ## [v2.7.1] - 2026-05-25
 
 ### Fixed

@@ -1,15 +1,23 @@
+using System.Text.Json.Serialization;
+
 namespace IBS.DTOs
 {
-    public class PublicHolidayDto
-    {
-        public DateTime Date { get; set; }
-        public string LocalName { get; set; } = null!;
-        public string Name { get; set; } = null!;
-        public string CountryCode { get; set; } = null!;
-        public bool Fixed { get; set; }
-        public bool Global { get; set; }
-        public string[] Counties { get; set; } = null!;
-        public int? LaunchYear { get; set; }
-        public string[] Types { get; set; } = null!;
-    }
+    // DTOs for Calendarific API
+    public record CalendarificResponse(
+        [property: JsonPropertyName("response")] CalendarificData Response
+    );
+
+    public record CalendarificData(
+        [property: JsonPropertyName("holidays")] List<CalendarificHoliday> Holidays
+    );
+
+    public record CalendarificHoliday(
+        [property: JsonPropertyName("name")] string Name,
+        [property: JsonPropertyName("date")] CalendarificDate Date,
+        [property: JsonPropertyName("type")] List<string> Type
+    );
+
+    public record CalendarificDate(
+        [property: JsonPropertyName("iso")] string Iso  // Format: "2025-01-01"
+    );
 }

@@ -8,12 +8,12 @@ using IBS.Models;
 using IBS.Services;
 using IBS.Services.Attributes;
 using IBS.Utility;
+using IBS.Utility.Helpers;
 using IBSWeb.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using QuestPDF;
 using QuestPDF.Infrastructure;
 using Serilog;
@@ -66,6 +66,7 @@ IMvcBuilder razorPagesBuilder = builder.Services.AddRazorPages();
 if (builder.Environment.IsDevelopment())
 {
     razorPagesBuilder.AddRazorRuntimeCompilation();
+    builder.Configuration.AddUserSecrets<Program>();
 }
 
 // Repositories + DI
@@ -157,5 +158,8 @@ app.MapControllerRoute(
 
 // SignalR
 app.MapHub<NotificationHub>("/notificationHub");
+
+// Initialize the IConfiguration to get the calendarific_api_key
+DateTimeHelper.Initialize(app.Configuration);
 
 app.Run();

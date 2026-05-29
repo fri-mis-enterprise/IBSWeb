@@ -186,6 +186,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         c.CanceledBy,
                         c.MultipleSIId,
                         c.DepositedDate,
+                        c.ClearedDate
                     })
                     .ToListAsync(cancellationToken);
 
@@ -287,8 +288,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     {
                         continue;
                     }
-                    var getHolidays = await DateTimeHelper.GetNonWorkingDays(salesInvoice.DueDate, depositDate, "PH");
-                    var daysDelayed = depositDate.DayNumber - salesInvoice.DueDate.DayNumber - getHolidays.Count;
+
+                    var afterDueDate = salesInvoice.DueDate.AddDays(1);
+                    var getHolidays = await DateTimeHelper.GetNonWorkingDays(afterDueDate, depositDate);
+                    var daysDelayed = depositDate.DayNumber - afterDueDate.DayNumber - getHolidays.Count;
 
                     if (daysDelayed <= 0 || salesInvoice.DeliveryReceipt == null || salesInvoice.DeliveryReceipt?.CommissionAmount <= 0)
                     {
@@ -296,9 +299,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     }
 
                     var dr = salesInvoice.DeliveryReceipt!;
+                    var paymentAmount = model.CashAmount + model.CheckAmount + model.ManagersCheckAmount;
 
-                    //Formula: Commission Amount x 3% x Days Delayed / 360
-                    var costOfMoney = dr.CommissionAmount * .03m * daysDelayed / 360m;
+                    //Formula: Payment Amount x 3% x Days Delayed / 360
+                    var costOfMoney = paymentAmount * .03m * daysDelayed / 360m;
 
                     await _unitOfWork.FilprideCollectionReceipt.ApplyCostOfMoney(dr, costOfMoney,
                         GetUserFullName(), depositDate, cancellationToken);
@@ -2665,6 +2669,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             try
             {
                 model.DepositedDate = null;
+                model.ClearedDate = null;
                 model.Status = nameof(CollectionReceiptStatus.Returned);
 
                 await _unitOfWork.FilprideCollectionReceipt.ReturnedCheck(model.CollectionReceiptNo!, model.Company, GetUserFullName(), cancellationToken);
