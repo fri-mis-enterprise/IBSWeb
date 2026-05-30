@@ -308,7 +308,8 @@ namespace IBS.DataAccess.Repository.Filpride
             var vatInputTitle = accountTitlesDto.Find(c => c.AccountNumber == "101060200")
                                 ?? throw new ArgumentException("Account title '101060200' not found.");
             var ewtAccountNo = supplierTaxTitle?.FirstOrDefault();
-            var ewtTitle = accountTitlesDto.FirstOrDefault(c => c.AccountNumber == ewtAccountNo);
+            var ewtTitle = accountTitlesDto.FirstOrDefault(c => c.AccountNumber == ewtAccountNo)
+                ?? throw new ArgumentException($"Account title '{ewtAccountNo}' not found.");
             var apTradeTitle = accountTitlesDto.Find(c => c.AccountNumber == "202010100")
                                ?? throw new ArgumentException("Account title '202010100' not found.");
             var inventoryTitle = accountTitlesDto.Find(c => c.AccountNumber == inventoryAcctNo)
@@ -375,7 +376,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     Date = model.Date,
                     Reference = model.ReceivingReportNo!,
                     Description = "Receipt of Goods",
-                    AccountId = ewtTitle!.AccountId,
+                    AccountId = ewtTitle.AccountId,
                     AccountNo = ewtTitle.AccountNumber,
                     AccountTitle = ewtTitle.AccountName,
                     Debit = 0,
@@ -573,6 +574,7 @@ namespace IBS.DataAccess.Repository.Filpride
             var ewtAmount = model.PurchaseOrder!.TaxType == SD.TaxType_WithTax
                 ? ComputeEwtAmount(netOfVatAmount, 0.01m)
                 : 0m;
+            var supplierTaxTitle = model.PurchaseOrder.Supplier!.WithholdingTaxTitle?.Split(" ", 2);
 
 
             if (model.PurchaseOrder.Terms == SD.Terms_Cod || model.PurchaseOrder.Terms == SD.Terms_Prepaid)
@@ -595,7 +597,9 @@ namespace IBS.DataAccess.Repository.Filpride
             var (cogsAcctNo, cogsAcctTitle) = GetCogsAccountTitle(model.PurchaseOrder.Product!.ProductCode);
             var accountTitlesDto = await GetListOfAccountTitleDto(cancellationToken);
             var vatInputTitle = accountTitlesDto.Find(c => c.AccountNumber == "101060200") ?? throw new ArgumentException("Account title '101060200' not found.");
-            var ewtTitle = accountTitlesDto.Find(c => c.AccountNumber == "201030210") ?? throw new ArgumentException("Account title '201030210' not found.");
+            var ewtAccountNo = supplierTaxTitle?.FirstOrDefault();
+            var ewtTitle = accountTitlesDto.FirstOrDefault(c => c.AccountNumber == ewtAccountNo)
+                           ?? throw new ArgumentException($"Account title '{ewtAccountNo}' not found.");
             var apTradeTitle = accountTitlesDto.Find(c => c.AccountNumber == "202010100") ?? throw new ArgumentException("Account title '202010100' not found.");
             var inventoryTitle = accountTitlesDto.Find(c => c.AccountNumber == inventoryAcctNo) ?? throw new ArgumentException($"Account title '{inventoryAcctNo}' not found.");
             var cogsTitle = accountTitlesDto.Find(c => c.AccountNumber == cogsAcctNo) ?? throw new ArgumentException($"Account title '{cogsAcctNo}' not found.");
