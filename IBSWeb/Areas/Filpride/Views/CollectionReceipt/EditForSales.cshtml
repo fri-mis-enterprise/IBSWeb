@@ -63,18 +63,18 @@
                         <span asp-validation-for="TransactionDate" class="text-danger"></span>
                     </div>
                     <div class="form-floating mb-3">
-                        <input asp-for="ReferenceNo" id="floatingInput" type="text" class="form-control" placeholder="Reference #" required />
-                        <label for="floatingInput" class="control-label">Reference #</label>
+                        <input asp-for="ReferenceNo" type="text" class="form-control" placeholder="Reference #" required/>
+                        <label asp-for="ReferenceNo" class="control-label">Reference# (Manual CR#)<span class="required">*</span></label>
                         <span asp-validation-for="ReferenceNo" class="text-danger"></span>
                     </div>
                     <div class="form-floating mb-3">
-                        <input asp-for="Remarks" id="floatingInput" type="text" class="form-control" placeholder="Optional" />
-                        <label for="floatingInput" class="control-label">Remarks</label>
+                        <input asp-for="Remarks" type="text" class="form-control" placeholder="Optional" />
+                        <label asp-for="Remarks" class="control-label">Remarks</label>
                         <span asp-validation-for="Remarks" class="text-danger"></span>
                     </div>
                     <div class="form-floating mb-3">
-                        <input asp-for="BatchNumber" id="floatingInput" type="text" class="form-control" placeholder="Optional" />
-                        <label for="floatingInput" class="control-label">Batch#</label>
+                        <input asp-for="BatchNumber" type="text" class="form-control" placeholder="Optional" />
+                        <label asp-for="BatchNumber" class="control-label">Batch#</label>
                         <span asp-validation-for="BatchNumber" class="text-danger"></span>
                     </div>
                 </div>
@@ -400,7 +400,7 @@ Balance:        <span id="balance"></span>
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            $("#submitButton").on("click", checkIfExceed);
+            $("#submitButton").on("click", validateAndSubmit);
             let inputs = document.querySelectorAll(".moneyInput");
             let totalCell = document.getElementById("checkTotal");
 
@@ -424,16 +424,42 @@ Balance:        <span id="balance"></span>
             updateTotal();
         });
 
-        function checkIfExceed (event){
-            const balanceValue = parseFloat($("#balance").text().replace(/,/g, "")) || 0;
-            const checkTotal = parseFloat($("#checkTotal").text().replace(/,/g, "")) || 0;
+        function validateAndSubmit(event) {
+            let balanceValue = parseFloat($("#balance").text().replace(/,/g, "")) || 0;
+            let checkTotal = parseFloat($("#checkTotal").text().replace(/,/g, "")) || 0;
 
-            if (checkTotal > balanceValue){
+            if (checkTotal > balanceValue) {
                 event.preventDefault();
                 Swal.fire({
                     title: "Error",
                     text: "Total payment amount cannot exceed the balance",
                     icon: "error"
+                });
+                return;
+            }
+
+            let ewtValue = parseFloat($("#EWT").val().replace(/,/g, "")) || 0;
+            let wvatValue = parseFloat($("#WVAT").val().replace(/,/g, "")) || 0;
+
+            let bir2307File = $("#Bir2307")[0].files.length;
+            let bir2306File = $("#Bir2306")[0].files.length;
+
+            let missing = [];
+
+            if (ewtValue > 0 && bir2307File === 0) {
+                missing.push("BIR 2307 is required when EWT has a value.");
+            }
+
+            if (wvatValue > 0 && bir2306File === 0) {
+                missing.push("BIR 2306 is required when WVAT has a value.");
+            }
+
+            if (missing.length > 0) {
+                event.preventDefault();
+                Swal.fire({
+                    title: "Missing Certificate(s)",
+                    html: missing.map(m => `<p style="margin:4px 0">${m}</p>`).join(""),
+                    icon: "warning"
                 });
             }
         }

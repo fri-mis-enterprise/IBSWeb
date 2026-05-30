@@ -64,18 +64,18 @@
                             <span asp-validation-for="TransactionDate" class="text-danger"></span>
                         </div>
                         <div class="form-floating mb-3">
-                            <input asp-for="ReferenceNo" id="floatingInput" type="text" class="form-control" placeholder="Reference #" required/>
-                            <label for="floatingInput" class="control-label">Reference# (Manual CR#)<span class="required">*</span></label>
+                            <input asp-for="ReferenceNo" type="text" class="form-control" placeholder="Reference #" required/>
+                            <label asp-for="ReferenceNo" class="control-label">Reference# (Manual CR#)<span class="required">*</span></label>
                             <span asp-validation-for="ReferenceNo" class="text-danger"></span>
                         </div>
                         <div class="form-floating mb-3">
-                            <input asp-for="Remarks" id="floatingInput" type="text" class="form-control" placeholder="Optional" />
-                            <label for="floatingInput" class="control-label">Remarks</label>
+                            <input asp-for="Remarks" type="text" class="form-control" placeholder="Optional" />
+                            <label asp-for="Remarks" class="control-label">Remarks</label>
                             <span asp-validation-for="Remarks" class="text-danger"></span>
                         </div>
                         <div class="form-floating mb-3">
-                            <input asp-for="BatchNumber" id="floatingInput" type="text" class="form-control" placeholder="Optional" />
-                            <label for="floatingInput" class="control-label">Batch#</label>
+                            <input asp-for="BatchNumber" type="text" class="form-control" placeholder="Optional" />
+                            <label asp-for="BatchNumber" class="control-label">Batch#</label>
                             <span asp-validation-for="BatchNumber" class="text-danger"></span>
                         </div>
                     </div>
@@ -141,7 +141,7 @@ Balance:        <span id="balance"></span>
                         </tr>
 
                         <tr>
-                            <td style="padding-left:20px;">EWT</td>
+                            <td style="padding-left:20px;">EWT Cert</td>
                             <td><input style="border:none" class="form-control" disabled /></td>
                             <td><input style="border:none" class="form-control" disabled /></td>
                             <td><input style="border:none" class="form-control" disabled /></td>
@@ -149,7 +149,7 @@ Balance:        <span id="balance"></span>
                             <td><input asp-for="EWT" style="border:none" class="form-control moneyInput" /></td>
                         </tr>
                         <tr>
-                            <td style="padding-left:20px;">WVAT</td>
+                            <td style="padding-left:20px;">WVAT Cert</td>
                             <td><input style="border:none" class="form-control" disabled /></td>
                             <td><input style="border:none" class="form-control" disabled /></td>
                             <td><input style="border:none" class="form-control" disabled /></td>
@@ -249,183 +249,209 @@ Balance:        <span id="balance"></span>
 
 
 
-    @section Scripts {
-        @{
-            await Html.RenderPartialAsync("_ValidationScriptsPartial");
-        }
-        <script>
-            $(document).ready(function () {
-                $("#CustomerId").change(function () {
-                    var customerNo = $(this).val();
-
-                    $.ajax({
-                    url: '@Url.Action("GetServiceInvoices", "CollectionReceipt", new { area = "Filpride" })',
-                        type: "GET",
-                        data: { customerNo: customerNo },
-                        success: function (data) {
-
-                            $("#invoices").empty();
-
-                            // Check if data is an array and not null
-                            if (Array.isArray(data) && data.length > 0) {
-
-                                document.getElementById("amount").innerHTML = "";
-                                document.getElementById("amountPaid").innerHTML = "";
-                                document.getElementById("balance").innerHTML = "";
-
-                                $("#invoices").append('<option>');
-
-                                // Iterate over the array and append options
-                                $.each(data, function (index, item) {
-                                    $("#invoices").append($('<option>', {
-                                        value: item.value,   // Use the correct property for value
-                                        text: item.text      // Use the correct property for text
-                                    }));
-                                });
-                            } else {
-                                // Handle the case where data is null or empty
-                                console.log("No sales invoices found for the selected customer.");
-                            }
-                        }
-                    });
-                });
-            });
-
-        </script>
-
-        <script>
-            function saveAccountingEntry() {
-                // Get the values from the modal inputs
-                var accountTitle = $("#AccountTitle").val();
-                var accountTitleText = $("#AccountTitle option:selected").text();
-                var accountAmount = parseNumber($("#AccountAmount").val());
-
-                if (accountAmount === 0) {
-                    event.preventDefault();
-                    alert('Please input amount');
-                    return;
-                } else if (accountTitleText === "") {
-                    event.preventDefault();
-                    alert('Please select Account No.!');
-                    return;
-                }
-
-                // Format debit and credit values with commas and two decimal places
-                var formattedAmount = formatNumber(accountAmount);
-
-                // Create a new row with the text only and a hidden input for the value
-                var newRow = `<tr>
-                                            <td>
-                                                <input type='hidden' name='accountTitle' value='${accountTitle}' />
-                                                <input type='text' name='accountTitleText' value='${accountTitleText}' style='border:none' readonly />
-                                            </td>
-                                                        <td><input type='text' name='accountAmount' value='${formattedAmount}' style='border:none' readonly /></td>
-                                            <td><button type='button' class='btn btn-danger btn-sm' onclick='removeRow(this)'>Remove</button></td>
-                                         </tr>`;
-
-                // Append the new row to the table body
-                $("#accountingEntriesBody").append(newRow);
-
-                // Close the modal
-                $("#AddAccEntry").modal("hide");
-
-                // Clear the modal inputs
-                $("#AccountTitle").val(""); // Reset the select to its default state
-                $("#AccountTitle").trigger("change"); // Trigger change event for the select
-                $("#AccountAmount").val("");
-            }
-
-
-            // Function to remove the corresponding row
-            function removeRow(button) {
-                // Get the reference to the button's parent row and remove it
-                $(button).closest("tr").remove();
-            }
-
-        </script>
-
-        <script>
-            // Function to handle invoice change event
-            function handleInvoiceChange() {
-                var invoiceNo = $("#invoices").val();
-
-                if (invoiceNo != "") {
-                    $.ajax({
-                    url: '@Url.Action("GetInvoiceDetails", "CollectionReceipt", new { area = "Filpride" })',
-                        type: "GET",
-                        data: {
-                            invoiceNo: invoiceNo,
-                            isSales: false,
-                            isServices: true
-                        },
-                        success: function (data) {
-                            document.getElementById("amount").innerHTML = data.amount;
-                            document.getElementById("amountPaid").innerHTML = data.amountPaid;
-                            document.getElementById("balance").innerHTML = data.balance;
-                            document.getElementById("ewt").innerHTML = data.ewt;
-                            document.getElementById("wvat").innerHTML = data.wvat;
-                            document.getElementById("total").innerHTML = data.total;
-                        }
-                    });
-                }
-            }
-
-            $(document).ready(function () {
-                // Call the handleInvoiceChange function on page load
-                handleInvoiceChange();
-
-                // Attach event listener to invoice dropdown
-                $("#invoices").change(function () {
-                    // Call the handleInvoiceChange function when the dropdown changes
-                    handleInvoiceChange();
-                });
-            });
-        </script>
-
-        <script>
-            $('#AccountTitle').select2({
-                dropdownParent: $('#AddAccEntry')
-            });
-        </script>
-
-        <script>
-            document.addEventListener("DOMContentLoaded", function () {
-                $("#submitButton").on("click", checkIfExceed);
-                let inputs = document.querySelectorAll(".moneyInput");
-                let totalCell = document.getElementById("checkTotal");
-
-                function updateTotal() {
-                    let total = 0;
-                    inputs.forEach(input => {
-                        const value = parseFloat(input.value.replace(/,/g, "")) || 0;
-                        total += value;
-                    });
-                    totalCell.textContent = total.toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                    });
-                }
-
-                inputs.forEach(input => {
-                    input.addEventListener("input", updateTotal);
-                    input.addEventListener("change", updateTotal);
-                });
-
-                updateTotal();
-            });
-
-            function checkIfExceed (event){
-                let balanceValue = parseFloat($("#balance").text().replace(/,/g, "")) || 0;
-                let checkTotal = parseFloat($("#checkTotal").text().replace(/,/g, "")) || 0;
-
-                if (checkTotal > balanceValue){
-                    event.preventDefault();
-                    Swal.fire({
-                        title: "Error",
-                        text: "Total payment amount cannot exceed the balance",
-                        icon: "error"
-                    });
-                }
-            }
-        </script>
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+    <script>
+        $(document).ready(function () {
+            $("#CustomerId").change(function () {
+                var customerNo = $(this).val();
+
+                $.ajax({
+                url: '@Url.Action("GetServiceInvoices", "CollectionReceipt", new { area = "Filpride" })',
+                    type: "GET",
+                    data: { customerNo: customerNo },
+                    success: function (data) {
+
+                        $("#invoices").empty();
+
+                        // Check if data is an array and not null
+                        if (Array.isArray(data) && data.length > 0) {
+
+                            document.getElementById("amount").innerHTML = "";
+                            document.getElementById("amountPaid").innerHTML = "";
+                            document.getElementById("balance").innerHTML = "";
+
+                            $("#invoices").append('<option>');
+
+                            // Iterate over the array and append options
+                            $.each(data, function (index, item) {
+                                $("#invoices").append($('<option>', {
+                                    value: item.value,   // Use the correct property for value
+                                    text: item.text      // Use the correct property for text
+                                }));
+                            });
+                        } else {
+                            // Handle the case where data is null or empty
+                            console.log("No sales invoices found for the selected customer.");
+                        }
+                    }
+                });
+            });
+        });
+
+    </script>
+
+    <script>
+        function saveAccountingEntry() {
+            // Get the values from the modal inputs
+            var accountTitle = $("#AccountTitle").val();
+            var accountTitleText = $("#AccountTitle option:selected").text();
+            var accountAmount = parseNumber($("#AccountAmount").val());
+
+            if (accountAmount === 0) {
+                event.preventDefault();
+                alert('Please input amount');
+                return;
+            } else if (accountTitleText === "") {
+                event.preventDefault();
+                alert('Please select Account No.!');
+                return;
+            }
+
+            // Format debit and credit values with commas and two decimal places
+            var formattedAmount = formatNumber(accountAmount);
+
+            // Create a new row with the text only and a hidden input for the value
+            var newRow = `<tr>
+                                        <td>
+                                            <input type='hidden' name='accountTitle' value='${accountTitle}' />
+                                            <input type='text' name='accountTitleText' value='${accountTitleText}' style='border:none' readonly />
+                                        </td>
+                                                    <td><input type='text' name='accountAmount' value='${formattedAmount}' style='border:none' readonly /></td>
+                                        <td><button type='button' class='btn btn-danger btn-sm' onclick='removeRow(this)'>Remove</button></td>
+                                     </tr>`;
+
+            // Append the new row to the table body
+            $("#accountingEntriesBody").append(newRow);
+
+            // Close the modal
+            $("#AddAccEntry").modal("hide");
+
+            // Clear the modal inputs
+            $("#AccountTitle").val(""); // Reset the select to its default state
+            $("#AccountTitle").trigger("change"); // Trigger change event for the select
+            $("#AccountAmount").val("");
+        }
+
+
+        // Function to remove the corresponding row
+        function removeRow(button) {
+            // Get the reference to the button's parent row and remove it
+            $(button).closest("tr").remove();
+        }
+
+    </script>
+
+    <script>
+        // Function to handle invoice change event
+        function handleInvoiceChange() {
+            var invoiceNo = $("#invoices").val();
+
+            if (invoiceNo !== "") {
+                $.ajax({
+                url: '@Url.Action("GetInvoiceDetails", "CollectionReceipt", new { area = "Filpride" })',
+                    type: "GET",
+                    data: {
+                        invoiceNo: invoiceNo,
+                        isSales: false,
+                        isServices: true
+                    },
+                    success: function (data) {
+                        document.getElementById("amount").innerHTML = data.amount;
+                        document.getElementById("amountPaid").innerHTML = data.amountPaid;
+                        document.getElementById("balance").innerHTML = data.balance;
+                        document.getElementById("ewt").innerHTML = data.ewt;
+                        document.getElementById("wvat").innerHTML = data.wvat;
+                        document.getElementById("total").innerHTML = data.total;
+                    }
+                });
+            }
+        }
+
+        $(document).ready(function () {
+            // Call the handleInvoiceChange function on page load
+            handleInvoiceChange();
+
+            // Attach event listener to invoice dropdown
+            $("#invoices").change(function () {
+                // Call the handleInvoiceChange function when the dropdown changes
+                handleInvoiceChange();
+            });
+        });
+    </script>
+
+    <script>
+        $('#AccountTitle').select2({
+            dropdownParent: $('#AddAccEntry')
+        });
+    </script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            $("#submitButton").on("click", validateAndSubmit);
+            let inputs = document.querySelectorAll(".moneyInput");
+            let totalCell = document.getElementById("checkTotal");
+
+            function updateTotal() {
+                let total = 0;
+                inputs.forEach(input => {
+                    const value = parseFloat(input.value.replace(/,/g, "")) || 0;
+                    total += value;
+                });
+                totalCell.textContent = total.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
+
+            inputs.forEach(input => {
+                input.addEventListener("input", updateTotal);
+                input.addEventListener("change", updateTotal);
+            });
+
+            updateTotal();
+        });
+
+        function validateAndSubmit(event) {
+            let balanceValue = parseFloat($("#balance").text().replace(/,/g, "")) || 0;
+            let checkTotal = parseFloat($("#checkTotal").text().replace(/,/g, "")) || 0;
+
+            if (checkTotal > balanceValue) {
+                event.preventDefault();
+                Swal.fire({
+                    title: "Error",
+                    text: "Total payment amount cannot exceed the balance",
+                    icon: "error"
+                });
+                return;
+            }
+
+            let ewtValue = parseFloat($("#EWT").val().replace(/,/g, "")) || 0;
+            let wvatValue = parseFloat($("#WVAT").val().replace(/,/g, "")) || 0;
+
+            let bir2307File = $("#Bir2307")[0].files.length;
+            let bir2306File = $("#Bir2306")[0].files.length;
+
+            let missing = [];
+
+            if (ewtValue > 0 && bir2307File === 0) {
+                missing.push("BIR 2307 is required when EWT has a value.");
+            }
+
+            if (wvatValue > 0 && bir2306File === 0) {
+                missing.push("BIR 2306 is required when WVAT has a value.");
+            }
+
+            if (missing.length > 0) {
+                event.preventDefault();
+                Swal.fire({
+                    title: "Missing Certificate(s)",
+                    html: missing.map(m => `<p style="margin:4px 0">${m}</p>`).join(""),
+                    icon: "warning"
+                });
+            }
+        }
+    </script>
+}

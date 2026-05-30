@@ -6,6 +6,16 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v2.8.1] - 2026-05-30
+
+### Changed
+- Rename the EWT ⇒ EWT Cert and WVAT ⇒ WVAT Cert in creation of CR
+
+### Added
+- Added validation to mark as required the uploading of attachment in CR if the EWT or WVAT has a value
+
+---
+
 ## [v2.8.0] - 2026-05-29
 
 ### Changed
