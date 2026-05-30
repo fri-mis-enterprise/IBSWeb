@@ -272,10 +272,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.BankAccountNumber = bank.AccountNo;
                 model.Status = nameof(CollectionReceiptStatus.Deposited);
 
-                model.ReceiptDetails = await _dbContext.FilprideCollectionReceiptDetails
-                    .Where(rd => rd.CollectionReceiptId == model.CollectionReceiptId)
-                    .ToListAsync(cancellationToken);
-
                 #region --Audit Trail Recording
 
                 FilprideAuditTrail auditTrailBook = new(GetUserFullName(),
@@ -4701,6 +4697,64 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return RedirectToAction(nameof(Index));
                 }
                 return RedirectToAction(nameof(ServiceInvoiceIndex));
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CalculateCostOfMoney(CancellationToken cancellationToken)
+        {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                var collections = await _unitOfWork.FilprideCollectionReceipt
+                    .GetAllAsync(x => x.DepositedDate != null && x.ClearedDate != null, cancellationToken);
+
+                if (!collections.Any())
+                {
+                    return NotFound();
+                }
+
+                foreach (var collection in collections)
+                {
+                    foreach (var receipt in collection.ReceiptDetails!)
+                    {
+                        var salesInvoice = await _unitOfWork.FilprideSalesInvoice
+                            .GetAsync(x => x.SalesInvoiceNo == receipt.InvoiceNo, cancellationToken);
+
+                        if (salesInvoice?.DeliveryReceipt == null)
+                        {
+                            continue;
+                        }
+
+                        var dr = salesInvoice.DeliveryReceipt!;
+                        var getHolidays = await DateTimeHelper.GetNonWorkingDays(salesInvoice.DueDate, collection.DepositedDate!.Value);
+                        var daysDelayed = collection.DepositedDate.Value.DayNumber - salesInvoice.DueDate.DayNumber - getHolidays.Count;
+
+                        if (daysDelayed <= 0 || dr.CommissionAmount <= 0)
+                        {
+                            continue;
+                        }
+
+                        var paymentAmount = receipt.Amount;
+
+                        //Formula: Payment Amount x 3% x Days Delayed / 360
+                        var costOfMoney = paymentAmount * .03m * daysDelayed / 360m;
+
+                        await _unitOfWork.FilprideCollectionReceipt.ApplyCostOfMoney(dr, costOfMoney,
+                            GetUserFullName(), collection.DepositedDate.Value, cancellationToken);
+                    }
+                }
+
+                await _unitOfWork.SaveAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                return Ok();
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
             }
         }
     }

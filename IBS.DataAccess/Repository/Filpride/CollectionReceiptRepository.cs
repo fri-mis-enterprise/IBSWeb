@@ -677,7 +677,8 @@ namespace IBS.DataAccess.Repository.Filpride
                 .ThenInclude(sv => sv!.Customer)
                 .Include(cr => cr.ServiceInvoice)
                 .ThenInclude(sv => sv!.Service)
-                .Include(cr => cr.BankAccount);
+                .Include(cr => cr.BankAccount)
+                .Include(c => c.ReceiptDetails);
 
             if (filter != null)
             {
@@ -702,6 +703,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .Include(cr => cr.ServiceInvoice)
                 .ThenInclude(sv => sv!.Service)
                 .Include(cr => cr.BankAccount)
+                .Include(c => c.ReceiptDetails)
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
