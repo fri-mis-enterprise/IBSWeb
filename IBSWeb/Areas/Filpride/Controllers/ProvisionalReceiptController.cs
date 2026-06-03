@@ -265,7 +265,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             var viewModel = new PRCreateViewModel
             {
-                TransactionDate = DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime())
+                TransactionDate = DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime()),
+                Type = nameof(DocumentType.Undocumented)
             };
 
             await PopulateFormDependenciesAsync(viewModel, cancellationToken);

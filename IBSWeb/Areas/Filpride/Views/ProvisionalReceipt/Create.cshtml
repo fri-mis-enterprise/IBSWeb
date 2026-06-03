@@ -45,7 +45,7 @@
                             <option value="" selected disabled>Select Document type</option>
                             @foreach (var documentType in Enum.GetValues<DocumentType>())
                             {
-                                <option value="@documentType" selected="@(documentType == DocumentType.Undocumented)">@documentType.ToString()</option>
+                                <option value="@documentType">@documentType.ToString()</option>
                             }
                         </select>
                         <span asp-validation-for="Type" class="text-danger"></span>
