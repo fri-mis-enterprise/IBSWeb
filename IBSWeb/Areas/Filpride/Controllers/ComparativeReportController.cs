@@ -164,7 +164,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             column.Item().Text(reportTitle).FontSize(20).SemiBold();
                             column.Item().Text(text =>
                             {
-                                text.Span("Month: ").SemiBold();
+                                text.Span("Period Created: ").SemiBold();
                                 text.Span(monthDate.ToString("MMMM yyyy"));
                             });
                         });
@@ -193,7 +193,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         table.Header(header =>
                         {
                             AddHeaderCell(header, "Created Date");
-                            AddHeaderCell(header, "Original Period");
+                            AddHeaderCell(header, "Period");
                             AddHeaderCell(header, "Module");
                             AddHeaderCell(header, "Reference");
                             AddHeaderCell(header, "Old Value");
