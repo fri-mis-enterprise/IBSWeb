@@ -21,7 +21,6 @@
     var amountReceived = Model.CashAmount + Model.CheckAmount + Model.ManagersCheckAmount;
     var employeeName = Model.Employee.GetFullName().ToUpper();
     var employeeAddress = (Model.Employee.Address ?? string.Empty).ToUpper();
-    var employeeTin = Model.Employee.TinNo ?? string.Empty;
 
     int integerPart = Convert.ToInt32(Math.Floor(amountReceived));
     decimal decimalPart = Math.Round((amountReceived - integerPart), 4);
@@ -87,7 +86,7 @@
 </table>
 
 <div>
-    <table class="table-bordered w-100">
+    <table class="table-bordered" style="width: 99.9%">
         <tbody>
         <tr>
             <td colspan="2" style="padding-left:10px;">Received from: @employeeName</td>
@@ -96,14 +95,10 @@
             <td colspan="2" style="padding-left:10px;">Address: @employeeAddress</td>
         </tr>
         <tr>
-            <td style="padding-left:10px;">TIN: @employeeTin</td>
-            <td style="padding-left:10px;">Buss. Style: </td>
+            <td colspan="2" style="padding-left:10px;">Buss. Style: </td>
         </tr>
         <tr>
-            <td colspan="2" style="padding-left:10px;">The sum of Pesos:<br /> @words</td>
-        </tr>
-        <tr>
-            <td>&nbsp;</td>
+            <td style="padding-left:10px;">The sum of Pesos:<br /> @words</td>
             <td style="padding-left:10px;">(&#8369; @amountReceived.ToString(SD.Two_Decimal_Format))</td>
         </tr>
         <tr>
@@ -114,7 +109,7 @@
 </div>
 
 <div style="margin-top:10px;">
-    <table class="table-bordered w-100">
+    <table class="table-bordered" style="width: 99.9%">
         <tbody>
         <tr>
             <td colspan="6" style="padding-left:20px;">FORM OF PAYMENT</td>

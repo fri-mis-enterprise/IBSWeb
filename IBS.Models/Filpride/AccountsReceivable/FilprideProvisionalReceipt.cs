@@ -20,9 +20,11 @@ namespace IBS.Models.Filpride.AccountsReceivable
         [ForeignKey(nameof(EmployeeId))]
         public FilprideEmployee Employee { get; set; } = null!;
 
+        [StringLength(255)]
         public string ReferenceNo { get; set; } = string.Empty;
 
-        public string Remarks { get; set; } = string.Empty;
+        [StringLength(255)]
+        public string? Remarks { get; set; }
 
         [Column(TypeName = "numeric(18,4)")]
         public decimal CashAmount { get; set; }
@@ -32,10 +34,13 @@ namespace IBS.Models.Filpride.AccountsReceivable
 
         public DateOnly? CheckDate { get; set; }
 
+        [StringLength(255)]
         public string? CheckNo { get; set; }
 
+        [StringLength(255)]
         public string? CheckBank { get; set; }
 
+        [StringLength(255)]
         public string? CheckBranch { get; set; }
 
         [Column(TypeName = "numeric(18,4)")]
@@ -43,18 +48,23 @@ namespace IBS.Models.Filpride.AccountsReceivable
 
         public DateOnly? ManagersCheckDate { get; set; }
 
+        [StringLength(255)]
         public string? ManagersCheckNo { get; set; }
 
+        [StringLength(255)]
         public string? ManagersCheckBank { get; set; }
 
+        [StringLength(255)]
         public string? ManagersCheckBranch { get; set; }
 
         public int? BankId { get; set; }
 
         public FilprideBankAccount? BankAccount { get; set; }
 
+        [StringLength(255)]
         public string? BankAccountNo { get; set; }
 
+        [StringLength(255)]
         public string? BankAccountName { get; set; }
 
         [Column(TypeName = "numeric(18,4)")]
@@ -81,6 +91,7 @@ namespace IBS.Models.Filpride.AccountsReceivable
 
         public DateOnly? ClearedDate { get; set; }
 
+        [StringLength(255)]
         public string? BatchNumber { get; set; }
     }
 }
