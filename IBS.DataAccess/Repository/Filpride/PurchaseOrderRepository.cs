@@ -1,5 +1,6 @@
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Filpride.IRepository;
+using IBS.DTOs;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsPayable;
 using IBS.Models.Filpride.Integrated;
@@ -254,6 +255,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 var effectiveVolume = Math.Min(receivingReport.QuantityReceived, remainingVolume);
                 var updatedAmount = effectiveVolume * model.TriggeredPrice;
                 var difference = updatedAmount - receivingReport.Amount;
+                var oldUnitCost = GetUnitValue(receivingReport.Amount, receivingReport.QuantityReceived);
 
                 // Update receiving report
                 receivingReport.Amount = updatedAmount;
@@ -297,6 +299,20 @@ namespace IBS.DataAccess.Repository.Filpride
                 // Create GL entries for cost update
                 await unitOfWork.FilprideReceivingReport.CreateEntriesForUpdatingCost(
                     receivingReport, difference, model.ApprovedBy!, cancellationToken);
+
+                await unitOfWork.LockedPeriodAdjustment.AddIfPeriodPostedAsync(new LockedPeriodAdjustmentRequestDto
+                {
+                    Module = Module.ReceivingReport,
+                    TransactionDate = receivingReport.Date,
+                    EntityType = Module.ReceivingReport,
+                    EntityNo = receivingReport.ReceivingReportNo!,
+                    AdjustmentType = LockedPeriodAdjustmentType.UnitCost,
+                    OldValue = oldUnitCost,
+                    NewValue = model.TriggeredPrice,
+                    AdjustmentValue = difference,
+                    Reason = "Update approved unit cost in PO",
+                    CreatedBy = model.ApprovedBy!
+                }, cancellationToken);
             }
 
             // Recalculate inventory once at the end
@@ -321,6 +337,11 @@ namespace IBS.DataAccess.Repository.Filpride
                     .First(x => x.IsApproved)
                     .TriggeredPrice
                 : purchaseOrder.Price;
+        }
+
+        private static decimal GetUnitValue(decimal amount, decimal quantity)
+        {
+            return quantity == 0m ? 0m : amount / quantity;
         }
     }
 }

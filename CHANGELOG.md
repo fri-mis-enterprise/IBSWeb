@@ -6,6 +6,19 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v2.9.0] - 2026-06-03
+
+### Added
+- Added locked-period adjustment recording for COS selling price, approved PO unit cost, commission, and freight changes.
+- Added a reusable locked-period adjustment repository with a DTO request model for shared adjustment creation.
+- Added separate comparative adjustment reports for commission and freight.
+
+### Changed
+- Revised the comparative report to use locked-period adjustments filtered by the selected month of `CreatedDate`, regardless of the original adjusted period.
+- Updated comparative report output to show adjustment details including original period, document reference, old value, new value, signed adjustment amount, reason, and creator.
+
+---
+
 ## [v2.8.1] - 2026-05-30
 
 ### Changed

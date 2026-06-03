@@ -91,6 +91,7 @@ namespace IBS.DataAccess.Repository
         public ITermsRepository FilprideTerms { get; private set; }
         public Filpride.IRepository.IGeneralLedgerRepository GeneralLedger { get; private set; }
         public IProvisionalReceiptRepository ProvisionalReceipt { get; private set; }
+        public ILockedPeriodAdjustmentRepository LockedPeriodAdjustment { get; private set; }
 
         #endregion
 
@@ -165,6 +166,7 @@ namespace IBS.DataAccess.Repository
             FilprideTerms = new TermsRepository(_db);
             GeneralLedger = new Filpride.GeneralLedgerRepository(_db);
             ProvisionalReceipt = new ProvisionalReceiptRepository(_db);
+            LockedPeriodAdjustment = new LockedPeriodAdjustmentRepository(_db);
 
             #endregion
 

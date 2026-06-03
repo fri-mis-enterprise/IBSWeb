@@ -39,6 +39,8 @@ namespace IBS.DataAccess.Data
 
         public DbSet<DepartmentAccess> DepartmentAccesses { get; set; }
 
+        public DbSet<LockedPeriodAdjustment> LockedPeriodAdjustments { get; set; }
+
         #region--FILPRIDE
 
         public DbSet<FilprideCustomerOrderSlip> FilprideCustomerOrderSlips { get; set; }
@@ -58,10 +60,6 @@ namespace IBS.DataAccess.Data
         public DbSet<FilprideBookAtlDetail> FilprideBookAtlDetails { get; set; }
 
         public DbSet<FilprideMonthlyNibit> FilprideMonthlyNibits { get; set; }
-
-        public DbSet<FilprideSalesLockedRecordsQueue> FilprideSalesLockedRecordsQueues { get; set; }
-
-        public DbSet<FilpridePurchaseLockedRecordsQueue> FilpridePurchaseLockedRecordsQueues { get; set; }
 
         public DbSet<FilprideGLPeriodBalance> FilprideGlPeriodBalances { get; set; }
 
@@ -318,30 +316,6 @@ namespace IBS.DataAccess.Data
                 n.HasIndex(n => n.Company);
                 n.HasIndex(n => n.Month);
                 n.HasIndex(n => n.Year);
-            });
-
-            builder.Entity<FilprideSalesLockedRecordsQueue>(x =>
-            {
-                x.HasOne(s => s.DeliveryReceipt)
-                    .WithMany()
-                    .HasForeignKey(s => s.DeliveryReceiptId)
-                    .OnDelete(DeleteBehavior.Restrict);
-                x.HasIndex(s => s.LockedDate);
-                x.HasIndex(s => s.UpdatedDate);
-                x.HasIndex(s => s.DeliveryReceiptId)
-                    .IsUnique();
-            });
-
-            builder.Entity<FilpridePurchaseLockedRecordsQueue>(x =>
-            {
-                x.HasOne(s => s.ReceivingReport)
-                    .WithMany()
-                    .HasForeignKey(s => s.ReceivingReportId)
-                    .OnDelete(DeleteBehavior.Restrict);
-                x.HasIndex(s => s.LockedDate);
-                x.HasIndex(s => s.UpdatedDate);
-                x.HasIndex(s => s.ReceivingReportId)
-                    .IsUnique();
             });
 
             #region-- Master File

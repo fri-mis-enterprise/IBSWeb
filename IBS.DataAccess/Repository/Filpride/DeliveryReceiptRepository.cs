@@ -1,5 +1,6 @@
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Filpride.IRepository;
+using IBS.DTOs;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.Integrated;
@@ -999,6 +1000,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 var postingDate = isDeliveredPeriodPosted
                     ? firstDayOfTheMonth
                     : deliveredDate;
+                var signedDifference = difference;
                 var particulars = $"Update Price on DR#{deliveryReceipt.DeliveryReceiptNo}. DR dated {deliveryReceipt.DeliveredDate}";
                 var isIncremental = difference > 0;
                 difference = Math.Abs(difference);
@@ -1114,6 +1116,19 @@ namespace IBS.DataAccess.Repository.Filpride
                 }
 
                 await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
+                await unitOfWork.LockedPeriodAdjustment.AddIfPeriodPostedAsync(new LockedPeriodAdjustmentRequestDto
+                {
+                    Module = Module.DeliveryReceipt,
+                    TransactionDate = deliveredDate,
+                    EntityType = Module.DeliveryReceipt,
+                    EntityNo = deliveryReceipt.DeliveryReceiptNo,
+                    AdjustmentType = LockedPeriodAdjustmentType.SellingPrice,
+                    OldValue = GetUnitValue(deliveryReceipt.TotalAmount - signedDifference, deliveryReceipt.Quantity),
+                    NewValue = GetUnitValue(deliveryReceipt.TotalAmount, deliveryReceipt.Quantity),
+                    AdjustmentValue = signedDifference,
+                    Reason = "Update selling price in COS",
+                    CreatedBy = userName
+                }, cancellationToken);
 
                 #endregion General Ledger Book Recording
 
@@ -1153,6 +1168,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 var postingDate = isDeliveredPeriodPosted
                     ? firstDayOfMonth
                     : deliveredDate;
+                var signedDifference = difference;
                 var particulars = $"Update commission rate on DR#{deliveryReceipt.DeliveryReceiptNo}. DR dated {deliveryReceipt.DeliveredDate}";
                 var isIncremental = difference > 0;
                 difference = Math.Abs(difference);
@@ -1224,6 +1240,19 @@ namespace IBS.DataAccess.Repository.Filpride
                 }
 
                 await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
+                await unitOfWork.LockedPeriodAdjustment.AddIfPeriodPostedAsync(new LockedPeriodAdjustmentRequestDto
+                {
+                    Module = Module.DeliveryReceipt,
+                    TransactionDate = deliveredDate,
+                    EntityType = Module.DeliveryReceipt,
+                    EntityNo = deliveryReceipt.DeliveryReceiptNo,
+                    AdjustmentType = LockedPeriodAdjustmentType.Commission,
+                    OldValue = GetUnitValue(deliveryReceipt.CommissionAmount - signedDifference, deliveryReceipt.Quantity),
+                    NewValue = deliveryReceipt.CommissionRate,
+                    AdjustmentValue = signedDifference,
+                    Reason = "Update commission",
+                    CreatedBy = userName
+                }, cancellationToken);
                 await _db.SaveChangesAsync(cancellationToken);
             }
             catch (Exception ex)
@@ -1262,6 +1291,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 var postingDate = isDeliveredPeriodPosted
                     ? firstDayOfMonth
                     : deliveredDate;
+                var signedDifference = difference;
                 var particulars = $"Update freight rate on DR#{deliveryReceipt.DeliveryReceiptNo}. DR dated {deliveryReceipt.DeliveredDate}";
                 var isIncremental = difference > 0;
                 difference = Math.Abs(difference);
@@ -1357,12 +1387,30 @@ namespace IBS.DataAccess.Repository.Filpride
                 }
 
                 await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
+                await unitOfWork.LockedPeriodAdjustment.AddIfPeriodPostedAsync(new LockedPeriodAdjustmentRequestDto
+                {
+                    Module = Module.DeliveryReceipt,
+                    TransactionDate = deliveredDate,
+                    EntityType = Module.DeliveryReceipt,
+                    EntityNo = deliveryReceipt.DeliveryReceiptNo,
+                    AdjustmentType = LockedPeriodAdjustmentType.Freight,
+                    OldValue = GetUnitValue(deliveryReceipt.FreightAmount - (deliveryReceipt.ECC * deliveryReceipt.Quantity) - signedDifference, deliveryReceipt.Quantity),
+                    NewValue = deliveryReceipt.Freight,
+                    AdjustmentValue = signedDifference,
+                    Reason = "Update freight",
+                    CreatedBy = userName
+                }, cancellationToken);
                 await _db.SaveChangesAsync(cancellationToken);
             }
             catch (Exception ex)
             {
                 throw new InvalidOperationException(ex.Message);
             }
+        }
+
+        private static decimal GetUnitValue(decimal amount, decimal quantity)
+        {
+            return quantity == 0m ? 0m : amount / quantity;
         }
     }
 }

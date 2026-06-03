@@ -2,6 +2,7 @@ using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
 using IBS.Models;
+using IBS.Models.Enums;
 using IBS.Models.Filpride.Books;
 using IBS.Services.Attributes;
 using IBS.Utility.Constants;
@@ -66,7 +67,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpPost]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Index(DateOnly monthDate, string category, CancellationToken cancellationToken)
         {
             var companyClaims = await GetCompanyClaimAsync();
@@ -78,442 +78,193 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                if (category == "Sales")
+                var adjustmentType = GetAdjustmentType(category);
+                var dateFrom = monthDate.ToDateTime(TimeOnly.MinValue);
+                var dateTo = monthDate.AddMonths(1).ToDateTime(TimeOnly.MinValue);
+
+                var adjustments = await _dbContext.LockedPeriodAdjustments
+                    .AsNoTracking()
+                    .Where(a => a.AdjustmentType == adjustmentType
+                                && a.CreatedDate >= dateFrom
+                                && a.CreatedDate < dateTo)
+                    .OrderBy(a => a.CreatedDate)
+                    .ThenBy(a => a.EntityTypeNo)
+                    .ToListAsync(cancellationToken);
+
+                if (adjustments.Count == 0)
                 {
-                    var lockedSales = await _dbContext.FilprideSalesLockedRecordsQueues
-                        .Include(x => x.DeliveryReceipt)
-                        .ThenInclude(x => x.CustomerOrderSlip)
-                        .Where(x => x.UpdatedDate.HasValue
-                                    && x.UpdatedDate.Value.Month == monthDate.Month
-                                    && x.UpdatedDate.Value.Year == monthDate.Year)
-                        .OrderBy(x => x.DeliveryReceiptId)
-                        .ToListAsync(cancellationToken);
-
-                    if (lockedSales.Count == 0)
-                    {
-                        TempData["info"] = "No records found!";
-                        return RedirectToAction(nameof(Index));
-                    }
-
-                    var document = Document.Create(container =>
-                    {
-                        container.Page(page =>
-                        {
-                            #region -- Page Setup
-
-                            page.Size(PageSizes.Legal.Landscape());
-                            page.Margin(20);
-                            page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Times New Roman"));
-
-                            #endregion
-
-                            #region -- Header
-
-                            var imgFilprideLogoPath = Path.Combine(_webHostEnvironment.WebRootPath, "img", "Filpride-logo.png");
-
-                            page.Header().Height(50).Row(row =>
-                            {
-                                row.RelativeItem().Column(column =>
-                                {
-                                    column.Item()
-                                        .Text("COMPARATIVE SALES REPORT")
-                                        .FontSize(20).SemiBold();
-
-                                    column.Item().Text(text =>
-                                    {
-                                        text.Span("As Of: ").SemiBold();
-                                        text.Span(monthDate.ToString("MMMM yyyy"));
-                                    });
-
-                                });
-
-                                row.ConstantItem(size: 100)
-                                    .Height(50)
-                                    .Image(Image.FromFile(imgFilprideLogoPath)).FitWidth();
-
-                            });
-
-                            #endregion
-
-                            #region Content
-
-                            page.Content().PaddingTop(10).Table(table =>
-                            {
-                                #region -- Columns Definition
-
-                                table.ColumnsDefinition(columns =>
-                                {
-                                    columns.RelativeColumn();
-                                    columns.RelativeColumn();
-                                    columns.RelativeColumn();
-                                    columns.RelativeColumn();
-                                    columns.RelativeColumn();
-                                    columns.ConstantColumn(5);
-                                    columns.RelativeColumn();
-                                    columns.RelativeColumn();
-                                    columns.RelativeColumn();
-                                    columns.ConstantColumn(5);
-                                    columns.RelativeColumn();
-                                    columns.RelativeColumn();
-                                    columns.RelativeColumn();
-                                });
-
-                                #endregion
-
-                                #region -- Table Header
-
-                                table.Header(header =>
-                                {
-                                    header.Cell().ColumnSpan(5).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("CURRENT").SemiBold();
-                                    header.Cell();
-                                    header.Cell().ColumnSpan(3).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("PREVIOUS").SemiBold();
-                                    header.Cell();
-                                    header.Cell().ColumnSpan(3).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("INCREASE/(DECREASE)").SemiBold();
-
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Delivered Date").SemiBold();
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Reference").SemiBold();
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Quantity").SemiBold();
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Price").SemiBold();
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Total").SemiBold();
-                                    header.Cell();
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Quantity").SemiBold();
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Price").SemiBold();
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Total").SemiBold();
-                                    header.Cell();
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Quantity").SemiBold();
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Price").SemiBold();
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Total").SemiBold();
-                                });
-
-                                #endregion
-
-                                #region -- Loop to Show Records
-
-                                var sumCurrentQuantity = 0m;
-                                var sumCurrentTotal = 0m;
-                                var sumPreviousQuantity = 0m;
-                                var sumPreviousTotal = 0m;
-                                var sumQuantityDifference = 0m;
-                                var sumPriceDifference = 0m;
-                                var sumTotalDifference = 0m;
-
-                                foreach (var record in lockedSales)
-                                {
-                                    var currentQuantity = record.DeliveryReceipt.Quantity;
-                                    var currentPrice = record.DeliveryReceipt.CustomerOrderSlip!.DeliveredPrice;
-                                    var currentTotal = record.DeliveryReceipt.TotalAmount;
-                                    var previousQuantity = record.Quantity;
-                                    var previousPrice = record.Price;
-                                    var previousTotal = previousQuantity * previousPrice;
-                                    var quantityDifference = currentQuantity - previousQuantity;
-                                    var priceDifference = currentPrice - previousPrice;
-                                    var totalDifference = currentTotal - previousTotal;
-
-                                    if (quantityDifference == 0 && priceDifference == 0 && totalDifference == 0)
-                                    {
-                                        continue;
-                                    }
-
-                                    sumCurrentQuantity += currentQuantity;
-
-                                    sumCurrentTotal += currentTotal;
-                                    sumPreviousQuantity += previousQuantity;
-
-                                    sumPreviousTotal += previousTotal;
-                                    sumQuantityDifference += quantityDifference;
-                                    sumPriceDifference += priceDifference;
-                                    sumTotalDifference += totalDifference;
-
-                                    table.Cell().Border(0.5f).Padding(3).Text(record.DeliveryReceipt.DeliveredDate?.ToString("MM/dd/yyyy"));
-                                    table.Cell().Border(0.5f).Padding(3).Text(record.DeliveryReceipt.DeliveryReceiptNo);
-                                    table.Cell().Border(0.5f).Padding(3).AlignRight().Text(currentQuantity.ToString(SD.Two_Decimal_Format));
-                                    table.Cell().Border(0.5f).Padding(3).AlignRight().Text(currentPrice.ToString(SD.Four_Decimal_Format));
-                                    table.Cell().Border(0.5f).Padding(3).AlignRight().Text(currentTotal.ToString(SD.Two_Decimal_Format));
-                                    table.Cell();
-                                    table.Cell().Border(0.5f).Padding(3).AlignRight().Text(previousQuantity.ToString(SD.Two_Decimal_Format));
-                                    table.Cell().Border(0.5f).Padding(3).AlignRight().Text(previousPrice.ToString(SD.Four_Decimal_Format));
-                                    table.Cell().Border(0.5f).Padding(3).AlignRight().Text(previousTotal.ToString(SD.Two_Decimal_Format));
-                                    table.Cell();
-                                    table.Cell().Border(0.5f).Padding(3).AlignRight().Text(quantityDifference != 0 ? quantityDifference < 0 ? $"({Math.Abs(quantityDifference).ToString(SD.Two_Decimal_Format)})" : quantityDifference.ToString(SD.Two_Decimal_Format) : null).SemiBold().FontColor(quantityDifference < 0 ? Colors.Red.Medium : Colors.Black);
-                                    table.Cell().Border(0.5f).Padding(3).AlignRight().Text(priceDifference != 0 ? priceDifference < 0 ? $"({Math.Abs(priceDifference).ToString(SD.Four_Decimal_Format)})" : priceDifference.ToString(SD.Four_Decimal_Format) : null).SemiBold().FontColor(priceDifference < 0 ? Colors.Red.Medium : Colors.Black);
-                                    table.Cell().Border(0.5f).Padding(3).AlignRight().Text(totalDifference != 0 ? totalDifference < 0 ? $"({Math.Abs(totalDifference).ToString(SD.Two_Decimal_Format)})" : totalDifference.ToString(SD.Two_Decimal_Format) : null).SemiBold().FontColor(totalDifference < 0 ? Colors.Red.Medium : Colors.Black);
-
-                                }
-
-                                var sumCurrentPrice = sumCurrentTotal != 0 && sumCurrentQuantity != 0 ? sumCurrentTotal / sumCurrentQuantity : 0;
-                                var sumPreviousPrice = sumPreviousTotal != 0 && sumPreviousQuantity != 0 ? sumPreviousTotal / sumPreviousQuantity : 0;
-
-                                #endregion
-
-                                #region -- Create Table Cell for Totals
-
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3);
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text("TOTALS").SemiBold();
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumCurrentQuantity.ToString(SD.Two_Decimal_Format));
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumCurrentPrice.ToString(SD.Four_Decimal_Format));
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumCurrentTotal.ToString(SD.Two_Decimal_Format));
-                                table.Cell();
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumPreviousQuantity.ToString(SD.Two_Decimal_Format));
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumPreviousPrice.ToString(SD.Four_Decimal_Format));
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumPreviousTotal.ToString(SD.Two_Decimal_Format));
-                                table.Cell();
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumQuantityDifference != 0 ? sumQuantityDifference < 0 ? $"({Math.Abs(sumQuantityDifference).ToString(SD.Two_Decimal_Format)})" : sumQuantityDifference.ToString(SD.Two_Decimal_Format) : null).SemiBold().FontColor(sumQuantityDifference < 0 ? Colors.Red.Medium : Colors.Black);
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumPriceDifference != 0 ? sumPriceDifference < 0 ? $"({Math.Abs(sumPriceDifference).ToString(SD.Four_Decimal_Format)})" : sumPriceDifference.ToString(SD.Four_Decimal_Format) : null).SemiBold().FontColor(sumPriceDifference < 0 ? Colors.Red.Medium : Colors.Black);
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumTotalDifference != 0 ? sumTotalDifference < 0 ? $"({Math.Abs(sumTotalDifference).ToString(SD.Two_Decimal_Format)})" : sumTotalDifference.ToString(SD.Two_Decimal_Format) : null).SemiBold().FontColor(sumTotalDifference < 0 ? Colors.Red.Medium : Colors.Black);
-
-                                #endregion
-                            });
-
-                            #endregion
-
-                            #region -- Footer
-
-                            page.Footer().AlignRight().Text(x =>
-                            {
-                                x.Span("Page ");
-                                x.CurrentPageNumber();
-                                x.Span(" of ");
-                                x.TotalPages();
-                            });
-
-                            #endregion
-
-                        });
-                    });
-
-                    #region -- Audit Trail --
-
-                    FilprideAuditTrail auditTrailBook = new(GetUserFullName(), "Generate sales comparative report quest pdf", "Comparative Report", companyClaims);
-                    await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
-
-                    #endregion
-
-                    var pdfBytes = document.GeneratePdf();
-                    return File(pdfBytes, "application/pdf");
-
-                }
-                else
-                {
-                    var lockedPurchases = await _dbContext.FilpridePurchaseLockedRecordsQueues
-                        .Include(x => x.ReceivingReport)
-                        .ThenInclude(x => x.PurchaseOrder)
-                        .ThenInclude(x => x!.ActualPrices)
-                        .Where(x => x.UpdatedDate.HasValue
-                                    && x.UpdatedDate.Value.Month == monthDate.Month
-                                    && x.UpdatedDate.Value.Year == monthDate.Year)
-                        .OrderBy(x => x.ReceivingReportId)
-                        .ToListAsync(cancellationToken);
-
-                    if (lockedPurchases.Count == 0)
-                    {
-                        TempData["info"] = "No records found!";
-                        return RedirectToAction(nameof(Index));
-                    }
-
-                    var document = Document.Create(container =>
-                    {
-                        container.Page(page =>
-                        {
-                            #region -- Page Setup
-
-                            page.Size(PageSizes.Legal.Landscape());
-                            page.Margin(20);
-                            page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Times New Roman"));
-
-                            #endregion
-
-                            #region -- Header
-
-                            var imgFilprideLogoPath = Path.Combine(_webHostEnvironment.WebRootPath, "img", "Filpride-logo.png");
-
-                            page.Header().Height(50).Row(row =>
-                            {
-                                row.RelativeItem().Column(column =>
-                                {
-                                    column.Item()
-                                        .Text("COMPARATIVE PURCHASE REPORT")
-                                        .FontSize(20).SemiBold();
-
-                                    column.Item().Text(text =>
-                                    {
-                                        text.Span("As Of: ").SemiBold();
-                                        text.Span(monthDate.ToString("MMMM yyyy"));
-                                    });
-
-                                });
-
-                                row.ConstantItem(size: 100)
-                                    .Height(50)
-                                    .Image(Image.FromFile(imgFilprideLogoPath)).FitWidth();
-
-                            });
-
-                            #endregion
-
-                            #region Content
-
-                            page.Content().PaddingTop(10).Table(table =>
-                            {
-                                #region -- Columns Definition
-
-                                table.ColumnsDefinition(columns =>
-                                {
-                                    columns.RelativeColumn();
-                                    columns.RelativeColumn();
-                                    columns.RelativeColumn();
-                                    columns.RelativeColumn();
-                                    columns.RelativeColumn();
-                                    columns.ConstantColumn(5);
-                                    columns.RelativeColumn();
-                                    columns.RelativeColumn();
-                                    columns.RelativeColumn();
-                                    columns.ConstantColumn(5);
-                                    columns.RelativeColumn();
-                                    columns.RelativeColumn();
-                                    columns.RelativeColumn();
-                                });
-
-                                #endregion
-
-                                #region -- Table Header
-
-                                table.Header(header =>
-                                {
-                                    header.Cell().ColumnSpan(5).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("CURRENT").SemiBold();
-                                    header.Cell();
-                                    header.Cell().ColumnSpan(3).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("PREVIOUS").SemiBold();
-                                    header.Cell();
-                                    header.Cell().ColumnSpan(3).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("INCREASE/(DECREASE)").SemiBold();
-
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Lifting Date").SemiBold();
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Reference").SemiBold();
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Quantity").SemiBold();
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Price").SemiBold();
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Total").SemiBold();
-                                    header.Cell();
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Quantity").SemiBold();
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Price").SemiBold();
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Total").SemiBold();
-                                    header.Cell();
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Quantity").SemiBold();
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Price").SemiBold();
-                                    header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Total").SemiBold();
-                                });
-
-                                #endregion
-
-                                #region -- Loop to Show Records
-
-                                var sumCurrentQuantity = 0m;
-                                var sumCurrentTotal = 0m;
-                                var sumPreviousQuantity = 0m;
-                                var sumPreviousTotal = 0m;
-                                var sumQuantityDifference = 0m;
-                                var sumPriceDifference = 0m;
-                                var sumTotalDifference = 0m;
-
-                                foreach (var record in lockedPurchases)
-                                {
-                                    var currentQuantity = record.ReceivingReport.QuantityReceived;
-                                    var currentTotal = record.ReceivingReport.Amount;
-                                    var currentPrice = currentTotal / currentQuantity;
-                                    var previousQuantity = record.Quantity;
-                                    var previousPrice = record.Price;
-                                    var previousTotal = previousQuantity * previousPrice;
-                                    var quantityDifference = currentQuantity - previousQuantity;
-                                    var priceDifference = currentPrice - previousPrice;
-                                    var totalDifference = currentTotal - previousTotal;
-
-                                    if (quantityDifference == 0 && priceDifference == 0 && totalDifference == 0)
-                                    {
-                                        continue;
-                                    }
-
-                                    sumCurrentQuantity += currentQuantity;
-
-                                    sumCurrentTotal += currentTotal;
-                                    sumPreviousQuantity += previousQuantity;
-
-                                    sumPreviousTotal += previousTotal;
-                                    sumQuantityDifference += quantityDifference;
-                                    sumPriceDifference += priceDifference;
-                                    sumTotalDifference += totalDifference;
-
-                                    table.Cell().Border(0.5f).Padding(3).Text(record.ReceivingReport.Date.ToString("MM/dd/yyyy"));
-                                    table.Cell().Border(0.5f).Padding(3).Text(record.ReceivingReport.ReceivingReportNo);
-                                    table.Cell().Border(0.5f).Padding(3).AlignRight().Text(currentQuantity.ToString(SD.Two_Decimal_Format));
-                                    table.Cell().Border(0.5f).Padding(3).AlignRight().Text(currentPrice.ToString(SD.Four_Decimal_Format));
-                                    table.Cell().Border(0.5f).Padding(3).AlignRight().Text(currentTotal.ToString(SD.Two_Decimal_Format));
-                                    table.Cell();
-                                    table.Cell().Border(0.5f).Padding(3).AlignRight().Text(previousQuantity.ToString(SD.Two_Decimal_Format));
-                                    table.Cell().Border(0.5f).Padding(3).AlignRight().Text(previousPrice.ToString(SD.Four_Decimal_Format));
-                                    table.Cell().Border(0.5f).Padding(3).AlignRight().Text(previousTotal.ToString(SD.Two_Decimal_Format));
-                                    table.Cell();
-                                    table.Cell().Border(0.5f).Padding(3).AlignRight().Text(quantityDifference != 0 ? quantityDifference < 0 ? $"({Math.Abs(quantityDifference).ToString(SD.Two_Decimal_Format)})" : quantityDifference.ToString(SD.Two_Decimal_Format) : null).SemiBold().FontColor(quantityDifference < 0 ? Colors.Red.Medium : Colors.Black);
-                                    table.Cell().Border(0.5f).Padding(3).AlignRight().Text(priceDifference != 0 ? priceDifference < 0 ? $"({Math.Abs(priceDifference).ToString(SD.Four_Decimal_Format)})" : priceDifference.ToString(SD.Four_Decimal_Format) : null).SemiBold().FontColor(priceDifference < 0 ? Colors.Red.Medium : Colors.Black);
-                                    table.Cell().Border(0.5f).Padding(3).AlignRight().Text(totalDifference != 0 ? totalDifference < 0 ? $"({Math.Abs(totalDifference).ToString(SD.Two_Decimal_Format)})" : totalDifference.ToString(SD.Two_Decimal_Format) : null).SemiBold().FontColor(totalDifference < 0 ? Colors.Red.Medium : Colors.Black);
-
-                                }
-
-                                var sumCurrentPrice = sumCurrentTotal != 0 && sumCurrentQuantity != 0 ? sumCurrentTotal / sumCurrentQuantity : 0;
-                                var sumPreviousPrice = sumPreviousTotal != 0 && sumPreviousQuantity != 0 ? sumPreviousTotal / sumPreviousQuantity : 0;
-
-                                #endregion
-
-                                #region -- Create Table Cell for Totals
-
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3);
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text("TOTALS").SemiBold();
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumCurrentQuantity.ToString(SD.Two_Decimal_Format));
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumCurrentPrice.ToString(SD.Four_Decimal_Format));
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumCurrentTotal.ToString(SD.Two_Decimal_Format));
-                                table.Cell();
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumPreviousQuantity.ToString(SD.Two_Decimal_Format));
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumPreviousPrice.ToString(SD.Four_Decimal_Format));
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumPreviousTotal.ToString(SD.Two_Decimal_Format));
-                                table.Cell();
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumQuantityDifference != 0 ? sumQuantityDifference < 0 ? $"({Math.Abs(sumQuantityDifference).ToString(SD.Two_Decimal_Format)})" : sumQuantityDifference.ToString(SD.Two_Decimal_Format) : null).SemiBold().FontColor(sumQuantityDifference < 0 ? Colors.Red.Medium : Colors.Black);
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumPriceDifference != 0 ? sumPriceDifference < 0 ? $"({Math.Abs(sumPriceDifference).ToString(SD.Four_Decimal_Format)})" : sumPriceDifference.ToString(SD.Four_Decimal_Format) : null).SemiBold().FontColor(sumPriceDifference < 0 ? Colors.Red.Medium : Colors.Black);
-                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(sumTotalDifference != 0 ? sumTotalDifference < 0 ? $"({Math.Abs(sumTotalDifference).ToString(SD.Two_Decimal_Format)})" : sumTotalDifference.ToString(SD.Two_Decimal_Format) : null).SemiBold().FontColor(sumTotalDifference < 0 ? Colors.Red.Medium : Colors.Black);
-
-                                #endregion
-                            });
-
-                            #endregion
-
-                            #region -- Footer
-
-                            page.Footer().AlignRight().Text(x =>
-                            {
-                                x.Span("Page ");
-                                x.CurrentPageNumber();
-                                x.Span(" of ");
-                                x.TotalPages();
-                            });
-
-                            #endregion
-
-                        });
-                    });
-
-                    #region -- Audit Trail --
-
-                    FilprideAuditTrail auditTrailBook = new(GetUserFullName(), "Generate purchase comparative report quest pdf", "Comparative Report", companyClaims);
-                    await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
-
-                    #endregion
-
-                    var pdfBytes = document.GeneratePdf();
-                    return File(pdfBytes, "application/pdf");
+                    TempData["info"] = "No records found!";
+                    return RedirectToAction(nameof(Index));
                 }
 
+                var document = GenerateAdjustmentReport(adjustments, GetReportTitle(category), monthDate);
+
+                FilprideAuditTrail auditTrailBook = new(
+                    GetUserFullName(),
+                    $"Generate {category.ToLower()} comparative adjustment report quest pdf",
+                    "Comparative Report",
+                    companyClaims);
+                await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
+
+                var pdfBytes = document.GeneratePdf();
+                return File(pdfBytes, "application/pdf");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error");
+                _logger.LogError(ex, "Failed to generate comparative adjustment report. Category: {Category}, Month: {MonthDate}, Generated by: {UserName}",
+                    category, monthDate, _userManager.GetUserName(User));
                 TempData["error"] = ex.Message;
                 return RedirectToAction(nameof(Index));
             }
+        }
+
+        private static LockedPeriodAdjustmentType GetAdjustmentType(string category)
+        {
+            return category switch
+            {
+                "Sales" => LockedPeriodAdjustmentType.SellingPrice,
+                "Purchases" => LockedPeriodAdjustmentType.UnitCost,
+                "Commission" => LockedPeriodAdjustmentType.Commission,
+                "Freight" => LockedPeriodAdjustmentType.Freight,
+                _ => throw new ArgumentException("Invalid comparative report category.")
+            };
+        }
+
+        private static string GetReportTitle(string category)
+        {
+            return category switch
+            {
+                "Sales" => "COMPARATIVE SALES ADJUSTMENT REPORT",
+                "Purchases" => "COMPARATIVE PURCHASE ADJUSTMENT REPORT",
+                "Commission" => "COMPARATIVE COMMISSION ADJUSTMENT REPORT",
+                "Freight" => "COMPARATIVE FREIGHT ADJUSTMENT REPORT",
+                _ => "COMPARATIVE ADJUSTMENT REPORT"
+            };
+        }
+
+        private Document GenerateAdjustmentReport(
+            IReadOnlyCollection<IBS.Models.Filpride.LockedPeriodAdjustment> adjustments,
+            string reportTitle,
+            DateOnly monthDate)
+        {
+            var imgFilprideLogoPath = Path.Combine(_webHostEnvironment.WebRootPath, "img", "Filpride-logo.png");
+
+            return Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.Legal.Landscape());
+                    page.Margin(20);
+                    page.DefaultTextStyle(x => x.FontSize(9).FontFamily("Times New Roman"));
+
+                    page.Header().Height(50).Row(row =>
+                    {
+                        row.RelativeItem().Column(column =>
+                        {
+                            column.Item().Text(reportTitle).FontSize(20).SemiBold();
+                            column.Item().Text(text =>
+                            {
+                                text.Span("Period Created: ").SemiBold();
+                                text.Span(monthDate.ToString("MMMM yyyy"));
+                            });
+                        });
+
+                        row.ConstantItem(100)
+                            .Height(50)
+                            .Image(Image.FromFile(imgFilprideLogoPath))
+                            .FitWidth();
+                    });
+
+                    page.Content().PaddingTop(10).Table(table =>
+                    {
+                        table.ColumnsDefinition(columns =>
+                        {
+                            columns.RelativeColumn();
+                            columns.RelativeColumn();
+                            columns.RelativeColumn();
+                            columns.RelativeColumn();
+                            columns.RelativeColumn();
+                            columns.RelativeColumn();
+                            columns.RelativeColumn();
+                            columns.RelativeColumn();
+                            columns.RelativeColumn();
+                        });
+
+                        table.Header(header =>
+                        {
+                            AddHeaderCell(header, "Created Date");
+                            AddHeaderCell(header, "Period");
+                            AddHeaderCell(header, "Module");
+                            AddHeaderCell(header, "Reference");
+                            AddHeaderCell(header, "Old Value");
+                            AddHeaderCell(header, "New Value");
+                            AddHeaderCell(header, "Adjustment");
+                            AddHeaderCell(header, "Reason");
+                            AddHeaderCell(header, "Created By");
+                        });
+
+                        foreach (var adjustment in adjustments)
+                        {
+                            AddTextCell(table, adjustment.CreatedDate.ToString(SD.Date_Format));
+                            AddTextCell(table, adjustment.Period.ToString("MMM yyyy"));
+                            AddTextCell(table, adjustment.EntityType.ToString());
+                            AddTextCell(table, adjustment.EntityTypeNo);
+                            AddNumberCell(table, adjustment.OldValue, SD.Four_Decimal_Format);
+                            AddNumberCell(table, adjustment.NewValue, SD.Four_Decimal_Format);
+                            AddNumberCell(table, adjustment.AdjustmentValue, SD.Two_Decimal_Format, true);
+                            AddTextCell(table, adjustment.Reason);
+                            AddTextCell(table, adjustment.CreatedBy);
+                        }
+
+                        AddTotalRow(table, adjustments.Sum(a => a.AdjustmentValue));
+                    });
+
+                    page.Footer().AlignRight().Text(x =>
+                    {
+                        x.Span("Page ");
+                        x.CurrentPageNumber();
+                        x.Span(" of ");
+                        x.TotalPages();
+                    });
+                });
+            });
+        }
+
+        private static void AddHeaderCell(TableCellDescriptor table, string text)
+        {
+            table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text(text).SemiBold();
+        }
+
+        private static void AddTextCell(TableDescriptor table, string? text)
+        {
+            table.Cell().Border(0.5f).Padding(3).Text(text ?? string.Empty);
+        }
+
+        private static void AddNumberCell(TableDescriptor table, decimal value, string format, bool emphasize = false)
+        {
+            var descriptor = table.Cell().Border(0.5f).Padding(3).AlignRight().Text(FormatNumber(value, format));
+
+            if (emphasize)
+            {
+                descriptor.SemiBold().FontColor(value < 0 ? Colors.Red.Medium : Colors.Black);
+            }
+        }
+
+        private static void AddTotalRow(TableDescriptor table, decimal totalAdjustment)
+        {
+            table.Cell().ColumnSpan(6).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text("TOTAL").SemiBold();
+            table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight()
+                .Text(FormatNumber(totalAdjustment, SD.Two_Decimal_Format))
+                .SemiBold()
+                .FontColor(totalAdjustment < 0 ? Colors.Red.Medium : Colors.Black);
+            table.Cell().ColumnSpan(2).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3);
+        }
+
+        private static string FormatNumber(decimal value, string format)
+        {
+            return value < 0
+                ? $"({Math.Abs(value).ToString(format)})"
+                : value.ToString(format);
         }
     }
 }
