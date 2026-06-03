@@ -160,7 +160,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     query = query.Where(pr =>
                         pr.SeriesNumber.ToLower().Contains(searchValue) ||
                         pr.ReferenceNo.ToLower().Contains(searchValue) ||
-                        pr.Remarks.ToLower().Contains(searchValue) ||
+                        pr.Remarks!.ToLower().Contains(searchValue) ||
                         pr.Employee.FirstName.ToLower().Contains(searchValue) ||
                         pr.Employee.LastName.ToLower().Contains(searchValue) ||
                         (pr.CreatedBy ?? string.Empty).ToLower().Contains(searchValue) ||
@@ -478,12 +478,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
-            if (model.PostedBy != null)
-            {
-                TempData["info"] = "Provisional receipt has already been posted.";
-                return RedirectToAction(nameof(Print), new { id });
-            }
-
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             try
@@ -529,6 +523,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
             if (model == null)
             {
                 return NotFound();
+            }
+
+            if (model.PostedBy != null)
+            {
+                TempData["info"] = "Provisional receipt has already been posted.";
+                return RedirectToAction(nameof(Print), new { id });
             }
 
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);

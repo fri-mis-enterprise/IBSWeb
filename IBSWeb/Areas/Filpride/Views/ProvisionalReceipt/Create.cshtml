@@ -42,15 +42,15 @@
                     <div class="form-group mb-3">
                         <label class="control-label">Type<span class="required">*</span></label>
                         <select asp-for="Type" class="form-select js-select2 border-0 shadow" style="width:100%;" required>
-                            <option value="" selected disabled>Select DR type</option>
+                            <option value="" selected disabled>Select Document type</option>
                             @foreach (var documentType in Enum.GetValues<DocumentType>())
                             {
-                                <option value="@documentType">@documentType.ToString()</option>
+                                <option value="@documentType" selected="@(documentType == DocumentType.Undocumented)">@documentType.ToString()</option>
                             }
                         </select>
                         <span asp-validation-for="Type" class="text-danger"></span>
                     </div>
-                    
+
                     <div class="form-group mb-3">
                         <label asp-for="EmployeeId" class="control-label"></label><span class="required">*</span>
                         <select asp-for="EmployeeId" asp-items="@Model.Employees" class="form-select js-select2" style="width:100%">
@@ -61,7 +61,7 @@
 
                     <div class="form-group mb-3">
                         <label asp-for="TransactionDate" class="control-label"></label><span class="required">*</span>
-                        <input asp-for="TransactionDate" type="date" class="form-control" 
+                        <input asp-for="TransactionDate" type="date" class="form-control"
                                value="@today.ToString("yyyy-MM-dd")"
                                min="@Model.MinDate.ToString("yyyy-MM-dd")" />
                         <span asp-validation-for="TransactionDate" class="text-danger"></span>
@@ -69,7 +69,7 @@
 
                     <div class="form-floating mb-3">
                         <input asp-for="ReferenceNo" class="form-control" placeholder="Reference #"/>
-                        <label asp-for="ReferenceNo"></label>
+                        <label asp-for="ReferenceNo">ReferenceNo<span class="required">*</span></label>
                         <span asp-validation-for="ReferenceNo" class="text-danger"></span>
                     </div>
 
@@ -167,7 +167,7 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-    
+
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             $("#submitButton").on("click");

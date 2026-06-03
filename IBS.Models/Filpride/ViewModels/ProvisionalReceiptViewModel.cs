@@ -21,7 +21,7 @@ namespace IBS.Models.Filpride.ViewModels
         public string ReferenceNo { get; set; } = string.Empty;
 
         [StringLength(255)]
-        public string Remarks { get; set; } = string.Empty;
+        public string? Remarks { get; set; }
 
         [Display(Name = "Cash Amount")]
         public decimal CashAmount { get; set; }
