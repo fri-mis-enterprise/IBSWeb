@@ -256,19 +256,23 @@
                                 dropdownHtml += `<li><a class="dropdown-item" onclick="confirmCancel(${row.id})">Cancel</a></li>`;
                                 dropdownHtml += `<li><a href="@Url.Action("Print", "ProvisionalReceipt", new { area = "Filpride" })/${row.id}" class="dropdown-item">Preview</a></li>`;
                             } else {
-                                const hasDeposit = row.depositedDate && row.depositedDate !== "";
+
+                                const depositedStatus = "@nameof(CollectionReceiptStatus.Deposited)";
                                 const postedStatus = "@nameof(CollectionReceiptStatus.Posted)";
-                                const clearedStatus = "@nameof(CollectionReceiptStatus.Cleared)";
+                                const redepositedStatus = "@nameof(CollectionReceiptStatus.Redeposited)";
                                 const returnedStatus = "@nameof(CollectionReceiptStatus.Returned)";
 
-                                if (!hasDeposit && row.status === postedStatus) {
+                                if (row.status === postedStatus) {
                                     dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="addDepositInfo(${row.id})">Add Deposit Info</a></li>`;
-                                } else if (!hasDeposit && row.status === returnedStatus) {
-                                    dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="redeposit(${row.id})">Redeposit</a></li>`;
-                                } else if (hasDeposit && row.status !== returnedStatus && row.status !== clearedStatus) {
+                                }
+
+                                if (row.status === depositedStatus || row.status === redepositedStatus) {
                                     dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="applyClearingDate(${row.id})">Apply Clearing Date</a></li>`;
-                                } else {
                                     dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="returnCheck(${row.id})">Return Check</a></li>`;
+                                }
+
+                                if (row.status === returnedStatus) {
+                                    dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="redeposit(${row.id})">Redeposit</a></li>`;
                                 }
 
                                 dropdownHtml += `<li><a href="@Url.Action("Print", "ProvisionalReceipt", new { area = "Filpride" })/${row.id}" class="dropdown-item">Preview</a></li>`;

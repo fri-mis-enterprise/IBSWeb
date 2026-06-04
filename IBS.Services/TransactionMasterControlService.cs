@@ -4,6 +4,7 @@ using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.ViewModels;
+using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,10 @@ namespace IBS.Services
         public int PurchaseCount { get; init; }
         public int SalesCount { get; init; }
         public int ServiceCount { get; init; }
+        public int CollectionCount { get; init; }
+        public int ProvisionalReceiptCount { get; init; }
+        public int DebitMemoCount { get; init; }
+        public int CreditMemoCount { get; init; }
         public int PaymentCount { get; init; }
         public int JvCount { get; init; }
     }
@@ -330,6 +335,10 @@ namespace IBS.Services
                 var purchaseCount = await ReJournalPurchaseAsync(month, year, company, cancellationToken);
                 var salesCount = await ReJournalSalesAsync(month, year, company, cancellationToken);
                 var serviceCount = await ReJournalServiceAsync(month, year, company, userFullName, cancellationToken);
+                var collectionCount = await ReJournalCollectionAsync(month, year, company, cancellationToken);
+                var provisionalReceiptCount = await ReJournalProvisionalReceiptAsync(month, year, company, cancellationToken);
+                var debitMemoCount = await ReJournalDebitMemoAsync(month, year, company, cancellationToken);
+                var creditMemoCount = await ReJournalCreditMemoAsync(month, year, company, cancellationToken);
                 var paymentCount = await ReJournalPaymentAsync(month, year, company, cancellationToken);
                 var jvCount = await ReJournalJvAsync(month, year, company, cancellationToken);
 
@@ -340,6 +349,10 @@ namespace IBS.Services
                     PurchaseCount = purchaseCount,
                     SalesCount = salesCount,
                     ServiceCount = serviceCount,
+                    CollectionCount = collectionCount,
+                    ProvisionalReceiptCount = provisionalReceiptCount,
+                    DebitMemoCount = debitMemoCount,
+                    CreditMemoCount = creditMemoCount,
                     PaymentCount = paymentCount,
                     JvCount = jvCount
                 };
@@ -528,6 +541,244 @@ namespace IBS.Services
             }
 
             return cvs.Count;
+        }
+
+        private async Task<int> ReJournalCollectionAsync(int month, int year, string company, CancellationToken cancellationToken)
+        {
+            var records = (await unitOfWork.FilprideCollectionReceipt.GetAllAsync(x =>
+                    x.Company == company &&
+                    x.PostedBy != null &&
+                    x.Status != nameof(CollectionReceiptStatus.Voided) &&
+                    x.Status != nameof(CollectionReceiptStatus.Canceled) &&
+                    x.TransactionDate.Month == month &&
+                    x.TransactionDate.Year == year,
+                cancellationToken))
+                .OrderBy(x => x.TransactionDate)
+                .ToList();
+
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var references = records
+                .Select(x => x.CollectionReceiptNo!)
+                .Distinct()
+                .ToList();
+
+            var existingGlEntries = await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => x.Company == company && references.Contains(x.Reference))
+                .ToListAsync(cancellationToken);
+
+            if (existingGlEntries.Count != 0)
+            {
+                dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            foreach (var record in records)
+            {
+                var collectionReceipt = await unitOfWork.FilprideCollectionReceipt
+                    .GetAsync(x => x.CollectionReceiptId == record.CollectionReceiptId, cancellationToken)
+                    ?? throw new ArgumentException($"Collection receipt '{record.CollectionReceiptNo}' not found.");
+
+                await unitOfWork.FilprideCollectionReceipt.PostAsync(collectionReceipt, cancellationToken);
+
+                if (collectionReceipt.DepositedDate != null && collectionReceipt.ClearedDate != null)
+                {
+                    await unitOfWork.FilprideCollectionReceipt.DepositAsync(collectionReceipt, cancellationToken);
+                    await ReApplyCollectionCostOfMoneyAsync(collectionReceipt, company, cancellationToken);
+                }
+            }
+
+            return records.Count;
+        }
+
+        private async Task<int> ReJournalProvisionalReceiptAsync(int month, int year, string company, CancellationToken cancellationToken)
+        {
+            var records = (await unitOfWork.ProvisionalReceipt.GetAllAsync(x =>
+                    x.Company == company &&
+                    x.PostedBy != null &&
+                    x.Status != nameof(CollectionReceiptStatus.Voided) &&
+                    x.Status != nameof(CollectionReceiptStatus.Canceled) &&
+                    x.DepositedDate != null &&
+                    x.TransactionDate.Month == month &&
+                    x.TransactionDate.Year == year,
+                cancellationToken))
+                .OrderBy(x => x.TransactionDate)
+                .ToList();
+
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var references = records
+                .Select(x => x.SeriesNumber)
+                .Distinct()
+                .ToList();
+
+            var existingGlEntries = await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => x.Company == company && references.Contains(x.Reference))
+                .ToListAsync(cancellationToken);
+
+            if (existingGlEntries.Count != 0)
+            {
+                dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            foreach (var record in records)
+            {
+                var provisionalReceipt = await unitOfWork.ProvisionalReceipt
+                    .GetAsync(x => x.Id == record.Id, cancellationToken)
+                    ?? throw new ArgumentException($"Provisional receipt '{record.SeriesNumber}' not found.");
+
+                if (provisionalReceipt.DepositedDate != null && provisionalReceipt.ClearedDate != null)
+                {
+                    await unitOfWork.ProvisionalReceipt.DepositAsync(provisionalReceipt, cancellationToken);
+                }
+            }
+
+            return records.Count;
+        }
+
+        private async Task ReApplyCollectionCostOfMoneyAsync(
+            Models.Filpride.AccountsReceivable.FilprideCollectionReceipt collectionReceipt,
+            string company,
+            CancellationToken cancellationToken)
+        {
+            if (collectionReceipt.DepositedDate == null)
+            {
+                return;
+            }
+
+            foreach (var receipt in collectionReceipt.ReceiptDetails!)
+            {
+                var salesInvoice = await unitOfWork.FilprideSalesInvoice
+                    .GetAsync(x => x.SalesInvoiceNo == receipt.InvoiceNo && x.Company == company, cancellationToken);
+
+                if (salesInvoice?.DeliveryReceipt == null || salesInvoice.CustomerOrderSlip == null)
+                {
+                    continue;
+                }
+
+                var hasWvat = salesInvoice.CustomerOrderSlip.HasWVAT;
+                var hasWtax = salesInvoice.CustomerOrderSlip.HasEWT;
+                var isVatable = salesInvoice.CustomerOrderSlip.VatType == SD.VatType_Vatable;
+                var dr = salesInvoice.DeliveryReceipt;
+                var getHolidays = await DateTimeHelper.GetNonWorkingDays(salesInvoice.DueDate, collectionReceipt.DepositedDate.Value);
+                var daysDelayed = collectionReceipt.DepositedDate.Value.DayNumber - salesInvoice.DueDate.DayNumber - getHolidays.Count;
+
+                if (daysDelayed <= 0 || dr.CommissionAmount <= 0)
+                {
+                    continue;
+                }
+
+                var netOfVat = isVatable
+                    ? unitOfWork.FilprideCollectionReceipt.ComputeNetOfVat(receipt.Amount)
+                    : receipt.Amount;
+                var wvatAmount = hasWvat
+                    ? unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, 0.05m)
+                    : 0m;
+                var wtaxAmount = hasWtax
+                    ? unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, 0.01m)
+                    : 0m;
+                var paymentAmount = receipt.Amount - (wvatAmount - wtaxAmount);
+
+                var costOfMoney = paymentAmount * .03m * daysDelayed / 360m;
+
+                await unitOfWork.FilprideCollectionReceipt.ApplyCostOfMoney(dr, costOfMoney,
+                    "Batch ReJournal", collectionReceipt.DepositedDate.Value, cancellationToken);
+            }
+        }
+
+        private async Task<int> ReJournalDebitMemoAsync(int month, int year, string company, CancellationToken cancellationToken)
+        {
+            var records = (await unitOfWork.FilprideDebitMemo.GetAllAsync(x =>
+                    x.Company == company &&
+                    x.PostedBy != null &&
+                    x.Status == nameof(Status.Posted) &&
+                    x.TransactionDate.Month == month &&
+                    x.TransactionDate.Year == year,
+                cancellationToken))
+                .OrderBy(x => x.TransactionDate)
+                .ToList();
+
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var references = records
+                .Select(x => x.DebitMemoNo!)
+                .Distinct()
+                .ToList();
+
+            var existingGlEntries = await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => x.Company == company && references.Contains(x.Reference))
+                .ToListAsync(cancellationToken);
+
+            if (existingGlEntries.Count != 0)
+            {
+                dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            foreach (var record in records)
+            {
+                var debitMemo = await unitOfWork.FilprideDebitMemo
+                    .GetAsync(x => x.DebitMemoId == record.DebitMemoId, cancellationToken)
+                    ?? throw new ArgumentException($"Debit memo '{record.DebitMemoNo}' not found.");
+
+                await unitOfWork.FilprideDebitMemo.PostAsync(debitMemo, cancellationToken);
+            }
+
+            return records.Count;
+        }
+
+        private async Task<int> ReJournalCreditMemoAsync(int month, int year, string company, CancellationToken cancellationToken)
+        {
+            var records = (await unitOfWork.FilprideCreditMemo.GetAllAsync(x =>
+                    x.Company == company &&
+                    x.PostedBy != null &&
+                    x.Status == nameof(Status.Posted) &&
+                    x.TransactionDate.Month == month &&
+                    x.TransactionDate.Year == year,
+                cancellationToken))
+                .OrderBy(x => x.TransactionDate)
+                .ToList();
+
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var references = records
+                .Select(x => x.CreditMemoNo!)
+                .Distinct()
+                .ToList();
+
+            var existingGlEntries = await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => x.Company == company && references.Contains(x.Reference))
+                .ToListAsync(cancellationToken);
+
+            if (existingGlEntries.Count != 0)
+            {
+                dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            foreach (var record in records)
+            {
+                var creditMemo = await unitOfWork.FilprideCreditMemo
+                    .GetAsync(x => x.CreditMemoId == record.CreditMemoId, cancellationToken)
+                    ?? throw new ArgumentException($"Credit memo '{record.CreditMemoNo}' not found.");
+
+                await unitOfWork.FilprideCreditMemo.PostAsync(creditMemo, cancellationToken);
+            }
+
+            return records.Count;
         }
 
         private async Task<int> ReJournalJvAsync(int month, int year, string company, CancellationToken cancellationToken)

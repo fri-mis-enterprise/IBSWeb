@@ -7,5 +7,6 @@ namespace IBS.DataAccess.Repository.Filpride.IRepository
     public interface IDebitMemoRepository : IRepository<FilprideDebitMemo>
     {
         Task<string> GenerateCodeAsync(string company, string type, CancellationToken cancellationToken = default);
+        Task PostAsync(FilprideDebitMemo model, CancellationToken cancellationToken = default);
     }
 }

@@ -150,6 +150,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     purchaseCount = result.PurchaseCount,
                     salesCount = result.SalesCount,
                     serviceCount = result.ServiceCount,
+                    collectionCount = result.CollectionCount,
+                    provisionalReceiptCount = result.ProvisionalReceiptCount,
+                    debitMemoCount = result.DebitMemoCount,
+                    creditMemoCount = result.CreditMemoCount,
                     paymentCount = result.PaymentCount,
                     jvCount = result.JvCount
                 });
