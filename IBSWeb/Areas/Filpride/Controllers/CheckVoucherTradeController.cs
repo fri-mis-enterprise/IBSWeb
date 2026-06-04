@@ -272,19 +272,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .ToList();
         }
 
-        private static string? GetWithholdingTaxAccountNumberByPercent(decimal taxPercent)
-        {
-            return taxPercent switch
-            {
-                0.01m => "201030210",
-                0.02m => "201030220",
-                0.05m => "201030230",
-                0.10m => "201030240",
-                0.005m => "201030250",
-                _ => null
-            };
-        }
-
         public IActionResult Index(string? view)
         {
             if (view == nameof(DynamicView.CheckVoucher))
@@ -674,11 +661,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region -- Additional journal entry in details
 
-                var withholdingTaxAccountNo = GetWithholdingTaxAccountNumberByPercent(cvh.TaxPercent);
-                var getWithholdingTaxTitle = withholdingTaxAccountNo == null
-                    ? null
-                    : await _dbContext.FilprideChartOfAccounts
-                        .FirstOrDefaultAsync(x => x.AccountNumber == withholdingTaxAccountNo, cancellationToken);
                 var manualDisplayEntries = cvDetails
                     .Where(d => !d.IsDisplayEntry &&
                                 d.AccountNo != _apTradePayableAccountNo &&
@@ -761,8 +743,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         });
                     }
 
-                    if (ewt != 0 && getWithholdingTaxTitle != null)
+                    if (ewt != 0)
                     {
+                        var withholdingTaxAccountNo = WithholdingTaxHelper.GetAccountNumberByPercent(cvh.TaxPercent)
+                            ?? throw new ArgumentException($"No EWT account mapping found for tax percentage '{cvh.TaxPercent}'.");
+                        var getWithholdingTaxTitle = await _dbContext.FilprideChartOfAccounts
+                            .FirstOrDefaultAsync(x => x.AccountNumber == withholdingTaxAccountNo, cancellationToken)
+                            ?? throw new ArgumentException($"Account title '{withholdingTaxAccountNo}' not found.");
                         cvDetails.Add(
                         new FilprideCheckVoucherDetail
                         {
@@ -1357,11 +1344,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region -- Additional details entry
 
-                var withholdingTaxAccountNo = GetWithholdingTaxAccountNumberByPercent(existingHeaderModel.TaxPercent);
-                var getWithholdingTaxTitle = withholdingTaxAccountNo == null
-                    ? null
-                    : await _dbContext.FilprideChartOfAccounts
-                        .FirstOrDefaultAsync(x => x.AccountNumber == withholdingTaxAccountNo, cancellationToken);
                 var manualDisplayEntries = details
                     .Where(d => !d.IsDisplayEntry &&
                                 d.AccountNo != _apTradePayableAccountNo &&
@@ -1446,8 +1428,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             });
                         }
 
-                        if (ewt != 0 && getWithholdingTaxTitle != null)
+                        if (ewt != 0)
                         {
+                            var withholdingTaxAccountNo = WithholdingTaxHelper.GetAccountNumberByPercent(existingHeaderModel.TaxPercent)
+                                ?? throw new ArgumentException($"No EWT account mapping found for tax percentage '{existingHeaderModel.TaxPercent}'.");
+                            var getWithholdingTaxTitle = await _dbContext.FilprideChartOfAccounts
+                                .FirstOrDefaultAsync(x => x.AccountNumber == withholdingTaxAccountNo, cancellationToken)
+                                ?? throw new ArgumentException($"Account title '{withholdingTaxAccountNo}' not found.");
                             details.Add(
                             new FilprideCheckVoucherDetail
                             {
@@ -2720,11 +2707,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await _dbContext.FilprideCheckVoucherDetails.AddRangeAsync(cvDetails, cancellationToken);
 
-                var withholdingTaxAccountNo = GetWithholdingTaxAccountNumberByPercent(cvh.TaxPercent);
-                var getWithholdingTaxTitle = withholdingTaxAccountNo == null
-                    ? null
-                    : await _dbContext.FilprideChartOfAccounts
-                        .FirstOrDefaultAsync(x => x.AccountNumber == withholdingTaxAccountNo, cancellationToken);
                 var manualDisplayEntries = cvDetails
                     .Where(d => !d.IsDisplayEntry &&
                                 d.AccountNo != _commissionPayableAccountNo &&
@@ -2805,8 +2787,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         });
                     }
 
-                    if (ewt != 0 && getWithholdingTaxTitle != null)
+                    if (ewt != 0)
                     {
+                        var withholdingTaxAccountNo = WithholdingTaxHelper.GetAccountNumberByPercent(cvh.TaxPercent)
+                            ?? throw new ArgumentException($"No EWT account mapping found for tax percentage '{cvh.TaxPercent}'.");
+                        var getWithholdingTaxTitle = await _dbContext.FilprideChartOfAccounts
+                            .FirstOrDefaultAsync(x => x.AccountNumber == withholdingTaxAccountNo, cancellationToken)
+                            ?? throw new ArgumentException($"Account title '{withholdingTaxAccountNo}' not found.");
                         cvDetails.Add(
                             new FilprideCheckVoucherDetail
                         {
@@ -3087,11 +3074,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await _dbContext.FilprideCheckVoucherDetails.AddRangeAsync(cvDetails, cancellationToken);
 
-                var withholdingTaxAccountNo = GetWithholdingTaxAccountNumberByPercent(cvh.TaxPercent);
-                var getWithholdingTaxTitle = withholdingTaxAccountNo == null
-                    ? null
-                    : await _dbContext.FilprideChartOfAccounts
-                        .FirstOrDefaultAsync(x => x.AccountNumber == withholdingTaxAccountNo, cancellationToken);
                 var manualDisplayEntries = cvDetails
                     .Where(d => !d.IsDisplayEntry &&
                                 d.AccountNo != _haulingPayableAccountNo &&
@@ -3172,8 +3154,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         });
                     }
 
-                    if (ewt != 0 && getWithholdingTaxTitle != null)
+                    if (ewt != 0)
                     {
+                        var withholdingTaxAccountNo = WithholdingTaxHelper.GetAccountNumberByPercent(cvh.TaxPercent)
+                            ?? throw new ArgumentException($"No EWT account mapping found for tax percentage '{cvh.TaxPercent}'.");
+                        var getWithholdingTaxTitle = await _dbContext.FilprideChartOfAccounts
+                            .FirstOrDefaultAsync(x => x.AccountNumber == withholdingTaxAccountNo, cancellationToken)
+                            ?? throw new ArgumentException($"Account title '{withholdingTaxAccountNo}' not found.");
                         cvDetails.Add(
                             new FilprideCheckVoucherDetail
                         {
@@ -3679,11 +3666,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region -- Additional details entry
 
-                var withholdingTaxAccountNo = GetWithholdingTaxAccountNumberByPercent(existingHeaderModel.TaxPercent);
-                var getWithholdingTaxTitle = withholdingTaxAccountNo == null
-                    ? null
-                    : await _dbContext.FilprideChartOfAccounts
-                        .FirstOrDefaultAsync(x => x.AccountNumber == withholdingTaxAccountNo, cancellationToken);
                 var manualDisplayEntries = details
                     .Where(d => !d.IsDisplayEntry &&
                                 d.AccountNo != _commissionPayableAccountNo &&
@@ -3765,8 +3747,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             });
                         }
 
-                        if (ewt != 0 && getWithholdingTaxTitle != null)
+                        if (ewt != 0)
                         {
+                            var withholdingTaxAccountNo = WithholdingTaxHelper.GetAccountNumberByPercent(existingHeaderModel.TaxPercent)
+                                ?? throw new ArgumentException($"No EWT account mapping found for tax percentage '{existingHeaderModel.TaxPercent}'.");
+                            var getWithholdingTaxTitle = await _dbContext.FilprideChartOfAccounts
+                                .FirstOrDefaultAsync(x => x.AccountNumber == withholdingTaxAccountNo, cancellationToken)
+                                ?? throw new ArgumentException($"Account title '{withholdingTaxAccountNo}' not found.");
                             details.Add(
                                 new FilprideCheckVoucherDetail
                             {
@@ -4129,11 +4116,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region -- Additional details entry
 
-                var withholdingTaxAccountNo = GetWithholdingTaxAccountNumberByPercent(existingHeaderModel.TaxPercent);
-                var getWithholdingTaxTitle = withholdingTaxAccountNo == null
-                    ? null
-                    : await _dbContext.FilprideChartOfAccounts
-                        .FirstOrDefaultAsync(x => x.AccountNumber == withholdingTaxAccountNo, cancellationToken);
                 var manualDisplayEntries = details
                     .Where(d => !d.IsDisplayEntry &&
                                 d.AccountNo != _haulingPayableAccountNo &&
@@ -4216,8 +4198,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             });
                         }
 
-                        if (ewt != 0 && getWithholdingTaxTitle != null)
+                        if (ewt != 0)
                         {
+                            var withholdingTaxAccountNo = WithholdingTaxHelper.GetAccountNumberByPercent(existingHeaderModel.TaxPercent)
+                                ?? throw new ArgumentException($"No EWT account mapping found for tax percentage '{existingHeaderModel.TaxPercent}'.");
+                            var getWithholdingTaxTitle = await _dbContext.FilprideChartOfAccounts
+                                .FirstOrDefaultAsync(x => x.AccountNumber == withholdingTaxAccountNo, cancellationToken)
+                                ?? throw new ArgumentException($"Account title '{withholdingTaxAccountNo}' not found.");
                             details.Add(
                                 new FilprideCheckVoucherDetail
                             {

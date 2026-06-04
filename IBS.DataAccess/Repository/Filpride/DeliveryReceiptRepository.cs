@@ -422,10 +422,6 @@ namespace IBS.DataAccess.Repository.Filpride
 
                 if (deliveryReceipt.Freight > 0 || deliveryReceipt.ECC > 0)
                 {
-                    var haulerTaxTitle = deliveryReceipt.Hauler!.WithholdingTaxTitle?.Split(" ", 2);
-                    var ewtAccountNo = haulerTaxTitle?.FirstOrDefault();
-                    var ewtTitle = accountTitlesDto.FirstOrDefault(c => c.AccountNumber == ewtAccountNo);
-
                     if (deliveryReceipt.Freight > 0)
                     {
                         var freightGrossAmount = deliveryReceipt.Freight * deliveryReceipt.Quantity;
@@ -524,6 +520,12 @@ namespace IBS.DataAccess.Repository.Filpride
                     var totalFreightNetOfEwt = totalFreightEwtAmount > 0
                         ? ComputeNetOfEwt(totalFreightGrossAmount, totalFreightEwtAmount)
                         : totalFreightGrossAmount;
+                    var ewtTitle = totalFreightEwtAmount > 0
+                        ? accountTitlesDto.FirstOrDefault(c =>
+                              c.AccountNumber == (WithholdingTaxHelper.GetAccountNumberByPercent(deliveryReceipt.Hauler!.WithholdingTaxPercent ?? 0m)
+                                  ?? throw new ArgumentException($"No EWT account mapping found for tax percentage '{deliveryReceipt.Hauler!.WithholdingTaxPercent ?? 0m}'.")))
+                          ?? throw new ArgumentException("Mapped EWT account title not found.")
+                        : null;
 
                     ledgers.Add(new FilprideGeneralLedgerBook
                     {
@@ -566,16 +568,18 @@ namespace IBS.DataAccess.Repository.Filpride
 
                 if (deliveryReceipt.CommissionRate > 0)
                 {
-                    var commissioneeTaxTitle = deliveryReceipt.Commissionee!.WithholdingTaxTitle?.Split(" ", 2);
-                    var ewtAccountNo = commissioneeTaxTitle?.FirstOrDefault();
-                    var ewtTitle = accountTitlesDto.FirstOrDefault(c => c.AccountNumber == ewtAccountNo);
-
                     var commissionGrossAmount = deliveryReceipt.CommissionAmount;
                     var commissionEwtAmount = deliveryReceipt.CustomerOrderSlip.CommissioneeTaxType == SD.TaxType_WithTax
                         ? ComputeEwtAmount(commissionGrossAmount, deliveryReceipt.Commissionee!.WithholdingTaxPercent ?? 0m)
                         : 0;
                     var commissionNetOfEwt = commissionEwtAmount > 0 ?
                         ComputeNetOfEwt(commissionGrossAmount, commissionEwtAmount) : commissionGrossAmount;
+                    var ewtTitle = commissionEwtAmount > 0
+                        ? accountTitlesDto.FirstOrDefault(c =>
+                              c.AccountNumber == (WithholdingTaxHelper.GetAccountNumberByPercent(deliveryReceipt.Commissionee!.WithholdingTaxPercent ?? 0m)
+                                  ?? throw new ArgumentException($"No EWT account mapping found for tax percentage '{deliveryReceipt.Commissionee!.WithholdingTaxPercent ?? 0m}'.")))
+                          ?? throw new ArgumentException("Mapped EWT account title not found.")
+                        : null;
 
                     ledgers.Add(new FilprideGeneralLedgerBook
                     {
@@ -1101,10 +1105,6 @@ namespace IBS.DataAccess.Repository.Filpride
                 var apCommissionPayableTitle = accountTitlesDto.Find(c => c.AccountNumber == "201010200")
                                                ?? throw new ArgumentException("Account title '201010200' not found.");
 
-                var commissioneeTaxTitle = deliveryReceipt.Commissionee?.WithholdingTaxTitle?.Split(" ", 2);
-                var ewtAccountNo = commissioneeTaxTitle?.FirstOrDefault();
-                var ewtTitle = accountTitlesDto.FirstOrDefault(c => c.AccountNumber == ewtAccountNo);
-
                 var unitOfWork = new UnitOfWork(_db);
                 var deliveredDate = deliveryReceipt.DeliveredDate
                     ?? throw new InvalidOperationException($"Delivered date is required for DR#{deliveryReceipt.DeliveryReceiptNo}.");
@@ -1125,6 +1125,12 @@ namespace IBS.DataAccess.Repository.Filpride
                     : 0;
                 var commissionNetOfEwt = commissionEwtAmount > 0 ?
                     ComputeNetOfEwt(commissionGrossAmount, commissionEwtAmount) : commissionGrossAmount;
+                var ewtTitle = commissionEwtAmount > 0
+                    ? accountTitlesDto.FirstOrDefault(c =>
+                          c.AccountNumber == (WithholdingTaxHelper.GetAccountNumberByPercent(deliveryReceipt.Commissionee?.WithholdingTaxPercent ?? 0m)
+                              ?? throw new ArgumentException($"No EWT account mapping found for tax percentage '{deliveryReceipt.Commissionee?.WithholdingTaxPercent ?? 0m}'.")))
+                      ?? throw new ArgumentException("Mapped EWT account title not found.")
+                    : null;
 
                 ledgers.Add(new FilprideGeneralLedgerBook
                 {
@@ -1224,10 +1230,6 @@ namespace IBS.DataAccess.Repository.Filpride
                 var vatInputTitle = accountTitlesDto.Find(c => c.AccountNumber == "101060200")
                                     ?? throw new ArgumentException("Account title '101060200' not found.");
 
-                var haulerTaxTitle = deliveryReceipt.Hauler?.WithholdingTaxTitle?.Split(" ", 2);
-                var ewtAccountNo = haulerTaxTitle?.FirstOrDefault();
-                var ewtTitle = accountTitlesDto.FirstOrDefault(c => c.AccountNumber == ewtAccountNo);
-
                 var unitOfWork = new UnitOfWork(_db);
                 var deliveredDate = deliveryReceipt.DeliveredDate
                     ?? throw new InvalidOperationException($"Delivered date is required for DR#{deliveryReceipt.DeliveryReceiptNo}.");
@@ -1252,6 +1254,12 @@ namespace IBS.DataAccess.Repository.Filpride
                 var freightNetOfEwt = freightEwtAmount > 0
                     ? ComputeNetOfEwt(freightGross, freightEwtAmount)
                     : freightGross;
+                var ewtTitle = freightEwtAmount > 0
+                    ? accountTitlesDto.FirstOrDefault(c =>
+                          c.AccountNumber == (WithholdingTaxHelper.GetAccountNumberByPercent(deliveryReceipt.Hauler?.WithholdingTaxPercent ?? 0m)
+                              ?? throw new ArgumentException($"No EWT account mapping found for tax percentage '{deliveryReceipt.Hauler?.WithholdingTaxPercent ?? 0m}'.")))
+                      ?? throw new ArgumentException("Mapped EWT account title not found.")
+                    : null;
 
                 ledgers.Add(new FilprideGeneralLedgerBook
                 {
@@ -1358,5 +1366,6 @@ namespace IBS.DataAccess.Repository.Filpride
         {
             return quantity == 0m ? 0m : amount / quantity;
         }
+
     }
 }

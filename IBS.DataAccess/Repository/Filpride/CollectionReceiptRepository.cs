@@ -847,8 +847,12 @@ namespace IBS.DataAccess.Repository.Filpride
                                   ?? throw new ArgumentException($"Account title '{commissionAcctNo}' not found.");
             var apCommissionPayableTitle = accountTitlesDto.Find(c => c.AccountNumber == "201010200")
                                            ?? throw new ArgumentException("Account title '201010200' not found.");
-            var ewtAccountNo = commissionee.WithholdingTaxTitle?.Split(" ", 2).FirstOrDefault();
-            var ewtTitle = accountTitlesDto.FirstOrDefault(c => c.AccountNumber == ewtAccountNo);
+            var ewtTitle = ewtAmount > 0
+                ? accountTitlesDto.FirstOrDefault(c =>
+                      c.AccountNumber == (WithholdingTaxHelper.GetAccountNumberByPercent(commissionee.WithholdingTaxPercent ?? 0m)
+                          ?? throw new ArgumentException($"No EWT account mapping found for tax percentage '{commissionee.WithholdingTaxPercent ?? 0m}'.")))
+                  ?? throw new ArgumentException("Mapped EWT account title not found.")
+                : null;
 
             var ledgers = new List<FilprideGeneralLedgerBook>
             {
@@ -1151,5 +1155,6 @@ namespace IBS.DataAccess.Repository.Filpride
 
             await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
         }
+
     }
 }

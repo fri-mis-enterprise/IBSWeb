@@ -16,6 +16,16 @@ namespace IBS.Services
         Task<(string Type, string ReferenceNo)?> FindTransactionAsync(string referenceNo, string? company, CancellationToken cancellationToken);
         Task<TransactionMasterControlViewModel?> GetTransactionDetailsAsync(string referenceNo, string type, string? company, CancellationToken cancellationToken);
         Task UpdateTransactionAsync(TransactionMasterControlViewModel model, string? company, string userFullName, CancellationToken cancellationToken);
+        Task<ReJournalBatchResult> ReJournalAllAsync(int month, int year, string company, string userFullName, CancellationToken cancellationToken);
+    }
+
+    public sealed class ReJournalBatchResult
+    {
+        public int PurchaseCount { get; init; }
+        public int SalesCount { get; init; }
+        public int ServiceCount { get; init; }
+        public int PaymentCount { get; init; }
+        public int JvCount { get; init; }
     }
 
     public class TransactionMasterControlService(
@@ -309,6 +319,337 @@ namespace IBS.Services
         {
             header.EditedBy = userFullName;
             header.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
+        }
+
+        public async Task<ReJournalBatchResult> ReJournalAllAsync(int month, int year, string company, string userFullName, CancellationToken cancellationToken)
+        {
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                var purchaseCount = await ReJournalPurchaseAsync(month, year, company, cancellationToken);
+                var salesCount = await ReJournalSalesAsync(month, year, company, cancellationToken);
+                var serviceCount = await ReJournalServiceAsync(month, year, company, userFullName, cancellationToken);
+                var paymentCount = await ReJournalPaymentAsync(month, year, company, cancellationToken);
+                var jvCount = await ReJournalJvAsync(month, year, company, cancellationToken);
+
+                await transaction.CommitAsync(cancellationToken);
+
+                return new ReJournalBatchResult
+                {
+                    PurchaseCount = purchaseCount,
+                    SalesCount = salesCount,
+                    ServiceCount = serviceCount,
+                    PaymentCount = paymentCount,
+                    JvCount = jvCount
+                };
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
+        }
+
+        private async Task<int> ReJournalPurchaseAsync(int month, int year, string company, CancellationToken cancellationToken)
+        {
+            var receivingReports = await unitOfWork.FilprideReceivingReport
+                .GetAllAsync(x =>
+                    x.Company == company &&
+                    x.Status == nameof(Status.Posted) &&
+                    x.Date.Month == month &&
+                    x.Date.Year == year,
+                    cancellationToken);
+
+            var records = receivingReports
+                .OrderBy(x => x.Date)
+                .ToList();
+
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var references = records
+                .Select(x => x.ReceivingReportNo!)
+                .Distinct()
+                .ToList();
+
+            var existingGlEntries = await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => x.Company == company && references.Contains(x.Reference))
+                .ToListAsync(cancellationToken);
+
+            if (existingGlEntries.Count != 0)
+            {
+                dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            foreach (var receivingReport in records)
+            {
+                await unitOfWork.FilprideReceivingReport.PostAsync(receivingReport, cancellationToken);
+            }
+
+            return records.Count;
+        }
+
+        private async Task<int> ReJournalSalesAsync(int month, int year, string company, CancellationToken cancellationToken)
+        {
+            var drs = await unitOfWork.FilprideDeliveryReceipt
+                .GetAllAsync(x =>
+                        x.Company == company &&
+                        x.VoidedBy == null &&
+                        x.CanceledDate == null &&
+                        x.DeliveredDate.HasValue &&
+                        x.DeliveredDate.Value.Month == month &&
+                        x.DeliveredDate.Value.Year == year,
+                    cancellationToken);
+
+            var records = drs
+                .OrderBy(x => x.DeliveredDate)
+                .ToList();
+
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var references = records
+                .Select(x => x.DeliveryReceiptNo)
+                .Distinct()
+                .ToList();
+
+            var existingGlEntries = await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => x.Company == company && references.Contains(x.Reference))
+                .ToListAsync(cancellationToken);
+
+            if (existingGlEntries.Count != 0)
+            {
+                dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            foreach (var dr in records)
+            {
+                await unitOfWork.FilprideDeliveryReceipt.PostAsync(dr, cancellationToken);
+            }
+
+            return records.Count;
+        }
+
+        private async Task<int> ReJournalServiceAsync(int month, int year, string company, string userFullName, CancellationToken cancellationToken)
+        {
+            var serviceInvoices = await unitOfWork.FilprideServiceInvoice
+                .GetAllAsync(x =>
+                        x.Company == company &&
+                        x.Status == nameof(Status.Posted) &&
+                        x.Period.Month == month &&
+                        x.Period.Year == year,
+                    cancellationToken);
+
+            var records = serviceInvoices
+                .OrderBy(x => x.Period)
+                .ToList();
+
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var references = records
+                .Select(x => x.ServiceInvoiceNo)
+                .Distinct()
+                .ToList();
+
+            var existingGlEntries = await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => x.Company == company && references.Contains(x.Reference))
+                .ToListAsync(cancellationToken);
+
+            if (existingGlEntries.Count != 0)
+            {
+                dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            foreach (var service in records.Where(x => x.ServiceName == "TRANSACTION FEE"))
+            {
+                await RevertTheReversalOfDrEntriesAsync(service.DeliveryReceiptId, company, cancellationToken);
+            }
+
+            foreach (var service in records)
+            {
+                await unitOfWork.FilprideServiceInvoice.PostAsync(service, cancellationToken);
+
+                if (service.ServiceName == "TRANSACTION FEE")
+                {
+                    await ReverseDrEntriesAsync(service.DeliveryReceiptId, company, userFullName, cancellationToken);
+                }
+            }
+
+            return records.Count;
+        }
+
+        private async Task<int> ReJournalPaymentAsync(int month, int year, string company, CancellationToken cancellationToken)
+        {
+            var cvs = await dbContext.FilprideCheckVoucherHeaders
+                .Include(x => x.Details)
+                .Where(x =>
+                    x.Company == company &&
+                    x.PostedBy != null &&
+                    x.Date.Month == month &&
+                    x.Date.Year == year)
+                .ToListAsync(cancellationToken);
+
+            if (cvs.Count == 0)
+            {
+                return 0;
+            }
+
+            var references = cvs
+                .Select(x => x.CheckVoucherHeaderNo!)
+                .Distinct()
+                .ToList();
+
+            var existingGlEntries = await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => x.Company == company && references.Contains(x.Reference))
+                .ToListAsync(cancellationToken);
+
+            if (existingGlEntries.Count != 0)
+            {
+                dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            foreach (var cv in cvs.OrderBy(x => x.Date))
+            {
+                await unitOfWork.FilprideCheckVoucher.PostAsync(cv,
+                    cv.Details!.Where(x => !x.IsDisplayEntry),
+                    cancellationToken);
+            }
+
+            return cvs.Count;
+        }
+
+        private async Task<int> ReJournalJvAsync(int month, int year, string company, CancellationToken cancellationToken)
+        {
+            var jvs = await dbContext.FilprideJournalVoucherHeaders
+                .Include(x => x.Details)
+                .Where(x =>
+                    x.Company == company &&
+                    x.PostedBy != null &&
+                    x.Date.Month == month &&
+                    x.Date.Year == year)
+                .ToListAsync(cancellationToken);
+
+            if (jvs.Count == 0)
+            {
+                return 0;
+            }
+
+            var references = jvs
+                .Select(x => x.JournalVoucherHeaderNo!)
+                .Distinct()
+                .ToList();
+
+            var existingGlEntries = await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => x.Company == company && references.Contains(x.Reference))
+                .ToListAsync(cancellationToken);
+
+            if (existingGlEntries.Count != 0)
+            {
+                dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            foreach (var jv in jvs.OrderBy(x => x.Date))
+            {
+                await unitOfWork.FilprideJournalVoucher.PostAsync(jv, jv.Details!, cancellationToken);
+            }
+
+            return jvs.Count;
+        }
+
+        private async Task RevertTheReversalOfDrEntriesAsync(int? deliveryReceiptId, string company, CancellationToken cancellationToken)
+        {
+            if (!deliveryReceiptId.HasValue)
+            {
+                return;
+            }
+
+            var dr = await unitOfWork.FilprideDeliveryReceipt
+                .GetAsync(x => x.DeliveryReceiptId == deliveryReceiptId.Value, cancellationToken);
+
+            if (dr == null)
+            {
+                return;
+            }
+
+            var relatedRrNo = (await unitOfWork.FilprideReceivingReport
+                    .GetAsync(x => x.DeliveryReceiptId == dr.DeliveryReceiptId, cancellationToken))?
+                .ReceivingReportNo;
+
+            await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => (x.Reference == dr.DeliveryReceiptNo || (relatedRrNo != null && x.Reference == relatedRrNo))
+                            && x.Company == company && x.Description.StartsWith("Reversal"))
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        private async Task ReverseDrEntriesAsync(int? deliveryReceiptId, string company, string userFullName, CancellationToken cancellationToken)
+        {
+            if (!deliveryReceiptId.HasValue)
+            {
+                return;
+            }
+
+            var dr = await unitOfWork.FilprideDeliveryReceipt
+                .GetAsync(x => x.DeliveryReceiptId == deliveryReceiptId.Value, cancellationToken);
+
+            if (dr == null)
+            {
+                return;
+            }
+
+            var relatedRrNo = (await unitOfWork.FilprideReceivingReport
+                    .GetAsync(x => x.DeliveryReceiptId == dr.DeliveryReceiptId, cancellationToken))?
+                .ReceivingReportNo;
+
+            var originalEntries = await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => (x.Reference == dr.DeliveryReceiptNo || (relatedRrNo != null && x.Reference == relatedRrNo))
+                            && x.Company == company)
+                .ToListAsync(cancellationToken);
+
+            var reversalEntries = new List<FilprideGeneralLedgerBook>();
+
+            foreach (var originalEntry in originalEntries)
+            {
+                reversalEntries.Add(new FilprideGeneralLedgerBook
+                {
+                    Date = new DateOnly(
+                        originalEntry.Date.Year,
+                        originalEntry.Date.Month,
+                        DateTime.DaysInMonth(originalEntry.Date.Year, originalEntry.Date.Month)),
+                    Reference = originalEntry.Reference,
+                    AccountNo = originalEntry.AccountNo,
+                    AccountTitle = originalEntry.AccountTitle,
+                    Description = "Reversal of entries due to recording of transaction fee.",
+                    Debit = originalEntry.Credit,
+                    Credit = originalEntry.Debit,
+                    CreatedBy = userFullName,
+                    CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
+                    IsPosted = true,
+                    Company = originalEntry.Company,
+                    AccountId = originalEntry.AccountId,
+                    SubAccountType = originalEntry.SubAccountType,
+                    SubAccountId = originalEntry.SubAccountId,
+                    SubAccountName = originalEntry.SubAccountName,
+                    ModuleType = originalEntry.ModuleType,
+                });
+            }
+
+            await dbContext.FilprideGeneralLedgerBooks.AddRangeAsync(reversalEntries, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
         }
 
         private async Task UpdateGeneralLedgerBooksAsync(string referenceNo, string particulars, string company, CancellationToken cancellationToken)

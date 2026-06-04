@@ -42,6 +42,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(new TransactionMasterControlViewModel());
         }
 
+        [Authorize(Roles = "Admin")]
+        public IActionResult BatchReJournal()
+        {
+            return View();
+        }
+
         [HttpPost]
         [Authorize(Roles = "Admin")]
         [ValidateAntiForgeryToken]
@@ -108,6 +114,50 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 logger.LogError(ex, "Error updating transaction via Master Control. Ref: {Ref}", safeRefNo);
                 TempData["error"] = "An error occurred while updating the transaction. Please contact support.";
                 return View(model);
+            }
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ReJournalAll(int? month, int? year, CancellationToken cancellationToken)
+        {
+            if (!month.HasValue || !year.HasValue)
+            {
+                return BadRequest("Month and year are required.");
+            }
+
+            var company = await GetCompanyClaimAsync();
+
+            if (company == null)
+            {
+                return BadRequest();
+            }
+
+            try
+            {
+                var result = await transactionMasterControlService.ReJournalAllAsync(
+                    month.Value,
+                    year.Value,
+                    company,
+                    GetUserFullName(),
+                    cancellationToken);
+
+                return Json(new
+                {
+                    month,
+                    year,
+                    purchaseCount = result.PurchaseCount,
+                    salesCount = result.SalesCount,
+                    serviceCount = result.ServiceCount,
+                    paymentCount = result.PaymentCount,
+                    jvCount = result.JvCount
+                });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error running batch rejournal for {Month}/{Year}.", month, year);
+                return Json(new { success = false, error = ex.Message });
             }
         }
     }

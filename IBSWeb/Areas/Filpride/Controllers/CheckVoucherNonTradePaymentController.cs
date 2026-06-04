@@ -2208,7 +2208,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var accountTitlesDto = await _unitOfWork.FilprideCheckVoucher.GetListOfAccountTitleDto(cancellationToken);
                 var advancesToSupplierTitle = accountTitlesDto.Find(c => c.AccountNumber == "101060100") ?? throw new ArgumentException("Account title '101060100' not found.");
                 var cashInBankTitle = accountTitlesDto.Find(c => c.AccountNumber == "101010100") ?? throw new ArgumentException("Account title '101010100' not found.");
-                var ewtTitle = accountTitlesDto.Find(c => c.AccountNumber == (supplier.WithholdingTaxTitle ?? string.Empty).Split(' ', 2).FirstOrDefault());
 
                 var grossAmount = viewModel.Total;
                 var netOfVat = supplier.VatType == SD.VatType_Vatable
@@ -2216,6 +2215,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     : viewModel.Total;
                 var ewtAmount = _unitOfWork.FilprideCheckVoucher.ComputeEwtAmount(netOfVat, supplier.WithholdingTaxPercent ?? 0);
                 var netOfEwtAmount = _unitOfWork.FilprideCheckVoucher.ComputeNetOfEwt(grossAmount, ewtAmount);
+                var ewtTitle = ewtAmount > 0
+                    ? accountTitlesDto.Find(c =>
+                          c.AccountNumber == (WithholdingTaxHelper.GetAccountNumberByPercent(supplier.WithholdingTaxPercent ?? 0m)
+                              ?? throw new ArgumentException($"No EWT account mapping found for tax percentage '{supplier.WithholdingTaxPercent ?? 0m}'.")))
+                      ?? throw new ArgumentException("Mapped EWT account title not found.")
+                    : null;
                 checkVoucherHeader.CheckAmount = netOfEwtAmount;
 
                 var checkVoucherDetails = new List<FilprideCheckVoucherDetail>();
@@ -2462,7 +2467,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var accountTitlesDto = await _unitOfWork.FilprideCheckVoucher.GetListOfAccountTitleDto(cancellationToken);
                 var advancesToSupplierTitle = accountTitlesDto.Find(c => c.AccountNumber == "101060100") ?? throw new ArgumentException("Account title '101060100' not found.");
                 var cashInBankTitle = accountTitlesDto.Find(c => c.AccountNumber == "101010100") ?? throw new ArgumentException("Account title '101010100' not found.");
-                var ewtTitle = accountTitlesDto.Find(c => c.AccountNumber == (supplier.WithholdingTaxTitle ?? string.Empty).Split(' ', 2).FirstOrDefault());
 
                 var grossAmount = viewModel.Total;
                 var netOfVat = supplier.VatType == SD.VatType_Vatable
@@ -2470,6 +2474,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     : viewModel.Total;
                 var ewtAmount = _unitOfWork.FilprideCheckVoucher.ComputeEwtAmount(netOfVat, supplier.WithholdingTaxPercent ?? 0);
                 var netOfEwtAmount = _unitOfWork.FilprideCheckVoucher.ComputeNetOfEwt(grossAmount, ewtAmount);
+                var ewtTitle = ewtAmount > 0
+                    ? accountTitlesDto.Find(c =>
+                          c.AccountNumber == (WithholdingTaxHelper.GetAccountNumberByPercent(supplier.WithholdingTaxPercent ?? 0m)
+                              ?? throw new ArgumentException($"No EWT account mapping found for tax percentage '{supplier.WithholdingTaxPercent ?? 0m}'.")))
+                      ?? throw new ArgumentException("Mapped EWT account title not found.")
+                    : null;
                 existingHeaderModel.CheckAmount = netOfEwtAmount;
 
                 var checkVoucherDetails = new List<FilprideCheckVoucherDetail>();
