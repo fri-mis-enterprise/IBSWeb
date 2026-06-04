@@ -86,7 +86,6 @@ namespace IBS.DataAccess.Repository.Filpride
             }
 
             await _db.FilprideInventories.AddAsync(inventory, cancellationToken);
-            await _db.SaveChangesAsync(cancellationToken);
         }
 
         private async Task UpdateJournalEntriesForCostOfGoodsSoldAsync(string reference, decimal costOfGoodsSold, CancellationToken cancellationToken)
@@ -199,7 +198,6 @@ namespace IBS.DataAccess.Repository.Filpride
             }
 
             await _db.FilprideInventories.AddAsync(inventory, cancellationToken);
-            await _db.SaveChangesAsync(cancellationToken);
         }
 
         public async Task VoidInventory(FilprideInventory model, CancellationToken cancellationToken = default)
