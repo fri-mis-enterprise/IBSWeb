@@ -101,8 +101,6 @@ namespace IBS.Services
                 {
                     var accountTitlesDto = await _unitOfWork.FilprideCheckVoucher.GetListOfAccountTitleDto(cancellationToken);
                     var ledgers = new List<FilprideGeneralLedgerBook>();
-                    var journalBooks = new List<FilprideJournalBook>();
-
                     var details = await _dbContext.FilprideCheckVoucherDetails
                         .Where(cvd => cvd.CheckVoucherHeaderId == cv.CheckVoucherHeaderId)
                         .ToListAsync(cancellationToken);
@@ -150,32 +148,6 @@ namespace IBS.Services
                             ModuleType = nameof(ModuleType.Disbursement)
                         });
 
-                        journalBooks.Add(new FilprideJournalBook
-                        {
-                            Date = endOfPreviousMonth,
-                            Reference = cv.CheckVoucherHeaderNo!,
-                            Description = cv.Particulars!,
-                            AccountTitle = $"{account.AccountNumber} {account.AccountName}",
-                            Debit = detail.Credit,
-                            Credit = detail.Debit,
-                            Company = cv.Company,
-                            CreatedBy = "SYSTEM GENERATED",
-                            CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
-                        });
-
-                        journalBooks.Add(new FilprideJournalBook
-                        {
-                            Date = endOfPreviousMonth,
-                            Reference = cv.CheckVoucherHeaderNo!,
-                            Description = cv.Particulars!,
-                            AccountTitle = $"{account.AccountNumber} {account.AccountName}",
-                            Debit = detail.Debit,
-                            Credit = detail.Credit,
-                            Company = cv.Company,
-                            CreatedBy = "SYSTEM GENERATED",
-                            CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
-                        });
-
                         if (!_unitOfWork.FilprideCheckVoucher.IsJournalEntriesBalanced(ledgers))
                         {
                             throw new ArgumentException("Debit and Credit is not equal, check your entries.");
@@ -183,7 +155,6 @@ namespace IBS.Services
                     }
 
                     await _dbContext.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
-                    await _dbContext.FilprideJournalBooks.AddRangeAsync(journalBooks, cancellationToken);
                     await _dbContext.SaveChangesAsync(cancellationToken);
                 }
             }

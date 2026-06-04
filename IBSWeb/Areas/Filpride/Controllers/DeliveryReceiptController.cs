@@ -1442,8 +1442,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
+                if (!month.HasValue || !year.HasValue)
+                {
+                    return BadRequest("Month and year are required.");
+                }
+
+                var companyClaims = await GetCompanyClaimAsync();
+
+                if (companyClaims == null)
+                {
+                    return BadRequest();
+                }
+
                 var drs = await _unitOfWork.FilprideDeliveryReceipt
                     .GetAllAsync(x =>
+                            x.Company == companyClaims &&
                             x.VoidedBy == null &&
                             x.CanceledDate == null &&
                             x.DeliveredDate.HasValue &&
@@ -1456,15 +1469,24 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return Json(new { sucess = true, message = "No records were returned." });
                 }
 
+                var drReferences = drs
+                    .Select(x => x.DeliveryReceiptNo)
+                    .Distinct()
+                    .ToList();
+
+                var existingGlEntries = await _dbContext.FilprideGeneralLedgerBooks
+                    .Where(x => x.Company == companyClaims && drReferences.Contains(x.Reference))
+                    .ToListAsync(cancellationToken);
+
+                if (existingGlEntries.Count != 0)
+                {
+                    _dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                }
+
                 foreach (var dr in drs
                              .OrderBy(x => x.DeliveredDate))
                 {
-                    #region--Inventory Recording
-
-                    await _unitOfWork.FilprideInventory.AddSalesToInventoryAsync(dr, cancellationToken);
-
-                    #endregion
-
                     await _unitOfWork.FilprideDeliveryReceipt.PostAsync(dr, cancellationToken);
                 }
 

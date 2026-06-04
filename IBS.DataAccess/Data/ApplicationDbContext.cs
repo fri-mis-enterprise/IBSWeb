@@ -131,12 +131,7 @@ namespace IBS.DataAccess.Data
 
         #region Books
 
-        public DbSet<FilprideCashReceiptBook> FilprideCashReceiptBooks { get; set; }
-        public DbSet<FilprideDisbursementBook> FilprideDisbursementBooks { get; set; }
         public DbSet<FilprideGeneralLedgerBook> FilprideGeneralLedgerBooks { get; set; }
-        public DbSet<FilprideJournalBook> FilprideJournalBooks { get; set; }
-        public DbSet<FilpridePurchaseBook> FilpridePurchaseBooks { get; set; }
-        public DbSet<FilprideSalesBook> FilprideSalesBooks { get; set; }
         public DbSet<FilprideInventory> FilprideInventories { get; set; }
         public DbSet<FilprideAuditTrail> FilprideAuditTrails { get; set; }
 

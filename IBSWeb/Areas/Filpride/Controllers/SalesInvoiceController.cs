@@ -520,8 +520,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #endregion
 
-                await _unitOfWork.FilprideSalesInvoice.PostAsync(model, cancellationToken);
-
                 #region --Audit Trail Recording
 
                 FilprideAuditTrail auditTrailBook = new(model.PostedBy!, $"Posted sales invoice# {model.SalesInvoiceNo}", "Sales Invoice", model.Company);
@@ -556,9 +554,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
-            var existingInventory = await _unitOfWork.FilprideInventory
-                .GetAsync(i => i.Reference == model.SalesInvoiceNo && i.Company == model.Company, cancellationToken);
-
             var hasAlreadyBeenUsed =
                 await _dbContext.FilprideCollectionReceipts.AnyAsync(cr => cr.SalesInvoiceId == model.SalesInvoiceId && cr.Status != nameof(Status.Voided), cancellationToken) ||
                 await _dbContext.FilprideDebitMemos.AnyAsync(dm => dm.SalesInvoiceId == model.SalesInvoiceId && dm.Status != nameof(Status.Voided), cancellationToken) ||
@@ -579,15 +574,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.Status = nameof(Status.Voided);
 
-                await _unitOfWork.FilprideSalesInvoice.RemoveRecords<FilprideSalesBook>(sb => sb.SerialNo == model.SalesInvoiceNo, cancellationToken);
-                await _unitOfWork.FilprideSalesInvoice.RemoveRecords<FilprideGeneralLedgerBook>(gl => gl.Reference == model.SalesInvoiceNo, cancellationToken);
-
-                if (existingInventory != null)
-                {
-                    await _unitOfWork.FilprideInventory.VoidInventory(existingInventory, cancellationToken);
-                }
-
-                var dr = await _unitOfWork.FilprideDeliveryReceipt.GetAsync(d => d.HasAlreadyInvoiced && d.DeliveryReceiptId == model.DeliveryReceiptId);
+                var dr = await _unitOfWork.FilprideDeliveryReceipt
+                    .GetAsync(d =>
+                        d.HasAlreadyInvoiced &&
+                        d.DeliveryReceiptId == model.DeliveryReceiptId,
+                        cancellationToken);
 
                 if (dr != null)
                 {
@@ -987,8 +978,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     existingDr.HasAlreadyInvoiced = false;
                     existingDr.Status = nameof(DRStatus.ForInvoicing);
                 }
-
-                await _unitOfWork.FilprideSalesInvoice.RemoveRecords<FilprideSalesBook>(x => x.SerialNo == salesInvoice.SalesInvoiceNo, cancellationToken);
 
                 #region --Audit Trail Recording
 

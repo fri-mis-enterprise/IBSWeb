@@ -1,5 +1,6 @@
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Filpride.IRepository;
+using IBS.DTOs;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsPayable;
 using IBS.Models.Filpride.Books;
@@ -269,6 +270,8 @@ namespace IBS.DataAccess.Repository.Filpride
             #endregion Update the invoice if any
 
             await PostAsync(model, cancellationToken);
+            var unitOfWork = new UnitOfWork(_db);
+            await unitOfWork.FilprideInventory.AddPurchaseToInventoryAsync(model, cancellationToken);
 
             await UpdatePoAsync(model.PurchaseOrder!.PurchaseOrderId,
                 model.QuantityReceived, cancellationToken);
@@ -292,8 +295,6 @@ namespace IBS.DataAccess.Repository.Filpride
                 ? ComputeEwtAmount(netOfVatAmount, model.TaxPercentage)
                 : 0m;
 
-            var supplierTaxTitle = model.PurchaseOrder.Supplier!.WithholdingTaxTitle?.Split(" ", 2);
-
             if (model.PurchaseOrder.Terms == SD.Terms_Cod || model.PurchaseOrder.Terms == SD.Terms_Prepaid)
             {
                 ewtAmount = await ApplyAdvanceEwtOffsetAsync(model, ewtAmount, isReversal: false, cancellationToken);
@@ -307,9 +308,14 @@ namespace IBS.DataAccess.Repository.Filpride
             var accountTitlesDto = await GetListOfAccountTitleDto(cancellationToken);
             var vatInputTitle = accountTitlesDto.Find(c => c.AccountNumber == "101060200")
                                 ?? throw new ArgumentException("Account title '101060200' not found.");
-            var ewtAccountNo = supplierTaxTitle?.FirstOrDefault();
-            var ewtTitle = accountTitlesDto.FirstOrDefault(c => c.AccountNumber == ewtAccountNo)
-                ?? throw new ArgumentException($"Account title '{ewtAccountNo}' not found.");
+            AccountTitleDto? ewtTitle = null;
+            if (ewtAmount > 0)
+            {
+                var ewtAccountNo = WithholdingTaxHelper.GetAccountNumberByPercent(model.TaxPercentage)
+                    ?? throw new ArgumentException($"No EWT account mapping found for tax percentage '{model.TaxPercentage}'.");
+                ewtTitle = accountTitlesDto.FirstOrDefault(c => c.AccountNumber == ewtAccountNo)
+                    ?? throw new ArgumentException($"Account title '{ewtAccountNo}' not found.");
+            }
             var apTradeTitle = accountTitlesDto.Find(c => c.AccountNumber == "202010100")
                                ?? throw new ArgumentException("Account title '202010100' not found.");
             var inventoryTitle = accountTitlesDto.Find(c => c.AccountNumber == inventoryAcctNo)
@@ -376,7 +382,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     Date = model.Date,
                     Reference = model.ReceivingReportNo!,
                     Description = "Receipt of Goods",
-                    AccountId = ewtTitle.AccountId,
+                    AccountId = ewtTitle!.AccountId,
                     AccountNo = ewtTitle.AccountNumber,
                     AccountTitle = ewtTitle.AccountName,
                     Debit = 0,
@@ -396,37 +402,6 @@ namespace IBS.DataAccess.Repository.Filpride
             await _db.AddRangeAsync(ledgers, cancellationToken);
 
             #endregion --General Ledger Recording
-
-            #region--Inventory Recording
-
-            var unitOfWork = new UnitOfWork(_db);
-
-            await unitOfWork.FilprideInventory.AddPurchaseToInventoryAsync(model, cancellationToken);
-
-            #endregion
-
-            #region --Purchase Book Recording
-
-            FilpridePurchaseBook purchaseBook = new()
-            {
-                Date = model.Date,
-                SupplierName = model.PurchaseOrder.SupplierName,
-                SupplierTin = model.PurchaseOrder.SupplierTin,
-                SupplierAddress = model.PurchaseOrder.SupplierAddress,
-                DocumentNo = model.ReceivingReportNo!,
-                Description = model.PurchaseOrder.ProductName,
-                Amount = model.Amount,
-                VatAmount = vatAmount,
-                WhtAmount = ewtAmount,
-                NetPurchases = netOfVatAmount,
-                CreatedBy = model.CreatedBy,
-                PONo = model.PurchaseOrder.PurchaseOrderNo!,
-                DueDate = model.DueDate,
-                Company = model.Company
-            };
-
-            await _db.AddAsync(purchaseBook, cancellationToken);
-            #endregion --Purchase Book Recording
 
             await _db.SaveChangesAsync(cancellationToken);
         }
@@ -472,7 +447,6 @@ namespace IBS.DataAccess.Repository.Filpride
             }
 
             var unitOfWork = new UnitOfWork(_db);
-            await RemoveRecords<FilpridePurchaseBook>(pb => pb.DocumentNo == model.ReceivingReportNo, cancellationToken);
             await unitOfWork.GeneralLedger.ReverseEntries(model.ReceivingReportNo, cancellationToken);
 
             await unitOfWork.FilprideInventory.VoidInventory(existingInventory, cancellationToken);
@@ -572,9 +546,8 @@ namespace IBS.DataAccess.Repository.Filpride
                 ? ComputeVatAmount(netOfVatAmount)
                 : 0m;
             var ewtAmount = model.PurchaseOrder!.TaxType == SD.TaxType_WithTax
-                ? ComputeEwtAmount(netOfVatAmount, 0.01m)
+                ? ComputeEwtAmount(netOfVatAmount, model.TaxPercentage)
                 : 0m;
-            var supplierTaxTitle = model.PurchaseOrder.Supplier!.WithholdingTaxTitle?.Split(" ", 2);
 
 
             if (model.PurchaseOrder.Terms == SD.Terms_Cod || model.PurchaseOrder.Terms == SD.Terms_Prepaid)
@@ -597,9 +570,14 @@ namespace IBS.DataAccess.Repository.Filpride
             var (cogsAcctNo, cogsAcctTitle) = GetCogsAccountTitle(model.PurchaseOrder.Product!.ProductCode);
             var accountTitlesDto = await GetListOfAccountTitleDto(cancellationToken);
             var vatInputTitle = accountTitlesDto.Find(c => c.AccountNumber == "101060200") ?? throw new ArgumentException("Account title '101060200' not found.");
-            var ewtAccountNo = supplierTaxTitle?.FirstOrDefault();
-            var ewtTitle = accountTitlesDto.FirstOrDefault(c => c.AccountNumber == ewtAccountNo)
-                           ?? throw new ArgumentException($"Account title '{ewtAccountNo}' not found.");
+            AccountTitleDto? ewtTitle = null;
+            if (ewtAmount > 0)
+            {
+                var ewtAccountNo = WithholdingTaxHelper.GetAccountNumberByPercent(model.TaxPercentage)
+                    ?? throw new ArgumentException($"No EWT account mapping found for tax percentage '{model.TaxPercentage}'.");
+                ewtTitle = accountTitlesDto.FirstOrDefault(c => c.AccountNumber == ewtAccountNo)
+                               ?? throw new ArgumentException($"Account title '{ewtAccountNo}' not found.");
+            }
             var apTradeTitle = accountTitlesDto.Find(c => c.AccountNumber == "202010100") ?? throw new ArgumentException("Account title '202010100' not found.");
             var inventoryTitle = accountTitlesDto.Find(c => c.AccountNumber == inventoryAcctNo) ?? throw new ArgumentException($"Account title '{inventoryAcctNo}' not found.");
             var cogsTitle = accountTitlesDto.Find(c => c.AccountNumber == cogsAcctNo) ?? throw new ArgumentException($"Account title '{cogsAcctNo}' not found.");
@@ -662,12 +640,12 @@ namespace IBS.DataAccess.Repository.Filpride
             {
                 ledgers.Add(new FilprideGeneralLedgerBook
                 {
-                    Date = purchasePostingDate,
-                    Reference = model.ReceivingReportNo!,
-                    Description = particulars,
-                    AccountId = ewtTitle.AccountId,
-                    AccountNo = ewtTitle.AccountNumber,
-                    AccountTitle = ewtTitle.AccountName,
+                        Date = purchasePostingDate,
+                        Reference = model.ReceivingReportNo!,
+                        Description = particulars,
+                        AccountId = ewtTitle!.AccountId,
+                        AccountNo = ewtTitle.AccountNumber,
+                        AccountTitle = ewtTitle.AccountName,
                     Debit = !isIncremental ? ewtAmount : 0,
                     Credit = isIncremental ? ewtAmount : 0,
                     CreatedBy = userName,
@@ -730,5 +708,6 @@ namespace IBS.DataAccess.Repository.Filpride
 
             await _db.SaveChangesAsync(cancellationToken);
         }
+
     }
 }

@@ -265,37 +265,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await _unitOfWork.FilprideCheckVoucher.PostAsync(modelHeader, modelDetails, cancellationToken);
 
-                #region --Disbursement Book Recording(CV)--
-
-                var disbursement = new List<FilprideDisbursementBook>();
-                foreach (var details in modelDetails)
-                {
-                    var bank = await _unitOfWork.FilprideBankAccount.GetAsync(model => model.BankAccountId == modelHeader.BankId, cancellationToken);
-                    disbursement.Add(
-                            new FilprideDisbursementBook
-                            {
-                                Date = modelHeader.Date,
-                                CVNo = modelHeader.CheckVoucherHeaderNo!,
-                                Payee = modelHeader.Payee!,
-                                Amount = modelHeader.Total,
-                                Particulars = modelHeader.Particulars!,
-                                Bank = bank != null ? bank.Branch : "N/A",
-                                CheckNo = modelHeader.CheckNo!,
-                                CheckDate = modelHeader.CheckDate?.ToString("MM/dd/yyyy") ?? "N/A",
-                                ChartOfAccount = details.AccountNo + " " + details.AccountName,
-                                Debit = details.Debit,
-                                Credit = details.Credit,
-                                Company = modelHeader.Company,
-                                CreatedBy = modelHeader.CreatedBy,
-                                CreatedDate = modelHeader.CreatedDate
-                            }
-                        );
-                }
-
-                await _dbContext.FilprideDisbursementBooks.AddRangeAsync(disbursement, cancellationToken);
-
-                #endregion --Disbursement Book Recording(CV)--
-
                 #region --Audit Trail Recording
 
                 FilprideAuditTrail auditTrailBook = new(GetUserFullName(), $"Posted check voucher# {modelHeader.CheckVoucherHeaderNo}", "Check Voucher", modelHeader.Company);
@@ -469,7 +438,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingHeaderModel.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 existingHeaderModel.Status = nameof(CheckVoucherPaymentStatus.Voided);
 
-                await _unitOfWork.FilprideCheckVoucher.RemoveRecords<FilprideDisbursementBook>(db => db.CVNo == existingHeaderModel.CheckVoucherHeaderNo, cancellationToken);
                 await _unitOfWork.GeneralLedger.ReverseEntries(existingHeaderModel.CheckVoucherHeaderNo, cancellationToken);
 
                 #region --Audit Trail Recording
@@ -523,7 +491,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 cvHeader.Status = nameof(CheckVoucherPaymentStatus.ForPosting);
 
                 await _unitOfWork.FilprideCheckVoucher.RemoveRecords<FilprideGeneralLedgerBook>(gl => gl.Reference == cvHeader.CheckVoucherHeaderNo, cancellationToken);
-                await _unitOfWork.FilprideCheckVoucher.RemoveRecords<FilprideDisbursementBook>(d => d.CVNo == cvHeader.CheckVoucherHeaderNo, cancellationToken);
 
                 var updateMultipleInvoicingVoucher = await _dbContext.FilprideMultipleCheckVoucherPayments
                     .Where(mcvp => mcvp.CheckVoucherHeaderPaymentId == id)
@@ -2241,7 +2208,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var accountTitlesDto = await _unitOfWork.FilprideCheckVoucher.GetListOfAccountTitleDto(cancellationToken);
                 var advancesToSupplierTitle = accountTitlesDto.Find(c => c.AccountNumber == "101060100") ?? throw new ArgumentException("Account title '101060100' not found.");
                 var cashInBankTitle = accountTitlesDto.Find(c => c.AccountNumber == "101010100") ?? throw new ArgumentException("Account title '101010100' not found.");
-                var ewtTitle = accountTitlesDto.Find(c => c.AccountNumber == (supplier.WithholdingTaxTitle ?? string.Empty).Split(' ', 2).FirstOrDefault());
 
                 var grossAmount = viewModel.Total;
                 var netOfVat = supplier.VatType == SD.VatType_Vatable
@@ -2249,6 +2215,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     : viewModel.Total;
                 var ewtAmount = _unitOfWork.FilprideCheckVoucher.ComputeEwtAmount(netOfVat, supplier.WithholdingTaxPercent ?? 0);
                 var netOfEwtAmount = _unitOfWork.FilprideCheckVoucher.ComputeNetOfEwt(grossAmount, ewtAmount);
+                var ewtTitle = ewtAmount > 0
+                    ? accountTitlesDto.Find(c =>
+                          c.AccountNumber == (WithholdingTaxHelper.GetAccountNumberByPercent(supplier.WithholdingTaxPercent ?? 0m)
+                              ?? throw new ArgumentException($"No EWT account mapping found for tax percentage '{supplier.WithholdingTaxPercent ?? 0m}'.")))
+                      ?? throw new ArgumentException("Mapped EWT account title not found.")
+                    : null;
                 checkVoucherHeader.CheckAmount = netOfEwtAmount;
 
                 var checkVoucherDetails = new List<FilprideCheckVoucherDetail>();
@@ -2495,7 +2467,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var accountTitlesDto = await _unitOfWork.FilprideCheckVoucher.GetListOfAccountTitleDto(cancellationToken);
                 var advancesToSupplierTitle = accountTitlesDto.Find(c => c.AccountNumber == "101060100") ?? throw new ArgumentException("Account title '101060100' not found.");
                 var cashInBankTitle = accountTitlesDto.Find(c => c.AccountNumber == "101010100") ?? throw new ArgumentException("Account title '101010100' not found.");
-                var ewtTitle = accountTitlesDto.Find(c => c.AccountNumber == (supplier.WithholdingTaxTitle ?? string.Empty).Split(' ', 2).FirstOrDefault());
 
                 var grossAmount = viewModel.Total;
                 var netOfVat = supplier.VatType == SD.VatType_Vatable
@@ -2503,6 +2474,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     : viewModel.Total;
                 var ewtAmount = _unitOfWork.FilprideCheckVoucher.ComputeEwtAmount(netOfVat, supplier.WithholdingTaxPercent ?? 0);
                 var netOfEwtAmount = _unitOfWork.FilprideCheckVoucher.ComputeNetOfEwt(grossAmount, ewtAmount);
+                var ewtTitle = ewtAmount > 0
+                    ? accountTitlesDto.Find(c =>
+                          c.AccountNumber == (WithholdingTaxHelper.GetAccountNumberByPercent(supplier.WithholdingTaxPercent ?? 0m)
+                              ?? throw new ArgumentException($"No EWT account mapping found for tax percentage '{supplier.WithholdingTaxPercent ?? 0m}'.")))
+                      ?? throw new ArgumentException("Mapped EWT account title not found.")
+                    : null;
                 existingHeaderModel.CheckAmount = netOfEwtAmount;
 
                 var checkVoucherDetails = new List<FilprideCheckVoucherDetail>();

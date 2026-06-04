@@ -244,133 +244,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
             await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
 
-            #region Cash Receipt Book Recording
-
-            var crb = new List<FilprideCashReceiptBook>
-            {
-                new()
-                {
-                    Date = collectionReceipt.TransactionDate,
-                    RefNo = collectionReceipt.CollectionReceiptNo!,
-                    CustomerName = customerName,
-                    Bank = collectionReceipt.BankAccount?.Bank ?? "--",
-                    CheckNo = collectionReceipt.CheckNo ?? "--",
-                    COA = $"{cashInBankTitle.AccountNumber} {cashInBankTitle.AccountName}",
-                    Particulars = (collectionReceipt.SalesInvoiceId != null ? collectionReceipt.SalesInvoice!.SalesInvoiceNo : collectionReceipt.MultipleSIId != null ? string.Join(", ", collectionReceipt.MultipleSI!.Select(si => si.ToString())) : collectionReceipt.ServiceInvoice!.ServiceInvoiceNo)!,
-                    Debit = collectionReceipt.CashAmount + collectionReceipt.CheckAmount + collectionReceipt.ManagersCheckAmount,
-                    Credit = 0,
-                    Company = collectionReceipt.Company,
-                    CreatedBy = collectionReceipt.PostedBy,
-                    CreatedDate = collectionReceipt.PostedDate ?? DateTimeHelper.GetCurrentPhilippineTime(),
-                }
-            };
-
-            if (collectionReceipt.EWT > 0)
-            {
-                crb.Add(
-                    new FilprideCashReceiptBook
-                    {
-                        Date = collectionReceipt.TransactionDate,
-                        RefNo = collectionReceipt.CollectionReceiptNo!,
-                        CustomerName = customerName,
-                        Bank = collectionReceipt.BankAccount?.Bank ?? "--",
-                        CheckNo = collectionReceipt.CheckNo ?? "--",
-                        COA = $"{cwt.AccountNumber} {cwt.AccountName}",
-                        Particulars = (collectionReceipt.SalesInvoiceId != null ? collectionReceipt.SalesInvoice!.SalesInvoiceNo : collectionReceipt.MultipleSIId != null ? string.Join(", ", collectionReceipt.MultipleSI!.Select(si => si.ToString())) : collectionReceipt.ServiceInvoice!.ServiceInvoiceNo)!,
-                        Debit = collectionReceipt.EWT,
-                        Credit = 0,
-                        Company = collectionReceipt.Company,
-                        CreatedBy = collectionReceipt.PostedBy,
-                        CreatedDate = collectionReceipt.PostedDate ?? DateTimeHelper.GetCurrentPhilippineTime(),
-                    }
-                );
-            }
-
-            if (collectionReceipt.WVAT > 0)
-            {
-                crb.Add(
-                    new FilprideCashReceiptBook
-                    {
-                        Date = collectionReceipt.TransactionDate,
-                        RefNo = collectionReceipt.CollectionReceiptNo!,
-                        CustomerName = customerName,
-                        Bank = collectionReceipt.BankAccount?.Bank ?? "--",
-                        CheckNo = collectionReceipt.CheckNo ?? "--",
-                        COA = $"{cwv.AccountNumber} {cwv.AccountName}",
-                        Particulars = (collectionReceipt.SalesInvoiceId != null ? collectionReceipt.SalesInvoice!.SalesInvoiceNo : collectionReceipt.MultipleSIId != null ? string.Join(", ", collectionReceipt.MultipleSI!.Select(si => si.ToString())) : collectionReceipt.ServiceInvoice!.ServiceInvoiceNo)!,
-                        Debit = collectionReceipt.WVAT,
-                        Credit = 0,
-                        Company = collectionReceipt.Company,
-                        CreatedBy = collectionReceipt.PostedBy,
-                        CreatedDate = collectionReceipt.PostedDate ?? DateTimeHelper.GetCurrentPhilippineTime(),
-                    }
-                );
-            }
-
-            crb.Add(
-                new FilprideCashReceiptBook
-                {
-                    Date = collectionReceipt.TransactionDate,
-                    RefNo = collectionReceipt.CollectionReceiptNo!,
-                    CustomerName = customerName,
-                    Bank = collectionReceipt.BankAccount?.Bank ?? "--",
-                    CheckNo = collectionReceipt.CheckNo ?? "--",
-                    COA = $"{arTradeTitle.AccountNumber} {arTradeTitle.AccountName}",
-                    Particulars = (collectionReceipt.SalesInvoiceId != null ? collectionReceipt.SalesInvoice!.SalesInvoiceNo : collectionReceipt.MultipleSIId != null ? string.Join(", ", collectionReceipt.MultipleSI!.Select(si => si.ToString())) : collectionReceipt.ServiceInvoice!.ServiceInvoiceNo)!,
-                    Debit = 0,
-                    Credit = collectionReceipt.CashAmount + collectionReceipt.CheckAmount + collectionReceipt.ManagersCheckAmount,
-                    Company = collectionReceipt.Company,
-                    CreatedBy = collectionReceipt.PostedBy,
-                    CreatedDate = collectionReceipt.PostedDate ?? DateTimeHelper.GetCurrentPhilippineTime(),
-                }
-            );
-
-            if (collectionReceipt.EWT > 0)
-            {
-                crb.Add(
-                    new FilprideCashReceiptBook
-                    {
-                        Date = collectionReceipt.TransactionDate,
-                        RefNo = collectionReceipt.CollectionReceiptNo!,
-                        CustomerName = customerName,
-                        Bank = collectionReceipt.BankAccount?.Bank ?? "--",
-                        CheckNo = collectionReceipt.CheckNo ?? "--",
-                        COA = $"{arTradeCwt.AccountNumber} {arTradeCwt.AccountName}",
-                        Particulars = (collectionReceipt.SalesInvoiceId != null ? collectionReceipt.SalesInvoice!.SalesInvoiceNo : collectionReceipt.MultipleSIId != null ? string.Join(", ", collectionReceipt.MultipleSI!.Select(si => si.ToString())) : collectionReceipt.ServiceInvoice!.ServiceInvoiceNo)!,
-                        Debit = 0,
-                        Credit = collectionReceipt.EWT,
-                        Company = collectionReceipt.Company,
-                        CreatedBy = collectionReceipt.PostedBy,
-                        CreatedDate = collectionReceipt.PostedDate ?? DateTimeHelper.GetCurrentPhilippineTime(),
-                    }
-                );
-            }
-
-            if (collectionReceipt.WVAT > 0)
-            {
-                crb.Add(
-                    new FilprideCashReceiptBook
-                    {
-                        Date = collectionReceipt.TransactionDate,
-                        RefNo = collectionReceipt.CollectionReceiptNo!,
-                        CustomerName = customerName,
-                        Bank = collectionReceipt.BankAccount?.Bank ?? "--",
-                        CheckNo = collectionReceipt.CheckNo ?? "--",
-                        COA = $"{arTradeCwv.AccountNumber} {arTradeCwv.AccountName}",
-                        Particulars = (collectionReceipt.SalesInvoiceId != null ? collectionReceipt.SalesInvoice!.SalesInvoiceNo : collectionReceipt.MultipleSIId != null ? string.Join(", ", collectionReceipt.MultipleSI!.Select(si => si.ToString())) : collectionReceipt.ServiceInvoice!.ServiceInvoiceNo)!,
-                        Debit = 0,
-                        Credit = collectionReceipt.WVAT,
-                        Company = collectionReceipt.Company,
-                        CreatedBy = collectionReceipt.PostedBy,
-                        CreatedDate = collectionReceipt.PostedDate ?? DateTimeHelper.GetCurrentPhilippineTime(),
-                    }
-                );
-            }
-
-            await _db.AddRangeAsync(crb, cancellationToken);
             await _db.SaveChangesAsync(cancellationToken);
-
-            #endregion Cash Receipt Book Recording
         }
 
         public async Task DepositAsync(FilprideCollectionReceipt collectionReceipt, CancellationToken cancellationToken = default)
@@ -973,8 +847,12 @@ namespace IBS.DataAccess.Repository.Filpride
                                   ?? throw new ArgumentException($"Account title '{commissionAcctNo}' not found.");
             var apCommissionPayableTitle = accountTitlesDto.Find(c => c.AccountNumber == "201010200")
                                            ?? throw new ArgumentException("Account title '201010200' not found.");
-            var ewtAccountNo = commissionee.WithholdingTaxTitle?.Split(" ", 2).FirstOrDefault();
-            var ewtTitle = accountTitlesDto.FirstOrDefault(c => c.AccountNumber == ewtAccountNo);
+            var ewtTitle = ewtAmount > 0
+                ? accountTitlesDto.FirstOrDefault(c =>
+                      c.AccountNumber == (WithholdingTaxHelper.GetAccountNumberByPercent(commissionee.WithholdingTaxPercent ?? 0m)
+                          ?? throw new ArgumentException($"No EWT account mapping found for tax percentage '{commissionee.WithholdingTaxPercent ?? 0m}'.")))
+                  ?? throw new ArgumentException("Mapped EWT account title not found.")
+                : null;
 
             var ledgers = new List<FilprideGeneralLedgerBook>
             {
@@ -1194,132 +1072,6 @@ namespace IBS.DataAccess.Repository.Filpride
 
             await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
 
-            #region Cash Receipt Book Recording
-
-            var crb = new List<FilprideCashReceiptBook>
-            {
-                new()
-                {
-                    Date = collectionReceipt.TransactionDate,
-                    RefNo = collectionReceipt.CollectionReceiptNo!,
-                    CustomerName = customerName,
-                    Bank = collectionReceipt.BankAccount?.Bank ?? "--",
-                    CheckNo = collectionReceipt.CheckNo ?? "--",
-                    COA = $"{cashInBankTitle.AccountNumber} {cashInBankTitle.AccountName}",
-                    Particulars = (collectionReceipt.SalesInvoiceId != null ? collectionReceipt.SalesInvoice!.SalesInvoiceNo : collectionReceipt.MultipleSIId != null ? string.Join(", ", collectionReceipt.MultipleSI!.Select(si => si.ToString())) : collectionReceipt.ServiceInvoice!.ServiceInvoiceNo)!,
-                    Debit = collectionReceipt.CashAmount + collectionReceipt.CheckAmount + collectionReceipt.ManagersCheckAmount,
-                    Credit = 0,
-                    Company = collectionReceipt.Company,
-                    CreatedBy = collectionReceipt.PostedBy,
-                    CreatedDate = DateTimeHelper.GenerateRandomTransactionDateTime(DateOnly.FromDateTime(collectionReceipt.CreatedDate)),
-                }
-            };
-
-            if (collectionReceipt.EWT > 0)
-            {
-                crb.Add(
-                    new FilprideCashReceiptBook
-                    {
-                        Date = collectionReceipt.TransactionDate,
-                        RefNo = collectionReceipt.CollectionReceiptNo!,
-                        CustomerName = customerName,
-                        Bank = collectionReceipt.BankAccount?.Bank ?? "--",
-                        CheckNo = collectionReceipt.CheckNo ?? "--",
-                        COA = $"{cwt.AccountNumber} {cwt.AccountName}",
-                        Particulars = (collectionReceipt.SalesInvoiceId != null ? collectionReceipt.SalesInvoice!.SalesInvoiceNo : collectionReceipt.MultipleSIId != null ? string.Join(", ", collectionReceipt.MultipleSI!.Select(si => si.ToString())) : collectionReceipt.ServiceInvoice!.ServiceInvoiceNo)!,
-                        Debit = collectionReceipt.EWT,
-                        Credit = 0,
-                        Company = collectionReceipt.Company,
-                        CreatedBy = collectionReceipt.PostedBy,
-                        CreatedDate = DateTimeHelper.GenerateRandomTransactionDateTime(DateOnly.FromDateTime(collectionReceipt.CreatedDate)),
-                    }
-                );
-            }
-
-            if (collectionReceipt.WVAT > 0)
-            {
-                crb.Add(
-                    new FilprideCashReceiptBook
-                    {
-                        Date = collectionReceipt.TransactionDate,
-                        RefNo = collectionReceipt.CollectionReceiptNo!,
-                        CustomerName = customerName,
-                        Bank = collectionReceipt.BankAccount?.Bank ?? "--",
-                        CheckNo = collectionReceipt.CheckNo ?? "--",
-                        COA = $"{cwv.AccountNumber} {cwv.AccountName}",
-                        Particulars = (collectionReceipt.SalesInvoiceId != null ? collectionReceipt.SalesInvoice!.SalesInvoiceNo : collectionReceipt.MultipleSIId != null ? string.Join(", ", collectionReceipt.MultipleSI!.Select(si => si.ToString())) : collectionReceipt.ServiceInvoice!.ServiceInvoiceNo)!,
-                        Debit = collectionReceipt.WVAT,
-                        Credit = 0,
-                        Company = collectionReceipt.Company,
-                        CreatedBy = collectionReceipt.PostedBy,
-                        CreatedDate = DateTimeHelper.GenerateRandomTransactionDateTime(DateOnly.FromDateTime(collectionReceipt.CreatedDate)),
-                    }
-                );
-            }
-
-            crb.Add(
-                new FilprideCashReceiptBook
-                {
-                    Date = collectionReceipt.TransactionDate,
-                    RefNo = collectionReceipt.CollectionReceiptNo!,
-                    CustomerName = customerName,
-                    Bank = collectionReceipt.BankAccount?.Bank ?? "--",
-                    CheckNo = collectionReceipt.CheckNo ?? "--",
-                    COA = $"{arTradeTitle.AccountNumber} {arTradeTitle.AccountName}",
-                    Particulars = (collectionReceipt.SalesInvoiceId != null ? collectionReceipt.SalesInvoice!.SalesInvoiceNo : collectionReceipt.MultipleSIId != null ? string.Join(", ", collectionReceipt.MultipleSI!.Select(si => si.ToString())) : collectionReceipt.ServiceInvoice!.ServiceInvoiceNo)!,
-                    Debit = 0,
-                    Credit = collectionReceipt.CashAmount + collectionReceipt.CheckAmount + collectionReceipt.ManagersCheckAmount,
-                    Company = collectionReceipt.Company,
-                    CreatedBy = collectionReceipt.PostedBy,
-                    CreatedDate = DateTimeHelper.GenerateRandomTransactionDateTime(DateOnly.FromDateTime(collectionReceipt.CreatedDate)),
-                }
-            );
-
-            if (collectionReceipt.EWT > 0)
-            {
-                crb.Add(
-                    new FilprideCashReceiptBook
-                    {
-                        Date = collectionReceipt.TransactionDate,
-                        RefNo = collectionReceipt.CollectionReceiptNo!,
-                        CustomerName = customerName,
-                        Bank = collectionReceipt.BankAccount?.Bank ?? "--",
-                        CheckNo = collectionReceipt.CheckNo ?? "--",
-                        COA = $"{arTradeCwt.AccountNumber} {arTradeCwt.AccountName}",
-                        Particulars = (collectionReceipt.SalesInvoiceId != null ? collectionReceipt.SalesInvoice!.SalesInvoiceNo : collectionReceipt.MultipleSIId != null ? string.Join(", ", collectionReceipt.MultipleSI!.Select(si => si.ToString())) : collectionReceipt.ServiceInvoice!.ServiceInvoiceNo)!,
-                        Debit = 0,
-                        Credit = collectionReceipt.EWT,
-                        Company = collectionReceipt.Company,
-                        CreatedBy = collectionReceipt.PostedBy,
-                        CreatedDate = DateTimeHelper.GenerateRandomTransactionDateTime(DateOnly.FromDateTime(collectionReceipt.CreatedDate)),
-                    }
-                );
-            }
-
-            if (collectionReceipt.WVAT > 0)
-            {
-                crb.Add(
-                    new FilprideCashReceiptBook
-                    {
-                        Date = collectionReceipt.TransactionDate,
-                        RefNo = collectionReceipt.CollectionReceiptNo!,
-                        CustomerName = customerName,
-                        Bank = collectionReceipt.BankAccount?.Bank ?? "--",
-                        CheckNo = collectionReceipt.CheckNo ?? "--",
-                        COA = $"{arTradeCwv.AccountNumber} {arTradeCwv.AccountName}",
-                        Particulars = (collectionReceipt.SalesInvoiceId != null ? collectionReceipt.SalesInvoice!.SalesInvoiceNo : collectionReceipt.MultipleSIId != null ? string.Join(", ", collectionReceipt.MultipleSI!.Select(si => si.ToString())) : collectionReceipt.ServiceInvoice!.ServiceInvoiceNo)!,
-                        Debit = 0,
-                        Credit = collectionReceipt.WVAT,
-                        Company = collectionReceipt.Company,
-                        CreatedBy = collectionReceipt.PostedBy,
-                        CreatedDate = DateTimeHelper.GenerateRandomTransactionDateTime(DateOnly.FromDateTime(collectionReceipt.CreatedDate)),
-                    }
-                );
-            }
-
-            await _db.AddRangeAsync(crb, cancellationToken);
-
-            #endregion Cash Receipt Book Recording
         }
 
         public async Task BatchDepositAsync(FilprideCollectionReceipt collectionReceipt, Dictionary<string, FilprideChartOfAccount> accountTitlesDtoDictionary, CancellationToken cancellationToken = default)
@@ -1403,5 +1155,6 @@ namespace IBS.DataAccess.Repository.Filpride
 
             await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
         }
+
     }
 }

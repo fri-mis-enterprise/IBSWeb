@@ -222,18 +222,9 @@ namespace IBS.DataAccess.Repository.Filpride
                 .ThenBy(i => i.Particular == "Purchases" ? 0 : 1)
                 .ToListAsync(cancellationToken);
 
-            var rrNumbers = receivingReports.Select(rr => rr.ReceivingReportNo).ToList();
-            var companies = receivingReports.Select(rr => rr.Company).Distinct().ToList();
-
-            var purchaseBooks = await _db.FilpridePurchaseBooks
-                .Where(p => companies.Contains(p.Company) && rrNumbers.Contains(p.DocumentNo))
-                .ToListAsync(cancellationToken);
-
             // Create lookup dictionaries for better performance
             var inventoryLookup = inventories
                 .ToLookup(inv => new { inv.Reference, inv.Company });
-            var purchaseBookLookup = purchaseBooks
-                .ToDictionary(pb => new { pb.Company, pb.DocumentNo }, pb => pb);
 
             var unitOfWork = new UnitOfWork(_db);
             var netOfVatPrice = ComputeNetOfVat(model.TriggeredPrice);
@@ -248,9 +239,6 @@ namespace IBS.DataAccess.Repository.Filpride
                 }
 
                 var purchaseOrder = receivingReport.PurchaseOrder!;
-                var isSupplierVatable = purchaseOrder.VatType == SD.VatType_Vatable;
-                var isSupplierTaxable = purchaseOrder.TaxType == SD.TaxType_WithTax;
-
                 // Calculate effective volume
                 var effectiveVolume = Math.Min(receivingReport.QuantityReceived, remainingVolume);
                 var updatedAmount = effectiveVolume * model.TriggeredPrice;
@@ -278,22 +266,6 @@ namespace IBS.DataAccess.Repository.Filpride
                         inventory.AverageCost = inventory.Cost;
                         inventory.TotalBalance = inventory.InventoryBalance * inventory.AverageCost;
                     }
-                }
-
-                // Update purchase book
-                var purchaseBookKey = new { receivingReport.Company, DocumentNo = receivingReport.ReceivingReportNo };
-                if (purchaseBookLookup.TryGetValue(purchaseBookKey!, out var purchaseBook))
-                {
-                    purchaseBook.Amount = receivingReport.Amount;
-                    purchaseBook.NetPurchases = isSupplierVatable
-                        ? ComputeNetOfVat(receivingReport.Amount)
-                        : receivingReport.Amount;
-                    purchaseBook.VatAmount = isSupplierVatable
-                        ? ComputeVatAmount(purchaseBook.NetPurchases)
-                        : purchaseBook.NetPurchases;
-                    purchaseBook.WhtAmount = isSupplierTaxable
-                        ? ComputeEwtAmount(purchaseBook.NetPurchases, 0.01m)
-                        : 0;
                 }
 
                 // Create GL entries for cost update

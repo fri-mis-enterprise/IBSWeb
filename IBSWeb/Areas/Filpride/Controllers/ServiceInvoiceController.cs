@@ -448,7 +448,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     await RevertTheReversalOfDrEntries(dr, dr.Company, cancellationToken);
                 }
 
-                await _unitOfWork.FilprideServiceInvoice.RemoveRecords<FilprideSalesBook>(gl => gl.SerialNo == model.ServiceInvoiceNo, cancellationToken);
                 await _unitOfWork.GeneralLedger.ReverseEntries(model.ServiceInvoiceNo, cancellationToken);
 
                 #region --Audit Trail Recording
@@ -801,7 +800,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             await _dbContext.FilprideGeneralLedgerBooks
                 .Where(x => (x.Reference == dr.DeliveryReceiptNo || (relatedRrNo != null && x.Reference == relatedRrNo))
-                            && x.Company == company && x.Description.StartsWith("Reversal"))
+                            && x.Company == company && x.Description.Contains("Reversal of entries due to recording of transaction fee"))
                 .ExecuteDeleteAsync(cancellationToken);
 
             await _dbContext.SaveChangesAsync(cancellationToken);
@@ -987,8 +986,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
+                if (!month.HasValue || !year.HasValue)
+                {
+                    return BadRequest("Month and year are required.");
+                }
+
+                var companyClaims = await GetCompanyClaimAsync();
+
+                if (companyClaims == null)
+                {
+                    return BadRequest();
+                }
+
                 var serviceInvoices = await _unitOfWork.FilprideServiceInvoice
                     .GetAllAsync(x =>
+                            x.Company == companyClaims &&
                             x.Status == nameof(Status.Posted) &&
                             x.Period.Month == month &&
                             x.Period.Year == year,
@@ -997,6 +1009,26 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (!serviceInvoices.Any())
                 {
                     return Json(new { sucess = true, message = "No records were returned." });
+                }
+
+                var serviceInvoiceNos = serviceInvoices
+                    .Select(x => x.ServiceInvoiceNo)
+                    .Distinct()
+                    .ToList();
+
+                var existingGlEntries = await _dbContext.FilprideGeneralLedgerBooks
+                    .Where(x => x.Company == companyClaims && serviceInvoiceNos.Contains(x.Reference))
+                    .ToListAsync(cancellationToken);
+
+                if (existingGlEntries.Count != 0)
+                {
+                    _dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                }
+
+                foreach (var service in serviceInvoices.Where(x => x.ServiceName == "TRANSACTION FEE"))
+                {
+                    await RevertTheReversalOfDrEntries(service.DeliveryReceipt!, service.Company, cancellationToken);
                 }
 
                 foreach (var service in serviceInvoices
@@ -1042,8 +1074,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 serviceInvoice.PostedDate = null;
                 serviceInvoice.Status = nameof(Status.Pending);
 
-                await _unitOfWork.FilprideSalesInvoice.RemoveRecords<FilprideGeneralLedgerBook>(x => x.Reference == serviceInvoice.ServiceInvoiceNo, cancellationToken);
-                await _unitOfWork.FilprideSalesInvoice.RemoveRecords<FilprideSalesBook>(x => x.SerialNo == serviceInvoice.ServiceInvoiceNo, cancellationToken);
+                await _unitOfWork.FilprideServiceInvoice.RemoveRecords<FilprideGeneralLedgerBook>(x => x.Reference == serviceInvoice.ServiceInvoiceNo, cancellationToken);
+
+                if (serviceInvoice.ServiceName == "TRANSACTION FEE" &&
+                    serviceInvoice.DeliveryReceiptId != null)
+                {
+                    var dr = await _unitOfWork.FilprideDeliveryReceipt
+                                 .GetAsync(x => x.DeliveryReceiptId == serviceInvoice.DeliveryReceiptId, cancellationToken)
+                             ?? throw new NullReferenceException("DR not found!");
+
+                    await RevertTheReversalOfDrEntries(dr, serviceInvoice.Company, cancellationToken);
+                }
 
                 #region --Audit Trail Recording
 

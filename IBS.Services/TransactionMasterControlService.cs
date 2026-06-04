@@ -4,6 +4,7 @@ using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.ViewModels;
+using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -16,6 +17,20 @@ namespace IBS.Services
         Task<(string Type, string ReferenceNo)?> FindTransactionAsync(string referenceNo, string? company, CancellationToken cancellationToken);
         Task<TransactionMasterControlViewModel?> GetTransactionDetailsAsync(string referenceNo, string type, string? company, CancellationToken cancellationToken);
         Task UpdateTransactionAsync(TransactionMasterControlViewModel model, string? company, string userFullName, CancellationToken cancellationToken);
+        Task<ReJournalBatchResult> ReJournalAllAsync(int month, int year, string company, string userFullName, CancellationToken cancellationToken);
+    }
+
+    public sealed class ReJournalBatchResult
+    {
+        public int PurchaseCount { get; init; }
+        public int SalesCount { get; init; }
+        public int ServiceCount { get; init; }
+        public int CollectionCount { get; init; }
+        public int ProvisionalReceiptCount { get; init; }
+        public int DebitMemoCount { get; init; }
+        public int CreditMemoCount { get; init; }
+        public int PaymentCount { get; init; }
+        public int JvCount { get; init; }
     }
 
     public class TransactionMasterControlService(
@@ -186,17 +201,6 @@ namespace IBS.Services
                     header.CheckDate = model.CheckDate;
                     StampEdited(header, userFullName);
 
-                    await dbContext.FilprideDisbursementBooks
-                        .Where(x => x.CVNo == model.ReferenceNo && x.Company == company)
-                        .ExecuteUpdateAsync(setters => setters
-                                .SetProperty(x => x.Particulars, finalParticulars)
-                                .SetProperty(x => x.Payee, model.Payee ?? "")
-                                .SetProperty(x => x.CheckNo, model.CheckNo ?? "")
-                                .SetProperty(x => x.CheckDate, model.CheckDate != null
-                                    ? model.CheckDate.Value.ToString(_dateFormat, CultureInfo.InvariantCulture)
-                                    : ""),
-                            cancellationToken);
-
                     await UpdateGeneralLedgerBooksAsync(model.ReferenceNo, finalParticulars, company, cancellationToken);
 
                     if (header.CvType == nameof(CVType.Invoicing))
@@ -236,12 +240,6 @@ namespace IBS.Services
                             paymentHeader.Particulars = newPaymentParticulars;
                             StampEdited(paymentHeader, userFullName);
 
-                            await dbContext.FilprideDisbursementBooks
-                                .Where(x => x.CVNo == paymentHeader.CheckVoucherHeaderNo && x.Company == company)
-                                .ExecuteUpdateAsync(setters => setters
-                                        .SetProperty(x => x.Particulars, newPaymentParticulars),
-                                    cancellationToken);
-
                             await UpdateGeneralLedgerBooksAsync(paymentHeader.CheckVoucherHeaderNo!, newPaymentParticulars, company, cancellationToken);
                         }
                     }
@@ -258,7 +256,6 @@ namespace IBS.Services
                     header.Particulars = model.Particulars;
                     StampEdited(header, userFullName);
 
-                    await UpdateJournalBooksAsync(model.ReferenceNo, model.Particulars, company, cancellationToken);
                     await UpdateGeneralLedgerBooksAsync(model.ReferenceNo, model.Particulars, company, cancellationToken);
                 }
                 else if (model.TransactionType == "SI")
@@ -273,7 +270,6 @@ namespace IBS.Services
                     header.Remarks = model.Particulars;
                     StampEdited(header, userFullName);
 
-                    await UpdateSalesBooksAsync(model.ReferenceNo, model.Particulars, company, cancellationToken);
                 }
                 else if (model.TransactionType == "SV")
                 {
@@ -287,7 +283,6 @@ namespace IBS.Services
                     header.Instructions = model.Particulars;
                     StampEdited(header, userFullName);
 
-                    await UpdateServiceBooksAsync(model.ReferenceNo, model.Particulars, company, cancellationToken);
                 }
                 else if (model.TransactionType == "CR")
                 {
@@ -301,7 +296,6 @@ namespace IBS.Services
                     header.Remarks = model.Particulars;
                     StampEdited(header, userFullName);
 
-                    await UpdateCollectionReceiptBooksAsync(model.ReferenceNo, model.Particulars, company, cancellationToken);
                 }
 
                 await dbContext.SaveChangesAsync(cancellationToken);
@@ -332,40 +326,581 @@ namespace IBS.Services
             header.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
         }
 
-        private async Task UpdateJournalBooksAsync(string referenceNo, string particulars, string company, CancellationToken cancellationToken)
+        public async Task<ReJournalBatchResult> ReJournalAllAsync(int month, int year, string company, string userFullName, CancellationToken cancellationToken)
         {
-            await dbContext.FilprideJournalBooks
-                .Where(x => x.Reference == referenceNo && x.Company == company)
-                .ExecuteUpdateAsync(setters => setters
-                        .SetProperty(x => x.Description, particulars),
-                    cancellationToken);
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                var purchaseCount = await ReJournalPurchaseAsync(month, year, company, cancellationToken);
+                var salesCount = await ReJournalSalesAsync(month, year, company, cancellationToken);
+                var serviceCount = await ReJournalServiceAsync(month, year, company, userFullName, cancellationToken);
+                var collectionCount = await ReJournalCollectionAsync(month, year, company, cancellationToken);
+                var provisionalReceiptCount = await ReJournalProvisionalReceiptAsync(month, year, company, cancellationToken);
+                var debitMemoCount = await ReJournalDebitMemoAsync(month, year, company, cancellationToken);
+                var creditMemoCount = await ReJournalCreditMemoAsync(month, year, company, cancellationToken);
+                var paymentCount = await ReJournalPaymentAsync(month, year, company, cancellationToken);
+                var jvCount = await ReJournalJvAsync(month, year, company, cancellationToken);
+
+                await transaction.CommitAsync(cancellationToken);
+
+                return new ReJournalBatchResult
+                {
+                    PurchaseCount = purchaseCount,
+                    SalesCount = salesCount,
+                    ServiceCount = serviceCount,
+                    CollectionCount = collectionCount,
+                    ProvisionalReceiptCount = provisionalReceiptCount,
+                    DebitMemoCount = debitMemoCount,
+                    CreditMemoCount = creditMemoCount,
+                    PaymentCount = paymentCount,
+                    JvCount = jvCount
+                };
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
         }
 
-        private async Task UpdateSalesBooksAsync(string referenceNo, string particulars, string company, CancellationToken cancellationToken)
+        private async Task<int> ReJournalPurchaseAsync(int month, int year, string company, CancellationToken cancellationToken)
         {
-            await dbContext.FilprideSalesBooks
-                .Where(x => x.SerialNo == referenceNo && x.Company == company)
-                .ExecuteUpdateAsync(setters => setters
-                        .SetProperty(x => x.Description, particulars),
+            var receivingReports = await unitOfWork.FilprideReceivingReport
+                .GetAllAsync(x =>
+                    x.Company == company &&
+                    x.Status == nameof(Status.Posted) &&
+                    x.Date.Month == month &&
+                    x.Date.Year == year,
                     cancellationToken);
+
+            var records = receivingReports
+                .OrderBy(x => x.Date)
+                .ToList();
+
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var references = records
+                .Select(x => x.ReceivingReportNo!)
+                .Distinct()
+                .ToList();
+
+            var existingGlEntries = await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => x.Company == company && references.Contains(x.Reference))
+                .ToListAsync(cancellationToken);
+
+            if (existingGlEntries.Count != 0)
+            {
+                dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            foreach (var receivingReport in records)
+            {
+                await unitOfWork.FilprideReceivingReport.PostAsync(receivingReport, cancellationToken);
+            }
+
+            return records.Count;
         }
 
-        private async Task UpdateServiceBooksAsync(string referenceNo, string particulars, string company, CancellationToken cancellationToken)
+        private async Task<int> ReJournalSalesAsync(int month, int year, string company, CancellationToken cancellationToken)
         {
-            await dbContext.FilprideSalesBooks
-                .Where(x => x.SerialNo == referenceNo && x.Company == company)
-                .ExecuteUpdateAsync(setters => setters
-                        .SetProperty(x => x.Description, particulars),
+            var drs = await unitOfWork.FilprideDeliveryReceipt
+                .GetAllAsync(x =>
+                        x.Company == company &&
+                        x.VoidedBy == null &&
+                        x.CanceledDate == null &&
+                        x.DeliveredDate.HasValue &&
+                        x.DeliveredDate.Value.Month == month &&
+                        x.DeliveredDate.Value.Year == year,
                     cancellationToken);
+
+            var records = drs
+                .OrderBy(x => x.DeliveredDate)
+                .ToList();
+
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var references = records
+                .Select(x => x.DeliveryReceiptNo)
+                .Distinct()
+                .ToList();
+
+            var existingGlEntries = await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => x.Company == company && references.Contains(x.Reference))
+                .ToListAsync(cancellationToken);
+
+            if (existingGlEntries.Count != 0)
+            {
+                dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            foreach (var dr in records)
+            {
+                await unitOfWork.FilprideDeliveryReceipt.PostAsync(dr, cancellationToken);
+            }
+
+            return records.Count;
         }
 
-        private async Task UpdateCollectionReceiptBooksAsync(string referenceNo, string particulars, string company, CancellationToken cancellationToken)
+        private async Task<int> ReJournalServiceAsync(int month, int year, string company, string userFullName, CancellationToken cancellationToken)
         {
-            await dbContext.FilprideCashReceiptBooks
-                .Where(x => x.RefNo == referenceNo && x.Company == company)
-                .ExecuteUpdateAsync(setters => setters
-                        .SetProperty(x => x.Particulars, particulars),
+            var serviceInvoices = await unitOfWork.FilprideServiceInvoice
+                .GetAllAsync(x =>
+                        x.Company == company &&
+                        x.Status == nameof(Status.Posted) &&
+                        x.Period.Month == month &&
+                        x.Period.Year == year,
                     cancellationToken);
+
+            var records = serviceInvoices
+                .OrderBy(x => x.Period)
+                .ToList();
+
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var references = records
+                .Select(x => x.ServiceInvoiceNo)
+                .Distinct()
+                .ToList();
+
+            var existingGlEntries = await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => x.Company == company && references.Contains(x.Reference))
+                .ToListAsync(cancellationToken);
+
+            if (existingGlEntries.Count != 0)
+            {
+                dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            foreach (var service in records.Where(x => x.ServiceName == "TRANSACTION FEE"))
+            {
+                await RevertTheReversalOfDrEntriesAsync(service.DeliveryReceiptId, company, cancellationToken);
+            }
+
+            foreach (var service in records)
+            {
+                await unitOfWork.FilprideServiceInvoice.PostAsync(service, cancellationToken);
+
+                if (service.ServiceName == "TRANSACTION FEE")
+                {
+                    await ReverseDrEntriesAsync(service.DeliveryReceiptId, company, userFullName, cancellationToken);
+                }
+            }
+
+            return records.Count;
+        }
+
+        private async Task<int> ReJournalPaymentAsync(int month, int year, string company, CancellationToken cancellationToken)
+        {
+            var cvs = await dbContext.FilprideCheckVoucherHeaders
+                .Include(x => x.Details)
+                .Where(x =>
+                    x.Company == company &&
+                    x.PostedBy != null &&
+                    x.Date.Month == month &&
+                    x.Date.Year == year)
+                .ToListAsync(cancellationToken);
+
+            if (cvs.Count == 0)
+            {
+                return 0;
+            }
+
+            var references = cvs
+                .Select(x => x.CheckVoucherHeaderNo!)
+                .Distinct()
+                .ToList();
+
+            var existingGlEntries = await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => x.Company == company && references.Contains(x.Reference))
+                .ToListAsync(cancellationToken);
+
+            if (existingGlEntries.Count != 0)
+            {
+                dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            foreach (var cv in cvs.OrderBy(x => x.Date))
+            {
+                await unitOfWork.FilprideCheckVoucher.PostAsync(cv,
+                    cv.Details!.Where(x => !x.IsDisplayEntry),
+                    cancellationToken);
+            }
+
+            return cvs.Count;
+        }
+
+        private async Task<int> ReJournalCollectionAsync(int month, int year, string company, CancellationToken cancellationToken)
+        {
+            var records = (await unitOfWork.FilprideCollectionReceipt.GetAllAsync(x =>
+                    x.Company == company &&
+                    x.PostedBy != null &&
+                    x.Status != nameof(CollectionReceiptStatus.Voided) &&
+                    x.Status != nameof(CollectionReceiptStatus.Canceled) &&
+                    x.TransactionDate.Month == month &&
+                    x.TransactionDate.Year == year,
+                cancellationToken))
+                .OrderBy(x => x.TransactionDate)
+                .ToList();
+
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var references = records
+                .Select(x => x.CollectionReceiptNo!)
+                .Distinct()
+                .ToList();
+
+            var existingGlEntries = await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => x.Company == company && references.Contains(x.Reference))
+                .ToListAsync(cancellationToken);
+
+            if (existingGlEntries.Count != 0)
+            {
+                dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            foreach (var record in records)
+            {
+                var collectionReceipt = await unitOfWork.FilprideCollectionReceipt
+                    .GetAsync(x => x.CollectionReceiptId == record.CollectionReceiptId, cancellationToken)
+                    ?? throw new ArgumentException($"Collection receipt '{record.CollectionReceiptNo}' not found.");
+
+                await unitOfWork.FilprideCollectionReceipt.PostAsync(collectionReceipt, cancellationToken);
+
+                if (collectionReceipt.DepositedDate != null && collectionReceipt.ClearedDate != null)
+                {
+                    await unitOfWork.FilprideCollectionReceipt.DepositAsync(collectionReceipt, cancellationToken);
+                    await ReApplyCollectionCostOfMoneyAsync(collectionReceipt, company, cancellationToken);
+                }
+            }
+
+            return records.Count;
+        }
+
+        private async Task<int> ReJournalProvisionalReceiptAsync(int month, int year, string company, CancellationToken cancellationToken)
+        {
+            var records = (await unitOfWork.ProvisionalReceipt.GetAllAsync(x =>
+                    x.Company == company &&
+                    x.PostedBy != null &&
+                    x.Status != nameof(CollectionReceiptStatus.Voided) &&
+                    x.Status != nameof(CollectionReceiptStatus.Canceled) &&
+                    x.DepositedDate != null &&
+                    x.TransactionDate.Month == month &&
+                    x.TransactionDate.Year == year,
+                cancellationToken))
+                .OrderBy(x => x.TransactionDate)
+                .ToList();
+
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var references = records
+                .Select(x => x.SeriesNumber)
+                .Distinct()
+                .ToList();
+
+            var existingGlEntries = await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => x.Company == company && references.Contains(x.Reference))
+                .ToListAsync(cancellationToken);
+
+            if (existingGlEntries.Count != 0)
+            {
+                dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            foreach (var record in records)
+            {
+                var provisionalReceipt = await unitOfWork.ProvisionalReceipt
+                    .GetAsync(x => x.Id == record.Id, cancellationToken)
+                    ?? throw new ArgumentException($"Provisional receipt '{record.SeriesNumber}' not found.");
+
+                if (provisionalReceipt.DepositedDate != null && provisionalReceipt.ClearedDate != null)
+                {
+                    await unitOfWork.ProvisionalReceipt.DepositAsync(provisionalReceipt, cancellationToken);
+                }
+            }
+
+            return records.Count;
+        }
+
+        private async Task ReApplyCollectionCostOfMoneyAsync(
+            Models.Filpride.AccountsReceivable.FilprideCollectionReceipt collectionReceipt,
+            string company,
+            CancellationToken cancellationToken)
+        {
+            if (collectionReceipt.DepositedDate == null)
+            {
+                return;
+            }
+
+            foreach (var receipt in collectionReceipt.ReceiptDetails!)
+            {
+                var salesInvoice = await unitOfWork.FilprideSalesInvoice
+                    .GetAsync(x => x.SalesInvoiceNo == receipt.InvoiceNo && x.Company == company, cancellationToken);
+
+                if (salesInvoice?.DeliveryReceipt == null || salesInvoice.CustomerOrderSlip == null)
+                {
+                    continue;
+                }
+
+                var hasWvat = salesInvoice.CustomerOrderSlip.HasWVAT;
+                var hasWtax = salesInvoice.CustomerOrderSlip.HasEWT;
+                var isVatable = salesInvoice.CustomerOrderSlip.VatType == SD.VatType_Vatable;
+                var dr = salesInvoice.DeliveryReceipt;
+                var getHolidays = await DateTimeHelper.GetNonWorkingDays(salesInvoice.DueDate, collectionReceipt.DepositedDate.Value);
+                var daysDelayed = collectionReceipt.DepositedDate.Value.DayNumber - salesInvoice.DueDate.DayNumber - getHolidays.Count;
+
+                if (daysDelayed <= 0 || dr.CommissionAmount <= 0)
+                {
+                    continue;
+                }
+
+                var netOfVat = isVatable
+                    ? unitOfWork.FilprideCollectionReceipt.ComputeNetOfVat(receipt.Amount)
+                    : receipt.Amount;
+                var wvatAmount = hasWvat
+                    ? unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, 0.05m)
+                    : 0m;
+                var wtaxAmount = hasWtax
+                    ? unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, 0.01m)
+                    : 0m;
+                var paymentAmount = receipt.Amount - (wvatAmount - wtaxAmount);
+
+                var costOfMoney = paymentAmount * .03m * daysDelayed / 360m;
+
+                await unitOfWork.FilprideCollectionReceipt.ApplyCostOfMoney(dr, costOfMoney,
+                    "Batch ReJournal", collectionReceipt.DepositedDate.Value, cancellationToken);
+            }
+        }
+
+        private async Task<int> ReJournalDebitMemoAsync(int month, int year, string company, CancellationToken cancellationToken)
+        {
+            var records = (await unitOfWork.FilprideDebitMemo.GetAllAsync(x =>
+                    x.Company == company &&
+                    x.PostedBy != null &&
+                    x.Status == nameof(Status.Posted) &&
+                    x.TransactionDate.Month == month &&
+                    x.TransactionDate.Year == year,
+                cancellationToken))
+                .OrderBy(x => x.TransactionDate)
+                .ToList();
+
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var references = records
+                .Select(x => x.DebitMemoNo!)
+                .Distinct()
+                .ToList();
+
+            var existingGlEntries = await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => x.Company == company && references.Contains(x.Reference))
+                .ToListAsync(cancellationToken);
+
+            if (existingGlEntries.Count != 0)
+            {
+                dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            foreach (var record in records)
+            {
+                var debitMemo = await unitOfWork.FilprideDebitMemo
+                    .GetAsync(x => x.DebitMemoId == record.DebitMemoId, cancellationToken)
+                    ?? throw new ArgumentException($"Debit memo '{record.DebitMemoNo}' not found.");
+
+                await unitOfWork.FilprideDebitMemo.PostAsync(debitMemo, cancellationToken);
+            }
+
+            return records.Count;
+        }
+
+        private async Task<int> ReJournalCreditMemoAsync(int month, int year, string company, CancellationToken cancellationToken)
+        {
+            var records = (await unitOfWork.FilprideCreditMemo.GetAllAsync(x =>
+                    x.Company == company &&
+                    x.PostedBy != null &&
+                    x.Status == nameof(Status.Posted) &&
+                    x.TransactionDate.Month == month &&
+                    x.TransactionDate.Year == year,
+                cancellationToken))
+                .OrderBy(x => x.TransactionDate)
+                .ToList();
+
+            if (records.Count == 0)
+            {
+                return 0;
+            }
+
+            var references = records
+                .Select(x => x.CreditMemoNo!)
+                .Distinct()
+                .ToList();
+
+            var existingGlEntries = await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => x.Company == company && references.Contains(x.Reference))
+                .ToListAsync(cancellationToken);
+
+            if (existingGlEntries.Count != 0)
+            {
+                dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            foreach (var record in records)
+            {
+                var creditMemo = await unitOfWork.FilprideCreditMemo
+                    .GetAsync(x => x.CreditMemoId == record.CreditMemoId, cancellationToken)
+                    ?? throw new ArgumentException($"Credit memo '{record.CreditMemoNo}' not found.");
+
+                await unitOfWork.FilprideCreditMemo.PostAsync(creditMemo, cancellationToken);
+            }
+
+            return records.Count;
+        }
+
+        private async Task<int> ReJournalJvAsync(int month, int year, string company, CancellationToken cancellationToken)
+        {
+            var jvs = await dbContext.FilprideJournalVoucherHeaders
+                .Include(x => x.Details)
+                .Where(x =>
+                    x.Company == company &&
+                    x.PostedBy != null &&
+                    x.Date.Month == month &&
+                    x.Date.Year == year)
+                .ToListAsync(cancellationToken);
+
+            if (jvs.Count == 0)
+            {
+                return 0;
+            }
+
+            var references = jvs
+                .Select(x => x.JournalVoucherHeaderNo!)
+                .Distinct()
+                .ToList();
+
+            var existingGlEntries = await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => x.Company == company && references.Contains(x.Reference))
+                .ToListAsync(cancellationToken);
+
+            if (existingGlEntries.Count != 0)
+            {
+                dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+
+            foreach (var jv in jvs.OrderBy(x => x.Date))
+            {
+                await unitOfWork.FilprideJournalVoucher.PostAsync(jv, jv.Details!, cancellationToken);
+            }
+
+            return jvs.Count;
+        }
+
+        private async Task RevertTheReversalOfDrEntriesAsync(int? deliveryReceiptId, string company, CancellationToken cancellationToken)
+        {
+            if (!deliveryReceiptId.HasValue)
+            {
+                return;
+            }
+
+            var dr = await unitOfWork.FilprideDeliveryReceipt
+                .GetAsync(x => x.DeliveryReceiptId == deliveryReceiptId.Value, cancellationToken);
+
+            if (dr == null)
+            {
+                return;
+            }
+
+            var relatedRrNo = (await unitOfWork.FilprideReceivingReport
+                    .GetAsync(x => x.DeliveryReceiptId == dr.DeliveryReceiptId, cancellationToken))?
+                .ReceivingReportNo;
+
+            await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => (x.Reference == dr.DeliveryReceiptNo || (relatedRrNo != null && x.Reference == relatedRrNo))
+                            && x.Company == company && x.Description.Contains("Reversal of entries due to recording of transaction fee."))
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        private async Task ReverseDrEntriesAsync(int? deliveryReceiptId, string company, string userFullName, CancellationToken cancellationToken)
+        {
+            if (!deliveryReceiptId.HasValue)
+            {
+                return;
+            }
+
+            var dr = await unitOfWork.FilprideDeliveryReceipt
+                .GetAsync(x => x.DeliveryReceiptId == deliveryReceiptId.Value, cancellationToken);
+
+            if (dr == null)
+            {
+                return;
+            }
+
+            var relatedRrNo = (await unitOfWork.FilprideReceivingReport
+                    .GetAsync(x => x.DeliveryReceiptId == dr.DeliveryReceiptId, cancellationToken))?
+                .ReceivingReportNo;
+
+            var originalEntries = await dbContext.FilprideGeneralLedgerBooks
+                .Where(x => (x.Reference == dr.DeliveryReceiptNo || (relatedRrNo != null && x.Reference == relatedRrNo))
+                            && x.Company == company)
+                .ToListAsync(cancellationToken);
+
+            var reversalEntries = new List<FilprideGeneralLedgerBook>();
+
+            foreach (var originalEntry in originalEntries)
+            {
+                reversalEntries.Add(new FilprideGeneralLedgerBook
+                {
+                    Date = new DateOnly(
+                        originalEntry.Date.Year,
+                        originalEntry.Date.Month,
+                        DateTime.DaysInMonth(originalEntry.Date.Year, originalEntry.Date.Month)),
+                    Reference = originalEntry.Reference,
+                    AccountNo = originalEntry.AccountNo,
+                    AccountTitle = originalEntry.AccountTitle,
+                    Description = "Reversal of entries due to recording of transaction fee.",
+                    Debit = originalEntry.Credit,
+                    Credit = originalEntry.Debit,
+                    CreatedBy = userFullName,
+                    CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
+                    IsPosted = true,
+                    Company = originalEntry.Company,
+                    AccountId = originalEntry.AccountId,
+                    SubAccountType = originalEntry.SubAccountType,
+                    SubAccountId = originalEntry.SubAccountId,
+                    SubAccountName = originalEntry.SubAccountName,
+                    ModuleType = originalEntry.ModuleType,
+                });
+            }
+
+            await dbContext.FilprideGeneralLedgerBooks.AddRangeAsync(reversalEntries, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
         }
 
         private async Task UpdateGeneralLedgerBooksAsync(string referenceNo, string particulars, string company, CancellationToken cancellationToken)

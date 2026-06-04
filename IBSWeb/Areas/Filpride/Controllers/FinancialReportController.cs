@@ -200,24 +200,24 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             #region -- Loop to Show Records
 
                             decimal totalRevenue = 0;
-                            foreach (var record in chartOfAccounts.Where(a => a.IsMain))
+                            foreach (var record in chartOfAccounts.Where(a => a.IsMain).OrderBy(a => a.AccountNumber))
                             {
                                 decimal grandTotal = 0;
 
                                 table.Cell().ColumnSpan(6).Border(0.5f).Padding(3).Text(record.AccountName);
 
-                                foreach (var levelTwo in record.Children)
+                                foreach (var levelTwo in record.Children.OrderBy(l => l.AccountNumber))
                                 {
                                     decimal subTotal = 0;
                                     table.Cell().BorderLeft(0.5f).BorderBottom(0.5f);
                                     table.Cell().ColumnSpan(5).BorderTop(0.5f).BorderRight(0.5f).BorderBottom(0.5f).Padding(3).Text(levelTwo.AccountName);
 
-                                    foreach (var levelThree in levelTwo.Children)
+                                    foreach (var levelThree in levelTwo.Children.OrderBy(l => l.AccountNumber))
                                     {
                                         table.Cell().ColumnSpan(2).BorderLeft(0.5f).BorderBottom(0.5f);
                                         table.Cell().ColumnSpan(4).BorderTop(0.5f).BorderRight(0.5f).BorderBottom(0.5f).Padding(3).Text(levelThree.AccountName);
 
-                                        foreach (var levelFour in levelThree.Children)
+                                        foreach (var levelFour in levelThree.Children.OrderBy(l => l.AccountNumber))
                                         {
                                             table.Cell().ColumnSpan(3).BorderLeft(0.5f).BorderBottom(0.5f);
                                             table.Cell().ColumnSpan(2).BorderTop(0.5f).BorderRight(0.5f).BorderBottom(0.5f).Padding(3).Text(levelFour.AccountName);
@@ -229,7 +229,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                             table.Cell().Border(0.5f).Padding(3).AlignRight().Text(levelFourBalance != 0 ? levelFourBalance < 0 ? $"({Math.Abs(levelFourBalance).ToString(SD.Two_Decimal_Format)})" : levelFourBalance.ToString(SD.Two_Decimal_Format) : null).FontColor(levelFourBalance < 0 ? Colors.Red.Medium : Colors.Black);
                                             subTotal += levelFourBalance;
 
-                                            foreach (var levelFive in levelFour.Children)
+                                            foreach (var levelFive in levelFour.Children.OrderBy(l => l.AccountNumber))
                                             {
                                                 table.Cell().ColumnSpan(4).BorderLeft(0.5f).BorderBottom(0.5f);
                                                 table.Cell().BorderTop(0.5f).BorderRight(0.5f).BorderBottom(0.5f).Padding(3).Text(levelFive.AccountName);
@@ -351,8 +351,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var chartOfAccounts = await _dbContext.FilprideChartOfAccounts
                     .IgnoreQueryFilters()
                     .Include(coa => coa.Children)
-                    .OrderBy(coa => coa.AccountNumber)
                     .Where(coa => coa.FinancialStatementType == nameof(FinancialStatementType.PnL))
+                    .OrderBy(coa => coa.AccountNumber)
                     .ToListAsync(cancellationToken);
 
                 var nibitForThePeriod = await _dbContext.FilprideMonthlyNibits
@@ -453,25 +453,27 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #endregion
 
                 decimal totalRevenue = 0;
-                foreach (var account in chartOfAccounts.Where(a => a.IsMain))
+                foreach (var account in chartOfAccounts
+                             .Where(a => a.IsMain)
+                             .OrderBy(a => a.AccountNumber))
                 {
                     decimal grandTotal = 0;
 
                     worksheet.Cells[row, 1].Value = account.AccountName;
                     row++;
 
-                    foreach (var levelTwo in account.Children)
+                    foreach (var levelTwo in account.Children.OrderBy(l => l.AccountNumber))
                     {
                         decimal subTotal = 0;
                         worksheet.Cells[row, 2].Value = levelTwo.AccountName;
                         row++;
 
-                        foreach (var levelThree in levelTwo.Children)
+                        foreach (var levelThree in levelTwo.Children.OrderBy(l => l.AccountNumber))
                         {
                             worksheet.Cells[row, 3].Value = levelThree.AccountName;
                             row++;
 
-                            foreach (var levelFour in levelThree.Children)
+                            foreach (var levelFour in levelThree.Children.OrderBy(l => l.AccountNumber))
                             {
                                 worksheet.Cells[row, 4].Value = levelFour.AccountName;
                                 var levelFourBalance = generalLedgers
@@ -483,7 +485,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 subTotal += levelFourBalance;
                                 row++;
 
-                                foreach (var levelFive in levelFour.Children)
+                                foreach (var levelFive in levelFour.Children.OrderBy(l => l.AccountNumber))
                                 {
                                     worksheet.Cells[row, 5].Value = levelFive.AccountName;
                                     var levelFiveBalance = generalLedgers
@@ -1115,7 +1117,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                  decimal totalEndingDr = 0;
                                  decimal totalEndingCr = 0;
 
-                                foreach (var record in chartOfAccounts)
+                                foreach (var record in chartOfAccounts.OrderBy(a => a.AccountNumber))
                                 {
                                     var beginningDr = priorLedgers.Where(p => p.AccountNo == record.AccountNumber).Sum(p => p.Debit);
                                     var beginningCr = priorLedgers.Where(p => p.AccountNo == record.AccountNumber).Sum(p => p.Credit);
@@ -1620,7 +1622,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                  decimal totalAsset = 0;
                                  decimal totalLiabilitiesAndEquity = 0;
 
-                                foreach (var record in chartOfAccounts.Where(a => a.IsMain))
+                                foreach (var record in chartOfAccounts.Where(a => a.IsMain).OrderBy(a => a.AccountNumber))
                                 {
                                     decimal grandTotal = 0;
 
@@ -1632,12 +1634,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                         table.Cell().BorderLeft(0.5f).BorderBottom(0.5f);
                                         table.Cell().ColumnSpan(5).BorderTop(0.5f).BorderRight(0.5f).BorderBottom(0.5f).Padding(3).Text(levelTwo.AccountName);
 
-                                        foreach (var levelThree in levelTwo.Children)
+                                        foreach (var levelThree in levelTwo.Children.OrderBy(l => l.AccountNumber))
                                         {
                                             table.Cell().ColumnSpan(2).BorderLeft(0.5f).BorderBottom(0.5f);
                                             table.Cell().ColumnSpan(4).BorderTop(0.5f).BorderRight(0.5f).BorderBottom(0.5f).Padding(3).Text(levelThree.AccountName);
 
-                                            foreach (var levelFour in levelThree.Children)
+                                            foreach (var levelFour in levelThree.Children.OrderBy(l => l.AccountNumber))
                                             {
                                                 if (levelFour.AccountName.Contains("Retained Earnings"))
                                                 {
@@ -1677,7 +1679,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                                 table.Cell().Border(0.5f).Padding(3).AlignRight().Text(levelFourBalance != 0 ? levelFourBalance < 0 ? $"({Math.Abs(levelFourBalance).ToString(SD.Two_Decimal_Format)})" : levelFourBalance.ToString(SD.Two_Decimal_Format) : null).FontColor(levelFourBalance < 0 ? Colors.Red.Medium : Colors.Black);
                                                 subTotal += levelFourBalance;
 
-                                                foreach (var levelFive in levelFour.Children)
+                                                foreach (var levelFive in levelFour.Children.OrderBy(l => l.AccountNumber))
                                                 {
                                                     table.Cell().ColumnSpan(4).BorderLeft(0.5f).BorderBottom(0.5f);
                                                     table.Cell().BorderTop(0.5f).BorderRight(0.5f).BorderBottom(0.5f).Padding(3).Text(levelFive.AccountName);
@@ -1907,7 +1909,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 decimal totalAsset = 0;
                 decimal totalLiabilitiesAndEquity = 0;
 
-                foreach (var account in chartOfAccounts.Where(a => a.IsMain))
+                foreach (var account in chartOfAccounts.Where(a => a.IsMain).OrderBy(a => a.AccountNumber))
                 {
                     decimal grandTotal = 0;
 

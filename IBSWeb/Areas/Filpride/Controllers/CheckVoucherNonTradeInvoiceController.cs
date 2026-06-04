@@ -1472,7 +1472,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.Status = nameof(CheckVoucherInvoiceStatus.Voided);
 
-                await _unitOfWork.FilprideCheckVoucher.RemoveRecords<FilprideDisbursementBook>(db => db.CVNo == model.CheckVoucherHeaderNo, cancellationToken);
                 await _unitOfWork.GeneralLedger.ReverseEntries(model.CheckVoucherHeaderNo, cancellationToken);
 
                 #region --Audit Trail Recording
@@ -1523,7 +1522,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 cvHeader.PostedBy = null;
                 cvHeader.PostedDate = null;
 
-                await _unitOfWork.FilprideCheckVoucher.RemoveRecords<FilprideDisbursementBook>(db => db.CVNo == cvHeader.CheckVoucherHeaderNo, cancellationToken);
                 await _unitOfWork.FilprideCheckVoucher.RemoveRecords<FilprideGeneralLedgerBook>(gl => gl.Reference == cvHeader.CheckVoucherHeaderNo, cancellationToken);
 
                 #region --Audit Trail Recording

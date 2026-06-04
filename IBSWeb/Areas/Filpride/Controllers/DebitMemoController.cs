@@ -388,48 +388,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     #endregion --Retrieval of SI
 
-                    #region --Sales Book Recording(SI)--
-
-                    var sales = new FilprideSalesBook
-                    {
-                        TransactionDate = model.TransactionDate,
-                        SerialNo = model.DebitMemoNo!,
-                        SoldTo = model.SalesInvoice.CustomerOrderSlip!.CustomerName,
-                        TinNo = model.SalesInvoice.CustomerOrderSlip!.CustomerTin,
-                        Address = model.SalesInvoice.CustomerOrderSlip!.CustomerAddress,
-                        Description = model.SalesInvoice.CustomerOrderSlip!.ProductName,
-                        Amount = model.DebitAmount
-                    };
-
-                    switch (model.SalesInvoice.CustomerOrderSlip?.VatType)
-                    {
-                        case SD.VatType_Vatable:
-                            sales.VatableSales = _unitOfWork.FilprideDebitMemo.ComputeNetOfVat(sales.Amount);
-                            sales.VatAmount = _unitOfWork.FilprideDebitMemo.ComputeVatAmount(sales.VatableSales);
-                            sales.NetSales = sales.VatableSales - sales.Discount;
-                            break;
-
-                        case SD.VatType_Exempt:
-                            sales.VatExemptSales = sales.Amount;
-                            sales.NetSales = sales.VatExemptSales - sales.Discount;
-                            break;
-
-                        default:
-                            sales.ZeroRated = sales.Amount;
-                            sales.NetSales = sales.ZeroRated - sales.Discount;
-                            break;
-                    }
-
-                    sales.CreatedBy = model.CreatedBy;
-                    sales.CreatedDate = model.CreatedDate;
-                    sales.DueDate = existingSi!.DueDate;
-                    sales.DocumentId = model.SalesInvoiceId;
-                    sales.Company = model.Company;
-
-                    await _dbContext.FilprideSalesBooks.AddAsync(sales, cancellationToken);
-
-                    #endregion --Sales Book Recording(SI)--
-
                     #region --General Ledger Book Recording(SI)--
 
                     var netOfVatAmount = model.SalesInvoice.CustomerOrderSlip?.VatType == SD.VatType_Vatable
@@ -589,48 +547,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     #endregion -- Computation --
 
-                    #region --Sales Book Recording(SV)--
-
-                    var sales = new FilprideSalesBook
-                    {
-                        TransactionDate = model.TransactionDate,
-                        SerialNo = model.DebitMemoNo!,
-                        SoldTo = model.ServiceInvoice.CustomerName,
-                        TinNo = model.ServiceInvoice.CustomerTin,
-                        Address = model.ServiceInvoice.CustomerAddress,
-                        Description = model.ServiceInvoice.ServiceName,
-                        Amount = model.DebitAmount
-                    };
-
-                    switch (model.ServiceInvoice.VatType)
-                    {
-                        case SD.VatType_Vatable:
-                            sales.VatableSales = _unitOfWork.FilprideDebitMemo.ComputeNetOfVat(sales.Amount);
-                            sales.VatAmount = _unitOfWork.FilprideDebitMemo.ComputeVatAmount(sales.VatableSales);
-                            sales.NetSales = sales.VatableSales - sales.Discount;
-                            break;
-
-                        case SD.VatType_Exempt:
-                            sales.VatExemptSales = sales.Amount;
-                            sales.NetSales = sales.VatExemptSales - sales.Discount;
-                            break;
-
-                        default:
-                            sales.ZeroRated = sales.Amount;
-                            sales.NetSales = sales.ZeroRated - sales.Discount;
-                            break;
-                    }
-
-                    sales.CreatedBy = model.CreatedBy;
-                    sales.CreatedDate = model.CreatedDate;
-                    sales.DueDate = existingSv!.DueDate;
-                    sales.DocumentId = existingSv.ServiceInvoiceId;
-                    sales.Company = model.Company;
-
-                    await _dbContext.AddAsync(sales, cancellationToken);
-
-                    #endregion --Sales Book Recording(SV)--
-
                     #region --General Ledger Book Recording(SV)--
 
                     var ledgers = new List<FilprideGeneralLedgerBook>
@@ -788,7 +704,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.Status = nameof(Status.Voided);
 
-                await _unitOfWork.FilprideDebitMemo.RemoveRecords<FilprideSalesBook>(crb => crb.SerialNo == model.DebitMemoNo, cancellationToken);
                 await _unitOfWork.GeneralLedger.ReverseEntries(model.DebitMemoNo, cancellationToken);
 
                 #region --Audit Trail Recording
@@ -1466,16 +1381,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 debitMemo.PostedDate = null;
                 debitMemo.Status = nameof(Status.Pending);
 
-                if (debitMemo.SalesInvoiceId.HasValue)
-                {
-                    await _unitOfWork.FilprideSalesInvoice.RemoveRecords<FilprideSalesBook>(x => x.SerialNo == debitMemo.DebitMemoNo, cancellationToken);
-                    await _unitOfWork.FilprideSalesInvoice.RemoveRecords<FilprideGeneralLedgerBook>(x => x.Reference == debitMemo.DebitMemoNo, cancellationToken);
-                }
-                else
-                {
-                    await _unitOfWork.FilprideServiceInvoice.RemoveRecords<FilprideSalesBook>(x => x.SerialNo == debitMemo.DebitMemoNo, cancellationToken);
-                    await _unitOfWork.FilprideServiceInvoice.RemoveRecords<FilprideGeneralLedgerBook>(x => x.Reference == debitMemo.DebitMemoNo, cancellationToken);
-                }
+                await _unitOfWork.FilprideDebitMemo.RemoveRecords<FilprideGeneralLedgerBook>(x => x.Reference == debitMemo.DebitMemoNo, cancellationToken);
 
                 #region --Audit Trail Recording
 

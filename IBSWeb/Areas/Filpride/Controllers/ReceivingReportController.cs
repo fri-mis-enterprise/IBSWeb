@@ -579,6 +579,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #endregion --Audit Trail Recording
 
                 await _unitOfWork.FilprideReceivingReport.PostAsync(model, cancellationToken);
+                await _unitOfWork.FilprideInventory.AddPurchaseToInventoryAsync(model, cancellationToken);
 
                 await _unitOfWork.FilprideReceivingReport.UpdatePoAsync(model.PurchaseOrder!.PurchaseOrderId,
                     model.QuantityReceived, cancellationToken);
@@ -1083,8 +1084,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
+                if (!month.HasValue || !year.HasValue)
+                {
+                    return BadRequest("Month and year are required.");
+                }
+
+                var companyClaims = await GetCompanyClaimAsync();
+
+                if (companyClaims == null)
+                {
+                    return BadRequest();
+                }
+
                 var receivingReports = await _unitOfWork.FilprideReceivingReport
                     .GetAllAsync(x =>
+                        x.Company == companyClaims &&
                         x.Status == nameof(Status.Posted) &&
                         x.Date.Month == month &&
                         x.Date.Year == year,
@@ -1093,6 +1107,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (!receivingReports.Any())
                 {
                     return Json(new { sucess = true, message = "No records were returned." });
+                }
+
+                var rrReferences = receivingReports
+                    .Select(x => x.ReceivingReportNo!)
+                    .Distinct()
+                    .ToList();
+
+                var existingGlEntries = await _dbContext.FilprideGeneralLedgerBooks
+                    .Where(x => x.Company == companyClaims && rrReferences.Contains(x.Reference))
+                    .ToListAsync(cancellationToken);
+
+                if (existingGlEntries.Count != 0)
+                {
+                    _dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                    await _dbContext.SaveChangesAsync(cancellationToken);
                 }
 
                 foreach (var receivingReport in receivingReports

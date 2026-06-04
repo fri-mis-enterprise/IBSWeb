@@ -686,8 +686,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.ClearedDate = null;
                 model.Status = nameof(CollectionReceiptStatus.Deposited);
 
-                await _unitOfWork.ProvisionalReceipt.DepositAsync(model, cancellationToken);
-
                 var auditTrail = new FilprideAuditTrail(GetUserFullName(),
                     $"Record deposit date of provisional receipt#{model.SeriesNumber}", "Provisional Receipt", model.Company);
                 await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
@@ -733,12 +731,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.DepositedDate = null;
                 model.ClearedDate = null;
                 model.Status = nameof(CollectionReceiptStatus.Returned);
-
-                await _unitOfWork.ProvisionalReceipt.ReturnedCheck(
-                    model.SeriesNumber,
-                    model.Company,
-                    GetUserFullName(),
-                    cancellationToken);
 
                 var auditTrail = new FilprideAuditTrail(GetUserFullName(),
                     $"Return checks of provisional receipt#{model.SeriesNumber}", "Provisional Receipt", model.Company);
@@ -786,8 +778,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.ClearedDate = null;
                 model.Status = nameof(CollectionReceiptStatus.Redeposited);
 
-                await _unitOfWork.ProvisionalReceipt.DepositAsync(model, cancellationToken);
-
                 var auditTrail = new FilprideAuditTrail(GetUserFullName(),
                     $"Redeposit provisional receipt#{model.SeriesNumber}", "Provisional Receipt", model.Company);
                 await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
@@ -830,8 +820,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
+                if (model.DepositedDate == null)
+                {
+                    throw new InvalidOperationException("Deposited date cannot be null.");
+                }
+
                 model.ClearedDate = clearingDate;
                 model.Status = nameof(CollectionReceiptStatus.Cleared);
+                await _unitOfWork.ProvisionalReceipt.DepositAsync(model, cancellationToken);
 
                 var auditTrail = new FilprideAuditTrail(GetUserFullName(),
                     $"Apply clearing date for provisional receipt#{model.SeriesNumber}", "Provisional Receipt", model.Company);

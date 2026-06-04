@@ -19,78 +19,6 @@ namespace IBS.DataAccess.Repository.Filpride
             _db = db;
         }
 
-        public List<FilpridePurchaseBook> GetPurchaseBooks(DateOnly dateFrom, DateOnly dateTo, string? selectedFiltering, string company)
-        {
-            if (dateFrom > dateTo)
-            {
-                throw new ArgumentException("Date From must not be greater than Date To!");
-            }
-
-            Func<FilpridePurchaseBook, object> orderBy;
-
-            switch (selectedFiltering)
-            {
-                case "RRDate":
-                    orderBy = p => p.Date;
-                    break;
-
-                case "DueDate":
-                    orderBy = p => p.DueDate;
-                    break;
-
-                case "POLiquidation":
-                case "UnpostedRR":
-                    orderBy = p => p.PurchaseBookId;
-                    break;
-
-                default:
-                    orderBy = p => p.Date;
-                    break;
-            }
-
-            return _db
-                .FilpridePurchaseBooks
-                .AsEnumerable()
-                .Where(p => p.Company == company && (selectedFiltering == "DueDate" || selectedFiltering == "POLiquidation" ? p.DueDate : p.Date) >= dateFrom &&
-                            (selectedFiltering == "DueDate" || selectedFiltering == "POLiquidation" ? p.DueDate : p.Date) <= dateTo)
-                .OrderBy(orderBy)
-                .ToList();
-        }
-
-        public List<FilprideCashReceiptBook> GetCashReceiptBooks(DateOnly dateFrom, DateOnly dateTo, string company)
-        {
-            if (dateFrom > dateTo)
-            {
-                throw new ArgumentException("Date From must not be greater than Date To!");
-            }
-
-            var cashReceiptBooks = _db
-             .FilprideCashReceiptBooks
-             .AsEnumerable()
-             .Where(cr => cr.Company == company && cr.Date >= dateFrom && cr.Date <= dateTo)
-             .OrderBy(s => s.CashReceiptBookId)
-             .ToList();
-
-            return cashReceiptBooks;
-        }
-
-        public List<FilprideDisbursementBook> GetDisbursementBooks(DateOnly dateFrom, DateOnly dateTo, string company)
-        {
-            if (dateFrom > dateTo)
-            {
-                throw new ArgumentException("Date From must not be greater than Date To!");
-            }
-
-            var disbursementBooks = _db
-             .FilprideDisbursementBooks
-             .AsEnumerable()
-             .Where(d => d.Company == company && d.Date >= dateFrom && d.Date <= dateTo)
-             .OrderBy(d => d.Date)
-             .ToList();
-
-            return disbursementBooks;
-        }
-
         public async Task<List<FilprideGeneralLedgerBook>> GetGeneralLedgerBooks(DateOnly dateFrom, DateOnly dateTo, string company, CancellationToken cancellationToken = default)
         {
             if (dateFrom > dateTo)
@@ -130,23 +58,6 @@ namespace IBS.DataAccess.Repository.Filpride
             return inventoryBooks;
         }
 
-        public List<FilprideJournalBook> GetJournalBooks(DateOnly dateFrom, DateOnly dateTo, string company)
-        {
-            if (dateFrom > dateTo)
-            {
-                throw new ArgumentException("Date From must not be greater than Date To!");
-            }
-
-            var disbursementBooks = _db
-             .FilprideJournalBooks
-             .AsEnumerable()
-             .Where(d => d.Company == company && d.Date >= dateFrom && d.Date <= dateTo)
-             .OrderBy(d => d.JournalBookId)
-             .ToList();
-
-            return disbursementBooks;
-        }
-
         public async Task<List<FilprideReceivingReport>> GetReceivingReportAsync(DateOnly? dateFrom, DateOnly? dateTo, string? selectedFiltering, string company, CancellationToken cancellationToken = default)
         {
             if (dateFrom > dateTo)
@@ -170,40 +81,6 @@ namespace IBS.DataAccess.Repository.Filpride
             }
 
             return receivingReport;
-        }
-
-        public List<FilprideSalesBook> GetSalesBooks(DateOnly dateFrom, DateOnly dateTo, string? selectedDocument, string company)
-        {
-            Func<FilprideSalesBook, object>? orderBy = null;
-            Func<FilprideSalesBook, bool>? query;
-
-            switch (selectedDocument)
-            {
-                case null:
-                case "TransactionDate":
-                    query = s => s.Company == company && s.TransactionDate >= dateFrom && s.TransactionDate <= dateTo;
-                    break;
-
-                case "DueDate":
-                    orderBy = s => s.DueDate;
-                    query = s => s.Company == company && s.DueDate >= dateFrom && s.DueDate <= dateTo;
-                    break;
-
-                default:
-                    orderBy = s => s.TransactionDate;
-                    query = s => s.Company == company && s.TransactionDate >= dateFrom && s.TransactionDate <= dateTo && s.SerialNo.Contains(selectedDocument);
-                    break;
-            }
-
-            // Add a null check for orderBy
-            var salesBooks = _db
-                .FilprideSalesBooks
-                .AsEnumerable()
-                .Where(query)
-                .OrderBy(orderBy ?? (Func<FilprideSalesBook, object>)(s => s.TransactionDate))
-                .ToList();
-
-            return salesBooks;
         }
 
         public async Task<List<FilprideAuditTrail>> GetAuditTrails(DateOnly dateFrom, DateOnly dateTo, string company)

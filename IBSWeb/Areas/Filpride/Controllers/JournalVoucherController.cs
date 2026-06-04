@@ -559,7 +559,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.Status = nameof(JvStatus.Voided);
 
-                await _unitOfWork.FilprideJournalVoucher.RemoveRecords<FilprideJournalBook>(crb => crb.Reference == model.JournalVoucherHeaderNo, cancellationToken);
                 await _unitOfWork.GeneralLedger.ReverseEntries(model.JournalVoucherHeaderNo, cancellationToken);
 
                 #region --Audit Trail Recording
@@ -1484,9 +1483,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
+                if (!month.HasValue || !year.HasValue)
+                {
+                    return BadRequest("Month and year are required.");
+                }
+
+                var companyClaims = await GetCompanyClaimAsync();
+
+                if (companyClaims == null)
+                {
+                    return BadRequest();
+                }
+
                 var jvs = await _dbContext.FilprideJournalVoucherHeaders
                     .Include(x => x.Details)
                     .Where(x =>
+                        x.Company == companyClaims &&
                         x.PostedBy != null &&
                         x.Date.Month == month &&
                         x.Date.Year == year)
@@ -1495,6 +1507,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (!jvs.Any())
                 {
                     return Json(new { sucess = true, message = "No records were returned." });
+                }
+
+                var jvReferences = jvs
+                    .Select(x => x.JournalVoucherHeaderNo!)
+                    .Distinct()
+                    .ToList();
+
+                var existingGlEntries = await _dbContext.FilprideGeneralLedgerBooks
+                    .Where(x => x.Company == companyClaims && jvReferences.Contains(x.Reference))
+                    .ToListAsync(cancellationToken);
+
+                if (existingGlEntries.Count != 0)
+                {
+                    _dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
+                    await _dbContext.SaveChangesAsync(cancellationToken);
                 }
 
                 foreach (var jv in jvs
@@ -2700,7 +2727,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 jvHeader.Status = nameof(JvStatus.Pending);
 
                 await _unitOfWork.FilprideCheckVoucher.RemoveRecords<FilprideGeneralLedgerBook>(gl => gl.Reference == jvHeader.JournalVoucherHeaderNo, cancellationToken);
-                await _unitOfWork.FilprideCheckVoucher.RemoveRecords<FilprideJournalBook>(d => d.Reference == jvHeader.JournalVoucherHeaderNo, cancellationToken);
 
                 #region --Audit Trail Recording
 

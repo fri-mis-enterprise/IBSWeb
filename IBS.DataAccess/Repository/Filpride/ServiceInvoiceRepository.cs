@@ -148,48 +148,6 @@ namespace IBS.DataAccess.Repository.Filpride
                 withHoldingVatAmount = ComputeEwtAmount(netOfVatAmount, 0.05m);
             }
 
-            var sales = new FilprideSalesBook
-            {
-                TransactionDate = model.Period,
-                SerialNo = model.ServiceInvoiceNo,
-                SoldTo = model.CustomerName,
-                TinNo = model.CustomerTin,
-                Address = model.CustomerAddress,
-                Description = model.ServiceName,
-                Amount = model.Total,
-                VatAmount = vatAmount,
-                VatableSales = netOfVatAmount,
-                Discount = model.Discount,
-                NetSales = netOfVatAmount,
-                CreatedBy = model.CreatedBy,
-                CreatedDate = model.CreatedDate,
-                DueDate = model.DueDate,
-                DocumentId = model.ServiceInvoiceId,
-                Company = model.Company,
-            };
-
-            switch (model.VatType)
-            {
-                case SD.VatType_Vatable:
-                    sales.VatAmount = vatAmount;
-                    sales.VatableSales = netOfVatAmount;
-                    break;
-
-                case SD.VatType_Exempt:
-                    sales.VatExemptSales = model.Total;
-                    break;
-
-                default:
-                    sales.ZeroRated = model.Total;
-                    break;
-            }
-
-            await _db.FilprideSalesBooks.AddAsync(sales, cancellationToken);
-
-            #endregion --Sales Book Recording
-
-            #region --General Ledger Book Recording
-
             var ledgers = new List<FilprideGeneralLedgerBook>();
             var accountTitlesDto = await GetListOfAccountTitleDto(cancellationToken);
             var arTradeTitle = accountTitlesDto.Find(c => c.AccountNumber == "101020100")
