@@ -6,6 +6,30 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v3.0.0] - 2026-06-04
+
+### Added
+- Added batch re-journal processing in Transaction Master Control for collection receipts, provisional receipts, debit memos, and credit memos.
+- Added revised provisional receipt create, edit, and print support, including the remarks-field schema update.
+- Added collection receipt detail loading in affected report and processing flows.
+- Added the cleanup migration for removing unused Filpride tables after the reporting refactor.
+
+### Changed
+- Refactored Filpride inventory and re-journal handling to separate purchase GL posting from inventory processing, make the purchase GL posting async, and streamline inventory recalculation.
+- Modified AP non-trade payable handling across trade and non-trade voucher flows, related forms, and report usage.
+- Updated collection receipt deposit processing to use the clearing flow and revised due-date delay handling.
+
+### Fixed
+- Fixed inventory cost update journal-entry calculations and delivery receipt old-value computation.
+- Fixed provisional receipt revision issues across the controller and Razor views.
+- Fixed report/controller runtime issues encountered in collection receipt and accounts payable flows.
+- Fixed profit and loss report sorting.
+
+### Removed
+- Removed the old Filpride books and related report pages for cash receipt, disbursement, journal, purchase, sales, and transaction reports in SOA.
+
+---
+
 ## [v2.9.0] - 2026-06-03
 
 ### Added
