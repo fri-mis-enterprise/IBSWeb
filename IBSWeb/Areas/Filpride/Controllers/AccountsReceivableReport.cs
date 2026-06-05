@@ -79,6 +79,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
             _ => "Valid Only (Exclude Voided)"
         };
 
+        private static decimal RoundToFour(decimal value) => Math.Round(value, 4, MidpointRounding.AwayFromZero);
+
+        private static decimal DivideOrZero(decimal dividend, decimal divisor) => divisor != 0m
+            ? RoundToFour(dividend / divisor)
+            : 0m;
+
         [HttpGet]
         public IActionResult COSUnservedVolume()
         {
@@ -1760,13 +1766,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                         var quantity = record.DeliveryReceipt.Quantity;
                                         var freight = record.DeliveryReceipt.FreightAmount;
                                         var freightNetOfVat = isHaulerVatable
-                                            ? repoCalculator.ComputeNetOfVat(freight)
+                                            ? RoundToFour(repoCalculator.ComputeNetOfVat(freight))
                                             : freight;
                                         var salesNetOfVat = isCustomerVatable
-                                            ? repoCalculator.ComputeNetOfVat(record.DeliveryReceipt.TotalAmount)
+                                            ? RoundToFour(repoCalculator.ComputeNetOfVat(record.DeliveryReceipt.TotalAmount))
                                             : record.DeliveryReceipt.TotalAmount;
                                         var vat = isCustomerVatable
-                                            ? repoCalculator.ComputeVatAmount(salesNetOfVat)
+                                            ? RoundToFour(repoCalculator.ComputeVatAmount(salesNetOfVat))
                                             : 0m;
 
                                         table.Cell().Border(0.5f).Padding(3).Text(record.DeliveryReceipt.DeliveredDate?.ToString(SD.Date_Format));
@@ -1901,8 +1907,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                                 var overAllQuantitySum = list.Sum(s => s.DeliveryReceipt.Quantity);
                                                 var overallAmountSum = list.Sum(s => s.DeliveryReceipt.TotalAmount);
-                                                var overallNetOfAmountSum = overallAmountSum != 0m ? overallAmountSum / 1.12m : 0;
-                                                var overallAverageSellingPrice = overallNetOfAmountSum != 0m || overAllQuantitySum != 0m ? overallNetOfAmountSum / overAllQuantitySum : 0m;
+                                                var overallNetOfAmountSum = overallAmountSum != 0m ? RoundToFour(overallAmountSum / 1.12m) : 0m;
+                                                var overallAverageSellingPrice = overallNetOfAmountSum != 0m || overAllQuantitySum != 0m ? DivideOrZero(overallNetOfAmountSum, overAllQuantitySum) : 0m;
 
                                                 #endregion
 
@@ -1912,8 +1918,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                                 var biodieselQuantitySum = listForBiodiesel.Sum(s => s.DeliveryReceipt.Quantity);
                                                 var biodieselAmountSum = listForBiodiesel.Sum(s => s.DeliveryReceipt.TotalAmount);
-                                                var biodieselNetOfAmountSum = biodieselAmountSum != 0m ? biodieselAmountSum / 1.12m : 0;
-                                                var biodieselAverageSellingPrice = biodieselNetOfAmountSum != 0m || biodieselQuantitySum != 0m ? biodieselNetOfAmountSum / biodieselQuantitySum : 0m;
+                                                var biodieselNetOfAmountSum = biodieselAmountSum != 0m ? RoundToFour(biodieselAmountSum / 1.12m) : 0m;
+                                                var biodieselAverageSellingPrice = biodieselNetOfAmountSum != 0m || biodieselQuantitySum != 0m ? DivideOrZero(biodieselNetOfAmountSum, biodieselQuantitySum) : 0m;
 
                                                 #endregion
 
@@ -1923,8 +1929,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                                 var econogasQuantitySum = listForEconogas.Sum(s => s.DeliveryReceipt.Quantity);
                                                 var econogasAmountSum = listForEconogas.Sum(s => s.DeliveryReceipt.TotalAmount);
-                                                var econogasNetOfAmountSum = econogasAmountSum != 0m ? econogasAmountSum / 1.12m : 0;
-                                                var econogasAverageSellingPrice = econogasNetOfAmountSum != 0m && econogasQuantitySum != 0m ? econogasNetOfAmountSum / econogasQuantitySum : 0m;
+                                                var econogasNetOfAmountSum = econogasAmountSum != 0m ? RoundToFour(econogasAmountSum / 1.12m) : 0m;
+                                                var econogasAverageSellingPrice = econogasNetOfAmountSum != 0m && econogasQuantitySum != 0m ? DivideOrZero(econogasNetOfAmountSum, econogasQuantitySum) : 0m;
 
                                                 #endregion
 
@@ -1934,8 +1940,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                                 var envirogasQuantitySum = listForEnvirogas.Sum(s => s.DeliveryReceipt.Quantity);
                                                 var envirogasAmountSum = listForEnvirogas.Sum(s => s.DeliveryReceipt.TotalAmount);
-                                                var envirogasNetOfAmountSum = envirogasAmountSum != 0m ? envirogasAmountSum / 1.12m : 0;
-                                                var envirogasAverageSellingPrice = envirogasNetOfAmountSum != 0m && envirogasQuantitySum != 0m ? envirogasNetOfAmountSum / envirogasQuantitySum : 0m;
+                                                var envirogasNetOfAmountSum = envirogasAmountSum != 0m ? RoundToFour(envirogasAmountSum / 1.12m) : 0m;
+                                                var envirogasAverageSellingPrice = envirogasNetOfAmountSum != 0m && envirogasQuantitySum != 0m ? DivideOrZero(envirogasNetOfAmountSum, envirogasQuantitySum) : 0m;
 
                                                 #endregion
 
@@ -1970,10 +1976,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                         #region -- Create Table Cell for Totals
 
-                                            var averageSellingPriceForOverAll = totalSalesNetOfVat != 0 && overallTotalQuantity != 0 ? totalSalesNetOfVat / overallTotalQuantity : 0m;
-                                            var averageSellingPriceForBiodiesel = totalAmountForBiodiesel != 0 && totalQuantityForBiodiesel != 0 ? totalAmountForBiodiesel / totalQuantityForBiodiesel : 0m;
-                                            var averageSellingPriceForEconogas = totalAmountForEconogas != 0 && totalQuantityForEconogas != 0 ? totalAmountForEconogas / totalQuantityForEconogas : 0m;
-                                            var averageSellingPriceForEnvirogas = totalAmountForEnvirogas != 0 && totalQuantityForEnvirogas != 0 ? totalAmountForEnvirogas / totalQuantityForEnvirogas : 0m;
+                                            var averageSellingPriceForOverAll = totalSalesNetOfVat != 0 && overallTotalQuantity != 0 ? DivideOrZero(totalSalesNetOfVat, overallTotalQuantity) : 0m;
+                                            var averageSellingPriceForBiodiesel = totalAmountForBiodiesel != 0 && totalQuantityForBiodiesel != 0 ? DivideOrZero(totalAmountForBiodiesel, totalQuantityForBiodiesel) : 0m;
+                                            var averageSellingPriceForEconogas = totalAmountForEconogas != 0 && totalQuantityForEconogas != 0 ? DivideOrZero(totalAmountForEconogas, totalQuantityForEconogas) : 0m;
+                                            var averageSellingPriceForEnvirogas = totalAmountForEnvirogas != 0 && totalQuantityForEnvirogas != 0 ? DivideOrZero(totalAmountForEnvirogas, totalQuantityForEnvirogas) : 0m;
 
                                             content.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text("TOTAL:").SemiBold();
                                             content.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(overallTotalQuantity != 0 ? overallTotalQuantity < 0 ? $"({Math.Abs(overallTotalQuantity).ToString(SD.Two_Decimal_Format)})" : overallTotalQuantity.ToString(SD.Two_Decimal_Format) : null).FontColor(overallTotalQuantity < 0 ? Colors.Red.Medium : Colors.Black).SemiBold();
@@ -2164,9 +2170,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var isHaulerVatable = dr.DeliveryReceipt.HaulerVatType == SD.VatType_Vatable;
                     var freightAmount = dr.DeliveryReceipt.FreightAmount;
                     var segment = dr.DeliveryReceipt.TotalAmount;
-                    var salesNetOfVat = isCustomerVatable ? repoCalculator.ComputeNetOfVat(segment) : segment;
-                    var vat = isCustomerVatable ? repoCalculator.ComputeVatAmount(salesNetOfVat) : 0m;
-                    var freightNetOfVat = isHaulerVatable ? repoCalculator.ComputeNetOfVat(freightAmount) : freightAmount;
+                    var salesNetOfVat = isCustomerVatable ? RoundToFour(repoCalculator.ComputeNetOfVat(segment)) : segment;
+                    var vat = isCustomerVatable ? RoundToFour(repoCalculator.ComputeVatAmount(salesNetOfVat)) : 0m;
+                    var freightNetOfVat = isHaulerVatable ? RoundToFour(repoCalculator.ComputeNetOfVat(freightAmount)) : freightAmount;
 
                     worksheet.Cells[row, 1].Value = dr.DeliveryReceipt.DeliveredDate;
                     worksheet.Cells[row, 2].Value = dr.DeliveryReceipt.CustomerOrderSlip?.CustomerName;
@@ -2228,7 +2234,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 18].Value = totalVat;
                 worksheet.Cells[row, 19].Value = totalSalesNetOfVat;
                 worksheet.Cells[row, 20].Value = totalFreightNetOfVat;
-                worksheet.Cells[row, 21].Value = salesReport.Count > 0 ? totalCommissionRate / salesReport.Count : 0m;
+                worksheet.Cells[row, 21].Value = salesReport.Count > 0 ? DivideOrZero(totalCommissionRate, salesReport.Count) : 0m;
 
                 worksheet.Cells[row, 15].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[row, 16].Style.Numberformat.Format = currencyFormatTwoDecimal;
@@ -2448,12 +2454,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     // Computation for Overall
                     var overAllQuantitySum = list.Sum(s => s.DeliveryReceipt.Quantity);
                     var overallAmountSum = list.Sum(s => s.DeliveryReceipt.TotalAmount);
-                    var overallNetOfAmountSum = overallAmountSum != 0m ? overallAmountSum / 1.12m : 0;
+                    var overallNetOfAmountSum = overallAmountSum != 0m ? RoundToFour(overallAmountSum / 1.12m) : 0m;
 
                     worksheet.Cells[rowForSummary, 2].Value = customerType.ToString();
                     worksheet.Cells[rowForSummary, 3].Value = overAllQuantitySum;
                     worksheet.Cells[rowForSummary, 4].Value = overallNetOfAmountSum;
-                    worksheet.Cells[rowForSummary, 5].Value = overallNetOfAmountSum != 0m || overAllQuantitySum != 0m ? overallNetOfAmountSum / overAllQuantitySum : 0m;
+                    worksheet.Cells[rowForSummary, 5].Value = overallNetOfAmountSum != 0m || overAllQuantitySum != 0m ? DivideOrZero(overallNetOfAmountSum, overAllQuantitySum) : 0m;
 
                     worksheet.Cells[rowForSummary, 3].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[rowForSummary, 4].Style.Numberformat.Format = currencyFormatTwoDecimal;
@@ -2462,11 +2468,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     // Computation for Biodiesel
                     var biodieselQuantitySum = listForBiodiesel.Sum(s => s.DeliveryReceipt.Quantity);
                     var biodieselAmountSum = listForBiodiesel.Sum(s => s.DeliveryReceipt.TotalAmount);
-                    var biodieselNetOfAmountSum = biodieselAmountSum != 0m ? biodieselAmountSum / 1.12m : 0;
+                    var biodieselNetOfAmountSum = biodieselAmountSum != 0m ? RoundToFour(biodieselAmountSum / 1.12m) : 0m;
 
                     worksheet.Cells[rowForSummary, 7].Value = biodieselQuantitySum;
                     worksheet.Cells[rowForSummary, 8].Value = biodieselNetOfAmountSum;
-                    worksheet.Cells[rowForSummary, 9].Value = biodieselNetOfAmountSum != 0m || biodieselQuantitySum != 0m ? biodieselNetOfAmountSum / biodieselQuantitySum : 0m;
+                    worksheet.Cells[rowForSummary, 9].Value = biodieselNetOfAmountSum != 0m || biodieselQuantitySum != 0m ? DivideOrZero(biodieselNetOfAmountSum, biodieselQuantitySum) : 0m;
 
                     worksheet.Cells[rowForSummary, 7].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[rowForSummary, 8].Style.Numberformat.Format = currencyFormatTwoDecimal;
@@ -2475,11 +2481,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     // Computation for Econogas
                     var econogasQuantitySum = listForEconogas.Sum(s => s.DeliveryReceipt.Quantity);
                     var econogasAmountSum = listForEconogas.Sum(s => s.DeliveryReceipt.TotalAmount);
-                    var econogasNetOfAmountSum = econogasAmountSum != 0m ? econogasAmountSum / 1.12m : 0;
+                    var econogasNetOfAmountSum = econogasAmountSum != 0m ? RoundToFour(econogasAmountSum / 1.12m) : 0m;
 
                     worksheet.Cells[rowForSummary, 11].Value = econogasQuantitySum;
                     worksheet.Cells[rowForSummary, 12].Value = econogasNetOfAmountSum;
-                    worksheet.Cells[rowForSummary, 13].Value = econogasNetOfAmountSum != 0m || econogasQuantitySum != 0m ? econogasNetOfAmountSum / econogasQuantitySum : 0m;
+                    worksheet.Cells[rowForSummary, 13].Value = econogasNetOfAmountSum != 0m || econogasQuantitySum != 0m ? DivideOrZero(econogasNetOfAmountSum, econogasQuantitySum) : 0m;
 
                     worksheet.Cells[rowForSummary, 11].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[rowForSummary, 12].Style.Numberformat.Format = currencyFormatTwoDecimal;
@@ -2488,11 +2494,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     // Computation for Envirogas
                     var envirogasQuantitySum = listForEnvirogas.Sum(s => s.DeliveryReceipt.Quantity);
                     var envirogasAmountSum = listForEnvirogas.Sum(s => s.DeliveryReceipt.TotalAmount);
-                    var envirogasNetOfAmountSum = envirogasAmountSum != 0m ? envirogasAmountSum / 1.12m : 0;
+                    var envirogasNetOfAmountSum = envirogasAmountSum != 0m ? RoundToFour(envirogasAmountSum / 1.12m) : 0m;
 
                     worksheet.Cells[rowForSummary, 15].Value = envirogasQuantitySum;
                     worksheet.Cells[rowForSummary, 16].Value = envirogasNetOfAmountSum;
-                    worksheet.Cells[rowForSummary, 17].Value = envirogasNetOfAmountSum != 0m || envirogasQuantitySum != 0m ? envirogasNetOfAmountSum / envirogasQuantitySum : 0;
+                    worksheet.Cells[rowForSummary, 17].Value = envirogasNetOfAmountSum != 0m || envirogasQuantitySum != 0m ? DivideOrZero(envirogasNetOfAmountSum, envirogasQuantitySum) : 0m;
 
                     worksheet.Cells[rowForSummary, 15].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[rowForSummary, 16].Style.Numberformat.Format = currencyFormatTwoDecimal;
@@ -2521,7 +2527,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 worksheet.Cells[rowForSummary, 3].Value = totalOverallQuantity;
                 worksheet.Cells[rowForSummary, 4].Value = totalOverallAmount;
-                worksheet.Cells[rowForSummary, 5].Value = totalOverallAmount != 0m || totalOverallQuantity != 0m ? totalOverallAmount / totalOverallQuantity : 0;
+                worksheet.Cells[rowForSummary, 5].Value = totalOverallAmount != 0m || totalOverallQuantity != 0m ? DivideOrZero(totalOverallAmount, totalOverallQuantity) : 0m;
 
                 worksheet.Cells[rowForSummary, 3].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[rowForSummary, 4].Style.Numberformat.Format = currencyFormatTwoDecimal;
@@ -2529,7 +2535,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 worksheet.Cells[rowForSummary, 7].Value = totalQuantityForBiodiesel;
                 worksheet.Cells[rowForSummary, 8].Value = totalAmountForBiodiesel;
-                worksheet.Cells[rowForSummary, 9].Value = totalAmountForBiodiesel != 0m || totalQuantityForBiodiesel != 0m ? totalAmountForBiodiesel / totalQuantityForBiodiesel : 0;
+                worksheet.Cells[rowForSummary, 9].Value = totalAmountForBiodiesel != 0m || totalQuantityForBiodiesel != 0m ? DivideOrZero(totalAmountForBiodiesel, totalQuantityForBiodiesel) : 0m;
 
                 worksheet.Cells[rowForSummary, 7].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[rowForSummary, 8].Style.Numberformat.Format = currencyFormatTwoDecimal;
@@ -2537,7 +2543,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 worksheet.Cells[rowForSummary, 11].Value = totalQuantityForEconogas;
                 worksheet.Cells[rowForSummary, 12].Value = totalAmountForEconogas;
-                worksheet.Cells[rowForSummary, 13].Value = totalAmountForEconogas != 0m || totalQuantityForEconogas != 0m ? totalAmountForEconogas / totalQuantityForEconogas : 0;
+                worksheet.Cells[rowForSummary, 13].Value = totalAmountForEconogas != 0m || totalQuantityForEconogas != 0m ? DivideOrZero(totalAmountForEconogas, totalQuantityForEconogas) : 0m;
 
                 worksheet.Cells[rowForSummary, 11].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[rowForSummary, 12].Style.Numberformat.Format = currencyFormatTwoDecimal;
@@ -2545,7 +2551,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 worksheet.Cells[rowForSummary, 15].Value = totalQuantityForEnvirogas;
                 worksheet.Cells[rowForSummary, 16].Value = totalAmountForEnvirogas;
-                worksheet.Cells[rowForSummary, 17].Value = totalAmountForEnvirogas != 0m || totalQuantityForEnvirogas != 0m ? totalAmountForEnvirogas / totalQuantityForEnvirogas : 0;
+                worksheet.Cells[rowForSummary, 17].Value = totalAmountForEnvirogas != 0m || totalQuantityForEnvirogas != 0m ? DivideOrZero(totalAmountForEnvirogas, totalQuantityForEnvirogas) : 0m;
 
                 worksheet.Cells[rowForSummary, 15].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[rowForSummary, 16].Style.Numberformat.Format = currencyFormatTwoDecimal;
@@ -3446,10 +3452,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     var gross = record.Amount;
                                     var netDiscount = record.Amount - record.Discount;
                                     var netOfVatAmount = record.CustomerOrderSlip?.VatType == SD.VatType_Vatable
-                                        ? repoCalculator.ComputeNetOfVat(netDiscount)
+                                        ? RoundToFour(repoCalculator.ComputeNetOfVat(netDiscount))
                                         : netDiscount;
                                     var withHoldingTaxAmount = record.CustomerOrderSlip?.HasEWT ?? true
-                                        ? repoCalculator.ComputeEwtAmount(netDiscount, 0.01m)
+                                        ? RoundToFour(repoCalculator.ComputeEwtAmount(netDiscount, 0.01m))
                                         : 0;
                                     var retentionAmount = (record.Customer?.RetentionRate ?? 0.0000m) * netOfVatAmount;
                                     var vcfAmount = 0.0000m;
@@ -3679,10 +3685,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var gross = si.Amount;
                     var netDiscount = si.Amount - si.Discount;
                     var netOfVatAmount = (si.CustomerOrderSlip?.VatType ?? SD.VatType_Vatable) == SD.VatType_Vatable
-                        ? repoCalculator.ComputeNetOfVat(netDiscount)
+                        ? RoundToFour(repoCalculator.ComputeNetOfVat(netDiscount))
                         : netDiscount;
                     var withHoldingTaxAmount = si.CustomerOrderSlip?.HasEWT ?? true
-                        ? repoCalculator.ComputeEwtAmount(netDiscount, 0.01m)
+                        ? RoundToFour(repoCalculator.ComputeEwtAmount(netDiscount, 0.01m))
                         : 0;
                     var retentionAmount = (si.Customer?.RetentionRate ?? 0.0000m) * netOfVatAmount;
                     var vcfAmount = 0.0000m;
@@ -4012,17 +4018,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                         var freight = record.DeliveryReceipt?.FreightAmount;
                                         var grossAmount = record.Amount;
                                         var netOfVat = isVatable
-                                            ? repoCalculator.ComputeNetOfVat(grossAmount)
+                                            ? RoundToFour(repoCalculator.ComputeNetOfVat(grossAmount))
                                             : grossAmount;
                                         var vatAmount = isVatable
-                                            ? repoCalculator.ComputeVatAmount(netOfVat)
+                                            ? RoundToFour(repoCalculator.ComputeVatAmount(netOfVat))
                                             : 0m;
-                                        var vatPerLiter = vatAmount / record.Quantity;
+                                        var vatPerLiter = DivideOrZero(vatAmount, record.Quantity);
                                         var ewtAmount = isTaxable
-                                            ? repoCalculator.ComputeEwtAmount(netOfVat, 0.01m)
+                                            ? RoundToFour(repoCalculator.ComputeEwtAmount(netOfVat, 0.01m))
                                             : 0m;
                                         var isEwtAmountPaid = record.IsTaxAndVatPaid ? ewtAmount : 0m;
-                                        var ewtBalance = ewtAmount - isEwtAmountPaid;
+                                        var ewtBalance = RoundToFour(ewtAmount - isEwtAmountPaid);
 
                                         table.Cell().Border(0.5f).Padding(3).Text(record.Customer?.CustomerCode);
                                         table.Cell().Border(0.5f).Padding(3).Text(record.CustomerOrderSlip?.CustomerName ?? record.Customer?.CustomerName);
@@ -4053,7 +4059,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                         totalQuantity += record.Quantity;
                                         totalFreight += freight ?? 0m;
                                         totalFreightPerLiter += record.DeliveryReceipt?.Freight ?? 0m;
-                                        totalVatPerLiter += vatPerLiter;
                                         totalVatAmount += vatAmount;
                                         totalGrossAmount += grossAmount;
                                         totalAmountPaid += record.AmountPaid;
@@ -4068,7 +4073,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     var isVatableSub = groupByCustomer.Select(x => x.CustomerOrderSlip?.VatType).FirstOrDefault();
                                     var isTaxableSub = groupByCustomer.Select(x => x.CustomerOrderSlip?.HasEWT).FirstOrDefault();
                                     var subTotalFreight = groupByCustomer.Sum(x => x.DeliveryReceipt?.FreightAmount) ?? 0m;
-                                    var subTotalFreightPerLiter = subTotalFreight != 0m && subTotalQuantity != 0m ? subTotalFreight / subTotalQuantity : 0m;
+                                    var subTotalFreightPerLiter = subTotalFreight != 0m && subTotalQuantity != 0m ? DivideOrZero(subTotalFreight, subTotalQuantity) : 0m;
                                     var subTotalGrossAmount = groupByCustomer.Sum(x => x.Amount);
                                     var subTotalNetOfVat = isVatableSub == SD.VatType_Vatable
                                         ? repoCalculator.ComputeNetOfVat(subTotalGrossAmount)
@@ -4077,13 +4082,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                         ? repoCalculator.ComputeVatAmount(subTotalNetOfVat)
                                         : 0m;
                                     var subTotalAmountPaid = groupByCustomer.Sum(x => x.AmountPaid);
-                                    var subTotalVatPerLiter = subTotalVatAmount / subTotalQuantity;
+                                    var subTotalVatPerLiter = DivideOrZero(subTotalVatAmount, subTotalQuantity);
                                     var subTotalEwtAmount = isTaxableSub == true
                                         ? repoCalculator.ComputeEwtAmount(subTotalNetOfVat, 0.01m)
                                         : 0m;
                                     var isEwtAmountPaidSub = groupByCustomer.Select(x => x.IsTaxAndVatPaid).FirstOrDefault() ? subTotalEwtAmount : 0m;
-                                    var subTotalEwtBalance = subTotalEwtAmount - isEwtAmountPaidSub;
-                                    var subTotalUnitPrice = subTotalGrossAmount / subTotalQuantity;
+                                    var subTotalEwtBalance = RoundToFour(subTotalEwtAmount - isEwtAmountPaidSub);
+                                    var subTotalUnitPrice = DivideOrZero(subTotalGrossAmount, subTotalQuantity);
                                     var subTotalBalance = groupByCustomer.Sum(x => x.Balance);
                                     var subTotalEwtAmountPaid = isEwtAmountPaidSub;
 
@@ -4103,12 +4108,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(subTotalEwtBalance != 0 ? subTotalEwtBalance < 0 ? $"({Math.Abs(subTotalEwtBalance).ToString(SD.Two_Decimal_Format)})" : subTotalEwtBalance.ToString(SD.Two_Decimal_Format) : null).FontColor(subTotalEwtBalance < 0 ? Colors.Red.Medium : Colors.Black).SemiBold();
                                 }
 
-                                totalFreightPerLiter = totalFreight != 0 && totalQuantity != 0 ? totalFreight / totalQuantity : 0m;
+                                totalFreightPerLiter = totalFreight != 0 && totalQuantity != 0 ? DivideOrZero(totalFreight, totalQuantity) : 0m;
+                                totalVatPerLiter = DivideOrZero(totalVatAmount, totalQuantity);
                             #endregion
 
                             #region -- Create Table Cell for Totals
 
-                                var unitPrice = totalGrossAmount / totalQuantity;
+                                var unitPrice = DivideOrZero(totalGrossAmount, totalQuantity);
 
                                 table.Cell().ColumnSpan(12).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text("GRAND TOTAL:").SemiBold();
                                 table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(totalQuantity != 0 ? totalQuantity < 0 ? $"({Math.Abs(totalQuantity).ToString(SD.Two_Decimal_Format)})" : totalQuantity.ToString(SD.Two_Decimal_Format) : null).FontColor(totalQuantity < 0 ? Colors.Red.Medium : Colors.Black).SemiBold();
@@ -4299,13 +4305,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         var freight = si.DeliveryReceipt?.FreightAmount;
                         var grossAmount = si.Amount;
                         var netOfVat = isVatable
-                            ? repoCalculator.ComputeNetOfVat(grossAmount)
+                            ? RoundToFour(repoCalculator.ComputeNetOfVat(grossAmount))
                             : grossAmount;
-                        var vatAmount = isVatable ? repoCalculator.ComputeVatAmount(netOfVat) : 0m;
-                        var vatPerLiter = vatAmount / si.Quantity;
-                        var ewtAmount = isTaxable ? repoCalculator.ComputeEwtAmount(netOfVat, 0.01m) : 0m;
+                        var vatAmount = isVatable ? RoundToFour(repoCalculator.ComputeVatAmount(netOfVat)) : 0m;
+                        var vatPerLiter = DivideOrZero(vatAmount, si.Quantity);
+                        var ewtAmount = isTaxable ? RoundToFour(repoCalculator.ComputeEwtAmount(netOfVat, 0.01m)) : 0m;
                         var isEwtAmountPaid = si.IsTaxAndVatPaid ? ewtAmount : 0m;
-                        var ewtBalance = ewtAmount - isEwtAmountPaid;
+                        var ewtBalance = RoundToFour(ewtAmount - isEwtAmountPaid);
 
                         worksheet.Cells[row, 1].Value = si.Customer?.CustomerCode;
                         worksheet.Cells[row, 2].Value = si.CustomerOrderSlip?.CustomerName ?? si.Customer?.CustomerName;
@@ -4364,7 +4370,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         totalQuantity += si.Quantity;
                         totalFreight += freight ?? 0m;
                         totalFreightPerLiter += si.DeliveryReceipt?.Freight ?? 0m;
-                        totalVatPerLiter += vatPerLiter;
                         totalVatAmount += vatAmount;
                         totalGrossAmount += grossAmount;
                         totalAmountPaid += si.AmountPaid;
@@ -4378,22 +4383,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var isVatableSub = groupByCustomer.Select(x => x.CustomerOrderSlip?.VatType).FirstOrDefault();
                     var isTaxableSub = groupByCustomer.Select(x => x.CustomerOrderSlip?.HasEWT).FirstOrDefault();
                     var subTotalFreight = groupByCustomer.Sum(x => x.DeliveryReceipt?.FreightAmount) ?? 0m;
-                    var subTotalFreightPerLiter = subTotalFreight != 0m && subTotalQuantity != 0m ? subTotalFreight / subTotalQuantity : 0m;
+                    var subTotalFreightPerLiter = subTotalFreight != 0m && subTotalQuantity != 0m ? DivideOrZero(subTotalFreight, subTotalQuantity) : 0m;
                     var subTotalGrossAmount = groupByCustomer.Sum(x => x.Amount);
                     var subTotalNetOfVat = isVatableSub == SD.VatType_Vatable
                         ? repoCalculator.ComputeNetOfVat(subTotalGrossAmount)
                         : subTotalGrossAmount;
                     var subTotalVatAmount = isVatableSub == SD.VatType_Vatable
-                        ? repoCalculator.ComputeVatAmount(subTotalNetOfVat)
+                        ? RoundToFour(repoCalculator.ComputeVatAmount(subTotalNetOfVat))
                         : 0m;
                     var subTotalAmountPaid = groupByCustomer.Sum(x => x.AmountPaid);
-                    var subTotalVatPerLiter = subTotalVatAmount / subTotalQuantity;
+                    var subTotalVatPerLiter = DivideOrZero(subTotalVatAmount, subTotalQuantity);
                     var subTotalEwtAmount = isTaxableSub == true
-                        ? repoCalculator.ComputeEwtAmount(subTotalNetOfVat, 0.01m)
+                        ? RoundToFour(repoCalculator.ComputeEwtAmount(subTotalNetOfVat, 0.01m))
                         : 0m;
                     var isEwtAmountPaidSub = groupByCustomer.Select(x => x.IsTaxAndVatPaid).FirstOrDefault() ? subTotalEwtAmount : 0m;
-                    var subTotalEwtBalance = subTotalEwtAmount - isEwtAmountPaidSub;
-                    var subTotalUnitPrice = subTotalGrossAmount / subTotalQuantity;
+                    var subTotalEwtBalance = RoundToFour(subTotalEwtAmount - isEwtAmountPaidSub);
+                    var subTotalUnitPrice = DivideOrZero(subTotalGrossAmount, subTotalQuantity);
                     var subTotalBalance = groupByCustomer.Sum(x => x.Balance);
                     var subTotalEwtAmountPaid = isEwtAmountPaidSub;
 
@@ -4436,12 +4441,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     row++;
                 }
-                totalFreightPerLiter = totalFreight != 0 && totalQuantity != 0 ? totalFreight / totalQuantity : 0m;
+                totalFreightPerLiter = totalFreight != 0 && totalQuantity != 0 ? DivideOrZero(totalFreight, totalQuantity) : 0m;
+                totalVatPerLiter = DivideOrZero(totalVatAmount, totalQuantity);
 
                 worksheet.Cells[row, 12].Value = "GRAND TOTAL ";
 
                 worksheet.Cells[row, 13].Value = totalQuantity;
-                worksheet.Cells[row, 15].Value = totalGrossAmount / totalQuantity;
+                worksheet.Cells[row, 15].Value = DivideOrZero(totalGrossAmount, totalQuantity);
                 worksheet.Cells[row, 16].Value = totalFreight;
                 worksheet.Cells[row, 17].Value = totalFreightPerLiter;
                 worksheet.Cells[row, 18].Value = totalVatPerLiter;
@@ -5016,9 +5022,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var quantity = dr.Quantity;
                     var freightAmount = dr.DeliveryReceipt?.FreightAmount ?? 0m;
                     var segment = dr.Amount;
-                    var salesNetOfVat = segment != 0 ? segment / 1.12m : 0;
-                    var vat = salesNetOfVat * .12m;
-                    var freightNetOfVat = freightAmount / 1.12m;
+                    var salesNetOfVat = segment != 0 ? RoundToFour(segment / 1.12m) : 0m;
+                    var vat = RoundToFour(salesNetOfVat * .12m);
+                    var freightNetOfVat = RoundToFour(freightAmount / 1.12m);
 
                     worksheet.Cells[row, 1].Value = dr.TransactionDate;
                     worksheet.Cells[row, 2].Value = dr.Customer?.CustomerName;
@@ -5257,45 +5263,45 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     var overAllQuantitySum = list.Sum(s => s.Quantity);
                     var overallAmountSum = list.Sum(s => s.Amount);
-                    var overallNetOfAmountSum = overallAmountSum != 0m ? overallAmountSum / 1.12m : 0;
+                    var overallNetOfAmountSum = overallAmountSum != 0m ? RoundToFour(overallAmountSum / 1.12m) : 0m;
 
                     worksheet.Cells[rowForSummary, 2].Value = customerType.ToString();
                     worksheet.Cells[rowForSummary, 3].Value = overAllQuantitySum;
                     worksheet.Cells[rowForSummary, 4].Value = overallNetOfAmountSum;
-                    worksheet.Cells[rowForSummary, 5].Value = overallNetOfAmountSum != 0m || overAllQuantitySum != 0m ? overallNetOfAmountSum / overAllQuantitySum : 0m;
+                    worksheet.Cells[rowForSummary, 5].Value = overallNetOfAmountSum != 0m || overAllQuantitySum != 0m ? DivideOrZero(overallNetOfAmountSum, overAllQuantitySum) : 0m;
                     worksheet.Cells[rowForSummary, 3].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[rowForSummary, 4].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[rowForSummary, 5].Style.Numberformat.Format = currencyFormat;
 
                     var biodieselQuantitySum = listForBiodiesel.Sum(s => s.Quantity);
                     var biodieselAmountSum = listForBiodiesel.Sum(s => s.Amount);
-                    var biodieselNetOfAmountSum = biodieselAmountSum != 0m ? biodieselAmountSum / 1.12m : 0;
+                    var biodieselNetOfAmountSum = biodieselAmountSum != 0m ? RoundToFour(biodieselAmountSum / 1.12m) : 0m;
 
                     worksheet.Cells[rowForSummary, 7].Value = biodieselQuantitySum;
                     worksheet.Cells[rowForSummary, 8].Value = biodieselNetOfAmountSum;
-                    worksheet.Cells[rowForSummary, 9].Value = biodieselNetOfAmountSum != 0m || biodieselQuantitySum != 0m ? biodieselNetOfAmountSum / biodieselQuantitySum : 0m;
+                    worksheet.Cells[rowForSummary, 9].Value = biodieselNetOfAmountSum != 0m || biodieselQuantitySum != 0m ? DivideOrZero(biodieselNetOfAmountSum, biodieselQuantitySum) : 0m;
                     worksheet.Cells[rowForSummary, 7].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[rowForSummary, 8].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[rowForSummary, 9].Style.Numberformat.Format = currencyFormat;
 
                     var econogasQuantitySum = listForEconogas.Sum(s => s.Quantity);
                     var econogasAmountSum = listForEconogas.Sum(s => s.Amount);
-                    var econogasNetOfAmountSum = econogasAmountSum != 0m ? econogasAmountSum / 1.12m : 0;
+                    var econogasNetOfAmountSum = econogasAmountSum != 0m ? RoundToFour(econogasAmountSum / 1.12m) : 0m;
 
                     worksheet.Cells[rowForSummary, 11].Value = econogasQuantitySum;
                     worksheet.Cells[rowForSummary, 12].Value = econogasNetOfAmountSum;
-                    worksheet.Cells[rowForSummary, 13].Value = econogasNetOfAmountSum != 0m || econogasQuantitySum != 0m ? econogasNetOfAmountSum / econogasQuantitySum : 0m;
+                    worksheet.Cells[rowForSummary, 13].Value = econogasNetOfAmountSum != 0m || econogasQuantitySum != 0m ? DivideOrZero(econogasNetOfAmountSum, econogasQuantitySum) : 0m;
                     worksheet.Cells[rowForSummary, 11].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[rowForSummary, 12].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[rowForSummary, 13].Style.Numberformat.Format = currencyFormat;
 
                     var envirogasQuantitySum = listForEnvirogas.Sum(s => s.Quantity);
                     var envirogasAmountSum = listForEnvirogas.Sum(s => s.Amount);
-                    var envirogasNetOfAmountSum = envirogasAmountSum != 0m ? envirogasAmountSum / 1.12m : 0;
+                    var envirogasNetOfAmountSum = envirogasAmountSum != 0m ? RoundToFour(envirogasAmountSum / 1.12m) : 0m;
 
                     worksheet.Cells[rowForSummary, 15].Value = envirogasQuantitySum;
                     worksheet.Cells[rowForSummary, 16].Value = envirogasNetOfAmountSum;
-                    worksheet.Cells[rowForSummary, 17].Value = envirogasNetOfAmountSum != 0m || envirogasQuantitySum != 0m ? envirogasNetOfAmountSum / envirogasQuantitySum : 0;
+                    worksheet.Cells[rowForSummary, 17].Value = envirogasNetOfAmountSum != 0m || envirogasQuantitySum != 0m ? DivideOrZero(envirogasNetOfAmountSum, envirogasQuantitySum) : 0m;
                     worksheet.Cells[rowForSummary, 15].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[rowForSummary, 16].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[rowForSummary, 17].Style.Numberformat.Format = currencyFormat;
@@ -5319,28 +5325,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 worksheet.Cells[rowForSummary, 3].Value = totalOverallQuantity;
                 worksheet.Cells[rowForSummary, 4].Value = totalOverallAmount;
-                worksheet.Cells[rowForSummary, 5].Value = totalOverallAmount != 0m || totalOverallQuantity != 0m ? totalOverallAmount / totalOverallQuantity : 0;
+                worksheet.Cells[rowForSummary, 5].Value = totalOverallAmount != 0m || totalOverallQuantity != 0m ? DivideOrZero(totalOverallAmount, totalOverallQuantity) : 0m;
                 worksheet.Cells[rowForSummary, 3].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[rowForSummary, 4].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[rowForSummary, 5].Style.Numberformat.Format = currencyFormat;
 
                 worksheet.Cells[rowForSummary, 7].Value = totalQuantityForBiodiesel;
                 worksheet.Cells[rowForSummary, 8].Value = totalAmountForBiodiesel;
-                worksheet.Cells[rowForSummary, 9].Value = totalAmountForBiodiesel != 0m || totalQuantityForBiodiesel != 0m ? totalAmountForBiodiesel / totalQuantityForBiodiesel : 0;
+                worksheet.Cells[rowForSummary, 9].Value = totalAmountForBiodiesel != 0m || totalQuantityForBiodiesel != 0m ? DivideOrZero(totalAmountForBiodiesel, totalQuantityForBiodiesel) : 0m;
                 worksheet.Cells[rowForSummary, 7].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[rowForSummary, 8].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[rowForSummary, 9].Style.Numberformat.Format = currencyFormat;
 
                 worksheet.Cells[rowForSummary, 11].Value = totalQuantityForEconogas;
                 worksheet.Cells[rowForSummary, 12].Value = totalAmountForEconogas;
-                worksheet.Cells[rowForSummary, 13].Value = totalAmountForEconogas != 0m || totalQuantityForEconogas != 0m ? totalAmountForEconogas / totalQuantityForEconogas : 0;
+                worksheet.Cells[rowForSummary, 13].Value = totalAmountForEconogas != 0m || totalQuantityForEconogas != 0m ? DivideOrZero(totalAmountForEconogas, totalQuantityForEconogas) : 0m;
                 worksheet.Cells[rowForSummary, 11].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[rowForSummary, 12].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[rowForSummary, 13].Style.Numberformat.Format = currencyFormat;
 
                 worksheet.Cells[rowForSummary, 15].Value = totalQuantityForEnvirogas;
                 worksheet.Cells[rowForSummary, 16].Value = totalAmountForEnvirogas;
-                worksheet.Cells[rowForSummary, 17].Value = totalAmountForEnvirogas != 0m || totalQuantityForEnvirogas != 0m ? totalAmountForEnvirogas / totalQuantityForEnvirogas : 0;
+                worksheet.Cells[rowForSummary, 17].Value = totalAmountForEnvirogas != 0m || totalQuantityForEnvirogas != 0m ? DivideOrZero(totalAmountForEnvirogas, totalQuantityForEnvirogas) : 0m;
                 worksheet.Cells[rowForSummary, 15].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[rowForSummary, 16].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[rowForSummary, 17].Style.Numberformat.Format = currencyFormat;
@@ -6036,3 +6042,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         #endregion
     }
 }
+
+
+

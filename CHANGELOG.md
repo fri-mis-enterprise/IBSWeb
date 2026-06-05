@@ -6,6 +6,17 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v3.0.1] - 2026-06-05
+
+### Changed
+- Added shared 4-decimal rounding helpers to the Filpride report controllers so derived numeric values can be normalized consistently before export.
+- Updated Filpride accounts payable and accounts receivable report calculations to round derived raw values to 4 decimals before writing them to Excel or using them in report summaries and totals.
+
+### Fixed
+- Fixed report recalculation discrepancies caused by Excel displaying rounded values while storing higher-precision raw amounts for computed VAT, EWT, per-liter, and related derived fields.
+
+---
+
 ## [v3.0.0] - 2026-06-04
 
 ### Added

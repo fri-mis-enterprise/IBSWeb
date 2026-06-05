@@ -80,6 +80,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
             _ => "Valid Only (Exclude Voided)"
         };
 
+        private static decimal RoundToFour(decimal value) => Math.Round(value, 4, MidpointRounding.AwayFromZero);
+
+        private static decimal DivideOrZero(decimal dividend, decimal divisor) => divisor != 0m
+            ? RoundToFour(dividend / divisor)
+            : 0m;
+
         [HttpGet]
         public IActionResult ClearedDisbursementReport()
         {
@@ -1391,15 +1397,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 {
                                     var volume = record.QuantityReceived;
                                     var costAmountGross = record.Amount;
-                                    var costPerLiter = costAmountGross / volume;
+                                    var costPerLiter = DivideOrZero(costAmountGross, volume);
                                     var costAmountNet = record.PurchaseOrder!.VatType == SD.VatType_Vatable
-                                        ? costAmountGross / 1.12m
+                                        ? RoundToFour(costAmountGross / 1.12m)
                                         : costAmountGross;
                                     var vatAmount = record.PurchaseOrder!.VatType == SD.VatType_Vatable
-                                        ? costAmountNet * 0.12m
+                                        ? RoundToFour(costAmountNet * 0.12m)
                                         : 0m;
                                     var taxAmount = record.PurchaseOrder!.VatType == SD.VatType_Vatable
-                                        ? costAmountNet * 0.12m
+                                        ? RoundToFour(costAmountNet * 0.12m)
                                         : 0m;
 
                                     table.Cell().Border(0.5f).Padding(3).Text(record.Date.ToString(SD.Date_Format));
@@ -1434,7 +1440,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                 #region -- Initialize Variable for Computation of Totals
 
-                                var totalCostPerLiter = totalCostAmount / totalVolume;
+                                var totalCostPerLiter = DivideOrZero(totalCostAmount, totalVolume);
 
                                 #endregion -- Initialize Variable for Computation of Totals
 
@@ -1533,10 +1539,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                         var biodieselQuantitySum = listForBiodiesel.Sum(s => s.QuantityReceived);
                                         var biodieselPurchaseNetOfVatSum = isVatable
-                                                ? listForBiodiesel.Sum(pr => pr.Amount / 1.12m)
+                                                ? RoundToFour(listForBiodiesel.Sum(pr => pr.Amount / 1.12m))
                                                 : listForBiodiesel.Sum(pr => pr.Amount);
                                         var biodieselAverageSellingPrice = biodieselPurchaseNetOfVatSum != 0m || biodieselQuantitySum != 0m
-                                                ? biodieselPurchaseNetOfVatSum / biodieselQuantitySum
+                                                ? DivideOrZero(biodieselPurchaseNetOfVatSum, biodieselQuantitySum)
                                                 : 0m;
 
                                         #endregion Computation for Biodiesel
@@ -1547,10 +1553,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                         var econogasQuantitySum = listForEconogas.Sum(s => s.QuantityReceived);
                                         var econogasPurchaseNetOfVatSum = isVatable
-                                                ? listForEconogas.Sum(pr => pr.Amount / 1.12m)
+                                                ? RoundToFour(listForEconogas.Sum(pr => pr.Amount / 1.12m))
                                                 : listForEconogas.Sum(pr => pr.Amount);
                                         var econogasAverageSellingPrice = econogasPurchaseNetOfVatSum != 0m && econogasQuantitySum != 0m
-                                                ? econogasPurchaseNetOfVatSum / econogasQuantitySum
+                                                ? DivideOrZero(econogasPurchaseNetOfVatSum, econogasQuantitySum)
                                                 : 0m;
 
                                         #endregion Computation for Econogas
@@ -1561,9 +1567,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                         var envirogasQuantitySum = listForEnvirogas.Sum(s => s.QuantityReceived);
                                         var envirogasPurchaseNetOfVatSum = isVatable
-                                                ? listForEnvirogas.Sum(pr => pr.Amount / 1.12m)
+                                                ? RoundToFour(listForEnvirogas.Sum(pr => pr.Amount / 1.12m))
                                                 : listForEnvirogas.Sum(pr => pr.Amount);
-                                        var envirogasAverageSellingPrice = envirogasPurchaseNetOfVatSum != 0m && envirogasQuantitySum != 0m ? envirogasPurchaseNetOfVatSum / envirogasQuantitySum : 0m;
+                                        var envirogasAverageSellingPrice = envirogasPurchaseNetOfVatSum != 0m && envirogasQuantitySum != 0m ? DivideOrZero(envirogasPurchaseNetOfVatSum, envirogasQuantitySum) : 0m;
 
                                         #endregion Computation for Envirogas
 
@@ -1592,9 +1598,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                     #region -- Create Table Cell for Totals
 
-                                    var averageSellingPriceForBiodiesel = totalPurchaseNetOfVatForBiodiesel != 0 && totalQuantityForBiodiesel != 0 ? totalPurchaseNetOfVatForBiodiesel / totalQuantityForBiodiesel : 0m;
-                                    var averageSellingPriceForEconogas = totalPurchaseNetOfVatForEconogas != 0 && totalQuantityForEconogas != 0 ? totalPurchaseNetOfVatForEconogas / totalQuantityForEconogas : 0m;
-                                    var averageSellingPriceForEnvirogas = totalPurchaseNetOfVatForEnvirogas != 0 && totalQuantityForEnvirogas != 0 ? totalPurchaseNetOfVatForEnvirogas / totalQuantityForEnvirogas : 0m;
+                                    var averageSellingPriceForBiodiesel = totalPurchaseNetOfVatForBiodiesel != 0 && totalQuantityForBiodiesel != 0 ? DivideOrZero(totalPurchaseNetOfVatForBiodiesel, totalQuantityForBiodiesel) : 0m;
+                                    var averageSellingPriceForEconogas = totalPurchaseNetOfVatForEconogas != 0 && totalQuantityForEconogas != 0 ? DivideOrZero(totalPurchaseNetOfVatForEconogas, totalQuantityForEconogas) : 0m;
+                                    var averageSellingPriceForEnvirogas = totalPurchaseNetOfVatForEnvirogas != 0 && totalQuantityForEnvirogas != 0 ? DivideOrZero(totalPurchaseNetOfVatForEnvirogas, totalQuantityForEnvirogas) : 0m;
 
                                     content.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text("TOTAL:").SemiBold();
                                     content.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(totalQuantityForBiodiesel != 0 ? totalQuantityForBiodiesel < 0 ? $"({Math.Abs(totalQuantityForBiodiesel).ToString(SD.Two_Decimal_Format)})" : totalQuantityForBiodiesel.ToString(SD.Two_Decimal_Format) : null).FontColor(totalQuantityForBiodiesel < 0 ? Colors.Red.Medium : Colors.Black).SemiBold();
@@ -1809,6 +1815,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var currencyFormat = "#,##0.0000"; // numbers format
                 var currencyFormat2 = "#,##0.00"; // numbers format
 
+
+
                 var atlNos = purchaseReport
                     .Select(pr => pr.AuthorityToLoadNo)
                     .Where(x => !string.IsNullOrWhiteSpace(x))
@@ -1838,30 +1846,32 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var volume = pr.QuantityReceived; // volume
                     var costAmount = pr.Amount; // purchase total gross
                     var netPurchases = isSupplierVatable
-                        ? _unitOfWork.FilpridePurchaseOrder.ComputeNetOfVat(costAmount)
+                        ? RoundToFour(_unitOfWork.FilpridePurchaseOrder.ComputeNetOfVat(costAmount))
                         : costAmount; // purchase total net
                     var freight = pr.DeliveryReceipt?.Freight ?? 0m; // freight g vat
                     var netFreight = isHaulerVatable && freight != 0m
-                        ? _unitOfWork.FilpridePurchaseOrder.ComputeNetOfVat(freight)
+                        ? RoundToFour(_unitOfWork.FilpridePurchaseOrder.ComputeNetOfVat(freight))
                         : freight; // freight n vat
                     var freightAmount = pr.DeliveryReceipt!.FreightAmount; // purchase total net
-                    var freightAmountNet = netFreight * volume; // purchase total net
+                    var freightAmountNet = RoundToFour(netFreight * volume); // purchase total net
                     var vatAmount = isSupplierVatable
-                        ? _unitOfWork.FilpridePurchaseOrder.ComputeVatAmount(netPurchases)
+                        ? RoundToFour(_unitOfWork.FilpridePurchaseOrder.ComputeVatAmount(netPurchases))
                         : 0m; // vat total
                     var whtAmount = isSupplierTaxable
-                        ? _unitOfWork.FilpridePurchaseOrder.ComputeEwtAmount(netPurchases, pr.TaxPercentage)
+                        ? RoundToFour(_unitOfWork.FilpridePurchaseOrder.ComputeEwtAmount(netPurchases, pr.TaxPercentage))
                         : 0m; // wht total
-                    var costPerLiter = volume != 0 ? costAmount / volume : 0m; // sale price per liter
-                    var commission = ((pr.DeliveryReceipt?.CustomerOrderSlip?.CommissionRate ?? 0m) * volume);
-                    var purchaseNetOfWht = costAmount - whtAmount;
+                    var costPerLiter = volume != 0
+                        ? RoundToFour(costAmount / volume)
+                        : 0m; // sale price per liter
+                    var commission = RoundToFour((pr.DeliveryReceipt?.CustomerOrderSlip?.CommissionRate ?? 0m) * volume);
+                    var purchaseNetOfWht = RoundToFour(costAmount - whtAmount);
                     var freightNetOfVatAmount = isHaulerVatable
-                        ? _unitOfWork.FilpridePurchaseOrder.ComputeNetOfVat(freightAmount)
+                        ? RoundToFour(_unitOfWork.FilpridePurchaseOrder.ComputeNetOfVat(freightAmount))
                         : freightAmount;
                     var freightWhtAmount = isHaulerTaxable
-                        ? _unitOfWork.FilpridePurchaseOrder.ComputeEwtAmount(freightNetOfVatAmount, pr.DeliveryReceipt?.Hauler?.WithholdingTaxPercent ?? 0)
+                        ? RoundToFour(_unitOfWork.FilpridePurchaseOrder.ComputeEwtAmount(freightNetOfVatAmount, pr.DeliveryReceipt?.Hauler?.WithholdingTaxPercent ?? 0))
                         : 0m;
-                    var freightNetOfWht = freightAmount - freightWhtAmount;
+                    var freightNetOfWht = RoundToFour(freightAmount - freightWhtAmount);
 
                     FilprideAuthorityToLoad? atl;
                     if (pr.AuthorityToLoadNo != null)
@@ -1956,7 +1966,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #region -- Assign values of other totals and formatting of total cells --
 
                 var totalCostPerLiter = totalVolume != 0
-                    ? totalCostAmount / totalVolume
+                    ? RoundToFour(totalCostAmount / totalVolume)
                     : 0m;
 
                 purchaseReportWorksheet.Cells[row, 17].Value = "Total: ";
@@ -2100,12 +2110,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             var grandTotalVolume = product
                                 .Sum(pr => pr.QuantityReceived); // volume
                             var grandTotalPurchaseNet = isVatable
-                                ? product.Sum(pr => pr.Amount / 1.12m)
+                                ? RoundToFour(product.Sum(pr => pr.Amount / 1.12m))
                                 : product.Sum(pr => pr.Amount); // Purchase Net Total
 
                             purchaseReportWorksheet.Cells[row, startingColumn + 1].Value = grandTotalVolume;
                             purchaseReportWorksheet.Cells[row, startingColumn + 2].Value = grandTotalPurchaseNet;
-                            purchaseReportWorksheet.Cells[row, startingColumn + 3].Value = grandTotalVolume != 0m ? grandTotalPurchaseNet / grandTotalVolume : 0m; // Gross Margin Per Liter
+                            purchaseReportWorksheet.Cells[row, startingColumn + 3].Value = DivideOrZero(grandTotalPurchaseNet, grandTotalVolume); // Gross Margin Per Liter
                             purchaseReportWorksheet.Cells[row, startingColumn + 1, row, startingColumn + 3].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
                             purchaseReportWorksheet.Cells[row, startingColumn + 1].Style.Numberformat.Format = currencyFormat2;
                             purchaseReportWorksheet.Cells[row, startingColumn + 2].Style.Numberformat.Format = currencyFormat2;
@@ -2374,23 +2384,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     var isVatable = record.PurchaseOrder!.VatType == SD.VatType_Vatable;
                                     var volume = record.QuantityReceived;
                                     var costAmountGross = record.Amount;
-                                    var purchasePerLiter = costAmountGross / volume;
+                                    var purchasePerLiter = DivideOrZero(costAmountGross, volume);
                                     var salePricePerLiter = record.DeliveryReceipt?.CustomerOrderSlip?.DeliveredPrice ?? 0m;
                                     var costAmountNet = isVatable
-                                        ? _unitOfWork.FilpridePurchaseOrder.ComputeNetOfVat(costAmountGross)
+                                        ? RoundToFour(_unitOfWork.FilpridePurchaseOrder.ComputeNetOfVat(costAmountGross))
                                         : costAmountGross;
                                     var costVatAmount = isVatable
-                                        ? _unitOfWork.FilpridePurchaseOrder.ComputeVatAmount(costAmountNet)
+                                        ? RoundToFour(_unitOfWork.FilpridePurchaseOrder.ComputeVatAmount(costAmountNet))
                                         : 0m;
-                                    var saleAmountGross = volume * salePricePerLiter;
-                                    var gmPerLiter = salePricePerLiter - purchasePerLiter;
-                                    var gmAmount = volume * gmPerLiter;
-                                    var freightChargePerLiter = record.DeliveryReceipt!.Freight + (record.DeliveryReceipt?.ECC ?? 0m);
+                                    var saleAmountGross = RoundToFour(volume * salePricePerLiter);
+                                    var gmPerLiter = RoundToFour(salePricePerLiter - purchasePerLiter);
+                                    var gmAmount = RoundToFour(volume * gmPerLiter);
+                                    var freightChargePerLiter = RoundToFour(record.DeliveryReceipt!.Freight + (record.DeliveryReceipt?.ECC ?? 0m));
                                     var commissionPerLiter = record.DeliveryReceipt?.CustomerOrderSlip?.CommissionRate ?? 0m;
-                                    var commissionAmount = commissionPerLiter * volume;
-                                    var netMarginPerLiter = gmPerLiter - freightChargePerLiter;
-                                    var freightChargeAmount = volume * freightChargePerLiter;
-                                    var netMarginAmount = volume * netMarginPerLiter;
+                                    var commissionAmount = RoundToFour(commissionPerLiter * volume);
+                                    var netMarginPerLiter = RoundToFour(gmPerLiter - freightChargePerLiter);
+                                    var freightChargeAmount = RoundToFour(volume * freightChargePerLiter);
+                                    var netMarginAmount = RoundToFour(volume * netMarginPerLiter);
 
                                     table.Cell().Border(0.5f).Padding(3).Text(record.Date.ToString(SD.Date_Format));
                                     table.Cell().Border(0.5f).Padding(3).Text(record.PurchaseOrder?.SupplierName);
@@ -2433,12 +2443,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                 #region -- Initialize Variable for Computation of Totals
 
-                                var averagePurchasePrice = totalPurchaseAmountGross / totalVolume;
-                                var averageSalePrice = totalSaleAmount / totalVolume;
-                                var totalGmPerLiter = totalGmAmount / totalVolume;
-                                var totalFreightCharge = totalFcAmount / totalVolume;
-                                var totalCommissionPerLiter = totalCommissionAmount / totalVolume;
-                                var totalNetMarginPerLiter = totalNetMarginAmount / totalVolume;
+                                var averagePurchasePrice = DivideOrZero(totalPurchaseAmountGross, totalVolume);
+                                var averageSalePrice = DivideOrZero(totalSaleAmount, totalVolume);
+                                var totalGmPerLiter = DivideOrZero(totalGmAmount, totalVolume);
+                                var totalFreightCharge = DivideOrZero(totalFcAmount, totalVolume);
+                                var totalCommissionPerLiter = DivideOrZero(totalCommissionAmount, totalVolume);
+                                var totalNetMarginPerLiter = DivideOrZero(totalNetMarginAmount, totalVolume);
 
                                 #endregion -- Initialize Variable for Computation of Totals
 
@@ -2532,22 +2542,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                         // Computation for Overall
                                         var overallQuantitySum = list.Sum(s => s.DeliveryReceipt!.Quantity);
-                                        var overallSalesSum = list.Sum(s => s.DeliveryReceipt!.Quantity * s.DeliveryReceipt!.CustomerOrderSlip!.DeliveredPrice);
+                                        var overallSalesSum = RoundToFour(list.Sum(s => s.DeliveryReceipt!.Quantity * s.DeliveryReceipt!.CustomerOrderSlip!.DeliveredPrice));
                                         var overallNetOfSalesSum = isCustomerVatable && overallSalesSum != 0m
-                                                ? repoCalculator.ComputeNetOfVat(overallSalesSum)
+                                                ? RoundToFour(repoCalculator.ComputeNetOfVat(overallSalesSum))
                                                 : overallSalesSum;
                                         var overallPurchasesSum = list.Sum(s => s.Amount);
                                         var overallNetOfPurchasesSum = isSupplierVatable && overallPurchasesSum != 0m
-                                                ? repoCalculator.ComputeNetOfVat(overallPurchasesSum)
+                                                ? RoundToFour(repoCalculator.ComputeNetOfVat(overallPurchasesSum))
                                                 : overallPurchasesSum;
-                                        var overallGrossMarginSum = overallNetOfSalesSum - overallNetOfPurchasesSum;
-                                        var overallFreightSum = list.Sum(s => s.DeliveryReceipt!.Quantity * (s.DeliveryReceipt.Freight + s.DeliveryReceipt.ECC));
+                                        var overallGrossMarginSum = RoundToFour(overallNetOfSalesSum - overallNetOfPurchasesSum);
+                                        var overallFreightSum = RoundToFour(list.Sum(s => s.DeliveryReceipt!.Quantity * (s.DeliveryReceipt.Freight + s.DeliveryReceipt.ECC)));
                                         var overallNetOfFreightSum = isHaulerVatable && overallFreightSum != 0m
-                                                ? repoCalculator.ComputeNetOfVat(overallFreightSum)
+                                                ? RoundToFour(repoCalculator.ComputeNetOfVat(overallFreightSum))
                                                 : overallFreightSum;
-                                        var overallCommissionSum = list.Sum(s => s.DeliveryReceipt!.Quantity * s.DeliveryReceipt!.CustomerOrderSlip!.CommissionRate);
-                                        var overallNetMarginSum = overallGrossMarginSum - (overallFreightSum + overallCommissionSum);
-                                        var overallNetMarginPerLiterSum = overallNetMarginSum != 0 && overallQuantitySum != 0 ? overallNetMarginSum / overallQuantitySum : 0;
+                                        var overallCommissionSum = RoundToFour(list.Sum(s => s.DeliveryReceipt!.Quantity * s.DeliveryReceipt!.CustomerOrderSlip!.CommissionRate));
+                                        var overallNetMarginSum = RoundToFour(overallGrossMarginSum - (overallFreightSum + overallCommissionSum));
+                                        var overallNetMarginPerLiterSum = overallNetMarginSum != 0 && overallQuantitySum != 0 ? DivideOrZero(overallNetMarginSum, overallQuantitySum) : 0m;
 
                                         content.Cell().Border(0.5f).Padding(3).Text(customerType.ToString());
                                         content.Cell().Border(0.5f).Padding(3).AlignRight().Text(overallQuantitySum != 0 ? overallQuantitySum < 0 ? $"({Math.Abs(overallQuantitySum).ToString(SD.Two_Decimal_Format)})" : overallQuantitySum.ToString(SD.Two_Decimal_Format) : null).FontColor(overallQuantitySum < 0 ? Colors.Red.Medium : Colors.Black);
@@ -2654,22 +2664,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                         // Computation for Biodiesel
                                         var biodieselQuantitySum = listForBiodiesel.Sum(s => s.DeliveryReceipt!.Quantity);
-                                        var biodieselSalesSum = listForBiodiesel.Sum(s => s.DeliveryReceipt!.Quantity * s.DeliveryReceipt!.CustomerOrderSlip!.DeliveredPrice);
+                                        var biodieselSalesSum = RoundToFour(listForBiodiesel.Sum(s => s.DeliveryReceipt!.Quantity * s.DeliveryReceipt!.CustomerOrderSlip!.DeliveredPrice));
                                         var biodieselNetOfSalesSum = isCustomerVatable && biodieselSalesSum != 0m
-                                                ? repoCalculator.ComputeNetOfVat(biodieselSalesSum)
+                                                ? RoundToFour(repoCalculator.ComputeNetOfVat(biodieselSalesSum))
                                                 : biodieselSalesSum;
                                         var biodieselPurchasesSum = listForBiodiesel.Sum(s => s.Amount);
                                         var biodieselNetOfPurchasesSum = isSupplierVatable && biodieselPurchasesSum != 0m
-                                                ? repoCalculator.ComputeNetOfVat(biodieselPurchasesSum)
+                                                ? RoundToFour(repoCalculator.ComputeNetOfVat(biodieselPurchasesSum))
                                                 : biodieselPurchasesSum;
-                                        var biodieselGrossMarginSum = biodieselNetOfSalesSum - biodieselNetOfPurchasesSum;
-                                        var biodieselFreightSum = listForBiodiesel.Sum(s => s.DeliveryReceipt!.Quantity * (s.DeliveryReceipt.Freight + s.DeliveryReceipt.ECC));
+                                        var biodieselGrossMarginSum = RoundToFour(biodieselNetOfSalesSum - biodieselNetOfPurchasesSum);
+                                        var biodieselFreightSum = RoundToFour(listForBiodiesel.Sum(s => s.DeliveryReceipt!.Quantity * (s.DeliveryReceipt.Freight + s.DeliveryReceipt.ECC)));
                                         var biodieselNetOfFreightSum = isHaulerVatable && biodieselFreightSum != 0m
-                                                ? repoCalculator.ComputeNetOfVat(biodieselFreightSum)
+                                                ? RoundToFour(repoCalculator.ComputeNetOfVat(biodieselFreightSum))
                                                 : biodieselFreightSum;
-                                        var biodieselCommissionSum = listForBiodiesel.Sum(s => s.DeliveryReceipt!.Quantity * s.DeliveryReceipt!.CustomerOrderSlip!.CommissionRate);
-                                        var biodieselNetMarginSum = biodieselGrossMarginSum - (biodieselFreightSum + biodieselCommissionSum);
-                                        var biodieselNetMarginPerLiterSum = biodieselNetMarginSum != 0 && biodieselQuantitySum != 0 ? biodieselNetMarginSum / biodieselQuantitySum : 0;
+                                        var biodieselCommissionSum = RoundToFour(listForBiodiesel.Sum(s => s.DeliveryReceipt!.Quantity * s.DeliveryReceipt!.CustomerOrderSlip!.CommissionRate));
+                                        var biodieselNetMarginSum = RoundToFour(biodieselGrossMarginSum - (biodieselFreightSum + biodieselCommissionSum));
+                                        var biodieselNetMarginPerLiterSum = biodieselNetMarginSum != 0 && biodieselQuantitySum != 0 ? DivideOrZero(biodieselNetMarginSum, biodieselQuantitySum) : 0m;
 
                                         content.Cell().Border(0.5f).Padding(3).Text(customerType.ToString());
                                         content.Cell().Border(0.5f).Padding(3).AlignRight().Text(biodieselQuantitySum != 0 ? biodieselQuantitySum < 0 ? $"({Math.Abs(biodieselQuantitySum).ToString(SD.Two_Decimal_Format)})" : biodieselQuantitySum.ToString(SD.Two_Decimal_Format) : null).FontColor(biodieselQuantitySum < 0 ? Colors.Red.Medium : Colors.Black);
@@ -2776,22 +2786,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                         // Computation for Econogas
                                         var econogasQuantitySum = listForEconogas.Sum(s => s.DeliveryReceipt!.Quantity);
-                                        var econogasSalesSum = listForEconogas.Sum(s => s.DeliveryReceipt!.Quantity * s.DeliveryReceipt!.CustomerOrderSlip!.DeliveredPrice);
+                                        var econogasSalesSum = RoundToFour(listForEconogas.Sum(s => s.DeliveryReceipt!.Quantity * s.DeliveryReceipt!.CustomerOrderSlip!.DeliveredPrice));
                                         var econogasNetOfSalesSum = isCustomerVatable && econogasSalesSum != 0m
-                                                ? repoCalculator.ComputeNetOfVat(econogasSalesSum)
+                                                ? RoundToFour(repoCalculator.ComputeNetOfVat(econogasSalesSum))
                                                 : econogasSalesSum;
                                         var econogasPurchasesSum = listForEconogas.Sum(s => s.Amount);
                                         var econogasNetOfPurchasesSum = isSupplierVatable && econogasPurchasesSum != 0m
-                                                ? repoCalculator.ComputeNetOfVat(econogasPurchasesSum)
+                                                ? RoundToFour(repoCalculator.ComputeNetOfVat(econogasPurchasesSum))
                                                 : econogasPurchasesSum;
-                                        var econogasGrossMarginSum = econogasNetOfSalesSum - econogasNetOfPurchasesSum;
-                                        var econogasFreightSum = listForEconogas.Sum(s => s.DeliveryReceipt!.Quantity * (s.DeliveryReceipt.Freight + s.DeliveryReceipt.ECC));
+                                        var econogasGrossMarginSum = RoundToFour(econogasNetOfSalesSum - econogasNetOfPurchasesSum);
+                                        var econogasFreightSum = RoundToFour(listForEconogas.Sum(s => s.DeliveryReceipt!.Quantity * (s.DeliveryReceipt.Freight + s.DeliveryReceipt.ECC)));
                                         var econogasNetOfFreightSum = isHaulerVatable && econogasFreightSum != 0m
-                                                ? repoCalculator.ComputeNetOfVat(econogasFreightSum)
+                                                ? RoundToFour(repoCalculator.ComputeNetOfVat(econogasFreightSum))
                                                 : econogasFreightSum;
-                                        var econogasCommissionSum = listForEconogas.Sum(s => s.DeliveryReceipt!.Quantity * s.DeliveryReceipt!.CustomerOrderSlip!.CommissionRate);
-                                        var econogasNetMarginSum = econogasGrossMarginSum - (econogasFreightSum + econogasCommissionSum);
-                                        var econogasNetMarginPerLiterSum = econogasNetMarginSum != 0 && econogasQuantitySum != 0 ? econogasNetMarginSum / econogasQuantitySum : 0;
+                                        var econogasCommissionSum = RoundToFour(listForEconogas.Sum(s => s.DeliveryReceipt!.Quantity * s.DeliveryReceipt!.CustomerOrderSlip!.CommissionRate));
+                                        var econogasNetMarginSum = RoundToFour(econogasGrossMarginSum - (econogasFreightSum + econogasCommissionSum));
+                                        var econogasNetMarginPerLiterSum = econogasNetMarginSum != 0 && econogasQuantitySum != 0 ? DivideOrZero(econogasNetMarginSum, econogasQuantitySum) : 0m;
 
                                         content.Cell().Border(0.5f).Padding(3).Text(customerType.ToString());
                                         content.Cell().Border(0.5f).Padding(3).AlignRight().Text(econogasQuantitySum != 0 ? econogasQuantitySum < 0 ? $"({Math.Abs(econogasQuantitySum).ToString(SD.Two_Decimal_Format)})" : econogasQuantitySum.ToString(SD.Two_Decimal_Format) : null).FontColor(econogasQuantitySum < 0 ? Colors.Red.Medium : Colors.Black);
@@ -2898,22 +2908,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                         // Computation for Envirogas
                                         var envirogasQuantitySum = listForEnvirogas.Sum(s => s.DeliveryReceipt!.Quantity);
-                                        var envirogasSalesSum = listForEnvirogas.Sum(s => s.DeliveryReceipt!.Quantity * s.DeliveryReceipt!.CustomerOrderSlip!.DeliveredPrice);
+                                        var envirogasSalesSum = RoundToFour(listForEnvirogas.Sum(s => s.DeliveryReceipt!.Quantity * s.DeliveryReceipt!.CustomerOrderSlip!.DeliveredPrice));
                                         var envirogasNetOfSalesSum = isCustomerVatable && envirogasSalesSum != 0m
-                                                ? repoCalculator.ComputeNetOfVat(envirogasSalesSum)
+                                                ? RoundToFour(repoCalculator.ComputeNetOfVat(envirogasSalesSum))
                                                 : envirogasSalesSum;
                                         var envirogasPurchasesSum = listForEnvirogas.Sum(s => s.Amount);
                                         var envirogasNetOfPurchasesSum = isSupplierVatable && envirogasPurchasesSum != 0m
-                                                ? repoCalculator.ComputeNetOfVat(envirogasPurchasesSum)
+                                                ? RoundToFour(repoCalculator.ComputeNetOfVat(envirogasPurchasesSum))
                                                 : envirogasPurchasesSum;
-                                        var envirogasGrossMarginSum = envirogasNetOfSalesSum - envirogasNetOfPurchasesSum;
-                                        var envirogasFreightSum = listForEnvirogas.Sum(s => s.DeliveryReceipt!.Quantity * (s.DeliveryReceipt.Freight + s.DeliveryReceipt.ECC));
+                                        var envirogasGrossMarginSum = RoundToFour(envirogasNetOfSalesSum - envirogasNetOfPurchasesSum);
+                                        var envirogasFreightSum = RoundToFour(listForEnvirogas.Sum(s => s.DeliveryReceipt!.Quantity * (s.DeliveryReceipt.Freight + s.DeliveryReceipt.ECC)));
                                         var envirogasNetOfFreightSum = isHaulerVatable && envirogasFreightSum != 0m
-                                                ? repoCalculator.ComputeNetOfVat(envirogasFreightSum)
+                                                ? RoundToFour(repoCalculator.ComputeNetOfVat(envirogasFreightSum))
                                                 : envirogasFreightSum;
-                                        var envirogasCommissionSum = listForEnvirogas.Sum(s => s.DeliveryReceipt!.Quantity * s.DeliveryReceipt!.CustomerOrderSlip!.CommissionRate);
-                                        var envirogasNetMarginSum = envirogasGrossMarginSum - (envirogasFreightSum + envirogasCommissionSum);
-                                        var envirogasNetMarginPerLiterSum = envirogasNetMarginSum != 0 && envirogasQuantitySum != 0 ? envirogasNetMarginSum / envirogasQuantitySum : 0;
+                                        var envirogasCommissionSum = RoundToFour(listForEnvirogas.Sum(s => s.DeliveryReceipt!.Quantity * s.DeliveryReceipt!.CustomerOrderSlip!.CommissionRate));
+                                        var envirogasNetMarginSum = RoundToFour(envirogasGrossMarginSum - (envirogasFreightSum + envirogasCommissionSum));
+                                        var envirogasNetMarginPerLiterSum = envirogasNetMarginSum != 0 && envirogasQuantitySum != 0 ? DivideOrZero(envirogasNetMarginSum, envirogasQuantitySum) : 0m;
 
                                         content.Cell().Border(0.5f).Padding(3).Text(customerType.ToString());
                                         content.Cell().Border(0.5f).Padding(3).AlignRight().Text(envirogasQuantitySum != 0 ? envirogasQuantitySum < 0 ? $"({Math.Abs(envirogasQuantitySum).ToString(SD.Two_Decimal_Format)})" : envirogasQuantitySum.ToString(SD.Two_Decimal_Format) : null).FontColor(envirogasQuantitySum < 0 ? Colors.Red.Medium : Colors.Black);
@@ -3152,26 +3162,26 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var cosPricePerLiter = dr.CustomerOrderSlip.DeliveredPrice; // sales per liter
                     var salesAmount = dr.TotalAmount; // sales total
                     var netSales = isCustomerVatable
-                        ? repoCalculator.ComputeNetOfVat(salesAmount)
+                        ? RoundToFour(repoCalculator.ComputeNetOfVat(salesAmount))
                         : salesAmount;
                     var costAmount = relatedReceivingReports.Count > 0
                         ? relatedReceivingReports.Sum(rr => rr.Amount)
                         : dr.PurchaseOrder.FinalPrice * volume; // purchase total
-                    var costPerLiter = volume != 0m ? costAmount / volume : 0m; // purchase per liter
+                    var costPerLiter = DivideOrZero(costAmount, volume); // purchase per liter
                     var netPurchases = isSupplierVatable
-                        ? repoCalculator.ComputeNetOfVat(costAmount)
+                        ? RoundToFour(repoCalculator.ComputeNetOfVat(costAmount))
                         : costAmount; // purchase total net
-                    var gmAmount = netSales - netPurchases; // gross margin total
-                    var gmPerLiter = volume != 0m ? gmAmount / volume : 0m; // gross margin per liter
-                    var freightCharge = dr.Freight + dr.ECC; // freight charge per liter
+                    var gmAmount = RoundToFour(netSales - netPurchases); // gross margin total
+                    var gmPerLiter = DivideOrZero(gmAmount, volume); // gross margin per liter
+                    var freightCharge = RoundToFour(dr.Freight + dr.ECC); // freight charge per liter
                     var freightChargeAmount = dr.FreightAmount; // freight charge total
                     var freightChargeNet = isHaulerVatable && freightChargeAmount != 0m
-                        ? repoCalculator.ComputeNetOfVat(freightChargeAmount)
+                        ? RoundToFour(repoCalculator.ComputeNetOfVat(freightChargeAmount))
                         : freightChargeAmount;
                     var commissionPerLiter = dr.CommissionRate; // commission rate
                     var commissionAmount = dr.CommissionAmount; // commission total
-                    var netMarginAmount = gmAmount - freightChargeNet - commissionAmount;
-                    var netMarginPerLiter = volume != 0m ? netMarginAmount / volume : 0m; // net margin per liter
+                    var netMarginAmount = RoundToFour(gmAmount - freightChargeNet - commissionAmount);
+                    var netMarginPerLiter = DivideOrZero(netMarginAmount, volume); // net margin per liter
 
                     #endregion -- Variables and Formulas --
 
@@ -3230,12 +3240,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region -- Other subtotal values and formatting of subtotal cells --
 
-                var totalCostPerLiter = totalVolume != 0m ? totalCostAmount / totalVolume : 0m;
-                var totalCosPrice = totalVolume != 0m ? totalSalesAmount / totalVolume : 0m;
-                totalGmPerLiter = totalVolume != 0m ? totalGmAmount / totalVolume : 0m;
-                var totalFreightCharge = totalVolume != 0m ? totalFcAmount / totalVolume : 0m;
-                var totalCommissionPerLiter = totalVolume != 0m ? totalCommissionAmount / totalVolume : 0m;
-                totalNetMarginPerLiter = totalVolume != 0m ? totalNetMarginAmount / totalVolume : 0m;
+                var totalCostPerLiter = DivideOrZero(totalCostAmount, totalVolume);
+                var totalCosPrice = DivideOrZero(totalSalesAmount, totalVolume);
+                totalGmPerLiter = DivideOrZero(totalGmAmount, totalVolume);
+                var totalFreightCharge = DivideOrZero(totalFcAmount, totalVolume);
+                var totalCommissionPerLiter = DivideOrZero(totalCommissionAmount, totalVolume);
+                totalNetMarginPerLiter = DivideOrZero(totalNetMarginAmount, totalVolume);
 
                 gmReportWorksheet.Cells[row, 10].Value = "Total: ";
                 gmReportWorksheet.Cells[row, 12].Value = totalVolume;
@@ -3535,7 +3545,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var overallQuantitySum = list.Sum(s => s.Quantity);
                     var overallSalesSum = list.Sum(s => s.TotalAmount);
                     var overallNetOfSalesSum = isCustomerVatable && overallSalesSum != 0m
-                        ? repoCalculator.ComputeNetOfVat(overallSalesSum)
+                        ? RoundToFour(repoCalculator.ComputeNetOfVat(overallSalesSum))
                         : overallSalesSum;
                     var overallPurchasesSum = list.Sum(s =>
                     {
@@ -3543,16 +3553,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         return relatedRrs.Any() ? relatedRrs.Sum(rr => rr.Amount) : s.PurchaseOrder!.FinalPrice * s.Quantity;
                     });
                     var overallNetOfPurchasesSum = isSupplierVatable && overallPurchasesSum != 0m
-                        ? repoCalculator.ComputeNetOfVat(overallPurchasesSum)
+                        ? RoundToFour(repoCalculator.ComputeNetOfVat(overallPurchasesSum))
                         : overallPurchasesSum;
-                    var overallGrossMarginSum = overallNetOfSalesSum - overallNetOfPurchasesSum;
+                    var overallGrossMarginSum = RoundToFour(overallNetOfSalesSum - overallNetOfPurchasesSum);
                     var overallFreightSum = list.Sum(s => s.FreightAmount);
                     var overallNetOfFreightSum = isHaulerVatable && overallFreightSum != 0m
-                        ? repoCalculator.ComputeNetOfVat(overallFreightSum)
+                        ? RoundToFour(repoCalculator.ComputeNetOfVat(overallFreightSum))
                         : overallFreightSum;
                     var overallCommissionSum = list.Sum(s => s.CommissionAmount);
-                    var overallNetMarginSum = overallGrossMarginSum - (overallNetOfFreightSum + overallCommissionSum);
-                    var overallNetMarginPerLiterSum = overallNetMarginSum != 0 && overallQuantitySum != 0 ? overallNetMarginSum / overallQuantitySum : 0;
+                    var overallNetMarginSum = RoundToFour(overallGrossMarginSum - (overallNetOfFreightSum + overallCommissionSum));
+                    var overallNetMarginPerLiterSum = overallNetMarginSum != 0 && overallQuantitySum != 0 ? DivideOrZero(overallNetMarginSum, overallQuantitySum) : 0m;
 
                     gmReportWorksheet.Cells[rowForSummary, 2].Value = customerType.ToString();
                     gmReportWorksheet.Cells[rowForSummary, 3].Value = overallQuantitySum;
@@ -3577,7 +3587,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var biodieselQuantitySum = listForBiodiesel.Sum(s => s.Quantity);
                     var biodieselSalesSum = listForBiodiesel.Sum(s => s.TotalAmount);
                     var biodieselNetOfSalesSum = isCustomerVatable && biodieselSalesSum != 0m
-                        ? repoCalculator.ComputeNetOfVat(biodieselSalesSum)
+                        ? RoundToFour(repoCalculator.ComputeNetOfVat(biodieselSalesSum))
                         : biodieselSalesSum;
                     var biodieselPurchasesSum = listForBiodiesel.Sum(s =>
                     {
@@ -3585,16 +3595,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         return relatedRrs.Any() ? relatedRrs.Sum(rr => rr.Amount) : s.PurchaseOrder!.FinalPrice * s.Quantity;
                     });
                     var biodieselNetOfPurchasesSum = isSupplierVatable && biodieselPurchasesSum != 0m
-                        ? repoCalculator.ComputeNetOfVat(biodieselPurchasesSum)
+                        ? RoundToFour(repoCalculator.ComputeNetOfVat(biodieselPurchasesSum))
                         : biodieselPurchasesSum;
-                    var biodieselGrossMarginSum = biodieselNetOfSalesSum - biodieselNetOfPurchasesSum;
+                    var biodieselGrossMarginSum = RoundToFour(biodieselNetOfSalesSum - biodieselNetOfPurchasesSum);
                     var biodieselFreightSum = listForBiodiesel.Sum(s => s.FreightAmount);
                     var biodieselNetOfFreightSum = isHaulerVatable && biodieselFreightSum != 0m
-                        ? repoCalculator.ComputeNetOfVat(biodieselFreightSum)
+                        ? RoundToFour(repoCalculator.ComputeNetOfVat(biodieselFreightSum))
                         : biodieselFreightSum;
                     var biodieselCommissionSum = listForBiodiesel.Sum(s => s.CommissionAmount);
-                    var biodieselNetMarginSum = biodieselGrossMarginSum - (biodieselNetOfFreightSum + biodieselCommissionSum);
-                    var biodieselNetMarginPerLiterSum = biodieselNetMarginSum != 0 && biodieselQuantitySum != 0 ? biodieselNetMarginSum / biodieselQuantitySum : 0;
+                    var biodieselNetMarginSum = RoundToFour(biodieselGrossMarginSum - (biodieselNetOfFreightSum + biodieselCommissionSum));
+                    var biodieselNetMarginPerLiterSum = biodieselNetMarginSum != 0 && biodieselQuantitySum != 0 ? DivideOrZero(biodieselNetMarginSum, biodieselQuantitySum) : 0m;
 
                     gmReportWorksheet.Cells[rowForSummary, 12].Value = biodieselQuantitySum;
                     gmReportWorksheet.Cells[rowForSummary, 13].Value = biodieselNetOfSalesSum;
@@ -3618,7 +3628,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var econogasQuantitySum = listForEconogas.Sum(s => s.Quantity);
                     var econogasSalesSum = listForEconogas.Sum(s => s.TotalAmount);
                     var econogasNetOfSalesSum = isCustomerVatable && econogasSalesSum != 0m
-                        ? repoCalculator.ComputeNetOfVat(econogasSalesSum)
+                        ? RoundToFour(repoCalculator.ComputeNetOfVat(econogasSalesSum))
                         : econogasSalesSum;
                     var econogasPurchasesSum = listForEconogas.Sum(s =>
                     {
@@ -3626,16 +3636,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         return relatedRrs.Any() ? relatedRrs.Sum(rr => rr.Amount) : s.PurchaseOrder!.FinalPrice * s.Quantity;
                     });
                     var econogasNetOfPurchasesSum = isSupplierVatable && econogasPurchasesSum != 0m
-                        ? repoCalculator.ComputeNetOfVat(econogasPurchasesSum)
+                        ? RoundToFour(repoCalculator.ComputeNetOfVat(econogasPurchasesSum))
                         : econogasPurchasesSum;
-                    var econogasGrossMarginSum = econogasNetOfSalesSum - econogasNetOfPurchasesSum;
+                    var econogasGrossMarginSum = RoundToFour(econogasNetOfSalesSum - econogasNetOfPurchasesSum);
                     var econogasFreightSum = listForEconogas.Sum(s => s.FreightAmount);
                     var econogasNetOfFreightSum = isHaulerVatable && econogasFreightSum != 0m
-                        ? repoCalculator.ComputeNetOfVat(econogasFreightSum)
+                        ? RoundToFour(repoCalculator.ComputeNetOfVat(econogasFreightSum))
                         : econogasFreightSum;
                     var econogasCommissionSum = listForEconogas.Sum(s => s.CommissionAmount);
-                    var econogasNetMarginSum = econogasGrossMarginSum - (econogasNetOfFreightSum + econogasCommissionSum);
-                    var econogasNetMarginPerLiterSum = econogasNetMarginSum != 0 && econogasQuantitySum != 0 ? econogasNetMarginSum / econogasQuantitySum : 0;
+                    var econogasNetMarginSum = RoundToFour(econogasGrossMarginSum - (econogasNetOfFreightSum + econogasCommissionSum));
+                    var econogasNetMarginPerLiterSum = econogasNetMarginSum != 0 && econogasQuantitySum != 0 ? DivideOrZero(econogasNetMarginSum, econogasQuantitySum) : 0m;
 
                     gmReportWorksheet.Cells[rowForSummary, 21].Value = econogasQuantitySum;
                     gmReportWorksheet.Cells[rowForSummary, 22].Value = econogasNetOfSalesSum;
@@ -3659,7 +3669,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var envirogasQuantitySum = listForEnvirogas.Sum(s => s.Quantity);
                     var envirogasSalesSum = listForEnvirogas.Sum(s => s.TotalAmount);
                     var envirogasNetOfSalesSum = isCustomerVatable && envirogasSalesSum != 0m
-                        ? repoCalculator.ComputeNetOfVat(envirogasSalesSum)
+                        ? RoundToFour(repoCalculator.ComputeNetOfVat(envirogasSalesSum))
                         : envirogasSalesSum;
                     var envirogasPurchasesSum = listForEnvirogas.Sum(s =>
                     {
@@ -3667,16 +3677,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         return relatedRrs.Any() ? relatedRrs.Sum(rr => rr.Amount) : s.PurchaseOrder!.FinalPrice * s.Quantity;
                     });
                     var envirogasNetOfPurchasesSum = isSupplierVatable && envirogasPurchasesSum != 0m
-                        ? repoCalculator.ComputeNetOfVat(envirogasPurchasesSum)
+                        ? RoundToFour(repoCalculator.ComputeNetOfVat(envirogasPurchasesSum))
                         : envirogasPurchasesSum;
-                    var envirogasGrossMarginSum = envirogasNetOfSalesSum - envirogasNetOfPurchasesSum;
+                    var envirogasGrossMarginSum = RoundToFour(envirogasNetOfSalesSum - envirogasNetOfPurchasesSum);
                     var envirogasFreightSum = listForEnvirogas.Sum(s => s.FreightAmount);
                     var envirogasNetOfFreightSum = isHaulerVatable && envirogasFreightSum != 0m
-                        ? repoCalculator.ComputeNetOfVat(envirogasFreightSum)
+                        ? RoundToFour(repoCalculator.ComputeNetOfVat(envirogasFreightSum))
                         : envirogasFreightSum;
                     var envirogasCommissionSum = listForEnvirogas.Sum(s => s.CommissionAmount);
-                    var envirogasNetMarginSum = envirogasGrossMarginSum - (envirogasNetOfFreightSum + envirogasCommissionSum);
-                    var envirogasNetMarginPerLiterSum = envirogasNetMarginSum != 0 && envirogasQuantitySum != 0 ? envirogasNetMarginSum / envirogasQuantitySum : 0;
+                    var envirogasNetMarginSum = RoundToFour(envirogasGrossMarginSum - (envirogasNetOfFreightSum + envirogasCommissionSum));
+                    var envirogasNetMarginPerLiterSum = envirogasNetMarginSum != 0 && envirogasQuantitySum != 0 ? DivideOrZero(envirogasNetMarginSum, envirogasQuantitySum) : 0m;
 
                     gmReportWorksheet.Cells[rowForSummary, 30].Value = envirogasQuantitySum;
                     gmReportWorksheet.Cells[rowForSummary, 31].Value = envirogasNetOfSalesSum;
@@ -4031,37 +4041,37 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     var subTotalBeginningVolume = rr.Where(x => !x.IsPaid && x.Date < model.DateTo).Sum(x => x.QuantityReceived);
                                     var subTotalBeginningGross = rr.Where(x => !x.IsPaid && x.Date < model.DateTo).Sum(x => x.Amount);
                                     var subTotalBeginningNetOfVat = isSupplierVatable
-                                        ? repoCalculator.ComputeNetOfVat(subTotalBeginningGross)
+                                        ? RoundToFour(repoCalculator.ComputeNetOfVat(subTotalBeginningGross))
                                         : subTotalBeginningGross;
                                     var subTotalBeginningEwt = isSupplierTaxable
-                                        ? repoCalculator.ComputeEwtAmount(subTotalBeginningNetOfVat, 0.01m)
+                                        ? RoundToFour(repoCalculator.ComputeEwtAmount(subTotalBeginningNetOfVat, 0.01m))
                                         : 0m;
-                                    var subTotalBeginningNetAmount = subTotalBeginningGross - subTotalBeginningEwt;
+                                    var subTotalBeginningNetAmount = RoundToFour(subTotalBeginningGross - subTotalBeginningEwt);
                                     //PURCHASES
                                     var subTotalPurchaseVolume = rr.Where(x => !x.IsPaid && x.Date == model.DateTo).Sum(x => x.QuantityReceived);
                                     var subTotalPurchaseGross = rr.Where(x => !x.IsPaid && x.Date == model.DateTo).Sum(x => x.Amount);
                                     var subTotalPurchaseNetOfVat = isSupplierVatable && subTotalPurchaseGross != 0
-                                        ? repoCalculator.ComputeNetOfVat(subTotalPurchaseGross)
+                                        ? RoundToFour(repoCalculator.ComputeNetOfVat(subTotalPurchaseGross))
                                         : subTotalPurchaseGross;
                                     var subTotalPurchaseEwt = isSupplierTaxable && subTotalPurchaseNetOfVat != 0
-                                        ? repoCalculator.ComputeEwtAmount(subTotalPurchaseNetOfVat, 0.01m)
+                                        ? RoundToFour(repoCalculator.ComputeEwtAmount(subTotalPurchaseNetOfVat, 0.01m))
                                         : 0m;
-                                    var subTotalPurchaseNetAmount = subTotalPurchaseGross - subTotalPurchaseEwt;
+                                    var subTotalPurchaseNetAmount = RoundToFour(subTotalPurchaseGross - subTotalPurchaseEwt);
                                     //PAYMENT
                                     var subTotalPaymentVolume = rr.Where(x => x.IsPaid).Sum(x => x.QuantityReceived);
                                     var subTotalPaymentGross = rr.Where(x => x.IsPaid).Sum(x => x.Amount);
                                     var subTotalPaymentNetOfVat = isSupplierVatable && subTotalPaymentGross != 0
-                                        ? repoCalculator.ComputeNetOfVat(subTotalPaymentGross)
+                                        ? RoundToFour(repoCalculator.ComputeNetOfVat(subTotalPaymentGross))
                                         : subTotalPaymentGross;
                                     var subTotalPaymentEwt = isSupplierTaxable && subTotalPaymentNetOfVat != 0
-                                        ? repoCalculator.ComputeEwtAmount(subTotalPaymentNetOfVat, 0.01m)
+                                        ? RoundToFour(repoCalculator.ComputeEwtAmount(subTotalPaymentNetOfVat, 0.01m))
                                         : 0m;
-                                    var subTotalPaymentNetAmount = subTotalPaymentGross - subTotalPaymentEwt;
+                                    var subTotalPaymentNetAmount = RoundToFour(subTotalPaymentGross - subTotalPaymentEwt);
                                     //ENDING BALANCE
-                                    var subTotalEndingVolume = (subTotalBeginningVolume + subTotalPurchaseVolume) - subTotalPaymentVolume;
-                                    var subTotalEndingGross = (subTotalBeginningGross + subTotalPurchaseGross) - subTotalPaymentGross;
-                                    var subTotalEndingEwt = (subTotalBeginningEwt + subTotalPurchaseEwt) - subTotalPaymentEwt;
-                                    var subTotalEndingNetAmount = (subTotalBeginningNetAmount + subTotalPurchaseNetAmount) - subTotalPaymentNetAmount;
+                                    var subTotalEndingVolume = RoundToFour((subTotalBeginningVolume + subTotalPurchaseVolume) - subTotalPaymentVolume);
+                                    var subTotalEndingGross = RoundToFour((subTotalBeginningGross + subTotalPurchaseGross) - subTotalPaymentGross);
+                                    var subTotalEndingEwt = RoundToFour((subTotalBeginningEwt + subTotalPurchaseEwt) - subTotalPaymentEwt);
+                                    var subTotalEndingNetAmount = RoundToFour((subTotalBeginningNetAmount + subTotalPurchaseNetAmount) - subTotalPaymentNetAmount);
 
                                     var groupBySupplier = rr.GroupBy(x => new { x.PurchaseOrder?.Supplier?.SupplierName }).ToList();
 
@@ -4071,37 +4081,37 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                         var beginningVolume = item.Where(x => !x.IsPaid && x.Date < model.DateTo).Sum(x => x.QuantityReceived);
                                         var beginningGross = item.Where(x => !x.IsPaid && x.Date < model.DateTo).Sum(x => x.Amount);
                                         var beginningNetOfVat = isSupplierVatable && beginningGross != 0
-                                            ? repoCalculator.ComputeNetOfVat(beginningGross)
+                                            ? RoundToFour(repoCalculator.ComputeNetOfVat(beginningGross))
                                             : beginningGross;
                                         var beginningEwt = isSupplierTaxable && beginningNetOfVat != 0
-                                            ? repoCalculator.ComputeEwtAmount(beginningNetOfVat, 0.01m)
+                                            ? RoundToFour(repoCalculator.ComputeEwtAmount(beginningNetOfVat, 0.01m))
                                             : 0m;
-                                        var beginningNetAmount = beginningGross - beginningEwt;
+                                        var beginningNetAmount = RoundToFour(beginningGross - beginningEwt);
                                         //PURCHASES
                                         var purchaseVolume = item.Where(x => !x.IsPaid && x.Date == model.DateTo).Sum(x => x.QuantityReceived);
                                         var purchaseGross = item.Where(x => !x.IsPaid && x.Date == model.DateTo).Sum(x => x.Amount);
                                         var purchaseNetOfVat = isSupplierVatable && purchaseGross != 0
-                                            ? repoCalculator.ComputeNetOfVat(purchaseGross)
+                                            ? RoundToFour(repoCalculator.ComputeNetOfVat(purchaseGross))
                                             : purchaseGross;
                                         var purchaseEwt = isSupplierTaxable && purchaseNetOfVat != 0
-                                            ? repoCalculator.ComputeEwtAmount(purchaseNetOfVat, 0.01m)
+                                            ? RoundToFour(repoCalculator.ComputeEwtAmount(purchaseNetOfVat, 0.01m))
                                             : 0m;
-                                        var purchaseNetAmount = purchaseGross - purchaseEwt;
+                                        var purchaseNetAmount = RoundToFour(purchaseGross - purchaseEwt);
                                         //PAYMENT
                                         var paymentVolume = item.Where(x => x.IsPaid).Sum(x => x.QuantityReceived);
                                         var paymentGross = item.Where(x => x.IsPaid).Sum(x => x.Amount);
                                         var paymentNetOfVat = isSupplierVatable && paymentGross != 0
-                                            ? repoCalculator.ComputeNetOfVat(paymentGross)
+                                            ? RoundToFour(repoCalculator.ComputeNetOfVat(paymentGross))
                                             : paymentGross;
                                         var paymentEwt = isSupplierTaxable && paymentNetOfVat != 0
-                                            ? repoCalculator.ComputeEwtAmount(paymentNetOfVat, 0.01m)
+                                            ? RoundToFour(repoCalculator.ComputeEwtAmount(paymentNetOfVat, 0.01m))
                                             : 0m;
-                                        var paymentNetAmount = paymentGross - paymentEwt;
+                                        var paymentNetAmount = RoundToFour(paymentGross - paymentEwt);
                                         //ENDING BALANCE
-                                        var endingVolume = (beginningVolume + purchaseVolume) - paymentVolume;
-                                        var endingGross = (beginningGross + purchaseGross) - paymentGross;
-                                        var endingEwt = (beginningEwt + purchaseEwt) - paymentEwt;
-                                        var endingNetAmount = (beginningNetAmount + purchaseNetAmount) - paymentNetAmount;
+                                        var endingVolume = RoundToFour((beginningVolume + purchaseVolume) - paymentVolume);
+                                        var endingGross = RoundToFour((beginningGross + purchaseGross) - paymentGross);
+                                        var endingEwt = RoundToFour((beginningEwt + purchaseEwt) - paymentEwt);
+                                        var endingNetAmount = RoundToFour((beginningNetAmount + purchaseNetAmount) - paymentNetAmount);
 
                                         if (isStart)
                                         {
@@ -4611,11 +4621,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                             volume = totalVolume - sumOfVolumePaid;
 
-                                            netOfVat = isSupplierVatable ? repoCalculator.ComputeNetOfVat(gross) : gross;
+                                            netOfVat = isSupplierVatable ? RoundToFour(repoCalculator.ComputeNetOfVat(gross)) : gross;
 
                                             ewtPercentage = sameMonthYear.Average(rr => rr.PurchaseOrder!.Supplier!.WithholdingTaxPercent ?? 0m);
 
-                                            ewt = isSupplierTaxable ? repoCalculator.ComputeEwtAmount(netOfVat, ewtPercentage) : 0m;
+                                            ewt = isSupplierTaxable ? RoundToFour(repoCalculator.ComputeEwtAmount(netOfVat, ewtPercentage)) : 0m;
 
                                             net = gross - ewt;
 
@@ -4634,11 +4644,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                             volume = totalVolume - sumOfVolumePaid;
 
-                                            netOfVat = isSupplierVatable ? repoCalculator.ComputeNetOfVat(gross) : gross;
+                                            netOfVat = isSupplierVatable ? RoundToFour(repoCalculator.ComputeNetOfVat(gross)) : gross;
 
                                             ewtPercentage = sameMonthYear.Average(dr => dr.PurchaseOrder!.Supplier!.WithholdingTaxPercent ?? 0m);
 
-                                            ewt = isSupplierTaxable ? repoCalculator.ComputeEwtAmount(netOfVat, ewtPercentage) : 0m;
+                                            ewt = isSupplierTaxable ? RoundToFour(repoCalculator.ComputeEwtAmount(netOfVat, ewtPercentage)) : 0m;
 
                                             net = gross - ewt;
 
@@ -4674,9 +4684,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                             volume = sumOfVolumePaid;
 
-                                            netOfVat = isSupplierVatable ? repoCalculator.ComputeNetOfVat(gross) : gross;
+                                            netOfVat = isSupplierVatable ? RoundToFour(repoCalculator.ComputeNetOfVat(gross)) : gross;
 
-                                            ewt = isSupplierTaxable ? repoCalculator.ComputeEwtAmount(netOfVat, ewtPercentage) : 0m;
+                                            ewt = isSupplierTaxable ? RoundToFour(repoCalculator.ComputeEwtAmount(netOfVat, ewtPercentage)) : 0m;
 
                                             net = gross - ewt;
 
@@ -4801,10 +4811,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     #region == Ending Subtotal and Grand Total Processes ==
 
                     // input subtotal of ending
-                    var subtotalVolumeEnding = subtotalVolumeBeginning + subtotalVolumePurchases - subtotalVolumePayments;
-                    var subtotalGrossEnding = subtotalGrossBeginning + subtotalGrossPurchases - subtotalGrossPayments;
-                    var subtotalEwtEnding = subtotalEwtBeginning + subtotalEwtPurchases - subtotalEwtPayments;
-                    var subtotalNetEnding = subtotalNetBeginning + subtotalNetPurchases - subtotalNetPayments;
+                    var subtotalVolumeEnding = RoundToFour(subtotalVolumeBeginning + subtotalVolumePurchases - subtotalVolumePayments);
+                    var subtotalGrossEnding = RoundToFour(subtotalGrossBeginning + subtotalGrossPurchases - subtotalGrossPayments);
+                    var subtotalEwtEnding = RoundToFour(subtotalEwtBeginning + subtotalEwtPurchases - subtotalEwtPayments);
+                    var subtotalNetEnding = RoundToFour(subtotalNetBeginning + subtotalNetPurchases - subtotalNetPayments);
 
                     worksheet.Cells[row, 19].Value = subtotalVolumeEnding;
                     worksheet.Cells[row, 20].Value = subtotalGrossEnding;
@@ -5123,10 +5133,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                                 grossOfLiftedThisMonth += rr.Amount;
 
                                                 var netOfVat = isVatable
-                                                    ? repoCalculator.ComputeNetOfVat(rr.Amount)
+                                                    ? RoundToFour(repoCalculator.ComputeNetOfVat(rr.Amount))
                                                     : rr.Amount;
                                                 var ewt = isTaxable
-                                                    ? repoCalculator.ComputeEwtAmount(netOfVat, rr.TaxPercentage)
+                                                    ? RoundToFour(repoCalculator.ComputeEwtAmount(netOfVat, rr.TaxPercentage))
                                                     : 0m;
 
                                                 totalEwt += ewt;
@@ -5226,13 +5236,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 var price = liftedThisMonth > 0
                                     ? grossOfLiftedThisMonth / liftedThisMonth
                                     : 0m;
-                                var priceNetOfVat = repoCalculator.ComputeNetOfVat(price);
+                                var priceNetOfVat = RoundToFour(repoCalculator.ComputeNetOfVat(price));
 
                                 worksheet.Cells[row, 11].Value = priceNetOfVat;
                                 worksheet.Cells[row, 12].Value = price;
                                 worksheet.Cells[row, 13].Value = grossOfLiftedThisMonth;
                                 worksheet.Cells[row, 14].Value = totalEwt;
-                                worksheet.Cells[row, 15].Value = grossOfLiftedThisMonth - totalEwt;
+                                worksheet.Cells[row, 15].Value = RoundToFour(grossOfLiftedThisMonth - totalEwt);
                                 using var range = worksheet.Cells[row, 11, row, 15];
                                 range.Style.Numberformat.Format = currencyFormatTwoDecimal;
                             }
@@ -5267,13 +5277,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 10].Value = unliftedThisMonthSubtotal;
                     if (liftedThisMonthSubtotal != 0)
                     {
-                        var price = grossAmountSubtotal / liftedThisMonthSubtotal;
-                        var priceNetOfVat = repoCalculator.ComputeNetOfVat(price);
+                        var price = DivideOrZero(grossAmountSubtotal, liftedThisMonthSubtotal);
+                        var priceNetOfVat = RoundToFour(repoCalculator.ComputeNetOfVat(price));
                         worksheet.Cells[row, 11].Value = priceNetOfVat;
                         worksheet.Cells[row, 12].Value = price;
                         worksheet.Cells[row, 13].Value = grossAmountSubtotal;
                         worksheet.Cells[row, 14].Value = ewtAmountSubtotal;
-                        worksheet.Cells[row, 15].Value = grossAmountSubtotal - ewtAmountSubtotal;
+                        worksheet.Cells[row, 15].Value = RoundToFour(grossAmountSubtotal - ewtAmountSubtotal);
                     }
                     else
                     {
@@ -5323,8 +5333,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             worksheet.Cells[row, 10].Value = unliftedThisMonthGrandTotalBiodiesel;
                             if (liftedThisMonthGrandTotalBiodiesel != 0)
                             {
-                                worksheet.Cells[row, 11].Value = grossAmountGrandTotalBiodiesel / liftedThisMonthGrandTotalBiodiesel / 1.12m;
-                                worksheet.Cells[row, 12].Value = grossAmountGrandTotalBiodiesel / liftedThisMonthGrandTotalBiodiesel;
+                                worksheet.Cells[row, 11].Value = RoundToFour(grossAmountGrandTotalBiodiesel / liftedThisMonthGrandTotalBiodiesel / 1.12m);
+                                worksheet.Cells[row, 12].Value = DivideOrZero(grossAmountGrandTotalBiodiesel, liftedThisMonthGrandTotalBiodiesel);
                             }
                             else
                             {
@@ -5333,7 +5343,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             }
                             worksheet.Cells[row, 13].Value = grossAmountGrandTotalBiodiesel;
                             worksheet.Cells[row, 14].Value = ewtGrandTotalBiodiesel;
-                            worksheet.Cells[row, 15].Value = grossAmountGrandTotalBiodiesel - ewtGrandTotalBiodiesel;
+                            worksheet.Cells[row, 15].Value = RoundToFour(grossAmountGrandTotalBiodiesel - ewtGrandTotalBiodiesel);
                             break;
 
                         case "ECONOGAS":
@@ -5343,8 +5353,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             worksheet.Cells[row, 10].Value = unliftedThisMonthGrandTotalEconogas;
                             if (liftedThisMonthGrandTotalEconogas != 0)
                             {
-                                worksheet.Cells[row, 11].Value = grossAmountGrandTotalEconogas / liftedThisMonthGrandTotalEconogas / 1.12m;
-                                worksheet.Cells[row, 12].Value = grossAmountGrandTotalEconogas / liftedThisMonthGrandTotalEconogas;
+                                worksheet.Cells[row, 11].Value = RoundToFour(grossAmountGrandTotalEconogas / liftedThisMonthGrandTotalEconogas / 1.12m);
+                                worksheet.Cells[row, 12].Value = DivideOrZero(grossAmountGrandTotalEconogas, liftedThisMonthGrandTotalEconogas);
                             }
                             else
                             {
@@ -5353,7 +5363,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             }
                             worksheet.Cells[row, 13].Value = grossAmountGrandTotalEconogas;
                             worksheet.Cells[row, 14].Value = ewtGrandTotalEconogas;
-                            worksheet.Cells[row, 15].Value = grossAmountGrandTotalEconogas - ewtGrandTotalEconogas;
+                            worksheet.Cells[row, 15].Value = RoundToFour(grossAmountGrandTotalEconogas - ewtGrandTotalEconogas);
                             break;
 
                         case "ENVIROGAS":
@@ -5363,8 +5373,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             worksheet.Cells[row, 10].Value = unliftedThisMonthGrandTotalEnvirogas;
                             if (liftedThisMonthGrandTotalEnvirogas != 0)
                             {
-                                worksheet.Cells[row, 11].Value = grossAmountGrandTotalEnvirogas / liftedThisMonthGrandTotalEnvirogas / 1.12m;
-                                worksheet.Cells[row, 12].Value = grossAmountGrandTotalEnvirogas / liftedThisMonthGrandTotalEnvirogas;
+                                worksheet.Cells[row, 11].Value = RoundToFour(grossAmountGrandTotalEnvirogas / liftedThisMonthGrandTotalEnvirogas / 1.12m);
+                                worksheet.Cells[row, 12].Value = DivideOrZero(grossAmountGrandTotalEnvirogas, liftedThisMonthGrandTotalEnvirogas);
                             }
                             else
                             {
@@ -5373,7 +5383,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             }
                             worksheet.Cells[row, 13].Value = grossAmountGrandTotalEnvirogas;
                             worksheet.Cells[row, 14].Value = ewtGrandTotalEnvirogas;
-                            worksheet.Cells[row, 15].Value = grossAmountGrandTotalEnvirogas - ewtGrandTotalEnvirogas;
+                            worksheet.Cells[row, 15].Value = RoundToFour(grossAmountGrandTotalEnvirogas - ewtGrandTotalEnvirogas);
                             break;
                     }
 
@@ -5393,11 +5403,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 10].Value = finalUnliftedThisMonth;
                 if (finalLiftedThisMonth != 0)
                 {
-                    worksheet.Cells[row, 11].Value = finalGross / finalLiftedThisMonth / 1.12m;
-                    worksheet.Cells[row, 12].Value = finalGross / finalLiftedThisMonth;
+                    worksheet.Cells[row, 11].Value = RoundToFour(finalGross / finalLiftedThisMonth / 1.12m);
+                    worksheet.Cells[row, 12].Value = DivideOrZero(finalGross, finalLiftedThisMonth);
                     worksheet.Cells[row, 13].Value = finalGross;
                     worksheet.Cells[row, 14].Value = finalEwt;
-                    worksheet.Cells[row, 15].Value = finalGross - finalEwt;
+                    worksheet.Cells[row, 15].Value = RoundToFour(finalGross - finalEwt);
                 }
                 else
                 {
@@ -5564,10 +5574,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     ? liftedThisMonth.Sum(rr =>
                                     {
                                         var netOfVat = isVatable
-                                            ? repoCalculator.ComputeNetOfVat(rr.Amount)
+                                            ? RoundToFour(repoCalculator.ComputeNetOfVat(rr.Amount))
                                             : rr.Amount;
 
-                                        return repoCalculator.ComputeEwtAmount(netOfVat, rr.TaxPercentage);
+                                        return RoundToFour(repoCalculator.ComputeEwtAmount(netOfVat, rr.TaxPercentage));
                                     })
                                     : 0m;
                             }
@@ -5598,12 +5608,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 ? grossAmount / liftedThisMonthRrQty
                                 : 0;
                             worksheet.Cells[row, 12].Value = isVatable
-                                ? repoCalculator.ComputeNetOfVat(cost)
+                                ? RoundToFour(repoCalculator.ComputeNetOfVat(cost))
                                 : cost;
                             worksheet.Cells[row, 13].Value = cost;
                             worksheet.Cells[row, 14].Value = grossAmount;
                             worksheet.Cells[row, 15].Value = ewt;
-                            worksheet.Cells[row, 16].Value = grossAmount - ewt;
+                            worksheet.Cells[row, 16].Value = RoundToFour(grossAmount - ewt);
 
                             using (var range = worksheet.Cells[row, 6, row, 16])
                             {
@@ -5628,16 +5638,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[row, 11].Value = unliftedThisMonthSubtotal;
                         if (liftedThisMonthSubtotal != 0)
                         {
-                            var price = grossAmountSubtotal / liftedThisMonthSubtotal;
+                            var price = DivideOrZero(grossAmountSubtotal, liftedThisMonthSubtotal);
                             var priceNetOfVat = isVatable
-                                ? repoCalculator.ComputeNetOfVat(price)
+                                ? RoundToFour(repoCalculator.ComputeNetOfVat(price))
                                 : price;
                             worksheet.Cells[row, 12].Value = priceNetOfVat;
                             worksheet.Cells[row, 13].Value = price;
                         }
                         worksheet.Cells[row, 14].Value = grossAmountSubtotal;
                         worksheet.Cells[row, 15].Value = ewtSubtotal;
-                        worksheet.Cells[row, 16].Value = grossAmountSubtotal - ewtSubtotal;
+                        worksheet.Cells[row, 16].Value = RoundToFour(grossAmountSubtotal - ewtSubtotal);
 
                         using (var range = worksheet.Cells[row, 3, row, 5])
                         {
@@ -5666,16 +5676,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 11].Value = unliftedThisMonthGrandTotal;
                     if (liftedThisMonthGrandTotal != 0)
                     {
-                        var price = grossAmountGrandTotal / liftedThisMonthGrandTotal;
+                        var price = DivideOrZero(grossAmountGrandTotal, liftedThisMonthGrandTotal);
                         var priceNetOfVat = isVatable
-                            ? repoCalculator.ComputeNetOfVat(price)
+                            ? RoundToFour(repoCalculator.ComputeNetOfVat(price))
                             : price;
                         worksheet.Cells[row, 12].Value = priceNetOfVat;
                         worksheet.Cells[row, 13].Value = price;
                     }
                     worksheet.Cells[row, 14].Value = grossAmountGrandTotal;
                     worksheet.Cells[row, 15].Value = ewtGrandTotal;
-                    worksheet.Cells[row, 16].Value = grossAmountGrandTotal - ewtGrandTotal;
+                    worksheet.Cells[row, 16].Value = RoundToFour(grossAmountGrandTotal - ewtGrandTotal);
 
                     using (var range = worksheet.Cells[row, 3, row, 5])
                     {
@@ -6016,7 +6026,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[32, 3].Value = "Form Check:";
                 worksheet.Cells[32, 4].Value = sumOfAmount;
                 worksheet.Cells[30, 5].Value = sumOfFreightAmount;
-                worksheet.Cells[32, 6].Value = (sumOfAmount + sumOfFreightAmount);
+                worksheet.Cells[32, 6].Value = RoundToFour(sumOfAmount + sumOfFreightAmount);
 
                 using (var range = worksheet.Cells[row, 4, row, 6])
                 {
@@ -6105,14 +6115,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[39, col].Style.Numberformat.Format = currencyFormatTwoDecimal;
 
                 // use if-else to determine value of freight if multiple or single hauler
-                worksheet.Cells[38, col].Value = (sumOfQuantityWithFreight > 0 ? totalFreightAmount / sumOfQuantityWithFreight : 0); // new cost/ltr of freight
+                worksheet.Cells[38, col].Value = DivideOrZero(totalFreightAmount, sumOfQuantityWithFreight); // new cost/ltr of freight
                 worksheet.Cells[38, col].Style.Numberformat.Format = currencyFormatFourDecimal;
-                worksheet.Cells[29, 6].Value = averageFreightPerLiterWithFreight + averageCostPerLiter; // cost/ltr + freight/ltr if multiple hauler
-                worksheet.Cells[30, 6].Value = (sumOfAmount + sumOfFreightAmountWithFreight); // total amount with total freight amount
+                worksheet.Cells[29, 6].Value = RoundToFour(averageFreightPerLiterWithFreight + averageCostPerLiter); // cost/ltr + freight/ltr if multiple hauler
+                worksheet.Cells[30, 6].Value = RoundToFour(sumOfAmount + sumOfFreightAmountWithFreight); // total amount with total freight amount
 
                 worksheet.Cells[32, 4].Value = sumOfAmount;
                 worksheet.Cells[32, 5].Value = sumOfFreightAmount;
-                worksheet.Cells[32, 6].Value = (sumOfAmount + sumOfFreightAmountWithFreight); // total amount with freight amount
+                worksheet.Cells[32, 6].Value = RoundToFour(sumOfAmount + sumOfFreightAmountWithFreight); // total amount with freight amount
 
                 worksheet.Cells[39 - 1, col].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[29, 5].Style.Numberformat.Format = currencyFormatTwoDecimal;
@@ -6244,8 +6254,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 12].Value = rr.CostBasedOnSoa;
                     worksheet.Cells[row, 13].Value = amountBasedOnSoa;
                     worksheet.Cells[row, 14].Value = 0;
-                    worksheet.Cells[row, 15].Value = (costPerLiter - rr.CostBasedOnSoa);
-                    worksheet.Cells[row, 16].Value = (rr.Amount - amountBasedOnSoa);
+                    worksheet.Cells[row, 15].Value = RoundToFour(costPerLiter - rr.CostBasedOnSoa);
+                    worksheet.Cells[row, 16].Value = RoundToFour(rr.Amount - amountBasedOnSoa);
 
                     worksheet.Cells[row, 3].Style.Numberformat.Format = "MM/dd/yyyy";
 
@@ -6269,8 +6279,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 12].Value = averageCostBasedOnSoa;
                 worksheet.Cells[row, 13].Value = sumOfAmountBasedOnSoa;
                 worksheet.Cells[row, 14].Value = 0;
-                worksheet.Cells[row, 15].Value = (averageCostPerLiter - averageCostBasedOnSoa);
-                worksheet.Cells[row, 16].Value = (sumOfAmount - sumOfAmountBasedOnSoa);
+                worksheet.Cells[row, 15].Value = RoundToFour(averageCostPerLiter - averageCostBasedOnSoa);
+                worksheet.Cells[row, 16].Value = RoundToFour(sumOfAmount - sumOfAmountBasedOnSoa);
 
                 using (var range = worksheet.Cells[row, 7, row, 16])
                 {
@@ -6370,7 +6380,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 15].Value = rr.Amount;
                     worksheet.Cells[row, 16].Value = rr.DeliveryReceipt.Freight;
                     worksheet.Cells[row, 17].Value = rr.DeliveryReceipt.FreightAmount;
-                    worksheet.Cells[row, 18].Value = (costPerLiter + rr.DeliveryReceipt.Freight);
+                    worksheet.Cells[row, 18].Value = RoundToFour(costPerLiter + rr.DeliveryReceipt.Freight);
                     worksheet.Cells[row, 19].Value = amountWithFreight;
 
                     worksheet.Cells[row, 3].Style.Numberformat.Format = "MM/dd/yyyy";
@@ -6394,8 +6404,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 15].Value = sumOfAmount;
                 worksheet.Cells[row, 16].Value = averageFreightPerLiter;
                 worksheet.Cells[row, 17].Value = sumOfFreightAmount;
-                worksheet.Cells[row, 18].Value = (averageCostPerLiter + averageFreightPerLiter);
-                worksheet.Cells[row, 19].Value = receivingReports.Sum(rr => rr.Amount + rr.DeliveryReceipt!.FreightAmount);
+                worksheet.Cells[row, 18].Value = RoundToFour(averageCostPerLiter + averageFreightPerLiter);
+                worksheet.Cells[row, 19].Value = RoundToFour(receivingReports.Sum(rr => rr.Amount + rr.DeliveryReceipt!.FreightAmount));
 
                 using (var range = worksheet.Cells[row, 13, row, 19])
                 {
@@ -6539,13 +6549,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 10].Value = rr.PurchaseOrder!.ProductName;
                     worksheet.Cells[row, 11].Value = rr.QuantityReceived;
                     worksheet.Cells[row, 12].Value = rr.WithdrawalCertificate;
-                    worksheet.Cells[row, 13].Value = (rrWithSameWC.Sum(wcs => wcs.QuantityReceived) + rr.QuantityReceived); // added the current rr's quantity because it is excluded in rrWithSameWC
+                    worksheet.Cells[row, 13].Value = RoundToFour(rrWithSameWC.Sum(wcs => wcs.QuantityReceived) + rr.QuantityReceived); // added the current rr's quantity because it is excluded in rrWithSameWC
 
                     worksheet.Cells[row, 3].Style.Numberformat.Format = "MM/dd/yyyy";
                     worksheet.Cells[row, 11].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[row, 13].Style.Numberformat.Format = currencyFormatTwoDecimal;
 
-                    wcTotal += (rrWithSameWC.Sum(wcs => wcs.QuantityReceived) + rr.QuantityReceived); // added the current rr's quantity because it is excluded in rrWithSameWC
+                    wcTotal += RoundToFour(rrWithSameWC.Sum(wcs => wcs.QuantityReceived) + rr.QuantityReceived); // added the current rr's quantity because it is excluded in rrWithSameWC
                     col = 14;
                     int ctr = 1;
 
@@ -6893,18 +6903,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     var quantityServed = groupByProduct.Sum(rr => rr.QuantityReceived);
                     var salesAmount = groupByProduct.Sum(rr => rr.DeliveryReceipt!.TotalAmount);
-                    var salesAmountVatEx = salesAmount / 1.12m;
-                    var salesPerLiterVatEx = salesAmountVatEx / quantityServed;
+                    var salesAmountVatEx = RoundToFour(salesAmount / 1.12m);
+                    var salesPerLiterVatEx = DivideOrZero(salesAmountVatEx, quantityServed);
                     var costAmount = groupByProduct.Sum(rr => rr.Amount);
-                    var costAmountVatEx = costAmount / 1.12m;
-                    var costPerLiterVatEx = costAmountVatEx / quantityServed;
+                    var costAmountVatEx = RoundToFour(costAmount / 1.12m);
+                    var costPerLiterVatEx = DivideOrZero(costAmountVatEx, quantityServed);
                     var freightAmount = groupByProduct.Sum(rr => rr.DeliveryReceipt!.FreightAmount);
-                    var freightAmountEx = freightAmount / 1.12m;
-                    var freightPerLiterEx = freightAmountEx / quantityServed;
+                    var freightAmountEx = RoundToFour(freightAmount / 1.12m);
+                    var freightPerLiterEx = DivideOrZero(freightAmountEx, quantityServed);
                     var commissionAmount = groupByProduct.Sum(rr => rr.DeliveryReceipt!.CommissionAmount);
-                    var commissionPerLiter = commissionAmount / quantityServed;
-                    var gmAmount = salesAmountVatEx - costAmountVatEx - freightAmountEx - commissionAmount;
-                    var gmPerLiter = gmAmount / quantityServed;
+                    var commissionPerLiter = DivideOrZero(commissionAmount, quantityServed);
+                    var gmAmount = RoundToFour(salesAmountVatEx - costAmountVatEx - freightAmountEx - commissionAmount);
+                    var gmPerLiter = DivideOrZero(gmAmount, quantityServed);
 
                     // CONTENTS ENCODING
                     worksheet.Cells[row, 2].Value = "All Segment:";
@@ -6951,17 +6961,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 4].Value = totalQuantityServed;
                 worksheet.Cells[row, 5].Value = totalSalesAmount;
                 worksheet.Cells[row, 6].Value = totalSalesAmountVatEx;
-                worksheet.Cells[row, 7].Value = totalSalesAmountVatEx / totalQuantityServed;
+                worksheet.Cells[row, 7].Value = DivideOrZero(totalSalesAmountVatEx, totalQuantityServed);
                 worksheet.Cells[row, 8].Value = totalCostAmount;
                 worksheet.Cells[row, 9].Value = totalCostAmountVatEx;
-                worksheet.Cells[row, 10].Value = totalCostAmountVatEx / totalQuantityServed;
+                worksheet.Cells[row, 10].Value = DivideOrZero(totalCostAmountVatEx, totalQuantityServed);
                 worksheet.Cells[row, 11].Value = totalFreightAmount;
                 worksheet.Cells[row, 12].Value = totalFreightAmountEx;
-                worksheet.Cells[row, 13].Value = totalFreightAmountEx / totalQuantityServed;
+                worksheet.Cells[row, 13].Value = DivideOrZero(totalFreightAmountEx, totalQuantityServed);
                 worksheet.Cells[row, 14].Value = totalCommissionAmount;
-                worksheet.Cells[row, 15].Value = totalCommissionAmount / totalQuantityServed;
+                worksheet.Cells[row, 15].Value = DivideOrZero(totalCommissionAmount, totalQuantityServed);
                 worksheet.Cells[row, 16].Value = totalGmAmount;
-                worksheet.Cells[row, 17].Value = totalGmAmount / totalQuantityServed;
+                worksheet.Cells[row, 17].Value = DivideOrZero(totalGmAmount, totalQuantityServed);
                 // styling
                 using (var range = worksheet.Cells[row, 4, row, 16])
                 {
@@ -7047,18 +7057,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                         var quantityServed = groupByProduct.Sum(rr => rr.QuantityReceived);
                         var salesAmount = groupByProduct.Sum(rr => rr.DeliveryReceipt!.TotalAmount);
-                        var salesAmountVatEx = salesAmount / 1.12m;
-                        var salesPerLiterVatEx = salesAmountVatEx / quantityServed;
+                        var salesAmountVatEx = RoundToFour(salesAmount / 1.12m);
+                        var salesPerLiterVatEx = DivideOrZero(salesAmountVatEx, quantityServed);
                         var costAmount = groupByProduct.Sum(rr => rr.Amount);
-                        var costAmountVatEx = costAmount / 1.12m;
-                        var costPerLiterVatEx = costAmountVatEx / quantityServed;
+                        var costAmountVatEx = RoundToFour(costAmount / 1.12m);
+                        var costPerLiterVatEx = DivideOrZero(costAmountVatEx, quantityServed);
                         var freightAmount = groupByProduct.Sum(rr => rr.DeliveryReceipt!.FreightAmount);
-                        var freightAmountEx = freightAmount / 1.12m;
-                        var freightPerLiterEx = freightAmountEx / quantityServed;
+                        var freightAmountEx = RoundToFour(freightAmount / 1.12m);
+                        var freightPerLiterEx = DivideOrZero(freightAmountEx, quantityServed);
                         var commissionAmount = groupByProduct.Sum(rr => rr.DeliveryReceipt!.CommissionAmount);
-                        var commissionPerLiter = commissionAmount / quantityServed;
-                        var gmAmount = salesAmountVatEx - costAmountVatEx - freightAmountEx - commissionAmount;
-                        var gmPerLiter = gmAmount / quantityServed;
+                        var commissionPerLiter = DivideOrZero(commissionAmount, quantityServed);
+                        var gmAmount = RoundToFour(salesAmountVatEx - costAmountVatEx - freightAmountEx - commissionAmount);
+                        var gmPerLiter = DivideOrZero(gmAmount, quantityServed);
 
                         // ENCODE, THIS SET IS BY PRODUCT
                         worksheet.Cells[row, 2].Value = segment;
@@ -7105,17 +7115,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 4].Value = totalQuantityServed;
                     worksheet.Cells[row, 5].Value = totalSalesAmount;
                     worksheet.Cells[row, 6].Value = totalSalesAmountVatEx;
-                    worksheet.Cells[row, 7].Value = totalSalesAmountVatEx / totalQuantityServed;
+                    worksheet.Cells[row, 7].Value = DivideOrZero(totalSalesAmountVatEx, totalQuantityServed);
                     worksheet.Cells[row, 8].Value = totalCostAmount;
                     worksheet.Cells[row, 9].Value = totalCostAmountVatEx;
-                    worksheet.Cells[row, 10].Value = totalCostAmountVatEx / totalQuantityServed;
+                    worksheet.Cells[row, 10].Value = DivideOrZero(totalCostAmountVatEx, totalQuantityServed);
                     worksheet.Cells[row, 11].Value = totalFreightAmount;
                     worksheet.Cells[row, 12].Value = totalFreightAmountEx;
-                    worksheet.Cells[row, 13].Value = totalFreightAmountEx / totalQuantityServed;
+                    worksheet.Cells[row, 13].Value = DivideOrZero(totalFreightAmountEx, totalQuantityServed);
                     worksheet.Cells[row, 14].Value = totalCommissionAmount;
-                    worksheet.Cells[row, 15].Value = totalCommissionAmount / totalQuantityServed;
+                    worksheet.Cells[row, 15].Value = DivideOrZero(totalCommissionAmount, totalQuantityServed);
                     worksheet.Cells[row, 16].Value = totalGmAmount;
-                    worksheet.Cells[row, 17].Value = totalGmAmount / totalQuantityServed;
+                    worksheet.Cells[row, 17].Value = DivideOrZero(totalGmAmount, totalQuantityServed);
                     // styling
                     using (var range = worksheet.Cells[row, 4, row, 17])
                     {
@@ -7192,18 +7202,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     {
                         var quantityServed = receivingReport.QuantityReceived;
                         var salesAmount = receivingReport.DeliveryReceipt!.TotalAmount;
-                        var salesAmountVatEx = salesAmount / 1.12m;
-                        var salesPerLiterVatEx = salesAmountVatEx / quantityServed;
+                        var salesAmountVatEx = RoundToFour(salesAmount / 1.12m);
+                        var salesPerLiterVatEx = DivideOrZero(salesAmountVatEx, quantityServed);
                         var costAmount = receivingReport.Amount;
-                        var costAmountVatEx = costAmount / 1.12m;
-                        var costPerLiterVatEx = costAmountVatEx / quantityServed;
+                        var costAmountVatEx = RoundToFour(costAmount / 1.12m);
+                        var costPerLiterVatEx = DivideOrZero(costAmountVatEx, quantityServed);
                         var freightAmount = receivingReport.DeliveryReceipt!.FreightAmount;
-                        var freightAmountEx = freightAmount / 1.12m;
-                        var freightPerLiterEx = freightAmountEx / quantityServed;
+                        var freightAmountEx = RoundToFour(freightAmount / 1.12m);
+                        var freightPerLiterEx = DivideOrZero(freightAmountEx, quantityServed);
                         var commissionAmount = receivingReport.DeliveryReceipt!.CommissionAmount;
-                        var commissionPerLiter = commissionAmount / quantityServed;
-                        var gmAmount = salesAmountVatEx - costAmountVatEx - freightAmountEx - commissionAmount;
-                        var gmPerLiter = gmAmount / quantityServed;
+                        var commissionPerLiter = DivideOrZero(commissionAmount, quantityServed);
+                        var gmAmount = RoundToFour(salesAmountVatEx - costAmountVatEx - freightAmountEx - commissionAmount);
+                        var gmPerLiter = DivideOrZero(gmAmount, quantityServed);
 
                         // SUBTOTAL BY SEGMENT
                         worksheet.Cells[row, 2].Value = receivingReport.Date.ToString("MM/dd/yyyy");
@@ -7259,17 +7269,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 11].Value = totalQuantityServed;
                     worksheet.Cells[row, 12].Value = totalSalesAmount;
                     worksheet.Cells[row, 13].Value = totalSalesAmountVatEx;
-                    worksheet.Cells[row, 14].Value = totalSalesAmountVatEx / totalQuantityServed;
+                    worksheet.Cells[row, 14].Value = DivideOrZero(totalSalesAmountVatEx, totalQuantityServed);
                     worksheet.Cells[row, 15].Value = totalCostAmount;
                     worksheet.Cells[row, 16].Value = totalCostAmountVatEx;
-                    worksheet.Cells[row, 17].Value = totalCostAmountVatEx / totalQuantityServed;
+                    worksheet.Cells[row, 17].Value = DivideOrZero(totalCostAmountVatEx, totalQuantityServed);
                     worksheet.Cells[row, 18].Value = totalFreightAmount;
                     worksheet.Cells[row, 19].Value = totalFreightAmountEx;
-                    worksheet.Cells[row, 20].Value = totalFreightAmountEx / totalQuantityServed;
+                    worksheet.Cells[row, 20].Value = DivideOrZero(totalFreightAmountEx, totalQuantityServed);
                     worksheet.Cells[row, 21].Value = totalCommissionAmount;
-                    worksheet.Cells[row, 22].Value = totalCommissionAmount / totalQuantityServed;
+                    worksheet.Cells[row, 22].Value = DivideOrZero(totalCommissionAmount, totalQuantityServed);
                     worksheet.Cells[row, 23].Value = totalGmAmount;
-                    worksheet.Cells[row, 24].Value = totalGmAmount / totalQuantityServed;
+                    worksheet.Cells[row, 24].Value = DivideOrZero(totalGmAmount, totalQuantityServed);
 
                     // styling
                     using (var range = worksheet.Cells[row, 11, row, 23])
@@ -7336,18 +7346,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     {
                         var quantityServed = receivingReport.QuantityReceived;
                         var salesAmount = receivingReport.DeliveryReceipt!.TotalAmount;
-                        var salesAmountVatEx = salesAmount / 1.12m;
-                        var salesPerLiterVatEx = salesAmountVatEx / quantityServed;
+                        var salesAmountVatEx = RoundToFour(salesAmount / 1.12m);
+                        var salesPerLiterVatEx = DivideOrZero(salesAmountVatEx, quantityServed);
                         var costAmount = receivingReport.Amount;
-                        var costAmountVatEx = costAmount / 1.12m;
-                        var costPerLiterVatEx = costAmountVatEx / quantityServed;
+                        var costAmountVatEx = RoundToFour(costAmount / 1.12m);
+                        var costPerLiterVatEx = DivideOrZero(costAmountVatEx, quantityServed);
                         var freightAmount = receivingReport.DeliveryReceipt!.FreightAmount;
-                        var freightAmountEx = freightAmount / 1.12m;
-                        var freightPerLiterEx = freightAmountEx / quantityServed;
+                        var freightAmountEx = RoundToFour(freightAmount / 1.12m);
+                        var freightPerLiterEx = DivideOrZero(freightAmountEx, quantityServed);
                         var commissionAmount = receivingReport.DeliveryReceipt!.CommissionAmount;
-                        var commissionPerLiter = commissionAmount / quantityServed;
-                        var gmAmount = salesAmountVatEx - costAmountVatEx - freightAmountEx - commissionAmount;
-                        var gmPerLiter = gmAmount / quantityServed;
+                        var commissionPerLiter = DivideOrZero(commissionAmount, quantityServed);
+                        var gmAmount = RoundToFour(salesAmountVatEx - costAmountVatEx - freightAmountEx - commissionAmount);
+                        var gmPerLiter = DivideOrZero(gmAmount, quantityServed);
 
                         // SUBTOTAL BY SEGMENT
                         worksheet.Cells[row, 2].Value = receivingReport.Date.ToString("MM/dd/yyyy");
@@ -7403,17 +7413,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 11].Value = totalQuantityServed;
                     worksheet.Cells[row, 12].Value = totalSalesAmount;
                     worksheet.Cells[row, 13].Value = totalSalesAmountVatEx;
-                    worksheet.Cells[row, 14].Value = totalSalesAmountVatEx / totalQuantityServed;
+                    worksheet.Cells[row, 14].Value = DivideOrZero(totalSalesAmountVatEx, totalQuantityServed);
                     worksheet.Cells[row, 15].Value = totalCostAmount;
                     worksheet.Cells[row, 16].Value = totalCostAmountVatEx;
-                    worksheet.Cells[row, 17].Value = totalCostAmountVatEx / totalQuantityServed;
+                    worksheet.Cells[row, 17].Value = DivideOrZero(totalCostAmountVatEx, totalQuantityServed);
                     worksheet.Cells[row, 18].Value = totalFreightAmount;
                     worksheet.Cells[row, 19].Value = totalFreightAmountEx;
-                    worksheet.Cells[row, 20].Value = totalFreightAmountEx / totalQuantityServed;
+                    worksheet.Cells[row, 20].Value = DivideOrZero(totalFreightAmountEx, totalQuantityServed);
                     worksheet.Cells[row, 21].Value = totalCommissionAmount;
-                    worksheet.Cells[row, 22].Value = totalCommissionAmount / totalQuantityServed;
+                    worksheet.Cells[row, 22].Value = DivideOrZero(totalCommissionAmount, totalQuantityServed);
                     worksheet.Cells[row, 23].Value = totalGmAmount;
-                    worksheet.Cells[row, 24].Value = totalGmAmount / totalQuantityServed;
+                    worksheet.Cells[row, 24].Value = DivideOrZero(totalGmAmount, totalQuantityServed);
 
                     // styling
                     using (var range = worksheet.Cells[row, 11, row, 23])
@@ -7480,18 +7490,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     {
                         var quantityServed = receivingReport.QuantityReceived;
                         var salesAmount = receivingReport.DeliveryReceipt!.TotalAmount;
-                        var salesAmountVatEx = salesAmount / 1.12m;
-                        var salesPerLiterVatEx = salesAmountVatEx / quantityServed;
+                        var salesAmountVatEx = RoundToFour(salesAmount / 1.12m);
+                        var salesPerLiterVatEx = DivideOrZero(salesAmountVatEx, quantityServed);
                         var costAmount = receivingReport.Amount;
-                        var costAmountVatEx = costAmount / 1.12m;
-                        var costPerLiterVatEx = costAmountVatEx / quantityServed;
+                        var costAmountVatEx = RoundToFour(costAmount / 1.12m);
+                        var costPerLiterVatEx = DivideOrZero(costAmountVatEx, quantityServed);
                         var freightAmount = receivingReport.DeliveryReceipt!.FreightAmount;
-                        var freightAmountEx = freightAmount / 1.12m;
-                        var freightPerLiterEx = freightAmountEx / quantityServed;
+                        var freightAmountEx = RoundToFour(freightAmount / 1.12m);
+                        var freightPerLiterEx = DivideOrZero(freightAmountEx, quantityServed);
                         var commissionAmount = receivingReport.DeliveryReceipt!.CommissionAmount;
-                        var commissionPerLiter = commissionAmount / quantityServed;
-                        var gmAmount = salesAmountVatEx - costAmountVatEx - freightAmountEx - commissionAmount;
-                        var gmPerLiter = gmAmount / quantityServed;
+                        var commissionPerLiter = DivideOrZero(commissionAmount, quantityServed);
+                        var gmAmount = RoundToFour(salesAmountVatEx - costAmountVatEx - freightAmountEx - commissionAmount);
+                        var gmPerLiter = DivideOrZero(gmAmount, quantityServed);
 
                         // SUBTOTAL BY SEGMENT
                         worksheet.Cells[row, 2].Value = receivingReport.Date.ToString("MM/dd/yyyy");
@@ -7547,17 +7557,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 11].Value = totalQuantityServed;
                     worksheet.Cells[row, 12].Value = totalSalesAmount;
                     worksheet.Cells[row, 13].Value = totalSalesAmountVatEx;
-                    worksheet.Cells[row, 14].Value = totalSalesAmountVatEx / totalQuantityServed;
+                    worksheet.Cells[row, 14].Value = DivideOrZero(totalSalesAmountVatEx, totalQuantityServed);
                     worksheet.Cells[row, 15].Value = totalCostAmount;
                     worksheet.Cells[row, 16].Value = totalCostAmountVatEx;
-                    worksheet.Cells[row, 17].Value = totalCostAmountVatEx / totalQuantityServed;
+                    worksheet.Cells[row, 17].Value = DivideOrZero(totalCostAmountVatEx, totalQuantityServed);
                     worksheet.Cells[row, 18].Value = totalFreightAmount;
                     worksheet.Cells[row, 19].Value = totalFreightAmountEx;
-                    worksheet.Cells[row, 20].Value = totalFreightAmountEx / totalQuantityServed;
+                    worksheet.Cells[row, 20].Value = DivideOrZero(totalFreightAmountEx, totalQuantityServed);
                     worksheet.Cells[row, 21].Value = totalCommissionAmount;
-                    worksheet.Cells[row, 22].Value = totalCommissionAmount / totalQuantityServed;
+                    worksheet.Cells[row, 22].Value = DivideOrZero(totalCommissionAmount, totalQuantityServed);
                     worksheet.Cells[row, 23].Value = totalGmAmount;
-                    worksheet.Cells[row, 24].Value = totalGmAmount / totalQuantityServed;
+                    worksheet.Cells[row, 24].Value = DivideOrZero(totalGmAmount, totalQuantityServed);
 
                     // styling
                     using (var range = worksheet.Cells[row, 11, row, 23])
@@ -7654,27 +7664,27 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             {
                                 var quantityServed = receivingReport.QuantityReceived;
                                 var salesAmount = receivingReport.DeliveryReceipt!.TotalAmount;
-                                var salesAmountVatEx = salesAmount / 1.12m;
+                                var salesAmountVatEx = RoundToFour(salesAmount / 1.12m);
                                 var salesPerLiterVatEx = quantityServed > 0
-                                    ? salesAmountVatEx / quantityServed
+                                    ? DivideOrZero(salesAmountVatEx, quantityServed)
                                     : 0m;
                                 var costAmount = receivingReport.Amount;
-                                var costAmountVatEx = costAmount / 1.12m;
+                                var costAmountVatEx = RoundToFour(costAmount / 1.12m);
                                 var costPerLiterVatEx = quantityServed > 0
-                                    ? costAmountVatEx / quantityServed
+                                    ? DivideOrZero(costAmountVatEx, quantityServed)
                                     : 0m;
                                 var freightAmount = receivingReport.DeliveryReceipt!.FreightAmount;
-                                var freightAmountEx = freightAmount / 1.12m;
+                                var freightAmountEx = RoundToFour(freightAmount / 1.12m);
                                 var freightPerLiterEx = quantityServed > 0
-                                    ? freightAmountEx / quantityServed
+                                    ? DivideOrZero(freightAmountEx, quantityServed)
                                     : 0m;
                                 var commissionAmount = receivingReport.DeliveryReceipt!.CommissionAmount;
                                 var commissionPerLiter = quantityServed > 0
-                                    ? commissionAmount / quantityServed
+                                    ? DivideOrZero(commissionAmount, quantityServed)
                                     : 0m;
-                                var gmAmount = salesAmountVatEx - costAmountVatEx - freightAmountEx - commissionAmount;
+                                var gmAmount = RoundToFour(salesAmountVatEx - costAmountVatEx - freightAmountEx - commissionAmount);
                                 var gmPerLiter = quantityServed > 0
-                                    ? gmAmount / quantityServed
+                                    ? DivideOrZero(gmAmount, quantityServed)
                                     : 0m;
 
                                 // SUBTOTAL BY SEGMENT
@@ -7731,17 +7741,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             worksheet.Cells[row, 11].Value = totalQuantityServed;
                             worksheet.Cells[row, 12].Value = totalSalesAmount;
                             worksheet.Cells[row, 13].Value = totalSalesAmountVatEx;
-                            worksheet.Cells[row, 14].Value = totalSalesAmountVatEx / totalQuantityServed;
+                            worksheet.Cells[row, 14].Value = DivideOrZero(totalSalesAmountVatEx, totalQuantityServed);
                             worksheet.Cells[row, 15].Value = totalCostAmount;
                             worksheet.Cells[row, 16].Value = totalCostAmountVatEx;
-                            worksheet.Cells[row, 17].Value = totalCostAmountVatEx / totalQuantityServed;
+                            worksheet.Cells[row, 17].Value = DivideOrZero(totalCostAmountVatEx, totalQuantityServed);
                             worksheet.Cells[row, 18].Value = totalFreightAmount;
                             worksheet.Cells[row, 19].Value = totalFreightAmountEx;
-                            worksheet.Cells[row, 20].Value = totalFreightAmountEx / totalQuantityServed;
+                            worksheet.Cells[row, 20].Value = DivideOrZero(totalFreightAmountEx, totalQuantityServed);
                             worksheet.Cells[row, 21].Value = totalCommissionAmount;
-                            worksheet.Cells[row, 22].Value = totalCommissionAmount / totalQuantityServed;
+                            worksheet.Cells[row, 22].Value = DivideOrZero(totalCommissionAmount, totalQuantityServed);
                             worksheet.Cells[row, 23].Value = totalGmAmount;
-                            worksheet.Cells[row, 24].Value = totalGmAmount / totalQuantityServed;
+                            worksheet.Cells[row, 24].Value = DivideOrZero(totalGmAmount, totalQuantityServed);
 
                             // styling
                             using (var range = worksheet.Cells[row, 11, row, 23])
@@ -7776,18 +7786,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         row += 2;
                         var quantityServed = rrSetBySegment.Sum(rr => rr.QuantityReceived);
                         var salesAmount = rrSetBySegment.Sum(rr => rr.DeliveryReceipt!.TotalAmount);
-                        var salesAmountVatEx = salesAmount / 1.12m;
-                        var salesPerLiterVatEx = salesAmountVatEx / quantityServed;
+                        var salesAmountVatEx = RoundToFour(salesAmount / 1.12m);
+                        var salesPerLiterVatEx = DivideOrZero(salesAmountVatEx, quantityServed);
                         var costAmount = rrSetBySegment.Sum(rr => rr.Amount);
-                        var costAmountVatEx = costAmount / 1.12m;
-                        var costPerLiterVatEx = costAmountVatEx / quantityServed;
+                        var costAmountVatEx = RoundToFour(costAmount / 1.12m);
+                        var costPerLiterVatEx = DivideOrZero(costAmountVatEx, quantityServed);
                         var freightAmount = rrSetBySegment.Sum(rr => rr.DeliveryReceipt!.FreightAmount);
-                        var freightAmountEx = freightAmount / 1.12m;
-                        var freightPerLiterEx = freightAmountEx / quantityServed;
+                        var freightAmountEx = RoundToFour(freightAmount / 1.12m);
+                        var freightPerLiterEx = DivideOrZero(freightAmountEx, quantityServed);
                         var commissionAmount = rrSetBySegment.Sum(rr => rr.DeliveryReceipt!.CommissionAmount);
-                        var commissionPerLiter = commissionAmount / quantityServed;
-                        var gmAmount = salesAmountVatEx - costAmountVatEx - freightAmountEx - commissionAmount;
-                        var gmPerLiter = gmAmount / quantityServed;
+                        var commissionPerLiter = DivideOrZero(commissionAmount, quantityServed);
+                        var gmAmount = RoundToFour(salesAmountVatEx - costAmountVatEx - freightAmountEx - commissionAmount);
+                        var gmPerLiter = DivideOrZero(gmAmount, quantityServed);
 
                         worksheet.Cells[row, 10].Value = "Sub-total (All Products)";
                         worksheet.Cells[row, 11].Value = quantityServed;
@@ -7843,17 +7853,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 11].Value = grandTotalQuantityServed;
                 worksheet.Cells[row, 12].Value = grandTotalSalesAmount;
                 worksheet.Cells[row, 13].Value = grandTotalSalesAmountVatEx;
-                worksheet.Cells[row, 14].Value = grandTotalSalesAmountVatEx / grandTotalQuantityServed;
+                worksheet.Cells[row, 14].Value = DivideOrZero(grandTotalSalesAmountVatEx, grandTotalQuantityServed);
                 worksheet.Cells[row, 15].Value = grandTotalCostAmount;
                 worksheet.Cells[row, 16].Value = grandTotalCostAmountVatEx;
-                worksheet.Cells[row, 17].Value = grandTotalCostAmountVatEx / grandTotalQuantityServed;
+                worksheet.Cells[row, 17].Value = DivideOrZero(grandTotalCostAmountVatEx, grandTotalQuantityServed);
                 worksheet.Cells[row, 18].Value = grandTotalFreightAmount;
                 worksheet.Cells[row, 19].Value = grandTotalFreightAmountEx;
-                worksheet.Cells[row, 20].Value = grandTotalFreightAmountEx / grandTotalQuantityServed;
+                worksheet.Cells[row, 20].Value = DivideOrZero(grandTotalFreightAmountEx, grandTotalQuantityServed);
                 worksheet.Cells[row, 21].Value = grandTotalCommissionAmount;
-                worksheet.Cells[row, 22].Value = grandTotalCommissionAmount / grandTotalQuantityServed;
+                worksheet.Cells[row, 22].Value = DivideOrZero(grandTotalCommissionAmount, grandTotalQuantityServed);
                 worksheet.Cells[row, 23].Value = grandTotalGmAmount;
-                worksheet.Cells[row, 24].Value = grandTotalGmAmount / grandTotalQuantityServed;
+                worksheet.Cells[row, 24].Value = DivideOrZero(grandTotalGmAmount, grandTotalQuantityServed);
 
                 // styling
                 using (var range = worksheet.Cells[row, 11, row, 23])
@@ -8324,11 +8334,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                             volume = totalVolume - sumOfVolumePaid;
 
-                                            netOfVat = isSupplierVatable ? repoCalculator.ComputeNetOfVat(gross) : gross;
+                                            netOfVat = isSupplierVatable ? RoundToFour(repoCalculator.ComputeNetOfVat(gross)) : gross;
 
                                             ewtPercentage = sameMonthYear.Average(dr => dr.Hauler!.WithholdingTaxPercent ?? 0m);
 
-                                            ewt = isSupplierTaxable ? repoCalculator.ComputeEwtAmount(netOfVat, ewtPercentage) : 0m;
+                                            ewt = isSupplierTaxable ? RoundToFour(repoCalculator.ComputeEwtAmount(netOfVat, ewtPercentage)) : 0m;
 
                                             net = gross - ewt;
 
@@ -8347,11 +8357,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                             volume = totalVolume - sumOfVolumePaid;
 
-                                            netOfVat = isSupplierVatable ? repoCalculator.ComputeNetOfVat(gross) : gross;
+                                            netOfVat = isSupplierVatable ? RoundToFour(repoCalculator.ComputeNetOfVat(gross)) : gross;
 
                                             ewtPercentage = sameMonthYear.Average(dr => dr.Hauler!.WithholdingTaxPercent ?? 0m);
 
-                                            ewt = isSupplierTaxable ? repoCalculator.ComputeEwtAmount(netOfVat, ewtPercentage) : 0m;
+                                            ewt = isSupplierTaxable ? RoundToFour(repoCalculator.ComputeEwtAmount(netOfVat, ewtPercentage)) : 0m;
 
                                             net = gross - ewt;
 
@@ -8387,9 +8397,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                             volume = sumOfVolumePaid;
 
-                                            netOfVat = isSupplierVatable ? repoCalculator.ComputeNetOfVat(gross) : gross;
+                                            netOfVat = isSupplierVatable ? RoundToFour(repoCalculator.ComputeNetOfVat(gross)) : gross;
 
-                                            ewt = isSupplierTaxable ? repoCalculator.ComputeEwtAmount(netOfVat, ewtPercentage) : 0m;
+                                            ewt = isSupplierTaxable ? RoundToFour(repoCalculator.ComputeEwtAmount(netOfVat, ewtPercentage)) : 0m;
 
                                             net = gross - ewt;
 
@@ -8513,10 +8523,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     #region == Ending Subtotal and Grand Total Processes ==
 
                     // input subtotal of ending
-                    var subtotalVolumeEnding = subtotalVolumeBeginning + subtotalVolumePurchases - subtotalVolumePayments;
-                    var subtotalGrossEnding = subtotalGrossBeginning + subtotalGrossPurchases - subtotalGrossPayments;
-                    var subtotalEwtEnding = subtotalEwtBeginning + subtotalEwtPurchases - subtotalEwtPayments;
-                    var subtotalNetEnding = subtotalNetBeginning + subtotalNetPurchases - subtotalNetPayments;
+                    var subtotalVolumeEnding = RoundToFour(subtotalVolumeBeginning + subtotalVolumePurchases - subtotalVolumePayments);
+                    var subtotalGrossEnding = RoundToFour(subtotalGrossBeginning + subtotalGrossPurchases - subtotalGrossPayments);
+                    var subtotalEwtEnding = RoundToFour(subtotalEwtBeginning + subtotalEwtPurchases - subtotalEwtPayments);
+                    var subtotalNetEnding = RoundToFour(subtotalNetBeginning + subtotalNetPurchases - subtotalNetPayments);
 
                     worksheet.Cells[row, 19].Value = subtotalVolumeEnding;
                     worksheet.Cells[row, 20].Value = subtotalGrossEnding;
@@ -8855,3 +8865,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
         #endregion -- Generated Journal Voucher Report as Excel File --
     }
 }
+
+
+
+
+
+
