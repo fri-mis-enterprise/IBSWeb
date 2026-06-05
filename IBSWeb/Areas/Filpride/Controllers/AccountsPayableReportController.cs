@@ -5121,16 +5121,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                             {
                                                 rrQtyForLiftedThisMonth += rr.QuantityReceived;
                                                 grossOfLiftedThisMonth += rr.Amount;
+
+                                                var netOfVat = isVatable
+                                                    ? repoCalculator.ComputeNetOfVat(rr.Amount)
+                                                    : rr.Amount;
+                                                var ewt = isTaxable
+                                                    ? repoCalculator.ComputeEwtAmount(netOfVat, rr.TaxPercentage)
+                                                    : 0m;
+
+                                                totalEwt += ewt;
                                             }
-
-                                            var netOfVat = isVatable
-                                                ? repoCalculator.ComputeNetOfVat(rr.Amount)
-                                                : grossOfLiftedThisMonth;
-                                            var ewt = isTaxable
-                                                ? repoCalculator.ComputeEwtAmount(netOfVat, rr.TaxPercentage)
-                                                : 0m;
-
-                                            totalEwt += ewt;
                                         }
                                     }
 
@@ -5529,13 +5529,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             // computing the cells variables
                             var poTotal = po.Quantity;
                             var grossAmount = 0m;
-                            var ewtPercentage = 0m;
                             var unliftedLastMonth = 0m;
                             var liftedThisMonthRrQty = 0m;
                             var unliftedThisMonth = poTotal;
                             var isPoCurrentlyClosed = po.IsClosed
                                                       && po.Date.Month <= monthYear.Month
                                                       && po.Date.Year <= monthYear.Year;
+                            var isTaxable = po.TaxType == SD.TaxType_WithTax;
+                            var totalEwt = 0m;
 
                             if (po.ReceivingReports!.Count != 0)
                             {
@@ -5559,20 +5560,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     unliftedLastMonth = 0m;
                                 }
 
-                                ewtPercentage = po.ReceivingReports!
-                                    .Where(rr => rr.Date.Month == monthYear.Month && rr.Date.Year == monthYear.Year)
-                                    .Select(r => r.TaxPercentage)
-                                    .DefaultIfEmpty(0m)
-                                    .Average();
+                                totalEwt = isTaxable
+                                    ? liftedThisMonth.Sum(rr =>
+                                    {
+                                        var netOfVat = isVatable
+                                            ? repoCalculator.ComputeNetOfVat(rr.Amount)
+                                            : rr.Amount;
+
+                                        return repoCalculator.ComputeEwtAmount(netOfVat, rr.TaxPercentage);
+                                    })
+                                    : 0m;
                             }
 
-                            var netOfVat = isVatable
-                                ? repoCalculator.ComputeNetOfVat(grossAmount)
-                                : grossAmount;
-
-                            var ewt = ewtPercentage != 0m
-                                ? repoCalculator.ComputeEwtAmount(netOfVat, ewtPercentage)
-                                : 0m;
+                            var ewt = totalEwt;
 
                             // incrementing subtotals
                             poSubtotal += poTotal;

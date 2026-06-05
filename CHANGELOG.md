@@ -23,7 +23,9 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 - Fixed inventory cost update journal-entry calculations and delivery receipt old-value computation.
 - Fixed provisional receipt revision issues across the controller and Razor views.
 - Fixed report/controller runtime issues encountered in collection receipt and accounts payable flows.
+- Fixed trade payable report EWT calculations so topsheet and per-supplier outputs both use current-month per-receiving-report tax amounts consistently.
 - Fixed profit and loss report sorting.
+- Disabled the monthly-closure auto-reversal step for check vouchers without a DCR date.
 
 ### Removed
 - Removed the old Filpride books and related report pages for cash receipt, disbursement, journal, purchase, sales, and transaction reports in SOA.
