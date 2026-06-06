@@ -913,15 +913,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var getSupplier = await _unitOfWork.FilprideSupplier
                 .GetAsync(s => s.SupplierId == supplierId, cancellationToken);
 
-            var getEmployee = await _unitOfWork.FilprideEmployee
-                .GetAsync(s => s.EmployeeId == employeeId, cancellationToken);
-
             var viewModel = new CheckVoucherVM
             {
                 Header = header,
                 Details = details,
-                Supplier = getSupplier,
-                Employee = getEmployee
+                Supplier = getSupplier
             };
 
             #region --Audit Trail Recording
