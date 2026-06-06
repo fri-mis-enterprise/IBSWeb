@@ -58,7 +58,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private async Task PopulateFormDependenciesAsync(ProvisionalReceiptViewModel viewModel, CancellationToken cancellationToken)
         {
-            viewModel.Employees = await _unitOfWork.GetFilprideEmployeeListById(cancellationToken);
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                viewModel.Suppliers = [];
+            }
+            else
+            {
+                viewModel.Suppliers = await _unitOfWork.GetFilprideEmployeeSupplierListAsyncById(companyClaims, cancellationToken);
+            }
+
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.ProvisionalReceipt, cancellationToken);
         }
 
@@ -68,7 +78,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 Id = model.Id,
                 TransactionDate = model.TransactionDate,
-                EmployeeId = model.EmployeeId,
+                SupplierId = model.SupplierId,
                 ReferenceNo = model.ReferenceNo,
                 Remarks = model.Remarks,
                 CashAmount = model.CashAmount,
@@ -92,7 +102,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         private static void MapFormToEntity(ProvisionalReceiptViewModel viewModel, FilprideProvisionalReceipt model)
         {
             model.TransactionDate = viewModel.TransactionDate;
-            model.EmployeeId = viewModel.EmployeeId;
+            model.SupplierId = viewModel.SupplierId;
             model.ReferenceNo = viewModel.ReferenceNo.Trim();
             model.Remarks = viewModel.Remarks?.Trim() ?? string.Empty;
             model.CashAmount = viewModel.CashAmount;
@@ -161,8 +171,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         pr.SeriesNumber.ToLower().Contains(searchValue) ||
                         pr.ReferenceNo.ToLower().Contains(searchValue) ||
                         (pr.Remarks ?? string.Empty).ToLower().Contains(searchValue) ||
-                        pr.Employee.FirstName.ToLower().Contains(searchValue) ||
-                        pr.Employee.LastName.ToLower().Contains(searchValue) ||
+                        pr.Supplier.SupplierName.ToLower().Contains(searchValue) ||
                         (pr.CreatedBy ?? string.Empty).ToLower().Contains(searchValue) ||
                         pr.Status.ToLower().Contains(searchValue) ||
                         (hasTransactionDate && pr.TransactionDate == transactionDate));
@@ -199,8 +208,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             ? query.OrderBy(pr => pr.Status)
                             : query.OrderByDescending(pr => pr.Status),
                         "employeeName" => ascending
-                            ? query.OrderBy(pr => pr.Employee.LastName).ThenBy(pr => pr.Employee.FirstName)
-                            : query.OrderByDescending(pr => pr.Employee.LastName).ThenByDescending(pr => pr.Employee.FirstName),
+                            ? query.OrderBy(pr => pr.Supplier.SupplierName)
+                            : query.OrderByDescending(pr => pr.Supplier.SupplierName),
                         _ => query.OrderByDescending(pr => pr.Id)
                     };
                 }
@@ -219,10 +228,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         pr.Id,
                         pr.SeriesNumber,
                         pr.TransactionDate,
-                        EmployeeName = pr.Employee.FirstName
-                                       + (pr.Employee.MiddleName != null ? " " + pr.Employee.MiddleName : string.Empty)
-                                       + " " + pr.Employee.LastName
-                                       + (pr.Employee.Suffix != null ? " " + pr.Employee.Suffix : string.Empty),
+                        EmployeeName = pr.Supplier.SupplierName,
                         pr.ReferenceNo,
                         pr.Total,
                         pr.DepositedDate,

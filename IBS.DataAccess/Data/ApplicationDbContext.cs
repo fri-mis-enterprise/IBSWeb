@@ -474,9 +474,9 @@ namespace IBS.DataAccess.Data
 
             builder.Entity<FilprideProvisionalReceipt>(pr =>
             {
-                pr.HasOne(p => p.Employee)
+                pr.HasOne(p => p.Supplier)
                     .WithMany()
-                    .HasForeignKey(p => p.EmployeeId)
+                    .HasForeignKey(p => p.SupplierId)
                     .OnDelete(DeleteBehavior.Restrict);
 
                 pr.HasOne(p => p.BankAccount)
