@@ -386,7 +386,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     (SubAccountType? subAccountType, int? subAccountId) = SubAccountHelper.DetermineCvSubAccount(
                         accountEntry.CustomerMasterFileId,
                         accountEntry.SupplierMasterFileId,
-                        accountEntry.EmployeeMasterFileId,
                         accountEntry.BankMasterFileId,
                         accountEntry.CompanyMasterFileId
                     );
@@ -828,9 +827,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         CompanyMasterFileId = details.SubAccountType == SubAccountType.Company
                             ? details.SubAccountId
                             : null,
-                        EmployeeMasterFileId = details.SubAccountType == SubAccountType.Employee
-                            ? details.SubAccountId
-                            : null,
                         CustomerMasterFileId = details.SubAccountType == SubAccountType.Customer
                             ? details.SubAccountId
                             : null,
@@ -955,7 +951,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     (SubAccountType? subAccountType, int? subAccountId) = SubAccountHelper.DetermineCvSubAccount(
                         accountEntry.CustomerMasterFileId,
                         accountEntry.SupplierMasterFileId,
-                        accountEntry.EmployeeMasterFileId,
                         accountEntry.BankMasterFileId,
                         accountEntry.CompanyMasterFileId
                     );

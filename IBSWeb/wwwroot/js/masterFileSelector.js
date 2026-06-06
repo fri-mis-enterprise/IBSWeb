@@ -20,15 +20,6 @@ class MasterFileSelector {
                 formatOption: (item) => `${item.accountNumber} - ${item.accountName}`,
                 inputName: 'CompanyMasterFileId'
             },
-            EMPLOYEE: {
-                id: 'employee',
-                title: 'Employee',
-                url: urls.getEmployees,
-                triggerAccount: '101020400 Advances from Officers and Employees',
-                placeholder: 'Select an employee',
-                formatOption: (item) => `${item.accountNumber} - ${item.accountName}`,
-                inputName: 'EmployeeMasterFileId'
-            },
             CUSTOMER: {
                 id: 'customer',
                 title: 'Customer',
@@ -42,7 +33,7 @@ class MasterFileSelector {
                 id: 'supplier',
                 title: 'Supplier',
                 url: urls.getSuppliers,
-                triggerAccounts: ['101020500 AR-Non Trade Receivable', '101060900 Security Deposit'],
+                triggerAccounts: ['101020400 Advances from Officers and Employees', '101020500 AR-Non Trade Receivable', '101060900 Security Deposit'],
                 placeholder: 'Select a supplier',
                 formatOption: (item) => `${item.accountNumber} - ${item.accountName}`,
                 inputName: 'SupplierMasterFileId'
@@ -127,7 +118,6 @@ class MasterFileSelector {
                                     <option value="">Select type...</option>
                                     <option value="BANK">Bank Account</option>
                                     <option value="COMPANY">Company</option>
-                                    <option value="EMPLOYEE">Employee</option>
                                     <option value="CUSTOMER">Customer</option>
                                     <option value="SUPPLIER">Supplier</option>
                                 </select>

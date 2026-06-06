@@ -111,7 +111,6 @@
                                             </select>
                                             <input type="hidden" name="AccountingEntries[@i].BankMasterFileId" value="@Model.AccountingEntries[i].BankMasterFileId" class="bank-master-file-id" />
                                             <input type="hidden" name="AccountingEntries[@i].CompanyMasterFileId" value="@Model.AccountingEntries[i].CompanyMasterFileId" class="company-master-file-id" />
-                                            <input type="hidden" name="AccountingEntries[@i].EmployeeMasterFileId" value="@Model.AccountingEntries[i].EmployeeMasterFileId" class="employee-master-file-id" />
                                             <input type="hidden" name="AccountingEntries[@i].CustomerMasterFileId" value="@Model.AccountingEntries[i].CustomerMasterFileId" class="customer-master-file-id" />
                                             <input type="hidden" name="AccountingEntries[@i].SupplierMasterFileId" value="@Model.AccountingEntries[i].SupplierMasterFileId" class="supplier-master-file-id" />
                                         </td>
@@ -431,7 +430,6 @@
                     </select>
                     <input type="hidden" name="AccountingEntries[${rowCount}].BankMasterFileId" class="bank-master-file-id" />
                     <input type="hidden" name="AccountingEntries[${rowCount}].CompanyMasterFileId" class="company-master-file-id" />
-                    <input type="hidden" name="AccountingEntries[${rowCount}].EmployeeMasterFileId" class="employee-master-file-id" />
                     <input type="hidden" name="AccountingEntries[${rowCount}].CustomerMasterFileId" class="customer-master-file-id" />
                     <input type="hidden" name="AccountingEntries[${rowCount}].SupplierMasterFileId" class="supplier-master-file-id" />
                 </td>
@@ -636,7 +634,6 @@
             const masterFileSelector = new MasterFileSelector({
                 getBankAccounts: '@Url.Action("GetBankAccounts", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })',
                 getCompanies: '@Url.Action("GetCompanies", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })',
-                getEmployees: '@Url.Action("GetEmployees", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })',
                 getCustomers: '@Url.Action("GetCustomers", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })',
                 getSuppliers: '@Url.Action("GetSuppliers", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })',
             });
@@ -670,7 +667,6 @@
                 const masterFileIds = {
                     bankId: row.querySelector('.bank-master-file-id')?.value,
                     companyId: row.querySelector('.company-master-file-id')?.value,
-                    employeeId: row.querySelector('.employee-master-file-id')?.value,
                     customerId: row.querySelector('.customer-master-file-id')?.value,
                     supplierId: row.querySelector('.supplier-master-file-id')?.value
                 };
@@ -682,7 +678,7 @@
                 const accountMappings = [
                     { key: 'bankId', accounts: ['101010100 Cash in Bank', '101020500 AR-Non Trade Receivable'], url: 'GetBankAccountById' },
                     { key: 'companyId', accounts: ['101010400 Fund Transfer', '101020600 AR-Exchange Check', '101020500 AR-Non Trade Receivable'], url: 'GetCompanyById' },
-                    { key: 'employeeId', accounts: ['101020400 Advances from Officers and Employees', '101020500 AR-Non Trade Receivable'], url: 'GetEmployeeById' },
+                    { key: 'supplierId', accounts: ['101020400 Advances from Officers and Employees'], url: 'GetSupplierById' },
                     { key: 'customerId', accounts: ['101020500 AR-Non Trade Receivable'], url: 'GetCustomerById' },
                     { key: 'supplierId', accounts: ['101020500 AR-Non Trade Receivable'], url: 'GetSupplierById' }
                 ];

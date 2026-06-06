@@ -54,18 +54,6 @@ namespace IBS.Services
                         .FirstOrDefaultAsync(cancellationToken);
                     return supplier;
 
-                case SubAccountType.Employee:
-                    var employee = await _context.FilprideEmployees
-                        .Where(e => e.EmployeeId == subAccountId)
-                        .Select(e => new SubAccountInfoDto
-                        {
-                            Type = SubAccountType.Employee,
-                            Id = e.EmployeeId,
-                            Name = $"{e.FirstName} {e.LastName}"
-                        })
-                        .FirstOrDefaultAsync(cancellationToken);
-                    return employee;
-
                 case SubAccountType.BankAccount:
                     var bank = await _context.FilprideBankAccounts
                         .Where(b => b.BankAccountId == subAccountId)
@@ -105,8 +93,6 @@ namespace IBS.Services
                     .AnyAsync(c => c.CustomerId == subAccountId, cancellationToken),
                 SubAccountType.Supplier => await _context.FilprideSuppliers
                     .AnyAsync(s => s.SupplierId == subAccountId, cancellationToken),
-                SubAccountType.Employee => await _context.FilprideEmployees
-                    .AnyAsync(e => e.EmployeeId == subAccountId, cancellationToken),
                 SubAccountType.BankAccount => await _context.FilprideBankAccounts
                     .AnyAsync(b => b.BankAccountId == subAccountId, cancellationToken),
                 SubAccountType.Company => await _context.Companies
