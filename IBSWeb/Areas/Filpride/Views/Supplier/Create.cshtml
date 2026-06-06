@@ -46,6 +46,11 @@
                     <label class="form-check-label" for="inlineRadio4" id="labelInlineRadio4">Hauler</label>
                 </div>
 
+                <div class="form-check form-check-inline">
+                    <input asp-for="Category" class="form-check-input" type="radio" id="inlineRadio5" value="Employee" aria-labelledby="labelInlineRadio5" onclick="toggleSelect('employeeList')">
+                    <label class="form-check-label" for="inlineRadio5" id="labelInlineRadio5">Employee</label>
+                </div>
+
                 <br />
                 <span class="text-danger"></span>
             </fieldset>
@@ -80,6 +85,11 @@
                     <label asp-for="Branch" class="control-label ms-2">Branch</label>
                     <span asp-validation-for="Branch" class="text-danger"></span>
                 </div>
+            </div>
+            <div class="form-floating mb-3" id="employeeList" style="display: none;">
+                <input asp-for="EmployeeNumber" class="form-control" placeholder="" />
+                <label asp-for="EmployeeNumber" class="control-label">Employee Number<span class="required">*</span></label>
+                <span asp-validation-for="EmployeeNumber" class="text-danger"></span>
             </div>
             <div class="form-group mb-3" id="nonTradeList" style="display: none;">
                 <label class="control-label">Default Expense</label>
@@ -230,36 +240,50 @@
         window.onload = function () {
             var inlineRadio1 = document.getElementById('inlineRadio1');
             var inlineRadio2 = document.getElementById('inlineRadio2');
+            var inlineRadio3 = document.getElementById('inlineRadio3');
+            var inlineRadio4 = document.getElementById('inlineRadio4');
+            var inlineRadio5 = document.getElementById('inlineRadio5');
 
             // Check the default radio button on page load
-            if (inlineRadio1.checked) {
+            if (inlineRadio1.checked || inlineRadio3.checked || inlineRadio4.checked) {
                 document.getElementById('tradeList').style.display = 'block';
                 document.getElementById('nonTradeList').style.display = 'none';
             } else if (inlineRadio2.checked) {
                 document.getElementById('tradeList').style.display = 'none';
                 document.getElementById('nonTradeList').style.display = 'block';
+            } else if (inlineRadio5.checked) {
+                document.getElementById('tradeList').style.display = 'none';
+                document.getElementById('nonTradeList').style.display = 'none';
+                document.getElementById('employeeList').style.display = 'block';
+                document.getElementById('EmployeeNumber').required = true;
             }
         };
 
         function toggleSelect(id) {
             var tradeList = document.getElementById('tradeList');
             var nonTradeList = document.getElementById('nonTradeList');
+            var employeeList = document.getElementById('employeeList');
+            var employeeNumber = document.getElementById('EmployeeNumber');
             var radios = [
                 document.getElementById('inlineRadio1'),
                 document.getElementById('inlineRadio2'),
                 document.getElementById('inlineRadio3'),
-                document.getElementById('inlineRadio4')
+                document.getElementById('inlineRadio4'),
+                document.getElementById('inlineRadio5')
             ];
             const withHoldingTaxPercent = document.getElementById("WithholdingTaxPercent");
             const withHoldingTaxTitle = document.getElementById("WithholdingTaxTitle");
 
             const resetCommonFields = () => {
                 $("#DefaultExpenseNumber").val(null).trigger('change');
+                employeeNumber.value = "";
+                employeeNumber.required = false;
             };
 
             // Hide trade and non-trade lists by default
             tradeList.style.display = 'none';
             nonTradeList.style.display = 'none';
+            employeeList.style.display = 'none';
             withHoldingTaxPercent.style.display = 'none';
             withHoldingTaxTitle.style.display = 'none';
             radios.forEach(radio => radio.checked = false);
@@ -280,6 +304,14 @@
                     $("#TradeName").val("");
                     withHoldingTaxPercent.style.display = 'block';
                     withHoldingTaxTitle.style.display = 'block';
+                    $("#TaxType").val(null).trigger('change');
+                    break;
+                case 'employeeList':
+                    employeeList.style.display = 'block';
+                    employeeNumber.required = true;
+                    radios[4].checked = true;
+                    $("#TradeName").val("");
+                    $("#DefaultExpenseNumber").val(null).trigger('change');
                     $("#TaxType").val(null).trigger('change');
                     break;
             }
