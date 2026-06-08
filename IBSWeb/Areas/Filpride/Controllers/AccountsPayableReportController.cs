@@ -3598,7 +3598,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     gmReportWorksheet.Cells[row, 25].Value = commissionAmount;
                     gmReportWorksheet.Cells[row, 26].Value = netMarginPerLiter;
                     gmReportWorksheet.Cells[row, 27].Value = netMarginAmount;
-                    gmReportWorksheet.Cells[row, 28].Value = dr.Customer!.CustomerType;
 
                     #endregion -- Assign Values to Cells --
 
