@@ -47,6 +47,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 OldValue = request.OldValue,
                 NewValue = request.NewValue,
                 AdjustmentValue = request.AdjustmentValue,
+                AffectedQuantity = request.AffectedQuantity,
                 Reason = request.Reason,
                 CreatedBy = request.CreatedBy,
                 CreatedDate = DateTimeHelper.GetCurrentPhilippineTime()

@@ -78,16 +78,24 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var adjustmentType = GetAdjustmentType(category);
                 var dateFrom = monthDate.ToDateTime(TimeOnly.MinValue);
                 var dateTo = monthDate.AddMonths(1).ToDateTime(TimeOnly.MinValue);
+                var isCombinedReport = string.Equals(category, "All", StringComparison.OrdinalIgnoreCase);
 
-                var adjustments = await _dbContext.LockedPeriodAdjustments
+                var adjustmentsQuery = _dbContext.LockedPeriodAdjustments
                     .AsNoTracking()
-                    .Where(a => a.AdjustmentType == adjustmentType
-                                && a.CreatedDate >= dateFrom
-                                && a.CreatedDate < dateTo)
+                    .Where(a => a.CreatedDate >= dateFrom
+                                && a.CreatedDate < dateTo);
+
+                if (!isCombinedReport)
+                {
+                    var adjustmentType = GetAdjustmentType(category);
+                    adjustmentsQuery = adjustmentsQuery.Where(a => a.AdjustmentType == adjustmentType);
+                }
+
+                var adjustments = await adjustmentsQuery
                     .OrderBy(a => a.CreatedDate)
+                    .ThenBy(a => a.AdjustmentType)
                     .ThenBy(a => a.EntityTypeNo)
                     .ToListAsync(cancellationToken);
 
@@ -97,7 +105,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
-                var document = GenerateAdjustmentReport(adjustments, GetReportTitle(category), monthDate);
+                var document = GenerateAdjustmentReport(adjustments, GetReportTitle(category), monthDate, isCombinedReport);
 
                 FilprideAuditTrail auditTrailBook = new(
                     GetUserFullName(),
@@ -134,6 +142,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             return category switch
             {
+                "All" => "COMPARATIVE ADJUSTMENT REPORT",
                 "Sales" => "COMPARATIVE SALES ADJUSTMENT REPORT",
                 "Purchases" => "COMPARATIVE PURCHASE ADJUSTMENT REPORT",
                 "Commission" => "COMPARATIVE COMMISSION ADJUSTMENT REPORT",
@@ -145,7 +154,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
         private Document GenerateAdjustmentReport(
             IReadOnlyCollection<IBS.Models.Filpride.LockedPeriodAdjustment> adjustments,
             string reportTitle,
-            DateOnly monthDate)
+            DateOnly monthDate,
+            bool isCombinedReport)
         {
             var imgFilprideLogoPath = Path.Combine(_webHostEnvironment.WebRootPath, "img", "Filpride-logo.png");
 
@@ -188,16 +198,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             columns.RelativeColumn();
                             columns.RelativeColumn();
                             columns.RelativeColumn();
+                            columns.RelativeColumn();
+                            columns.RelativeColumn();
+                            if (isCombinedReport)
+                            {
+                                columns.RelativeColumn();
+                            }
                         });
 
                         table.Header(header =>
                         {
                             AddHeaderCell(header, "Created Date");
                             AddHeaderCell(header, "Period");
+                            if (isCombinedReport)
+                            {
+                                AddHeaderCell(header, "Category");
+                            }
                             AddHeaderCell(header, "Module");
                             AddHeaderCell(header, "Reference");
+                            AddHeaderCell(header, "Affected Qty");
                             AddHeaderCell(header, "Old Value");
                             AddHeaderCell(header, "New Value");
+                            AddHeaderCell(header, "Value Diff");
                             AddHeaderCell(header, "Adjustment");
                             AddHeaderCell(header, "Reason");
                             AddHeaderCell(header, "Created By");
@@ -207,16 +229,26 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         {
                             AddTextCell(table, adjustment.CreatedDate.ToString(SD.Date_Format));
                             AddTextCell(table, adjustment.Period.ToString("MMM yyyy"));
+                            if (isCombinedReport)
+                            {
+                                AddTextCell(table, GetCategoryLabel(adjustment.AdjustmentType));
+                            }
                             AddTextCell(table, adjustment.EntityType.ToString());
                             AddTextCell(table, adjustment.EntityTypeNo);
+                            AddNumberCell(table, adjustment.AffectedQuantity, SD.Two_Decimal_Format);
                             AddNumberCell(table, adjustment.OldValue, SD.Four_Decimal_Format);
                             AddNumberCell(table, adjustment.NewValue, SD.Four_Decimal_Format);
+                            AddNumberCell(table, adjustment.NewValue - adjustment.OldValue, SD.Four_Decimal_Format, true);
                             AddNumberCell(table, adjustment.AdjustmentValue, SD.Two_Decimal_Format, true);
                             AddTextCell(table, adjustment.Reason);
                             AddTextCell(table, adjustment.CreatedBy);
                         }
 
-                        AddTotalRow(table, adjustments.Sum(a => a.AdjustmentValue));
+                        AddTotalRow(table,
+                            adjustments.Sum(a => a.AffectedQuantity),
+                            adjustments.Sum(a => a.NewValue - a.OldValue),
+                            adjustments.Sum(a => a.AdjustmentValue),
+                            isCombinedReport);
                     });
 
                     page.Footer().AlignRight().Text(x =>
@@ -250,9 +282,29 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        private static void AddTotalRow(TableDescriptor table, decimal totalAdjustment)
+        private static void AddTotalRow(
+            TableDescriptor table,
+            decimal totalAffectedQuantity,
+            decimal totalValueDifference,
+            decimal totalAdjustment,
+            bool isCombinedReport)
         {
-            table.Cell().ColumnSpan(6).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text("TOTAL").SemiBold();
+            table.Cell().ColumnSpan((uint)(isCombinedReport ? 5 : 4))
+                .Background(Colors.Grey.Lighten1)
+                .Border(0.5f)
+                .Padding(3)
+                .AlignRight()
+                .Text("TOTAL")
+                .SemiBold();
+            table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight()
+                .Text(FormatNumber(totalAffectedQuantity, SD.Two_Decimal_Format))
+                .SemiBold();
+            table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3);
+            table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3);
+            table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight()
+                .Text(FormatNumber(totalValueDifference, SD.Four_Decimal_Format))
+                .SemiBold()
+                .FontColor(totalValueDifference < 0 ? Colors.Red.Medium : Colors.Black);
             table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight()
                 .Text(FormatNumber(totalAdjustment, SD.Two_Decimal_Format))
                 .SemiBold()
@@ -265,6 +317,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return value < 0
                 ? $"({Math.Abs(value).ToString(format)})"
                 : value.ToString(format);
+        }
+
+        private static string GetCategoryLabel(LockedPeriodAdjustmentType adjustmentType)
+        {
+            return adjustmentType switch
+            {
+                LockedPeriodAdjustmentType.SellingPrice => "Sales",
+                LockedPeriodAdjustmentType.UnitCost => "Purchases",
+                LockedPeriodAdjustmentType.Commission => "Commission",
+                LockedPeriodAdjustmentType.Freight => "Freight",
+                _ => adjustmentType.ToString()
+            };
         }
     }
 }

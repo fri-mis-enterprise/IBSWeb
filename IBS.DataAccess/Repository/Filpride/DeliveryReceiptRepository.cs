@@ -1076,6 +1076,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     OldValue = GetUnitValue(deliveryReceipt.TotalAmount - signedDifference, deliveryReceipt.Quantity),
                     NewValue = GetUnitValue(deliveryReceipt.TotalAmount, deliveryReceipt.Quantity),
                     AdjustmentValue = signedDifference,
+                    AffectedQuantity = deliveryReceipt.Quantity,
                     Reason = "Update selling price in COS",
                     CreatedBy = userName
                 }, cancellationToken);
@@ -1202,6 +1203,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     OldValue = GetUnitValue(deliveryReceipt.CommissionAmount - signedDifference, deliveryReceipt.Quantity),
                     NewValue = deliveryReceipt.CommissionRate,
                     AdjustmentValue = signedDifference,
+                    AffectedQuantity = deliveryReceipt.Quantity,
                     Reason = "Update commission",
                     CreatedBy = userName
                 }, cancellationToken);
@@ -1351,6 +1353,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     OldValue = GetUnitValue(deliveryReceipt.FreightAmount - (deliveryReceipt.ECC * deliveryReceipt.Quantity) - signedDifference, deliveryReceipt.Quantity),
                     NewValue = deliveryReceipt.Freight,
                     AdjustmentValue = signedDifference,
+                    AffectedQuantity = deliveryReceipt.Quantity,
                     Reason = "Update freight",
                     CreatedBy = userName
                 }, cancellationToken);

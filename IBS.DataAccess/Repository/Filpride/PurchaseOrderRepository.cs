@@ -282,6 +282,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     OldValue = oldUnitCost,
                     NewValue = model.TriggeredPrice,
                     AdjustmentValue = difference,
+                    AffectedQuantity = effectiveVolume,
                     Reason = "Update approved unit cost in PO",
                     CreatedBy = model.ApprovedBy!
                 }, cancellationToken);

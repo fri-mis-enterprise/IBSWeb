@@ -20,6 +20,8 @@ namespace IBS.DTOs
 
         public decimal AdjustmentValue { get; set; }
 
+        public decimal AffectedQuantity { get; set; }
+
         public string Reason { get; set; } = string.Empty;
 
         public string CreatedBy { get; set; } = string.Empty;

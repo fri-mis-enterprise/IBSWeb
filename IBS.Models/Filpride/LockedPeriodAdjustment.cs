@@ -29,6 +29,9 @@ namespace IBS.Models.Filpride
         [Column(TypeName = "numeric(18,4)")]
         public decimal AdjustmentValue { get; set; }
 
+        [Column(TypeName = "numeric(18,4)")]
+        public decimal AffectedQuantity { get; set; }
+
         [Column(TypeName = "varchar(100)")]
         public string Reason { get; set; } = string.Empty;
 
