@@ -14,9 +14,9 @@ namespace IBS.Models.Filpride.ViewModels
         public DateOnly TransactionDate { get; set; }
 
         [Required(ErrorMessage = "The employee is required.")]
-        public int EmployeeId { get; set; }
+        public int SupplierId { get; set; }
 
-        public List<SelectListItem>? Employees { get; set; }
+        public List<SelectListItem>? Suppliers { get; set; }
 
         [Display(Name = "Payee")]
         public string Payee { get; set; } = null!;

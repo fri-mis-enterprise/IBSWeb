@@ -73,6 +73,10 @@ namespace IBS.Models.Filpride.MasterFile
         [StringLength(20)]
         public string Category { get; set; } = null!;
 
+        [StringLength(50)]
+        [Display(Name = "Employee Number")]
+        public string? EmployeeNumber { get; set; }
+
         [StringLength(255)]
         [Display(Name = "Trade Name")]
         public string? TradeName { get; set; }

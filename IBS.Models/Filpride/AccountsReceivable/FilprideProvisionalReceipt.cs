@@ -15,10 +15,10 @@ namespace IBS.Models.Filpride.AccountsReceivable
 
         public DateOnly TransactionDate { get; set; }
 
-        public int EmployeeId { get; set; }
+        public int SupplierId { get; set; }
 
-        [ForeignKey(nameof(EmployeeId))]
-        public FilprideEmployee Employee { get; set; } = null!;
+        [ForeignKey(nameof(SupplierId))]
+        public FilprideSupplier Supplier { get; set; } = null!;
 
         [StringLength(255)]
         public string ReferenceNo { get; set; } = string.Empty;

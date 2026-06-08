@@ -127,8 +127,7 @@ namespace IBS.Models.Enums
     {
         Customer = 1,
         Supplier = 2,
-        Employee = 3,
-        BankAccount = 4,
-        Company = 5
+        BankAccount = 3,
+        Company = 4
     }
 }

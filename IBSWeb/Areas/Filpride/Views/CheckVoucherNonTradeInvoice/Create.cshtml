@@ -238,7 +238,7 @@
             const netOfVatField = row.querySelector(".net-of-vat");
             const accountField = row.querySelector(".chart-of-accounts");
 
-            const amount = parseFloat(amountField.value) || 0;
+            const amount = parseNumber(amountField.value) || 0;
             const taxPercentage = parseFloat(row.querySelector(".taxable").value) || 0;
             const isVatable = vatableField.checked;
             const text = accountField.options[accountField.selectedIndex]?.text || '';
@@ -259,10 +259,10 @@
             netOfVatField.value = netOfVat.toFixed(4);
 
             // Add to accumulated entries without clearing previous entries
-            if(amount > 0){
+            if (accountCode && amount > 0) {
                 addToAccumulatedEntries(accountTitle, netOfVat, 0);
             }
-            if(amount < 0) {
+            if (accountCode && amount < 0) {
                 reverseAddToAccumulatedEntries(accountTitle, 0, Math.abs(netOfVat));
             }
             if (isVatable && vatAmount > 0) {
@@ -489,9 +489,26 @@
                 originalChartOfAccountsHTML = firstSelect.innerHTML;
             }
 
+            function clearAccountingEntrySelections() {
+                $('#accountTable tbody tr').each(function () {
+                    const row = $(this);
+                    const accountSelect = row.find('.chart-of-accounts');
+                    const originalText = accountSelect.data('original-text');
+
+                    if (originalText && accountSelect.val()) {
+                        accountSelect.find('option:selected').text(originalText);
+                    }
+
+                    row.find('input[name$=".BankMasterFileId"], input[name$=".CompanyMasterFileId"], input[name$=".CustomerMasterFileId"], input[name$=".SupplierMasterFileId"]').remove();
+                    accountSelect.removeData('original-text').trigger('change.select2');
+                });
+            }
+
             // Attach event listener to the select field
             $('.supplier').on('change', function () {
                 var supplierId = $(this).val();
+
+                clearAccountingEntrySelections();
 
                 fetchSupplierDetails(supplierId, function (data) {
                     $("#SupplierName").val(data.name);
@@ -500,14 +517,9 @@
                     $(".default-expense").val(data.defaultExpense).change();
                     const taxDropdown = $(".default-tax-percentage");
                     taxDropdown.val(data.taxPercent).change();
-                    const row = taxDropdown.closest("tr")[0];
-                    calculateTaxAndVat(row);
                     const vatableCheckbox = $(".default-vatable");
                     vatableCheckbox.prop("checked", data.vatable);
-                    if (data.vatable) {
-                        const row = vatableCheckbox.closest("tr")[0];
-                        calculateTaxAndVat(row);
-                    }
+                    recalculateAllRows();
                 });
             });
 
@@ -573,7 +585,7 @@
         // Add this function to validate totals before form submission
         function validateTotals() {
             // Get the total amount from the form
-            const totalAmount = parseFloat(document.querySelector('[name="Total"]').value) || 0;
+            const totalAmount = parseNumber(document.querySelector('[name="Total"]').value) || 0;
 
             // Get journal entry totals
             const totalDebit = Object.values(accumulatedEntries).reduce((sum, amt) => sum + amt.debit, 0);
@@ -635,7 +647,6 @@
             const masterFileSelector = new MasterFileSelector({
                 getBankAccounts: '@Url.Action("GetBankAccounts", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })',
                 getCompanies: '@Url.Action("GetCompanies", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })',
-                getEmployees: '@Url.Action("GetEmployees", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })',
                 getCustomers: '@Url.Action("GetCustomers", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })',
                 getSuppliers: '@Url.Action("GetSuppliers", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })',
             });
@@ -655,7 +666,7 @@
     </script>
     <script>
         function validateDebitAndCredit() {
-            let totalValue = parseFloat($("#totalAmount").val()) || 0;
+            let totalValue = parseNumber($("#totalAmount").val()) || 0;
             let totalDebit = parseNumber(document.getElementById("totalDebitCell")?.textContent || "0");
             let totalCredit = parseNumber(document.getElementById("totalCreditCell")?.textContent || "0");
             let errorMessage = "";

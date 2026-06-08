@@ -160,10 +160,7 @@ namespace IBS.Models.Filpride.AccountsPayable
 
         public bool IsAdvances { get; set; }
 
-        public int? EmployeeId { get; set; }
-
-        [ForeignKey(nameof(EmployeeId))]
-        public FilprideEmployee? Employee { get; set; }
+        public bool IsEmployeeAdvance { get; set; }
 
         [StringLength(200)]
         public string Address { get; set; } = null!;

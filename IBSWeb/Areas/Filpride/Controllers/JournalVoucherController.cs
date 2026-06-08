@@ -93,14 +93,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return claims.FirstOrDefault(c => c.Type == FilterTypeClaimType)?.Value;
         }
 
-        private async Task<List<SelectListItem>> GetLiquidationCheckVoucherHeadersAsync(string companyClaims, int employeeId, int? selectedCvId, CancellationToken cancellationToken)
+        private async Task<string?> GetSupplierEmployeeNumberAsync(string companyClaims, int supplierId, CancellationToken cancellationToken)
+        {
+            return await _dbContext.FilprideSuppliers
+                .Where(s => s.Company == companyClaims && s.SupplierId == supplierId && s.Category == "Employee")
+                .Select(s => s.EmployeeNumber)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        private async Task<List<SelectListItem>> GetLiquidationCheckVoucherHeadersAsync(string companyClaims, int supplierId, int? selectedCvId, CancellationToken cancellationToken)
         {
             return await _dbContext.FilprideCheckVoucherHeaders
                 .OrderBy(c => c.CheckVoucherHeaderNo)
                 .Where(c =>
                     c.Company == companyClaims &&
                     c.IsAdvances &&
-                    c.EmployeeId == employeeId &&
+                    c.IsEmployeeAdvance &&
+                    c.SupplierId == supplierId &&
                     (c.Status == nameof(CheckVoucherPaymentStatus.Unliquidated) || c.CheckVoucherHeaderId == selectedCvId))
                 .Select(cvh => new SelectListItem
                 {
@@ -110,14 +119,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .ToListAsync(cancellationToken);
         }
 
-        private async Task<List<SelectListItem>> GetLiquidationProvisionalReceiptsAsync(string companyClaims, int employeeId, string? selectedPrNo, CancellationToken cancellationToken)
+        private async Task<List<SelectListItem>> GetLiquidationProvisionalReceiptsAsync(string companyClaims, int supplierId, string? selectedPrNo, CancellationToken cancellationToken)
         {
+            var employeeNumber = await GetSupplierEmployeeNumberAsync(companyClaims, supplierId, cancellationToken);
+
+            if (string.IsNullOrWhiteSpace(employeeNumber))
+            {
+                return [];
+            }
+
             return await _dbContext.FilprideProvisionalReceipts
                 .OrderByDescending(pr => pr.TransactionDate)
                 .ThenByDescending(pr => pr.SeriesNumber)
                 .Where(pr =>
                     pr.Company == companyClaims &&
-                    pr.EmployeeId == employeeId &&
+                    pr.Supplier != null &&
+                    pr.Supplier.EmployeeNumber == employeeNumber &&
                     ((pr.Status != nameof(CollectionReceiptStatus.Canceled) &&
                       pr.Status != nameof(CollectionReceiptStatus.Voided)) ||
                      pr.SeriesNumber == selectedPrNo))
@@ -132,14 +149,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
         private async Task PopulateLiquidationDependenciesAsync(JournalVoucherViewModel viewModel, string companyClaims, CancellationToken cancellationToken, int? selectedCvId = null, string? selectedPrNo = null)
         {
             viewModel.COA = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
-            viewModel.Employees = await _unitOfWork.GetFilprideEmployeeListById(cancellationToken);
+            viewModel.Suppliers = await _unitOfWork.GetFilprideEmployeeSupplierListAsyncById(companyClaims, cancellationToken);
             viewModel.MinDate = await _unitOfWork
                 .GetMinimumPeriodBasedOnThePostedPeriods(Module.JournalVoucher, cancellationToken);
 
-            if (viewModel.EmployeeId.HasValue)
+            if (viewModel.SupplierId.HasValue)
             {
-                viewModel.CheckVoucherHeaders = await GetLiquidationCheckVoucherHeadersAsync(companyClaims, viewModel.EmployeeId.Value, selectedCvId ?? viewModel.CVId, cancellationToken);
-                viewModel.ProvisionalReceipts = await GetLiquidationProvisionalReceiptsAsync(companyClaims, viewModel.EmployeeId.Value, selectedPrNo ?? viewModel.PRNo, cancellationToken);
+                viewModel.CheckVoucherHeaders = await GetLiquidationCheckVoucherHeadersAsync(companyClaims, viewModel.SupplierId.Value, selectedCvId ?? viewModel.CVId, cancellationToken);
+                viewModel.ProvisionalReceipts = await GetLiquidationProvisionalReceiptsAsync(companyClaims, viewModel.SupplierId.Value, selectedPrNo ?? viewModel.PRNo, cancellationToken);
                 return;
             }
 
@@ -334,8 +351,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             JournalVoucherHeaderId = model.JournalVoucherHeaderId,
                             Debit = detail.Debit,
                             Credit = detail.Credit,
-                            SubAccountType = isAdvances ? SubAccountType.Employee : detail.SubAccountId != null ? SubAccountType.Supplier : null,
-                            SubAccountId = isAdvances ? cv.EmployeeId : detail.SubAccountId,
+                            SubAccountType = isAdvances ? SubAccountType.Supplier : detail.SubAccountId != null ? SubAccountType.Supplier : null,
+                            SubAccountId = isAdvances ? cv.SupplierId : detail.SubAccountId,
                             SubAccountName = isAdvances ? cv.Payee : detail.SubAccountCodeName,
                         }
                     );
@@ -403,7 +420,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetLiquidationCheckVouchersByEmployee(int employeeId, int? selectedCvId, CancellationToken cancellationToken = default)
+        public async Task<IActionResult> GetLiquidationCheckVouchersByEmployee(int supplierId, int? selectedCvId, CancellationToken cancellationToken = default)
         {
             var companyClaims = await GetCompanyClaimAsync();
 
@@ -412,12 +429,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            var selectList = await GetLiquidationCheckVoucherHeadersAsync(companyClaims, employeeId, selectedCvId, cancellationToken);
+            var selectList = await GetLiquidationCheckVoucherHeadersAsync(companyClaims, supplierId, selectedCvId, cancellationToken);
             return Json(selectList);
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetProvisionalReceiptsByEmployee(int employeeId, string? selectedPrNo, CancellationToken cancellationToken = default)
+        public async Task<IActionResult> GetProvisionalReceiptsByEmployee(int supplierId, string? selectedPrNo, CancellationToken cancellationToken = default)
         {
             var companyClaims = await GetCompanyClaimAsync();
 
@@ -426,7 +443,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            var selectList = await GetLiquidationProvisionalReceiptsAsync(companyClaims, employeeId, selectedPrNo, cancellationToken);
+            var selectList = await GetLiquidationProvisionalReceiptsAsync(companyClaims, supplierId, selectedPrNo, cancellationToken);
             return Json(selectList);
         }
 
@@ -666,7 +683,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     TransactionDate = existingHeaderModel.Date,
                     References = existingHeaderModel.References,
                     CVId = existingHeaderModel.CVId,
-                    EmployeeId = existingHeaderModel.CheckVoucherHeader?.EmployeeId,
+                    SupplierId = existingHeaderModel.CheckVoucherHeader?.SupplierId,
                     Particulars = existingHeaderModel.Particulars,
                     PRNo = existingHeaderModel.CRNo,
                     JVReason = existingHeaderModel.JVReason,
@@ -778,8 +795,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             JournalVoucherHeaderId = existingHeaderModel.JournalVoucherHeaderId,
                             Debit = detail.Debit,
                             Credit = detail.Credit,
-                            SubAccountType = isAdvances ? SubAccountType.Employee : detail.SubAccountId != null ? SubAccountType.Supplier : null,
-                            SubAccountId = isAdvances ? cv.EmployeeId : detail.SubAccountId,
+                            SubAccountType = isAdvances ? SubAccountType.Supplier : detail.SubAccountId != null ? SubAccountType.Supplier : null,
+                            SubAccountId = isAdvances ? cv.SupplierId : detail.SubAccountId,
                             SubAccountName = isAdvances ? cv.Payee : detail.SubAccountCodeName,
                         }
                     );

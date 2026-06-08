@@ -386,7 +386,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     (SubAccountType? subAccountType, int? subAccountId) = SubAccountHelper.DetermineCvSubAccount(
                         accountEntry.CustomerMasterFileId,
                         accountEntry.SupplierMasterFileId,
-                        accountEntry.EmployeeMasterFileId,
                         accountEntry.BankMasterFileId,
                         accountEntry.CompanyMasterFileId
                     );
@@ -828,9 +827,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         CompanyMasterFileId = details.SubAccountType == SubAccountType.Company
                             ? details.SubAccountId
                             : null,
-                        EmployeeMasterFileId = details.SubAccountType == SubAccountType.Employee
-                            ? details.SubAccountId
-                            : null,
                         CustomerMasterFileId = details.SubAccountType == SubAccountType.Customer
                             ? details.SubAccountId
                             : null,
@@ -955,7 +951,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     (SubAccountType? subAccountType, int? subAccountId) = SubAccountHelper.DetermineCvSubAccount(
                         accountEntry.CustomerMasterFileId,
                         accountEntry.SupplierMasterFileId,
-                        accountEntry.EmployeeMasterFileId,
                         accountEntry.BankMasterFileId,
                         accountEntry.CompanyMasterFileId
                     );
@@ -1312,15 +1307,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
             FilprideSupplier? getSupplier = await _unitOfWork.FilprideSupplier
                 .GetAsync(s => s.SupplierId == supplierId, cancellationToken);
 
-            FilprideEmployee? getEmployee = await _unitOfWork.FilprideEmployee
-                .GetAsync(s => s.EmployeeId == employeeId, cancellationToken);
-
             var viewModel = new CheckVoucherVM
             {
                 Header = header,
                 Details = details,
-                Supplier = getSupplier,
-                Employee = getEmployee
+                Supplier = getSupplier
             };
 
             #region --Audit Trail Recording
@@ -1684,12 +1675,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> GetEmployees()
         {
-            IEnumerable<FilprideEmployee> employees = await _unitOfWork.FilprideEmployee.GetAllAsync();
+            string? companyClaims = await GetCompanyClaimAsync();
 
-            return Json(employees.OrderBy(e => e.EmployeeNumber).Select(e => new
+            if (companyClaims == null)
             {
-                id = e.EmployeeId,
-                accountName = $"{e.FirstName} {e.LastName}",
+                return BadRequest();
+            }
+
+            IEnumerable<FilprideSupplier> employees = await _unitOfWork.FilprideSupplier
+                .GetAllAsync(s => s.Company == companyClaims && s.IsActive && s.Category == "Employee");
+
+            return Json(employees.OrderBy(e => e.EmployeeNumber).ThenBy(e => e.SupplierName).Select(e => new
+            {
+                id = e.SupplierId,
+                accountName = e.SupplierName,
                 accountNumber = e.EmployeeNumber
             }));
         }
@@ -1698,8 +1697,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
         public async Task<IActionResult> GetEmployeeById(int employeeId)
         {
             string? companyClaims = await GetCompanyClaimAsync();
-            FilprideEmployee? employee = await _unitOfWork.FilprideEmployee
-                .GetAsync(e => e.EmployeeId == employeeId && e.Company == companyClaims);
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            FilprideSupplier? employee = await _unitOfWork.FilprideSupplier
+                .GetAsync(e => e.SupplierId == employeeId && e.Company == companyClaims && e.Category == "Employee");
 
             if (employee == null)
             {
@@ -1708,8 +1713,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             return Json(new
             {
-                id = employee.EmployeeId,
-                accountName = $"{employee.FirstName} {employee.LastName}",
+                id = employee.SupplierId,
+                accountName = employee.SupplierName,
                 accountNumber = employee.EmployeeNumber
             });
         }

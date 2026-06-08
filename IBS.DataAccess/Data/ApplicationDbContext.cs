@@ -75,8 +75,6 @@ namespace IBS.DataAccess.Data
 
         public DbSet<FilpridePickUpPoint> FilpridePickUpPoints { get; set; }
 
-        public DbSet<FilprideEmployee> FilprideEmployees { get; set; }
-
         public DbSet<FilprideTerms> FilprideTerms { get; set; }
 
         #endregion
@@ -329,12 +327,6 @@ namespace IBS.DataAccess.Data
                 s.HasIndex(s => s.SupplierName);
             });
 
-            // FilprideEmployee
-            builder.Entity<FilprideEmployee>(c =>
-            {
-                c.HasIndex(c => c.EmployeeNumber);
-            });
-
             // FilpridePickUpPoint
             builder.Entity<FilpridePickUpPoint>(p =>
             {
@@ -474,9 +466,9 @@ namespace IBS.DataAccess.Data
 
             builder.Entity<FilprideProvisionalReceipt>(pr =>
             {
-                pr.HasOne(p => p.Employee)
+                pr.HasOne(p => p.Supplier)
                     .WithMany()
-                    .HasForeignKey(p => p.EmployeeId)
+                    .HasForeignKey(p => p.SupplierId)
                     .OnDelete(DeleteBehavior.Restrict);
 
                 pr.HasOne(p => p.BankAccount)
