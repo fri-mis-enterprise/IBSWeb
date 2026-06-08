@@ -3215,7 +3215,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     #endregion
 
-                    //var segment = 0m;
                     #region -- totals of summary
 
                         var totalOverallQuantity = 0m;
@@ -3617,7 +3616,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     #endregion
 
-                    #region -- Computation of totals for summary --
+                    row++;
+                }
+
+                #region -- Computation of totals for summary --
 
                     totalOverallQuantity = retailOverallQuantitySum + industrialOverallQuantitySum + governmentOverallQuantitySum + resellerOverallQuantitySum;
                     totalOverallNetOfSales = retailOverallNetOfSalesSum + industrialOverallNetOfSalesSum + governmentOverallNetOfSalesSum + resellerOverallNetOfSalesSum;
@@ -3655,10 +3657,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     totalNetMarginForEnvirogas = retailEnvirogasNetMarginSum + industrialEnvirogasNetMarginSum + governmentEnvirogasNetMarginSum + resellerEnvirogasNetMarginSum;
                     totalNetMarginPerLiterForEnvirogas = DivideOrZero(totalNetMarginForEnvirogas, totalQuantityForEnvirogas);
 
-                    #endregion
-
-                    row++;
-                }
+                #endregion
 
                 #endregion -- Populate data rows --
 

@@ -2164,6 +2164,95 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var totalVat = 0m;
                 var repoCalculator = _unitOfWork.FilprideDeliveryReceipt;
 
+                #region -- Initialize "Summary" variables
+
+                    #region -- Overall
+
+                        var retailOverallQuantitySum = 0m;
+                        var retailOverallNetOfSalesSum = 0m;
+
+                        var industrialOverallQuantitySum = 0m;
+                        var industrialOverallNetOfSalesSum = 0m;
+
+                        var governmentOverallQuantitySum = 0m;
+                        var governmentOverallNetOfSalesSum = 0m;
+
+                        var resellerOverallQuantitySum = 0m;
+                        var resellerOverallNetOfSalesSum = 0m;
+
+                    #endregion
+
+                    #region -- Biodiesel
+
+                        var retailBiodieselQuantitySum = 0m;
+                        var retailBiodieselNetOfSalesSum = 0m;
+
+                        var industrialBiodieselQuantitySum = 0m;
+                        var industrialBiodieselNetOfSalesSum = 0m;
+
+                        var governmentBiodieselQuantitySum = 0m;
+                        var governmentBiodieselNetOfSalesSum = 0m;
+
+                        var resellerBiodieselQuantitySum = 0m;
+                        var resellerBiodieselNetOfSalesSum = 0m;
+
+                    #endregion
+
+                    #region -- Econogas
+
+                    var retailEconogasQuantitySum = 0m;
+                    var retailEconogasNetOfSalesSum = 0m;
+
+                    var industrialEconogasQuantitySum = 0m;
+                    var industrialEconogasNetOfSalesSum = 0m;
+
+                    var governmentEconogasQuantitySum = 0m;
+                    var governmentEconogasNetOfSalesSum = 0m;
+
+                    var resellerEconogasQuantitySum = 0m;
+                    var resellerEconogasNetOfSalesSum = 0m;
+
+                    #endregion
+
+                    #region -- Envirogas
+
+                        var retailEnvirogasQuantitySum = 0m;
+                        var retailEnvirogasNetOfSalesSum = 0m;
+
+                        var industrialEnvirogasQuantitySum = 0m;
+                        var industrialEnvirogasNetOfSalesSum = 0m;
+
+                        var governmentEnvirogasQuantitySum = 0m;
+                        var governmentEnvirogasNetOfSalesSum = 0m;
+
+                        var resellerEnvirogasQuantitySum = 0m;
+                        var resellerEnvirogasNetOfSalesSum = 0m;
+
+                    #endregion
+
+                    #region -- totals of summary
+
+                        var totalOverallQuantity = 0m;
+                        var totalOverallNetOfSales = 0m;
+                        var totalOverallAverageSellingPrice = 0m;
+
+                        var totalQuantityForBiodiesel = 0m;
+                        var totalNetOfSalesForBiodiesel = 0m;
+                        var totalAverageSellingPriceForBiodiesel = 0m;
+
+                        var totalQuantityForEconogas = 0m;
+                        var totalNetOfSalesForEconogas = 0m;
+                        var totalAverageSellingPriceForEconogas = 0m;
+
+                        var totalQuantityForEnvirogas = 0m;
+                        var totalNetOfSalesForEnvirogas = 0m;
+                        var totalAverageSellingPriceForEnvirogas = 0m;
+
+
+                    #endregion
+
+                #endregion
+
                 foreach (var dr in salesReport)
                 {
                     var isCustomerVatable = dr.DeliveryReceipt.CustomerOrderSlip?.VatType == SD.VatType_Vatable;
@@ -2173,6 +2262,117 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var salesNetOfVat = isCustomerVatable ? RoundToFour(repoCalculator.ComputeNetOfVat(segment)) : segment;
                     var vat = isCustomerVatable ? RoundToFour(repoCalculator.ComputeVatAmount(salesNetOfVat)) : 0m;
                     var freightNetOfVat = isHaulerVatable ? RoundToFour(repoCalculator.ComputeNetOfVat(freightAmount)) : freightAmount;
+                    var quantity = dr.DeliveryReceipt.Quantity;
+
+                    switch (dr.DeliveryReceipt.CustomerOrderSlip!.CustomerType)
+                    {
+                        case nameof(CustomerType.Retail):
+                            retailOverallQuantitySum += quantity;
+                            retailOverallNetOfSalesSum += salesNetOfVat;
+
+                            switch (dr.DeliveryReceipt.CustomerOrderSlip!.Product!.ProductName)
+                            {
+                                case "BIODIESEL":
+                                    retailBiodieselQuantitySum  += quantity;
+                                    retailBiodieselNetOfSalesSum += salesNetOfVat;
+                                    break;
+
+                                case "ECONOGAS":
+                                    retailEconogasQuantitySum += quantity;
+                                    retailEconogasNetOfSalesSum += salesNetOfVat;
+                                    break;
+
+                                case "ENVIROGAS":
+                                    retailEnvirogasQuantitySum += quantity;
+                                    retailEnvirogasNetOfSalesSum += salesNetOfVat;
+                                    break;
+
+                                default:
+                                    throw new ArgumentException("No product name");
+                            }
+                            break;
+
+                        case nameof(CustomerType.Industrial):
+                            industrialOverallQuantitySum += quantity;
+                            industrialOverallNetOfSalesSum += salesNetOfVat;
+
+                            switch (dr.DeliveryReceipt.CustomerOrderSlip!.Product!.ProductName)
+                            {
+                                case "BIODIESEL":
+                                    industrialBiodieselQuantitySum  += quantity;
+                                    industrialBiodieselNetOfSalesSum += salesNetOfVat;
+                                    break;
+
+                                case "ECONOGAS":
+                                    industrialEconogasQuantitySum += quantity;
+                                    industrialEconogasNetOfSalesSum += salesNetOfVat;
+                                    break;
+
+                                case "ENVIROGAS":
+                                    industrialEnvirogasQuantitySum += quantity;
+                                    industrialEnvirogasNetOfSalesSum += salesNetOfVat;
+                                    break;
+
+                                default:
+                                    throw new ArgumentException("No product name");
+                            }
+                            break;
+
+                        case nameof(CustomerType.Government):
+                            governmentOverallQuantitySum += quantity;
+                            governmentOverallNetOfSalesSum += salesNetOfVat;
+
+                            switch (dr.DeliveryReceipt.CustomerOrderSlip!.Product!.ProductName)
+                            {
+                                case "BIODIESEL":
+                                    governmentBiodieselQuantitySum  += quantity;
+                                    governmentBiodieselNetOfSalesSum += salesNetOfVat;
+                                    break;
+
+                                case "ECONOGAS":
+                                    governmentEconogasQuantitySum += quantity;
+                                    governmentEconogasNetOfSalesSum += salesNetOfVat;
+                                    break;
+
+                                case "ENVIROGAS":
+                                    governmentEnvirogasQuantitySum += quantity;
+                                    governmentEnvirogasNetOfSalesSum += salesNetOfVat;
+                                    break;
+
+                                default:
+                                    throw new ArgumentException("No product name");
+                            }
+                            break;
+
+                        case nameof(CustomerType.Reseller):
+                            resellerOverallQuantitySum += quantity;
+                            resellerOverallNetOfSalesSum += salesNetOfVat;
+
+                            switch (dr.DeliveryReceipt.CustomerOrderSlip!.Product!.ProductName)
+                            {
+                                case "BIODIESEL":
+                                    resellerBiodieselQuantitySum  += quantity;
+                                    resellerBiodieselNetOfSalesSum += salesNetOfVat;
+                                    break;
+
+                                case "ECONOGAS":
+                                    resellerEconogasQuantitySum += quantity;
+                                    resellerEconogasNetOfSalesSum += salesNetOfVat;
+                                    break;
+
+                                case "ENVIROGAS":
+                                    resellerEnvirogasQuantitySum += quantity;
+                                    resellerEnvirogasNetOfSalesSum += salesNetOfVat;
+                                    break;
+
+                                default:
+                                    throw new ArgumentException("No product name");
+                            }
+                            break;
+
+                        default:
+                            throw new ArgumentException("No customer type");
+                    }
 
                     worksheet.Cells[row, 1].Value = dr.DeliveryReceipt.DeliveredDate;
                     worksheet.Cells[row, 2].Value = dr.DeliveryReceipt.CustomerOrderSlip?.CustomerName;
@@ -2226,6 +2426,30 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     totalFreightNetOfVat += freightNetOfVat;
                     totalCommissionRate += dr.DeliveryReceipt.CustomerOrderSlip?.CommissionRate ?? 0m;
                 }
+
+                #region -- Computation of totals for summary --
+
+                // Computation of total for Overall
+                totalOverallQuantity = retailOverallQuantitySum + industrialOverallQuantitySum + governmentOverallQuantitySum + resellerOverallQuantitySum;
+                totalOverallNetOfSales = retailOverallNetOfSalesSum + industrialOverallNetOfSalesSum + governmentOverallNetOfSalesSum + resellerOverallNetOfSalesSum;
+                totalOverallAverageSellingPrice = totalOverallNetOfSales != 0m || totalOverallQuantity != 0m ? DivideOrZero(totalOverallNetOfSales, totalOverallQuantity) : 0m;
+
+                // Computation of total for Biodiesel
+                totalQuantityForBiodiesel = retailBiodieselQuantitySum + industrialBiodieselQuantitySum + governmentBiodieselQuantitySum + resellerBiodieselQuantitySum;
+                totalNetOfSalesForBiodiesel = retailBiodieselNetOfSalesSum + industrialBiodieselNetOfSalesSum + governmentBiodieselNetOfSalesSum + resellerBiodieselNetOfSalesSum;
+                totalAverageSellingPriceForBiodiesel = totalNetOfSalesForBiodiesel != 0m || totalQuantityForBiodiesel != 0m ? DivideOrZero(totalNetOfSalesForBiodiesel, totalQuantityForBiodiesel) : 0m;
+
+                // Computation of total for Econogas
+                totalQuantityForEconogas = retailEconogasQuantitySum + industrialEconogasQuantitySum + governmentEconogasQuantitySum + resellerEconogasQuantitySum;
+                totalNetOfSalesForEconogas = retailEconogasNetOfSalesSum + industrialEconogasNetOfSalesSum + governmentEconogasNetOfSalesSum + resellerEconogasNetOfSalesSum;
+                totalAverageSellingPriceForEconogas = totalNetOfSalesForEconogas != 0m || totalQuantityForEconogas != 0m ? DivideOrZero(totalNetOfSalesForEconogas, totalQuantityForEconogas) : 0m;
+
+                // Computation of total for Envirogas
+                totalQuantityForEnvirogas = retailEnvirogasQuantitySum + industrialEnvirogasQuantitySum + governmentEnvirogasQuantitySum + resellerEnvirogasQuantitySum;
+                totalNetOfSalesForEnvirogas = retailEnvirogasNetOfSalesSum + industrialEnvirogasNetOfSalesSum + governmentEnvirogasNetOfSalesSum + resellerEnvirogasNetOfSalesSum;
+                totalAverageSellingPriceForEnvirogas = totalNetOfSalesForEnvirogas != 0m || totalQuantityForEnvirogas != 0m ? DivideOrZero(totalNetOfSalesForEnvirogas, totalQuantityForEnvirogas) : 0m;
+
+                #endregion
 
                 worksheet.Cells[row, 14].Value = "Total ";
                 worksheet.Cells[row, 15].Value = totalQuantity;
@@ -2432,92 +2656,109 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     range.Style.Border.Bottom.Style = ExcelBorderStyle.Double; // Double bottom border
                 }
 
-                var totalOverallQuantity = 0m;
-                var totalOverallAmount = 0m;
-
-                var totalQuantityForBiodiesel = 0m;
-                var totalAmountForBiodiesel = 0m;
-
-                var totalQuantityForEconogas = 0m;
-                var totalAmountForEconogas = 0m;
-
-                var totalQuantityForEnvirogas = 0m;
-                var totalAmountForEnvirogas = 0m;
-
                 foreach (var customerType in Enum.GetValues<CustomerType>())
                 {
-                    var list = salesReport.Where(s => s.DeliveryReceipt.Customer?.CustomerType == customerType.ToString()).ToList();
-                    var listForBiodiesel = list.Where(s => s.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "BIODIESEL").ToList();
-                    var listForEconogas = list.Where(s => s.DeliveryReceipt.PurchaseOrder!.Product?.ProductName == "ECONOGAS").ToList();
-                    var listForEnvirogas = list.Where(s => s.DeliveryReceipt.PurchaseOrder!.Product?.ProductName == "ENVIROGAS").ToList();
 
-                    // Computation for Overall
-                    var overAllQuantitySum = list.Sum(s => s.DeliveryReceipt.Quantity);
-                    var overallAmountSum = list.Sum(s => s.DeliveryReceipt.TotalAmount);
-                    var overallNetOfAmountSum = overallAmountSum != 0m ? RoundToFour(overallAmountSum / 1.12m) : 0m;
+                    // Assign Values to Cells
+                    switch (customerType.ToString())
+                    {
+                        case nameof(CustomerType.Retail):
+                            worksheet.Cells[rowForSummary, 2].Value = nameof(CustomerType.Retail);
+                            worksheet.Cells[rowForSummary, 3].Value = retailOverallQuantitySum;
+                            worksheet.Cells[rowForSummary, 4].Value = retailOverallNetOfSalesSum;
+                            worksheet.Cells[rowForSummary, 5].Value = retailOverallNetOfSalesSum != 0m || retailOverallQuantitySum != 0m ? DivideOrZero(retailOverallNetOfSalesSum, retailOverallQuantitySum) : 0m;
 
-                    worksheet.Cells[rowForSummary, 2].Value = customerType.ToString();
-                    worksheet.Cells[rowForSummary, 3].Value = overAllQuantitySum;
-                    worksheet.Cells[rowForSummary, 4].Value = overallNetOfAmountSum;
-                    worksheet.Cells[rowForSummary, 5].Value = overallNetOfAmountSum != 0m || overAllQuantitySum != 0m ? DivideOrZero(overallNetOfAmountSum, overAllQuantitySum) : 0m;
+                            worksheet.Cells[rowForSummary, 7].Value = retailBiodieselQuantitySum;
+                            worksheet.Cells[rowForSummary, 8].Value = retailBiodieselNetOfSalesSum;
+                            worksheet.Cells[rowForSummary, 9].Value = retailBiodieselNetOfSalesSum != 0m || retailBiodieselQuantitySum != 0m ? DivideOrZero(retailBiodieselNetOfSalesSum, retailBiodieselQuantitySum) : 0m;
 
+                            worksheet.Cells[rowForSummary, 11].Value = retailEconogasQuantitySum;
+                            worksheet.Cells[rowForSummary, 12].Value = retailEconogasNetOfSalesSum;
+                            worksheet.Cells[rowForSummary, 13].Value = retailEconogasNetOfSalesSum != 0m || retailEconogasQuantitySum != 0m ? DivideOrZero(retailEconogasNetOfSalesSum, retailEconogasQuantitySum) : 0m;
+
+                            worksheet.Cells[rowForSummary, 15].Value = retailEnvirogasQuantitySum;
+                            worksheet.Cells[rowForSummary, 16].Value = retailEnvirogasNetOfSalesSum;
+                            worksheet.Cells[rowForSummary, 17].Value = retailEnvirogasNetOfSalesSum != 0m || retailEnvirogasQuantitySum != 0m ? DivideOrZero(retailEnvirogasNetOfSalesSum, retailEnvirogasQuantitySum) : 0m;
+                            break;
+
+                        case nameof(CustomerType.Industrial):
+                            worksheet.Cells[rowForSummary, 2].Value = nameof(CustomerType.Industrial);
+                            worksheet.Cells[rowForSummary, 3].Value = industrialOverallQuantitySum;
+                            worksheet.Cells[rowForSummary, 4].Value = industrialOverallNetOfSalesSum;
+                            worksheet.Cells[rowForSummary, 5].Value = industrialOverallNetOfSalesSum != 0m || industrialOverallQuantitySum != 0m ? DivideOrZero(industrialOverallNetOfSalesSum, industrialOverallQuantitySum) : 0m;
+
+                            worksheet.Cells[rowForSummary, 7].Value = industrialBiodieselQuantitySum;
+                            worksheet.Cells[rowForSummary, 8].Value = industrialBiodieselNetOfSalesSum;
+                            worksheet.Cells[rowForSummary, 9].Value = industrialBiodieselNetOfSalesSum != 0m || industrialBiodieselQuantitySum != 0m ? DivideOrZero(industrialBiodieselNetOfSalesSum, industrialBiodieselQuantitySum) : 0m;
+
+                            worksheet.Cells[rowForSummary, 11].Value = industrialEconogasQuantitySum;
+                            worksheet.Cells[rowForSummary, 12].Value = industrialEconogasNetOfSalesSum;
+                            worksheet.Cells[rowForSummary, 13].Value = industrialEconogasNetOfSalesSum != 0m || industrialEconogasQuantitySum != 0m ? DivideOrZero(industrialEconogasNetOfSalesSum, industrialEconogasQuantitySum) : 0m;
+
+                            worksheet.Cells[rowForSummary, 15].Value = industrialEnvirogasQuantitySum;
+                            worksheet.Cells[rowForSummary, 16].Value = industrialEnvirogasNetOfSalesSum;
+                            worksheet.Cells[rowForSummary, 17].Value = industrialEnvirogasNetOfSalesSum != 0m || industrialEnvirogasQuantitySum != 0m ? DivideOrZero(industrialEnvirogasNetOfSalesSum, industrialEnvirogasQuantitySum) : 0m;
+                            break;
+
+                        case nameof(CustomerType.Government):
+                            worksheet.Cells[rowForSummary, 2].Value = nameof(CustomerType.Government);
+                            worksheet.Cells[rowForSummary, 3].Value = governmentOverallQuantitySum;
+                            worksheet.Cells[rowForSummary, 4].Value = governmentOverallNetOfSalesSum;
+                            worksheet.Cells[rowForSummary, 5].Value = governmentOverallNetOfSalesSum != 0m || governmentOverallQuantitySum != 0m ? DivideOrZero(governmentOverallNetOfSalesSum, governmentOverallQuantitySum) : 0m;
+
+                            worksheet.Cells[rowForSummary, 7].Value = governmentBiodieselQuantitySum;
+                            worksheet.Cells[rowForSummary, 8].Value = governmentBiodieselNetOfSalesSum;
+                            worksheet.Cells[rowForSummary, 9].Value = governmentBiodieselNetOfSalesSum != 0m || governmentBiodieselQuantitySum != 0m ? DivideOrZero(governmentBiodieselNetOfSalesSum, governmentBiodieselQuantitySum) : 0m;
+
+                            worksheet.Cells[rowForSummary, 11].Value = governmentEconogasQuantitySum;
+                            worksheet.Cells[rowForSummary, 12].Value = governmentEconogasNetOfSalesSum;
+                            worksheet.Cells[rowForSummary, 13].Value = governmentEconogasNetOfSalesSum != 0m || governmentEconogasQuantitySum != 0m ? DivideOrZero(governmentEconogasNetOfSalesSum, governmentEconogasQuantitySum) : 0m;
+
+                            worksheet.Cells[rowForSummary, 15].Value = governmentEnvirogasQuantitySum;
+                            worksheet.Cells[rowForSummary, 16].Value = governmentEnvirogasNetOfSalesSum;
+                            worksheet.Cells[rowForSummary, 17].Value = governmentEnvirogasNetOfSalesSum != 0m || governmentEnvirogasQuantitySum != 0m ? DivideOrZero(governmentEnvirogasNetOfSalesSum, governmentEnvirogasQuantitySum) : 0m;
+                            break;
+
+                        case nameof(CustomerType.Reseller):
+                            worksheet.Cells[rowForSummary, 2].Value = nameof(CustomerType.Reseller);
+                            worksheet.Cells[rowForSummary, 3].Value = resellerOverallQuantitySum;
+                            worksheet.Cells[rowForSummary, 4].Value = resellerOverallNetOfSalesSum;
+                            worksheet.Cells[rowForSummary, 5].Value = resellerOverallNetOfSalesSum != 0m || resellerOverallQuantitySum != 0m ? DivideOrZero(resellerOverallNetOfSalesSum, resellerOverallQuantitySum) : 0m;
+
+                            worksheet.Cells[rowForSummary, 7].Value = resellerBiodieselQuantitySum;
+                            worksheet.Cells[rowForSummary, 8].Value = resellerBiodieselNetOfSalesSum;
+                            worksheet.Cells[rowForSummary, 9].Value = resellerBiodieselNetOfSalesSum != 0m || resellerBiodieselQuantitySum != 0m ? DivideOrZero(resellerBiodieselNetOfSalesSum, resellerBiodieselQuantitySum) : 0m;
+
+                            worksheet.Cells[rowForSummary, 11].Value = resellerEconogasQuantitySum;
+                            worksheet.Cells[rowForSummary, 12].Value = resellerEconogasNetOfSalesSum;
+                            worksheet.Cells[rowForSummary, 13].Value = resellerEconogasNetOfSalesSum != 0m || resellerEconogasQuantitySum != 0m ? DivideOrZero(resellerEconogasNetOfSalesSum, resellerEconogasQuantitySum) : 0m;
+
+                            worksheet.Cells[rowForSummary, 15].Value = resellerEnvirogasQuantitySum;
+                            worksheet.Cells[rowForSummary, 16].Value = resellerEnvirogasNetOfSalesSum;
+                            worksheet.Cells[rowForSummary, 17].Value = resellerEnvirogasNetOfSalesSum != 0m || resellerEnvirogasQuantitySum != 0m ? DivideOrZero(resellerEnvirogasNetOfSalesSum, resellerEnvirogasQuantitySum) : 0m;
+                            break;
+
+                        default:
+                            throw new ArgumentException("No customer type");
+                    }
+                    //Column style for Overall summary
                     worksheet.Cells[rowForSummary, 3].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[rowForSummary, 4].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[rowForSummary, 5].Style.Numberformat.Format = currencyFormat;
-
-                    // Computation for Biodiesel
-                    var biodieselQuantitySum = listForBiodiesel.Sum(s => s.DeliveryReceipt.Quantity);
-                    var biodieselAmountSum = listForBiodiesel.Sum(s => s.DeliveryReceipt.TotalAmount);
-                    var biodieselNetOfAmountSum = biodieselAmountSum != 0m ? RoundToFour(biodieselAmountSum / 1.12m) : 0m;
-
-                    worksheet.Cells[rowForSummary, 7].Value = biodieselQuantitySum;
-                    worksheet.Cells[rowForSummary, 8].Value = biodieselNetOfAmountSum;
-                    worksheet.Cells[rowForSummary, 9].Value = biodieselNetOfAmountSum != 0m || biodieselQuantitySum != 0m ? DivideOrZero(biodieselNetOfAmountSum, biodieselQuantitySum) : 0m;
-
+                    //Column style for Biodiesel summary
                     worksheet.Cells[rowForSummary, 7].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[rowForSummary, 8].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[rowForSummary, 9].Style.Numberformat.Format = currencyFormat;
-
-                    // Computation for Econogas
-                    var econogasQuantitySum = listForEconogas.Sum(s => s.DeliveryReceipt.Quantity);
-                    var econogasAmountSum = listForEconogas.Sum(s => s.DeliveryReceipt.TotalAmount);
-                    var econogasNetOfAmountSum = econogasAmountSum != 0m ? RoundToFour(econogasAmountSum / 1.12m) : 0m;
-
-                    worksheet.Cells[rowForSummary, 11].Value = econogasQuantitySum;
-                    worksheet.Cells[rowForSummary, 12].Value = econogasNetOfAmountSum;
-                    worksheet.Cells[rowForSummary, 13].Value = econogasNetOfAmountSum != 0m || econogasQuantitySum != 0m ? DivideOrZero(econogasNetOfAmountSum, econogasQuantitySum) : 0m;
-
+                    //Column style for Econogas summary
                     worksheet.Cells[rowForSummary, 11].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[rowForSummary, 12].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[rowForSummary, 13].Style.Numberformat.Format = currencyFormat;
-
-                    // Computation for Envirogas
-                    var envirogasQuantitySum = listForEnvirogas.Sum(s => s.DeliveryReceipt.Quantity);
-                    var envirogasAmountSum = listForEnvirogas.Sum(s => s.DeliveryReceipt.TotalAmount);
-                    var envirogasNetOfAmountSum = envirogasAmountSum != 0m ? RoundToFour(envirogasAmountSum / 1.12m) : 0m;
-
-                    worksheet.Cells[rowForSummary, 15].Value = envirogasQuantitySum;
-                    worksheet.Cells[rowForSummary, 16].Value = envirogasNetOfAmountSum;
-                    worksheet.Cells[rowForSummary, 17].Value = envirogasNetOfAmountSum != 0m || envirogasQuantitySum != 0m ? DivideOrZero(envirogasNetOfAmountSum, envirogasQuantitySum) : 0m;
-
+                    //Column style for Envirogas summary
                     worksheet.Cells[rowForSummary, 15].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[rowForSummary, 16].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[rowForSummary, 17].Style.Numberformat.Format = currencyFormat;
 
                     rowForSummary++;
-
-                    // Computation of total for Overall
-                    totalOverallQuantity += overAllQuantitySum;
-                    totalOverallAmount += overallNetOfAmountSum;
-                    // Computation of total for Biodiesel
-                    totalQuantityForBiodiesel += biodieselQuantitySum;
-                    totalAmountForBiodiesel += biodieselNetOfAmountSum;
-                    // Computation of total for Econogas
-                    totalQuantityForEconogas += econogasQuantitySum;
-                    totalAmountForEconogas += econogasNetOfAmountSum;
-                    // Computation of total for Envirogas
-                    totalQuantityForEnvirogas += envirogasQuantitySum;
-                    totalAmountForEnvirogas += envirogasNetOfAmountSum;
                 }
 
                 var styleOfTotal = worksheet.Cells[rowForSummary, 2];
@@ -2526,32 +2767,32 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 mergedCellForEconogas.Style.Font.Bold = true;
 
                 worksheet.Cells[rowForSummary, 3].Value = totalOverallQuantity;
-                worksheet.Cells[rowForSummary, 4].Value = totalOverallAmount;
-                worksheet.Cells[rowForSummary, 5].Value = totalOverallAmount != 0m || totalOverallQuantity != 0m ? DivideOrZero(totalOverallAmount, totalOverallQuantity) : 0m;
+                worksheet.Cells[rowForSummary, 4].Value = totalOverallNetOfSales;
+                worksheet.Cells[rowForSummary, 5].Value = totalOverallAverageSellingPrice;
 
                 worksheet.Cells[rowForSummary, 3].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[rowForSummary, 4].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[rowForSummary, 5].Style.Numberformat.Format = currencyFormat;
 
                 worksheet.Cells[rowForSummary, 7].Value = totalQuantityForBiodiesel;
-                worksheet.Cells[rowForSummary, 8].Value = totalAmountForBiodiesel;
-                worksheet.Cells[rowForSummary, 9].Value = totalAmountForBiodiesel != 0m || totalQuantityForBiodiesel != 0m ? DivideOrZero(totalAmountForBiodiesel, totalQuantityForBiodiesel) : 0m;
+                worksheet.Cells[rowForSummary, 8].Value = totalNetOfSalesForBiodiesel;
+                worksheet.Cells[rowForSummary, 9].Value = totalAverageSellingPriceForBiodiesel;
 
                 worksheet.Cells[rowForSummary, 7].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[rowForSummary, 8].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[rowForSummary, 9].Style.Numberformat.Format = currencyFormat;
 
                 worksheet.Cells[rowForSummary, 11].Value = totalQuantityForEconogas;
-                worksheet.Cells[rowForSummary, 12].Value = totalAmountForEconogas;
-                worksheet.Cells[rowForSummary, 13].Value = totalAmountForEconogas != 0m || totalQuantityForEconogas != 0m ? DivideOrZero(totalAmountForEconogas, totalQuantityForEconogas) : 0m;
+                worksheet.Cells[rowForSummary, 12].Value = totalNetOfSalesForEconogas;
+                worksheet.Cells[rowForSummary, 13].Value = totalAverageSellingPriceForEconogas;
 
                 worksheet.Cells[rowForSummary, 11].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[rowForSummary, 12].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[rowForSummary, 13].Style.Numberformat.Format = currencyFormat;
 
                 worksheet.Cells[rowForSummary, 15].Value = totalQuantityForEnvirogas;
-                worksheet.Cells[rowForSummary, 16].Value = totalAmountForEnvirogas;
-                worksheet.Cells[rowForSummary, 17].Value = totalAmountForEnvirogas != 0m || totalQuantityForEnvirogas != 0m ? DivideOrZero(totalAmountForEnvirogas, totalQuantityForEnvirogas) : 0m;
+                worksheet.Cells[rowForSummary, 16].Value = totalNetOfSalesForEnvirogas;
+                worksheet.Cells[rowForSummary, 17].Value = totalAverageSellingPriceForEnvirogas;
 
                 worksheet.Cells[rowForSummary, 15].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[rowForSummary, 16].Style.Numberformat.Format = currencyFormatTwoDecimal;
