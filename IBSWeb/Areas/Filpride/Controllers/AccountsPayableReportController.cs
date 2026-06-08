@@ -3966,7 +3966,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             gmReportWorksheet.Cells[rowForSummary, 25].Value = retailEconogasNetOfFreightSum;
                             gmReportWorksheet.Cells[rowForSummary, 26].Value = retailEconogasCommissionSum;
                             gmReportWorksheet.Cells[rowForSummary, 27].Value = retailEconogasNetMarginSum;
-                            gmReportWorksheet.Cells[rowForSummary, 28].Value = DivideOrZero(retailBiodieselNetMarginSum, retailBiodieselQuantitySum);
+                            gmReportWorksheet.Cells[rowForSummary, 28].Value = DivideOrZero(retailEconogasNetMarginSum, retailEconogasQuantitySum);
 
                             gmReportWorksheet.Cells[rowForSummary, 30].Value = retailEnvirogasQuantitySum;
                             gmReportWorksheet.Cells[rowForSummary, 31].Value = retailEnvirogasNetOfSalesSum;

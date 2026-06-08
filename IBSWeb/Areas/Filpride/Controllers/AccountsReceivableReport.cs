@@ -2264,13 +2264,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var freightNetOfVat = isHaulerVatable ? RoundToFour(repoCalculator.ComputeNetOfVat(freightAmount)) : freightAmount;
                     var quantity = dr.DeliveryReceipt.Quantity;
 
-                    switch (dr.DeliveryReceipt.CustomerOrderSlip!.CustomerType)
+                    var customerType = dr.DeliveryReceipt.CustomerOrderSlip?.CustomerType;
+                    var productName = dr.DeliveryReceipt.CustomerOrderSlip?.ProductName;
+
+                    if (string.IsNullOrWhiteSpace(customerType) || string.IsNullOrWhiteSpace(productName))
+                    {
+                        throw new InvalidOperationException("Missing customer type or product name in sales report row.");
+                    }
+
+                    switch (customerType)
                     {
                         case nameof(CustomerType.Retail):
                             retailOverallQuantitySum += quantity;
                             retailOverallNetOfSalesSum += salesNetOfVat;
 
-                            switch (dr.DeliveryReceipt.CustomerOrderSlip!.Product!.ProductName)
+                            switch (productName)
                             {
                                 case "BIODIESEL":
                                     retailBiodieselQuantitySum  += quantity;
@@ -2296,7 +2304,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             industrialOverallQuantitySum += quantity;
                             industrialOverallNetOfSalesSum += salesNetOfVat;
 
-                            switch (dr.DeliveryReceipt.CustomerOrderSlip!.Product!.ProductName)
+                            switch (productName)
                             {
                                 case "BIODIESEL":
                                     industrialBiodieselQuantitySum  += quantity;
@@ -2322,7 +2330,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             governmentOverallQuantitySum += quantity;
                             governmentOverallNetOfSalesSum += salesNetOfVat;
 
-                            switch (dr.DeliveryReceipt.CustomerOrderSlip!.Product!.ProductName)
+                            switch (productName)
                             {
                                 case "BIODIESEL":
                                     governmentBiodieselQuantitySum  += quantity;
@@ -2348,7 +2356,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             resellerOverallQuantitySum += quantity;
                             resellerOverallNetOfSalesSum += salesNetOfVat;
 
-                            switch (dr.DeliveryReceipt.CustomerOrderSlip!.Product!.ProductName)
+                            switch (productName)
                             {
                                 case "BIODIESEL":
                                     resellerBiodieselQuantitySum  += quantity;
