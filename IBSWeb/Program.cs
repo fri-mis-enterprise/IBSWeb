@@ -22,8 +22,14 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
-    .AddEnvironmentVariables();
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true);
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddUserSecrets<Program>();
+}
+
+builder.Configuration.AddEnvironmentVariables();
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
@@ -66,7 +72,6 @@ IMvcBuilder razorPagesBuilder = builder.Services.AddRazorPages();
 if (builder.Environment.IsDevelopment())
 {
     razorPagesBuilder.AddRazorRuntimeCompilation();
-    builder.Configuration.AddUserSecrets<Program>();
 }
 
 // Repositories + DI
