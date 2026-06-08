@@ -6,6 +6,13 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v3.0.2] - 2026-06-05
+
+### Fixed
+- Fixed Filpride customer order slip create and update flows to always persist `TotalAmount` from `Quantity * DeliveredPrice` instead of using the posted form value, preventing mismatched totals when the client-sent amount is stale or incorrect.
+
+---
+
 ## [v3.0.1] - 2026-06-05
 
 ### Changed

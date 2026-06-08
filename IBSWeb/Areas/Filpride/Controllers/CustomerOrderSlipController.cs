@@ -338,7 +338,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     Quantity = viewModel.Quantity,
                     BalanceQuantity = viewModel.Quantity,
                     DeliveredPrice = viewModel.DeliveredPrice,
-                    TotalAmount = viewModel.TotalAmount,
+                    TotalAmount = viewModel.Quantity * viewModel.DeliveredPrice,
                     AccountSpecialist = viewModel.AccountSpecialist,
                     Remarks = viewModel.Remarks,
                     Company = companyClaims,

@@ -119,7 +119,7 @@ namespace IBS.DataAccess.Repository.Filpride
             existingRecord.Quantity = viewModel.Quantity;
             existingRecord.BalanceQuantity = existingRecord.Quantity;
             existingRecord.DeliveredPrice = viewModel.DeliveredPrice;
-            existingRecord.TotalAmount = viewModel.TotalAmount;
+            existingRecord.TotalAmount = existingRecord.Quantity * viewModel.DeliveredPrice;
             existingRecord.AccountSpecialist = viewModel.AccountSpecialist;
             existingRecord.Remarks = viewModel.Remarks;
             existingRecord.HasCommission = viewModel.HasCommission;
