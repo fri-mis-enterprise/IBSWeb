@@ -268,8 +268,8 @@
                                     // Add validation and recalculation on amount change
                                     $(".amount-input").on("input", function() {
                                         var input = $(this);
-                                        var max = parseFloat(input.data("max-balance"));
-                                        var val = parseFloat(input.val()) || 0;
+                                        var max = parseNumber(input.data("max-balance"));
+                                        var val = parseNumber(input.val()) || 0;
                                         var idx = input.data("index");
                                         var err = $(`.amount-error-${idx}`);
 
@@ -336,8 +336,8 @@
             var newTotal = 0;
             var hasInvalid = false;
             $(".amount-input").each(function() {
-                var val = parseFloat($(this).val()) || 0;
-                var max = parseFloat($(this).data("max-balance"));
+                var val = parseNumber($(this).val()) || 0;
+                var max = parseNumber($(this).data("max-balance"));
                 if (val <= 0 || val > max) {
                     hasInvalid = true;
                 }

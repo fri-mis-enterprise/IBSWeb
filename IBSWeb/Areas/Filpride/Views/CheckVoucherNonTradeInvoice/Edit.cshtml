@@ -253,7 +253,7 @@
             const accountField = row.querySelector(".chart-of-accounts");
 
             // Convert values properly
-            const amount = parseFloat(amountField.value) || 0;
+            const amount = parseNumber(amountField.value) || 0;
             const taxPercentage = parseFloat(taxSelect.value) || 0;
             const isVatable = vatableField.checked;
 
@@ -592,7 +592,7 @@
 
         // Form validation
         function validateTotals() {
-            const totalAmount = parseFloat(document.querySelector('[name="Total"]').value) || 0;
+            const totalAmount = parseNumber(document.querySelector('[name="Total"]').value) || 0;
             const totalDebit = Object.values(accumulatedEntries).reduce((sum, amt) => sum + amt.debit, 0);
             const totalCredit = Object.values(accumulatedEntries).reduce((sum, amt) => sum + amt.credit, 0);
             const totalDebits = Object.values(reverseAccumulatedEntries).reduce((sum, amt) => sum + amt.debit, 0);
@@ -767,7 +767,7 @@
     </script>
     <script>
         function validateDebitAndCredit() {
-            let totalValue = parseFloat($("#totalAmount").val()) || 0;
+            let totalValue = parseNumber($("#totalAmount").val()) || 0;
             let totalDebit = parseNumber(document.getElementById("totalDebitCell")?.textContent || "0");
             let totalCredit = parseNumber(document.getElementById("totalCreditCell")?.textContent || "0");
 
