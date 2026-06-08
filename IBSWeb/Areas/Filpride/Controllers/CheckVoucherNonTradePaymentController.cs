@@ -2220,6 +2220,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return NotFound();
                 }
 
+                if (supplier.Category == "Employee")
+                {
+                    TempData["warning"] = "Employee suppliers cannot be processed as supplier advances.";
+                    viewModel.Suppliers = await _unitOfWork.GetFilprideSupplierListAsyncById(companyClaims, cancellationToken);
+                    viewModel.Banks = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+                    viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
+                    return View(viewModel);
+                }
+
                 var supplierSubAccountName = (await _subAccountResolver.ResolveAsync(
                     SubAccountType.Supplier,
                     viewModel.SupplierId,
@@ -2488,6 +2497,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (supplier == null)
                 {
                     return NotFound();
+                }
+
+                if (supplier.Category == "Employee")
+                {
+                    TempData["warning"] = "Employee suppliers cannot be processed as supplier advances.";
+                    viewModel.Suppliers = await _unitOfWork.GetFilprideSupplierListAsyncById(companyClaims, cancellationToken);
+                    viewModel.Banks = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+                    viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
+                    return View(viewModel);
                 }
 
                 var supplierSubAccountName = (await _subAccountResolver.ResolveAsync(
