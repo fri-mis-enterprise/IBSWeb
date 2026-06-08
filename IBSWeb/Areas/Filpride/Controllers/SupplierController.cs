@@ -67,56 +67,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return $"{fileName}-{DateTimeHelper.GetCurrentPhilippineTime():yyyyMMddHHmmss}{extension}";
         }
 
-        public IActionResult Index(string? view)
+        private async Task PopulateSupplierFormListsAsync(FilprideSupplier model, CancellationToken cancellationToken)
         {
-            if (view == nameof(DynamicView.Supplier))
-            {
-                return View("ExportIndex");
-            }
-
-            return View();
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> Create(CancellationToken cancellationToken)
-        {
-            FilprideSupplier model = new()
-            {
-                DefaultExpenses = await _dbContext.FilprideChartOfAccounts
-                    .Where(coa => !coa.HasChildren)
-                    .OrderBy(coa => coa.AccountNumber)
-                    .Select(s => new SelectListItem
-                    {
-                        Value = s.AccountNumber,
-                        Text = s.AccountNumber + " " + s.AccountName
-                    })
-                    .ToListAsync(cancellationToken),
-                WithholdingTaxList = await _dbContext.FilprideChartOfAccounts
-                    .Where(coa => coa.AccountNumber!.Contains("2010302") && !coa.HasChildren)
-                    .OrderBy(coa => coa.AccountNumber)
-                    .Select(s => new SelectListItem
-                    {
-                        Value = s.AccountNumber + " " + s.AccountName,
-                        Text = s.AccountNumber + " " + s.AccountName
-                    })
-                    .ToListAsync(cancellationToken),
-                PaymentTerms = await _unitOfWork.FilprideTerms.GetFilprideTermsListAsyncByCode(cancellationToken)
-            };
-
-            return View(model);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(FilprideSupplier model, IFormFile? registration, IFormFile? document, CancellationToken cancellationToken)
-        {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
             model.DefaultExpenses = await _dbContext.FilprideChartOfAccounts
                 .Where(coa => !coa.HasChildren)
                 .OrderBy(coa => coa.AccountNumber)
@@ -138,6 +90,60 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .ToListAsync(cancellationToken);
 
             model.PaymentTerms = await _unitOfWork.FilprideTerms.GetFilprideTermsListAsyncByCode(cancellationToken);
+        }
+
+        private void ApplyEmployeeCategoryRules(FilprideSupplier model)
+        {
+            if (string.Equals(model.Category, "Employee", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(model.EmployeeNumber))
+                {
+                    ModelState.AddModelError(nameof(model.EmployeeNumber), "Employee Number is required.");
+                }
+                else
+                {
+                    model.EmployeeNumber = model.EmployeeNumber.Trim();
+                }
+
+                return;
+            }
+
+            model.EmployeeNumber = null;
+        }
+
+        public IActionResult Index(string? view)
+        {
+            if (view == nameof(DynamicView.Supplier))
+            {
+                return View("ExportIndex");
+            }
+
+            return View();
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Create(CancellationToken cancellationToken)
+        {
+            FilprideSupplier model = new();
+
+            await PopulateSupplierFormListsAsync(model, cancellationToken);
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(FilprideSupplier model, IFormFile? registration, IFormFile? document, CancellationToken cancellationToken)
+        {
+            var companyClaims = await GetCompanyClaimAsync();
+
+            if (companyClaims == null)
+            {
+                return BadRequest();
+            }
+
+            await PopulateSupplierFormListsAsync(model, cancellationToken);
+            ApplyEmployeeCategoryRules(model);
 
             if (!ModelState.IsValid)
             {
@@ -277,27 +283,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
-            supplier.DefaultExpenses = await _dbContext.FilprideChartOfAccounts
-                .Where(coa => !coa.HasChildren)
-                .OrderBy(coa => coa.AccountNumber)
-                .Select(s => new SelectListItem
-                {
-                    Value = s.AccountNumber,
-                    Text = s.AccountNumber + " " + s.AccountName
-                })
-                .ToListAsync(cancellationToken);
-
-            supplier.WithholdingTaxList = await _dbContext.FilprideChartOfAccounts
-                .Where(coa => coa.AccountNumber!.Contains("2010302") && !coa.HasChildren)
-                .OrderBy(coa => coa.AccountNumber)
-                .Select(s => new SelectListItem
-                {
-                    Value = s.AccountNumber + " " + s.AccountName,
-                    Text = s.AccountNumber + " " + s.AccountName
-                })
-                .ToListAsync(cancellationToken);
-
-            supplier.PaymentTerms = await _unitOfWork.FilprideTerms.GetFilprideTermsListAsyncByCode(cancellationToken);
+            await PopulateSupplierFormListsAsync(supplier, cancellationToken);
             return View(supplier);
         }
 
@@ -305,27 +291,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(FilprideSupplier model, IFormFile? registration, IFormFile? document, CancellationToken cancellationToken)
         {
-            model.DefaultExpenses = await _dbContext.FilprideChartOfAccounts
-                .Where(coa => !coa.HasChildren)
-                .OrderBy(coa => coa.AccountNumber)
-                .Select(s => new SelectListItem
-                {
-                    Value = s.AccountNumber,
-                    Text = s.AccountNumber + " " + s.AccountName
-                })
-                .ToListAsync(cancellationToken);
-
-            model.WithholdingTaxList = await _dbContext.FilprideChartOfAccounts
-                .Where(coa => coa.AccountNumber!.Contains("2010302") && !coa.HasChildren)
-                .OrderBy(coa => coa.AccountNumber)
-                .Select(s => new SelectListItem
-                {
-                    Value = s.AccountNumber + " " + s.AccountName,
-                    Text = s.AccountNumber + " " + s.AccountName
-                })
-                .ToListAsync(cancellationToken);
-
-            model.PaymentTerms = await _unitOfWork.FilprideTerms.GetFilprideTermsListAsyncByCode(cancellationToken);
+            await PopulateSupplierFormListsAsync(model, cancellationToken);
+            ApplyEmployeeCategoryRules(model);
 
             if (!ModelState.IsValid)
             {

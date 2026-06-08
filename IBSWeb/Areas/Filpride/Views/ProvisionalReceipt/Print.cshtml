@@ -19,8 +19,8 @@
     }
 
     var amountReceived = Model.CashAmount + Model.CheckAmount + Model.ManagersCheckAmount;
-    var employeeName = Model.Employee.GetFullName().ToUpper();
-    var employeeAddress = (Model.Employee.Address ?? string.Empty).ToUpper();
+    var employeeName = Model.Supplier.SupplierName.ToUpper();
+    var employeeAddress = (Model.Supplier.SupplierAddress ?? string.Empty).ToUpper();
 
     int integerPart = Convert.ToInt32(Math.Floor(amountReceived));
     decimal decimalPart = Math.Round((amountReceived - integerPart), 4);

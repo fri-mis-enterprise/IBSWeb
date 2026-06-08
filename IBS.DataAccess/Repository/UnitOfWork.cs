@@ -8,7 +8,6 @@ using IBS.DataAccess.Repository.MasterFile;
 using IBS.DataAccess.Repository.MasterFile.IRepository;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.MasterFile;
-using IBS.Utility.Constants;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
@@ -86,7 +85,6 @@ namespace IBS.DataAccess.Repository
         public IAuthorityToLoadRepository FilprideAuthorityToLoad { get; private set; }
         public Filpride.IRepository.IChartOfAccountRepository FilprideChartOfAccount { get; private set; }
         public IAuditTrailRepository FilprideAuditTrail { get; private set; }
-        public Filpride.IRepository.IEmployeeRepository FilprideEmployee { get; private set; }
         public ICustomerBranchRepository FilprideCustomerBranch { get; private set; }
         public ITermsRepository FilprideTerms { get; private set; }
         public Filpride.IRepository.IGeneralLedgerRepository GeneralLedger { get; private set; }
@@ -161,7 +159,6 @@ namespace IBS.DataAccess.Repository
             FilprideAuthorityToLoad = new AuthorityToLoadRepository(_db);
             FilprideChartOfAccount = new Filpride.ChartOfAccountRepository(_db);
             FilprideAuditTrail = new AuditTrailRepository(_db);
-            FilprideEmployee = new Filpride.EmployeeRepository(_db);
             FilprideCustomerBranch = new CustomerBranchRepository(_db);
             FilprideTerms = new TermsRepository(_db);
             GeneralLedger = new Filpride.GeneralLedgerRepository(_db);
@@ -262,6 +259,23 @@ namespace IBS.DataAccess.Repository
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<List<SelectListItem>> GetFilprideEmployeeSupplierListAsyncById(string company, CancellationToken cancellationToken = default)
+        {
+            return await _db.FilprideSuppliers
+                .Where(s => s.IsActive && s.Category == "Employee")
+                .Where(GetCompanyFilter<FilprideSupplier>(company))
+                .OrderBy(s => s.EmployeeNumber)
+                .ThenBy(s => s.SupplierName)
+                .Select(s => new SelectListItem
+                {
+                    Value = s.SupplierId.ToString(),
+                    Text = string.IsNullOrWhiteSpace(s.EmployeeNumber)
+                        ? s.SupplierName
+                        : $"{s.EmployeeNumber} - {s.SupplierName}"
+                })
+                .ToListAsync(cancellationToken);
+        }
+
         public async Task<List<SelectListItem>> GetFilprideTradeSupplierListAsyncById(string company, CancellationToken cancellationToken = default)
         {
             return await _db.FilprideSuppliers
@@ -327,20 +341,6 @@ namespace IBS.DataAccess.Repository
                 {
                     Value = ba.BankAccountId.ToString(),
                     Text = ba.Bank + " " + ba.AccountNo + " " + ba.AccountName
-                })
-                .ToListAsync(cancellationToken);
-        }
-
-        public async Task<List<SelectListItem>> GetFilprideEmployeeListById(CancellationToken cancellationToken = default)
-        {
-            return await _db.FilprideEmployees
-                .Where(e => e.IsActive)
-                .OrderBy(e => e.FirstName)
-                .ThenBy(e => e.LastName)
-                .Select(e => new SelectListItem
-                {
-                    Value = e.EmployeeId.ToString(),
-                    Text = $"{e.EmployeeNumber} - {e.FirstName} {e.LastName}"
                 })
                 .ToListAsync(cancellationToken);
         }

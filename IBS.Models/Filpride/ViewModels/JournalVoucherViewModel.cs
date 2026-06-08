@@ -24,7 +24,7 @@ namespace IBS.Models.Filpride.ViewModels
 
         [Display(Name = "Employee")]
         [Required(ErrorMessage = "The Employee field is required.")]
-        public int? EmployeeId { get; set; }
+        public int? SupplierId { get; set; }
 
         [ForeignKey(nameof(CVId))]
         public FilprideCheckVoucherHeader? CheckVoucherHeader { get; set; }
@@ -33,7 +33,7 @@ namespace IBS.Models.Filpride.ViewModels
         public List<SelectListItem>? CheckVoucherHeaders { get; set; }
 
         [NotMapped]
-        public List<SelectListItem>? Employees { get; set; }
+        public List<SelectListItem>? Suppliers { get; set; }
 
         public string Particulars { get; set; } = null!;
 
@@ -47,8 +47,6 @@ namespace IBS.Models.Filpride.ViewModels
         public string JVReason { get; set; } = null!;
 
         public List<SelectListItem>? COA { get; set; }
-
-        public List<SelectListItem>? SupplierList { get; set; }
 
         public string? Type { get; set; }
 

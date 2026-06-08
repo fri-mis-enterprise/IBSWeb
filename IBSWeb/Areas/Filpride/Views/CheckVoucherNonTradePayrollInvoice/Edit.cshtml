@@ -407,7 +407,7 @@
         function validateDebitAndCredit() {
             var totalDebit = parseNumber($(".totalDebit").text());
             var totalCredit = parseNumber($(".totalCredit").text());
-            var totalValue = parseFloat($("#totalAmount").val()) || 0;
+            var totalValue = parseNumber($("#totalAmount").val()) || 0;
             var errorMessage = "";
             var isValid = true;
             let hasValidSubaccount = false;
@@ -421,7 +421,7 @@
                 if (!titleInput || !creditInput) continue;
 
                 const title = titleInput.value.trim();
-                const credit = parseFloat(creditInput.value.replace(/,/g, "")) || 0;
+                const credit = parseNumber(creditInput.value) || 0;
 
                 if (title === requiredTitle && credit > 0) {
                     hasValidSubaccount = true;

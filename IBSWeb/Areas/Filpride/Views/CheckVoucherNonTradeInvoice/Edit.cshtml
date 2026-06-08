@@ -111,7 +111,6 @@
                                             </select>
                                             <input type="hidden" name="AccountingEntries[@i].BankMasterFileId" value="@Model.AccountingEntries[i].BankMasterFileId" class="bank-master-file-id" />
                                             <input type="hidden" name="AccountingEntries[@i].CompanyMasterFileId" value="@Model.AccountingEntries[i].CompanyMasterFileId" class="company-master-file-id" />
-                                            <input type="hidden" name="AccountingEntries[@i].EmployeeMasterFileId" value="@Model.AccountingEntries[i].EmployeeMasterFileId" class="employee-master-file-id" />
                                             <input type="hidden" name="AccountingEntries[@i].CustomerMasterFileId" value="@Model.AccountingEntries[i].CustomerMasterFileId" class="customer-master-file-id" />
                                             <input type="hidden" name="AccountingEntries[@i].SupplierMasterFileId" value="@Model.AccountingEntries[i].SupplierMasterFileId" class="supplier-master-file-id" />
                                         </td>
@@ -254,7 +253,7 @@
             const accountField = row.querySelector(".chart-of-accounts");
 
             // Convert values properly
-            const amount = parseFloat(amountField.value) || 0;
+            const amount = parseNumber(amountField.value) || 0;
             const taxPercentage = parseFloat(taxSelect.value) || 0;
             const isVatable = vatableField.checked;
 
@@ -278,11 +277,12 @@
 
             const text = accountField.options[accountField.selectedIndex]?.text || '';
             const accountTitle = text.substring(text.indexOf(')') + 1).trim();
+            const accountCode = accountField.value;
 
-            if(amount > 0){
+            if (accountCode && amount > 0) {
                 addToAccumulatedEntries(accountTitle, netOfVat, 0);
             }
-            if(amount < 0) {
+            if (accountCode && amount < 0) {
                 reverseAddToAccumulatedEntries(accountTitle, 0, Math.abs(netOfVat));
             }
             // Add to accumulated entries
@@ -431,7 +431,6 @@
                     </select>
                     <input type="hidden" name="AccountingEntries[${rowCount}].BankMasterFileId" class="bank-master-file-id" />
                     <input type="hidden" name="AccountingEntries[${rowCount}].CompanyMasterFileId" class="company-master-file-id" />
-                    <input type="hidden" name="AccountingEntries[${rowCount}].EmployeeMasterFileId" class="employee-master-file-id" />
                     <input type="hidden" name="AccountingEntries[${rowCount}].CustomerMasterFileId" class="customer-master-file-id" />
                     <input type="hidden" name="AccountingEntries[${rowCount}].SupplierMasterFileId" class="supplier-master-file-id" />
                 </td>
@@ -500,6 +499,21 @@
                 originalChartOfAccountsHTML = firstSelect.innerHTML;
             }
 
+            function clearAccountingEntrySelections() {
+                $('#accountTable tbody tr').each(function () {
+                    const row = $(this);
+                    const accountSelect = row.find('.chart-of-accounts');
+                    const originalText = accountSelect.data('original-text');
+
+                    if (originalText && accountSelect.val()) {
+                        accountSelect.find('option:selected').text(originalText);
+                    }
+
+                    row.find('input[name$=".BankMasterFileId"], input[name$=".CompanyMasterFileId"], input[name$=".CustomerMasterFileId"], input[name$=".SupplierMasterFileId"]').remove();
+                    accountSelect.removeData('original-text').trigger('change.select2');
+                });
+            }
+
             // Initialize event listeners for existing rows
             document.querySelectorAll('#accountTable tbody tr').forEach(row => {
                 initializeRowEventListeners(row);
@@ -521,6 +535,8 @@
             $('.supplier').on('change', function () {
                 var supplierId = $(this).val();
                 if (supplierId) {
+                    clearAccountingEntrySelections();
+
                     fetchSupplierDetails(supplierId, function (data) {
                         $("#SupplierName").val(data.name);
                         $("#SupplierAddress").val(data.address);
@@ -576,7 +592,7 @@
 
         // Form validation
         function validateTotals() {
-            const totalAmount = parseFloat(document.querySelector('[name="Total"]').value) || 0;
+            const totalAmount = parseNumber(document.querySelector('[name="Total"]').value) || 0;
             const totalDebit = Object.values(accumulatedEntries).reduce((sum, amt) => sum + amt.debit, 0);
             const totalCredit = Object.values(accumulatedEntries).reduce((sum, amt) => sum + amt.credit, 0);
             const totalDebits = Object.values(reverseAccumulatedEntries).reduce((sum, amt) => sum + amt.debit, 0);
@@ -636,7 +652,6 @@
             const masterFileSelector = new MasterFileSelector({
                 getBankAccounts: '@Url.Action("GetBankAccounts", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })',
                 getCompanies: '@Url.Action("GetCompanies", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })',
-                getEmployees: '@Url.Action("GetEmployees", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })',
                 getCustomers: '@Url.Action("GetCustomers", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })',
                 getSuppliers: '@Url.Action("GetSuppliers", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })',
             });
@@ -670,7 +685,6 @@
                 const masterFileIds = {
                     bankId: row.querySelector('.bank-master-file-id')?.value,
                     companyId: row.querySelector('.company-master-file-id')?.value,
-                    employeeId: row.querySelector('.employee-master-file-id')?.value,
                     customerId: row.querySelector('.customer-master-file-id')?.value,
                     supplierId: row.querySelector('.supplier-master-file-id')?.value
                 };
@@ -682,7 +696,7 @@
                 const accountMappings = [
                     { key: 'bankId', accounts: ['101010100 Cash in Bank', '101020500 AR-Non Trade Receivable'], url: 'GetBankAccountById' },
                     { key: 'companyId', accounts: ['101010400 Fund Transfer', '101020600 AR-Exchange Check', '101020500 AR-Non Trade Receivable'], url: 'GetCompanyById' },
-                    { key: 'employeeId', accounts: ['101020400 Advances from Officers and Employees', '101020500 AR-Non Trade Receivable'], url: 'GetEmployeeById' },
+                    { key: 'supplierId', accounts: ['101020400 Advances from Officers and Employees'], url: 'GetSupplierById' },
                     { key: 'customerId', accounts: ['101020500 AR-Non Trade Receivable'], url: 'GetCustomerById' },
                     { key: 'supplierId', accounts: ['101020500 AR-Non Trade Receivable'], url: 'GetSupplierById' }
                 ];
@@ -707,10 +721,24 @@
                 success: function(data) {
                     if (data && data.accountName) {
                         const currentText = accountSelect.options[accountSelect.selectedIndex].text;
+                        const getBaseAccountText = (text) => {
+                            if (!text) {
+                                return '';
+                            }
+
+                            let baseText = text.trim();
+                            const suffixPattern = /\s+\([^()]+ - [^()]+\)$/;
+
+                            while (suffixPattern.test(baseText)) {
+                                baseText = baseText.replace(suffixPattern, '').trim();
+                            }
+
+                            return baseText;
+                        };
 
                         // Store original text if not already stored
                         if (!$(accountSelect).data('original-text')) {
-                            $(accountSelect).data('original-text', currentText);
+                            $(accountSelect).data('original-text', getBaseAccountText(currentText));
                         }
 
                         // Get the original text and extract account info after the AccountType prefix
@@ -739,7 +767,7 @@
     </script>
     <script>
         function validateDebitAndCredit() {
-            let totalValue = parseFloat($("#totalAmount").val()) || 0;
+            let totalValue = parseNumber($("#totalAmount").val()) || 0;
             let totalDebit = parseNumber(document.getElementById("totalDebitCell")?.textContent || "0");
             let totalCredit = parseNumber(document.getElementById("totalCreditCell")?.textContent || "0");
 

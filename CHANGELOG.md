@@ -6,6 +6,20 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v3.0.3] - 2026-06-06
+
+### Added
+- Added `EmployeeNumber` to the Filpride supplier master file so employee-category suppliers can store the employee reference directly in the supplier record.
+
+### Changed
+- Migrated Filpride employee-advance voucher flows to use `FilprideSupplier` records with `Category = Employee` as the standard payee foreign key instead of the separate employee linkage.
+- Updated check voucher liquidation and related employee-advance selection flows to resolve employee advances through supplier-backed employee records.
+
+### Removed
+- Removed the check voucher `EmployeeId` linkage in favor of the standard `SupplierId` relationship plus an explicit employee-advance marker.
+
+---
+
 ## [v3.0.2] - 2026-06-05
 
 ### Fixed

@@ -20,15 +20,6 @@ class MasterFileSelector {
                 formatOption: (item) => `${item.accountNumber} - ${item.accountName}`,
                 inputName: 'CompanyMasterFileId'
             },
-            EMPLOYEE: {
-                id: 'employee',
-                title: 'Employee',
-                url: urls.getEmployees,
-                triggerAccount: '101020400 Advances from Officers and Employees',
-                placeholder: 'Select an employee',
-                formatOption: (item) => `${item.accountNumber} - ${item.accountName}`,
-                inputName: 'EmployeeMasterFileId'
-            },
             CUSTOMER: {
                 id: 'customer',
                 title: 'Customer',
@@ -42,7 +33,7 @@ class MasterFileSelector {
                 id: 'supplier',
                 title: 'Supplier',
                 url: urls.getSuppliers,
-                triggerAccounts: ['101020500 AR-Non Trade Receivable', '101060900 Security Deposit'],
+                triggerAccounts: ['101020400 Advances from Officers and Employees', '101020500 AR-Non Trade Receivable', '101060900 Security Deposit'],
                 placeholder: 'Select a supplier',
                 formatOption: (item) => `${item.accountNumber} - ${item.accountName}`,
                 inputName: 'SupplierMasterFileId'
@@ -89,6 +80,21 @@ class MasterFileSelector {
         });
     }
 
+    getBaseAccountText(text) {
+        if (!text) {
+            return '';
+        }
+
+        let baseText = text.trim();
+        const suffixPattern = /\s+\([^()]+ - [^()]+\)$/;
+
+        while (suffixPattern.test(baseText)) {
+            baseText = baseText.replace(suffixPattern, '').trim();
+        }
+
+        return baseText;
+    }
+
     handleAccountChange(selectedAccount, row) {
         let matchFound = false;
 
@@ -127,7 +133,6 @@ class MasterFileSelector {
                                     <option value="">Select type...</option>
                                     <option value="BANK">Bank Account</option>
                                     <option value="COMPANY">Company</option>
-                                    <option value="EMPLOYEE">Employee</option>
                                     <option value="CUSTOMER">Customer</option>
                                     <option value="SUPPLIER">Supplier</option>
                                 </select>
@@ -303,13 +308,13 @@ class MasterFileSelector {
 
         const accountSelect = row.find('.chart-of-accounts');
         const currentText = accountSelect.find('option:selected').text();
-        
+
         if (!accountSelect.data('original-text')) {
-            accountSelect.data('original-text', currentText);
+            accountSelect.data('original-text', this.getBaseAccountText(currentText));
         }
-        
+
         const originalText = accountSelect.data('original-text');
-        
+
         const firstParenIndex = originalText.indexOf(')');
         let newDisplayText;
 

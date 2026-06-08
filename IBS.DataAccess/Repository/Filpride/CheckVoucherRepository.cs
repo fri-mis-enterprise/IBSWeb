@@ -120,7 +120,6 @@ namespace IBS.DataAccess.Repository.Filpride
         {
             return await dbSet.Where(filter)
                 .Include(cv => cv.BankAccount)
-                .Include(cv => cv.Employee)
                 .Include(cv => cv.Supplier)
                 .FirstOrDefaultAsync(cancellationToken);
         }
@@ -129,7 +128,6 @@ namespace IBS.DataAccess.Repository.Filpride
         {
             IQueryable<FilprideCheckVoucherHeader> query = dbSet
                 .Include(cv => cv.BankAccount)
-                .Include(cv => cv.Employee)
                 .Include(cv => cv.Supplier);
 
             if (filter != null)
@@ -144,7 +142,6 @@ namespace IBS.DataAccess.Repository.Filpride
         {
             IQueryable<FilprideCheckVoucherHeader> query = dbSet
                 .Include(cv => cv.BankAccount)
-                .Include(cv => cv.Employee)
                 .Include(cv => cv.Supplier)
                 .AsSplitQuery()
                 .AsNoTracking();

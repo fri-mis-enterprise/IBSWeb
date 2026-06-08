@@ -83,6 +83,7 @@ namespace IBS.DataAccess.Repository.Filpride
                                    ?? throw new InvalidOperationException($"Supplier with id '{model.SupplierId}' not found.");
 
             existingSupplier.Category = model.Category;
+            existingSupplier.EmployeeNumber = model.EmployeeNumber;
             existingSupplier.SupplierName = model.SupplierName;
             existingSupplier.SupplierAddress = model.SupplierAddress;
             existingSupplier.SupplierTin = model.SupplierTin;

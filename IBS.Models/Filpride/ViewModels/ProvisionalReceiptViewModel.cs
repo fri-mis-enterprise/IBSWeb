@@ -11,9 +11,9 @@ namespace IBS.Models.Filpride.ViewModels
 
         [Required(ErrorMessage = "The employee is required.")]
         [Display(Name = "Employee")]
-        public int EmployeeId { get; set; }
+        public int SupplierId { get; set; }
 
-        public List<SelectListItem>? Employees { get; set; }
+        public List<SelectListItem>? Suppliers { get; set; }
 
         [Required]
         [StringLength(50)]

@@ -72,7 +72,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     "supplier" => await GenerateSupplierExcel(extractedBy, companyClaims, cancellationToken),
                     "bankaccount" => await GenerateBankAccountExcel(extractedBy, companyClaims, cancellationToken),
                     "service" => await GenerateServiceExcel(extractedBy, companyClaims, cancellationToken),
-                    "employee" => await GenerateEmployeeExcel(extractedBy, companyClaims, cancellationToken),
                     _ => throw new ArgumentException($"Invalid master file type: {masterFileType}")
                 };
 
@@ -371,66 +370,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         #endregion
-
-        #region -- Employee Master File --
-        private async Task<(MemoryStream? stream, string fileName)> GenerateEmployeeExcel(
-            string extractedBy,
-            string company,
-            CancellationToken cancellationToken)
-        {
-
-            var employees = (await _unitOfWork.FilprideEmployee
-                .GetAllAsync(x => x.Company == company, cancellationToken))
-                .OrderBy(x => x.EmployeeNumber);
-
-            if (!employees.Any())
-            {
-                return (null, string.Empty);
-            }
-
-            var columns = new List<ColumnDefinition>
-            {
-                new() { Header = "EMPLOYEE NO", ValueSelector = e => ((FilprideEmployee)e).EmployeeNumber },
-                new() { Header = "FIRST NAME", ValueSelector = e => ((FilprideEmployee)e).FirstName },
-                new() { Header = "MIDDLE NAME", ValueSelector = e => ((FilprideEmployee)e).MiddleName },
-                new() { Header = "LAST NAME", ValueSelector = e => ((FilprideEmployee)e).LastName },
-                new() { Header = "ADDRESS", ValueSelector = e => ((FilprideEmployee)e).Address },
-                new() { Header = "BIRTH DATE", ValueSelector = e => ((FilprideEmployee)e).BirthDate, NumberFormat = "mm/dd/yyyy" },
-                new() { Header = "TEL NO", ValueSelector = e => ((FilprideEmployee)e).TelNo },
-                new() { Header = "SSS NO", ValueSelector = e => ((FilprideEmployee)e).SssNo },
-                new() { Header = "TIN NO", ValueSelector = e => ((FilprideEmployee)e).TinNo },
-                new() { Header = "PHILHEALTH NO", ValueSelector = e => ((FilprideEmployee)e).PhilhealthNo },
-                new() { Header = "PAGIBIG NO", ValueSelector = e => ((FilprideEmployee)e).PagibigNo },
-                new() { Header = "COMPANY", ValueSelector = e => ((FilprideEmployee)e).Company },
-                new() { Header = "DEPARTMENT", ValueSelector = e => ((FilprideEmployee)e).Department },
-                new() { Header = "DATE HIRED", ValueSelector = e => ((FilprideEmployee)e).DateHired, NumberFormat = "mm/dd/yyyy" },
-                new() { Header = "DATE RESIGNED", ValueSelector = e => ((FilprideEmployee)e).DateResigned?.ToDateTime(TimeOnly.MinValue), NumberFormat = "mm/dd/yyyy" },
-                new() { Header = "POSITION", ValueSelector = e => ((FilprideEmployee)e).Position },
-                new() { Header = "IS MANAGERIAL", ValueSelector = e => ((FilprideEmployee)e).IsManagerial ? "Yes" : "No" },
-                new() { Header = "SUPERVISOR", ValueSelector = e => ((FilprideEmployee)e).Supervisor },
-            };
-
-            var customWidths = new Dictionary<string, double>
-            {
-                { "SERVICE NAME", 30 },
-                { "ADDRESS", 100},
-                { "PHILHEALTH NO", 40 },
-            };
-
-            return await BuildExcelFile(
-                employees,
-                "Employees",
-                "Employee_MasterFile",
-                extractedBy,
-                company,
-                columns,
-                customWidths,
-                2,
-                cancellationToken
-            );
-        }
-        #endregion
-
 
         #region -- Core Excel Building Logic --
 
