@@ -340,7 +340,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                            .GetAsync(coa => coa.AccountNumber == currentAccountNumber, cancellationToken)
                                        ?? throw new NullReferenceException($"Account number {currentAccountNumber} not found");
 
-                    var isAdvances = accountTitle.AccountName.Contains("Advances to Officers and Employees");
+                    var isAdvances = accountTitle.AccountName.Contains("Advances to Employees");
 
                     jvDetails.Add(
                         new FilprideJournalVoucherDetail
@@ -784,7 +784,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                            .GetAsync(coa => coa.AccountNumber == currentAccountNumber, cancellationToken)
                                        ?? throw new NullReferenceException($"Account number {currentAccountNumber} not found");
 
-                    var isAdvances = accountTitle.AccountName.Contains("Advances to Officers and Employees");
+                    var isAdvances = accountTitle.AccountName.Contains("Advances to Employees");
 
                     jvDetails.Add(
                         new FilprideJournalVoucherDetail
