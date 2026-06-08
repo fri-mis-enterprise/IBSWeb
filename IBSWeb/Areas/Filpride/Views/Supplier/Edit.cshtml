@@ -316,6 +316,9 @@
                     nonTradeList.style.display = 'block';
                     radios[1].checked = true;
                     $("#TradeName").val("");
+                    employeeNumber.required = false;
+                    employeeNumber.classList.remove('input-validation-error');
+                    $("[data-valmsg-for='EmployeeNumber']").text("");
                     withHoldingTaxPercent.style.display = 'block';
                     withHoldingTaxTitle.style.display = 'block';
                     $("#TaxType").val(null).trigger('change');
