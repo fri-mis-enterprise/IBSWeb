@@ -277,11 +277,12 @@
 
             const text = accountField.options[accountField.selectedIndex]?.text || '';
             const accountTitle = text.substring(text.indexOf(')') + 1).trim();
+            const accountCode = accountField.value;
 
-            if(amount > 0){
+            if (accountCode && amount > 0) {
                 addToAccumulatedEntries(accountTitle, netOfVat, 0);
             }
-            if(amount < 0) {
+            if (accountCode && amount < 0) {
                 reverseAddToAccumulatedEntries(accountTitle, 0, Math.abs(netOfVat));
             }
             // Add to accumulated entries
@@ -498,6 +499,21 @@
                 originalChartOfAccountsHTML = firstSelect.innerHTML;
             }
 
+            function clearAccountingEntrySelections() {
+                $('#accountTable tbody tr').each(function () {
+                    const row = $(this);
+                    const accountSelect = row.find('.chart-of-accounts');
+                    const originalText = accountSelect.data('original-text');
+
+                    if (originalText && accountSelect.val()) {
+                        accountSelect.find('option:selected').text(originalText);
+                    }
+
+                    row.find('input[name$=".BankMasterFileId"], input[name$=".CompanyMasterFileId"], input[name$=".CustomerMasterFileId"], input[name$=".SupplierMasterFileId"]').remove();
+                    accountSelect.removeData('original-text').trigger('change.select2');
+                });
+            }
+
             // Initialize event listeners for existing rows
             document.querySelectorAll('#accountTable tbody tr').forEach(row => {
                 initializeRowEventListeners(row);
@@ -519,6 +535,8 @@
             $('.supplier').on('change', function () {
                 var supplierId = $(this).val();
                 if (supplierId) {
+                    clearAccountingEntrySelections();
+
                     fetchSupplierDetails(supplierId, function (data) {
                         $("#SupplierName").val(data.name);
                         $("#SupplierAddress").val(data.address);
@@ -703,10 +721,24 @@
                 success: function(data) {
                     if (data && data.accountName) {
                         const currentText = accountSelect.options[accountSelect.selectedIndex].text;
+                        const getBaseAccountText = (text) => {
+                            if (!text) {
+                                return '';
+                            }
+
+                            let baseText = text.trim();
+                            const suffixPattern = /\s+\([^()]+ - [^()]+\)$/;
+
+                            while (suffixPattern.test(baseText)) {
+                                baseText = baseText.replace(suffixPattern, '').trim();
+                            }
+
+                            return baseText;
+                        };
 
                         // Store original text if not already stored
                         if (!$(accountSelect).data('original-text')) {
-                            $(accountSelect).data('original-text', currentText);
+                            $(accountSelect).data('original-text', getBaseAccountText(currentText));
                         }
 
                         // Get the original text and extract account info after the AccountType prefix
