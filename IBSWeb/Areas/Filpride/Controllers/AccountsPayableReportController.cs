@@ -5383,6 +5383,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 // string currencyFormat = "#,##0.0000";
                 string currencyFormatTwoDecimal = "#,##0.00";
+                var periodStart = new DateOnly(monthYear.Year, monthYear.Month, 1);
+                var periodEnd = periodStart.AddMonths(1).AddDays(-1);
 
                 // fetch for this month and back
                 var apReport = await _unitOfWork.FilprideReport.GetApReport(monthYear, companyClaims, cancellationToken);
@@ -5441,18 +5443,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ThenBy(po => po.PurchaseOrderNo)
                     .GroupBy(po => new
                     {
-                        po.Supplier
+                        po.SupplierId,
+                        po.SupplierName
                     })
                     .ToList();
 
                 var groupBySupplierTermsAndType = apReport
                     .GroupBy(po => new
                     {
-                        po.Supplier,
-                        po.Terms,
-                        po.TypeOfPurchase
+                        po.SupplierId,
+                        po.SupplierName,
+                        po.Company,
+                        po.Terms
                     })
-                    .OrderBy(po => po.Key.Supplier!.SupplierName)
+                    .OrderBy(po => po.Key.SupplierName)
                     .ThenBy(po => po.Key.Terms)
                     .ToList();
 
@@ -5482,13 +5486,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 foreach (var sameSupplierGroup in groupBySupplierTermsAndType)
                 {
                     row += 2;
-                    worksheet.Cells[row, 2].Value = sameSupplierGroup.First().Supplier!.SupplierName;
+                    worksheet.Cells[row, 2].Value = sameSupplierGroup.Key.SupplierName;
                     worksheet.Cells[row, 2].Style.Font.Bold = true;
-                    worksheet.Cells[row, 3].Value = sameSupplierGroup.First().Company;
+                    worksheet.Cells[row, 3].Value = sameSupplierGroup.Key.Company;
                     var groupByProduct = sameSupplierGroup
-                        .GroupBy(po => po.Product)
-                        .OrderBy(po => po.Key?.ProductName)
+                        .GroupBy(po => new
+                        {
+                            po.ProductId,
+                            po.ProductName
+                        })
+                        .OrderBy(po => po.Key.ProductName)
                         .ToList();
+                    var distinctTypesOfPurchase = sameSupplierGroup
+                        .Select(po => po.TypeOfPurchase)
+                        .Where(type => !string.IsNullOrWhiteSpace(type))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+                    var typeOfPurchaseLabel = distinctTypesOfPurchase.Count switch
+                    {
+                        0 => string.Empty,
+                        1 => distinctTypesOfPurchase[0],
+                        _ => "MIXED"
+                    };
                     decimal poSubtotal = 0m;
                     decimal unliftedLastMonthSubtotal = 0m;
                     decimal liftedThisMonthSubtotal = 0m;
@@ -5501,10 +5520,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     {
                         // declare per product
                         var aGroupByProduct = groupByProduct
-                            .FirstOrDefault(g => g.Key?.ProductName == product);
+                            .FirstOrDefault(g => g.Key.ProductName == product);
                         worksheet.Cells[row, 4].Value = product;
-                        worksheet.Cells[row, 5].Value = groupByProduct.FirstOrDefault()?.FirstOrDefault()?.Terms;
-                        worksheet.Cells[row, 6].Value = groupByProduct.FirstOrDefault()?.FirstOrDefault()?.TypeOfPurchase;
+                        worksheet.Cells[row, 5].Value = sameSupplierGroup.Key.Terms;
+                        worksheet.Cells[row, 6].Value = typeOfPurchaseLabel;
 
                         // get the necessary values from po, separate it by variable
                         if (aGroupByProduct != null)
@@ -5521,46 +5540,43 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                 foreach (var po in aGroupByProduct)
                                 {
-                                    decimal rrQtyForUnliftedLastMonth = 0m;
-                                    decimal rrQtyForLiftedThisMonth = 0m;
                                     decimal currentPoQuantity = po.Quantity;
-                                    var isPoCurrentlyClosed = po.IsClosed
-                                                              && po.Date.Month <= monthYear.Month
-                                                              && po.Date.Year <= monthYear.Year;
                                     allPoTotal += currentPoQuantity;
                                     var isTaxable = po.TaxType == SD.TaxType_WithTax;
                                     var isVatable = po.VatType == SD.VatType_Vatable;
+                                    var rrQtyBeforeSelectedPeriod = po.Date < periodStart
+                                        ? po.ReceivingReports!
+                                            .Where(rr => rr.Date < periodStart)
+                                            .Sum(rr => rr.QuantityReceived)
+                                        : 0m;
+                                    var liftedThisMonthReports = po.ReceivingReports!
+                                        .Where(rr => rr.Date >= periodStart && rr.Date <= periodEnd)
+                                        .ToList();
+                                    var rrQtyForLiftedThisMonth = liftedThisMonthReports.Sum(rr => rr.QuantityReceived);
+                                    var rrQtyThroughMonthEnd = rrQtyBeforeSelectedPeriod + rrQtyForLiftedThisMonth;
 
-                                    if (po.ReceivingReports!.Count != 0)
+                                    if (liftedThisMonthReports.Count != 0)
                                     {
-                                        foreach (var rr in po.ReceivingReports)
+                                        foreach (var rr in liftedThisMonthReports)
                                         {
-                                            if (rr.Date < monthYear)
-                                            {
-                                                rrQtyForUnliftedLastMonth += rr.QuantityReceived;
-                                            }
-                                            else if (rr.Date.Month == monthYear.Month && rr.Date.Year == monthYear.Year)
-                                            {
-                                                rrQtyForLiftedThisMonth += rr.QuantityReceived;
-                                                grossOfLiftedThisMonth += rr.Amount;
+                                            grossOfLiftedThisMonth += rr.Amount;
 
-                                                var netOfVat = isVatable
-                                                    ? RoundToFour(repoCalculator.ComputeNetOfVat(rr.Amount))
-                                                    : rr.Amount;
-                                                var ewt = isTaxable
-                                                    ? RoundToFour(repoCalculator.ComputeEwtAmount(netOfVat, rr.TaxPercentage))
-                                                    : 0m;
+                                            var netOfVat = isVatable
+                                                ? RoundToFour(repoCalculator.ComputeNetOfVat(rr.Amount))
+                                                : rr.Amount;
+                                            var ewt = isTaxable
+                                                ? RoundToFour(repoCalculator.ComputeEwtAmount(netOfVat, rr.TaxPercentage))
+                                                : 0m;
 
-                                                totalEwt += ewt;
-                                            }
+                                            totalEwt += ewt;
                                         }
                                     }
 
-                                    unliftedLastMonth += currentPoQuantity - rrQtyForUnliftedLastMonth;
-                                    liftedThisMonth += rrQtyForLiftedThisMonth;
-                                    unliftedThisMonth += !isPoCurrentlyClosed
-                                        ? currentPoQuantity - rrQtyForUnliftedLastMonth - rrQtyForLiftedThisMonth
+                                    unliftedLastMonth += po.Date < periodStart
+                                        ? Math.Max(0m, currentPoQuantity - rrQtyBeforeSelectedPeriod)
                                         : 0m;
+                                    liftedThisMonth += rrQtyForLiftedThisMonth;
+                                    unliftedThisMonth += Math.Max(0m, currentPoQuantity - rrQtyThroughMonthEnd);
                                 }
 
                                 if (allPoTotal != 0m)
@@ -5725,7 +5741,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 3].Value = "FILPRIDE";
 
                 decimal finalPo = originalPoGrandTotalBiodiesel + originalPoGrandTotalEconogas + originalPoGrandTotalEnvirogas;
-                decimal finalUnliftedLastMonth = unliftedLastMonthGrandTotalBiodiesel + unliftedLastMonthGrandTotalEconogas + originalPoGrandTotalEnvirogas;
+                decimal finalUnliftedLastMonth = unliftedLastMonthGrandTotalBiodiesel + unliftedLastMonthGrandTotalEconogas + unliftedLastMonthGrandTotalEnvirogas;
                 decimal finalLiftedThisMonth = liftedThisMonthGrandTotalBiodiesel + liftedThisMonthGrandTotalEconogas + liftedThisMonthGrandTotalEnvirogas;
                 decimal finalUnliftedThisMonth = unliftedThisMonthGrandTotalBiodiesel + unliftedThisMonthGrandTotalEconogas + unliftedThisMonthGrandTotalEnvirogas;
                 decimal finalGross = grossAmountGrandTotalBiodiesel + grossAmountGrandTotalEconogas + grossAmountGrandTotalEnvirogas;
@@ -5887,9 +5903,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var grossAmountGrandTotal = 0m;
                     var ewtGrandTotal = 0m;
 
-                    worksheet = package.Workbook.Worksheets.Add(firstRecord.Supplier!.SupplierName);
+                    worksheet = package.Workbook.Worksheets.Add(aGroupBySupplier.Key.SupplierName);
                     worksheet.Cells.Style.Font.Name = "Calibri";
-                    worksheet.Cells[1, 1].Value = $"SUPPLIER: {firstRecord.Supplier!.SupplierName}";
+                    worksheet.Cells[1, 1].Value = $"SUPPLIER: {aGroupBySupplier.Key.SupplierName}";
                     worksheet.Cells[2, 1].Value = "AP MONITORING REPORT (TRADE & SUPPLY GENERATED: PER PO #)";
                     worksheet.Cells[3, 1].Value = "REF: PURCHASE ORDER REPORT-per INTEGRATED BUSINESS SYSTEM";
                     worksheet.Cells[4, 1].Value = $"FOR THE MONTH OF {monthYear.ToString("MMMM yyyy")}";
@@ -5953,46 +5969,37 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             var grossAmount = 0m;
                             var unliftedLastMonth = 0m;
                             var liftedThisMonthRrQty = 0m;
-                            var unliftedThisMonth = poTotal;
-                            var isPoCurrentlyClosed = po.IsClosed
-                                                      && po.Date.Month <= monthYear.Month
-                                                      && po.Date.Year <= monthYear.Year;
+                            var unliftedThisMonth = 0m;
                             var isTaxable = po.TaxType == SD.TaxType_WithTax;
                             var totalEwt = 0m;
+                            var rrQtyBeforeSelectedPeriod = po.Date < periodStart
+                                ? po.ReceivingReports!
+                                    .Where(rr => rr.Date < periodStart)
+                                    .Sum(rr => rr.QuantityReceived)
+                                : 0m;
 
-                            if (po.ReceivingReports!.Count != 0)
-                            {
-                                var liftedLastMonthRrQty = po.ReceivingReports
-                                    .Where(rr => rr.Date < monthYear)
-                                    .Sum(rr => rr.QuantityReceived);
+                            unliftedLastMonth = po.Date < periodStart
+                                ? Math.Max(0m, poTotal - rrQtyBeforeSelectedPeriod)
+                                : 0m;
 
-                                unliftedLastMonth = poTotal - liftedLastMonthRrQty;
+                            var liftedThisMonth = po.ReceivingReports!
+                                .Where(rr => rr.Date >= periodStart && rr.Date <= periodEnd)
+                                .ToList();
 
-                                var liftedThisMonth = po.ReceivingReports
-                                    .Where(rr => rr.Date.Month == monthYear.Month && rr.Date.Year == monthYear.Year)
-                                    .ToList();
+                            liftedThisMonthRrQty = liftedThisMonth.Sum(x => x.QuantityReceived);
+                            unliftedThisMonth = Math.Max(0m, poTotal - rrQtyBeforeSelectedPeriod - liftedThisMonthRrQty);
+                            grossAmount += liftedThisMonth.Sum(x => x.Amount);
 
-                                liftedThisMonthRrQty = liftedThisMonth.Sum(x => x.QuantityReceived);
-
-                                unliftedThisMonth = !isPoCurrentlyClosed ? unliftedLastMonth - liftedThisMonthRrQty : 0;
-                                grossAmount += liftedThisMonth.Sum(x => x.Amount);
-
-                                if (po.Date.Month == monthYear.Month && po.Date.Year == monthYear.Year)
+                            totalEwt = isTaxable
+                                ? liftedThisMonth.Sum(rr =>
                                 {
-                                    unliftedLastMonth = 0m;
-                                }
+                                    var netOfVat = isVatable
+                                        ? RoundToFour(repoCalculator.ComputeNetOfVat(rr.Amount))
+                                        : rr.Amount;
 
-                                totalEwt = isTaxable
-                                    ? liftedThisMonth.Sum(rr =>
-                                    {
-                                        var netOfVat = isVatable
-                                            ? RoundToFour(repoCalculator.ComputeNetOfVat(rr.Amount))
-                                            : rr.Amount;
-
-                                        return RoundToFour(repoCalculator.ComputeEwtAmount(netOfVat, rr.TaxPercentage));
-                                    })
-                                    : 0m;
-                            }
+                                    return RoundToFour(repoCalculator.ComputeEwtAmount(netOfVat, rr.TaxPercentage));
+                                })
+                                : 0m;
 
                             var ewt = totalEwt;
 
@@ -9277,9 +9284,3 @@ namespace IBSWeb.Areas.Filpride.Controllers
         #endregion -- Generated Journal Voucher Report as Excel File --
     }
 }
-
-
-
-
-
-

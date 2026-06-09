@@ -527,13 +527,19 @@ namespace IBS.DataAccess.Repository.Filpride
 
         public async Task<List<FilpridePurchaseOrder>> GetApReport(DateOnly monthYear, string company, CancellationToken cancellationToken = default)
         {
+            var periodStart = new DateOnly(monthYear.Year, monthYear.Month, 1);
+            var periodEnd = periodStart.AddMonths(1).AddDays(-1);
+
             var purchaseOrders = await _db.FilpridePurchaseOrders
+                .AsNoTracking()
+                .AsSplitQuery()
                 .Include(po => po.ReceivingReports!
                     .Where(rr => rr.Status == nameof(Status.Posted)))
                 .Include(po => po.Product)
                 .Include(po => po.Supplier)
                 .Include(po => po.PickUpPoint)
                 .Where(po => po.Company == company && !po.IsSubPo)
+                .Where(po => po.Date <= periodEnd)
                 .Where(po => (po.Status == nameof(Status.Posted) || po.Status == nameof(Status.Closed) && po.QuantityReceived > 0)
                              && (
                                  // POs created in the monthYear
@@ -542,6 +548,12 @@ namespace IBS.DataAccess.Repository.Filpride
                                  || po.ReceivingReports!.Any(rr => rr.Status == nameof(Status.Posted)
                                                                    && rr.Date.Year == monthYear.Year
                                                                    && rr.Date.Month == monthYear.Month)
+                                 // OR open POs with outstanding balance as of the selected month
+                                 || (!po.IsClosed
+                                     && po.Date < periodStart
+                                     && po.Quantity > po.ReceivingReports!
+                                         .Where(rr => rr.Status == nameof(Status.Posted) && rr.Date <= periodEnd)
+                                         .Sum(rr => rr.QuantityReceived))
                              ))
                 .OrderBy(po => po.Date)
                 .ThenBy(po => po.PurchaseOrderNo)
