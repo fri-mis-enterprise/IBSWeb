@@ -6,6 +6,13 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v3.0.4] - 2026-06-09
+
+### Changed
+- Updated Filpride customer order slip creation to leave `ExpirationDate` blank for NPC customers as a temporary exception, while continuing to assign the standard 7-day expiration to other customers.
+
+---
+
 ## [v3.0.3] - 2026-06-06
 
 ### Added

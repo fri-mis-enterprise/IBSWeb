@@ -369,6 +369,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     ? DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime().AddDays(7))
                     : DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime().AddDays(14));
 
+                ///TODO Temporary solution for removal of expiration of NPC customer
+                model.ExpirationDate = !model.CustomerName.Contains("NPC", StringComparison.CurrentCultureIgnoreCase)
+                    ? DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime().AddDays(7))
+                    : null;
+
+
                 // Upload files if there is existing
                 if (viewModel.UploadedFiles != null)
                 {
