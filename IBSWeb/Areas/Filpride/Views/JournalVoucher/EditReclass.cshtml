@@ -171,13 +171,10 @@
                     <table class="table" style="min-width: 800px">
                         <thead>
                             <tr>
-                                <th class="w-50">Account No.</th>
-                                <th class="w-25">
-                                    Debit
-                                </th>
-                                <th class="w-25">
-                                    Credit
-                                </th>
+                                <th>Account No.</th>
+                                <th>Debit</th>
+                                <th>Credit</th>
+                                <th>Sub Acct</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -188,7 +185,7 @@
                                 <td class="text-end">TOTAL:</td>
                                 <td class="totalDebit">0.0000</td>
                                 <td class="totalCredit">0.0000</td>
-                                <td></td>
+                                <td colspan="2"></td>
                             </tr>
                         </tbody>
                     </table>
@@ -208,7 +205,7 @@
 </div>
 
 <!-- Modal -->
-<div class="modal fade" id="AddAccEntry" tabindex="-1" aria-labelledby="AddAccEntryLabel" aria-hidden="true">
+<div class="modal fade addAccEntry" id="AddAccEntry" tabindex="-1" aria-labelledby="AddAccEntryLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -233,6 +230,20 @@
                     <label class="control-label">Credit</label>
                     <input id="credit" value="0.0000" class="form-control moneyInput" placeholder="0.0000" />
                     <span class="text-danger"></span>
+                </div>
+
+                <div class="form-group pt-4">
+                    <label class="control-label">Sub Account Type</label>
+                    <select name="subAccountType" asp-items="@Model.SubAccountTypeList" class="form-select js-select2 selectSubAccountType" style="width:100%;">
+                        <option></option>
+                    </select>
+                </div>
+
+                <div class="form-group pt-4">
+                    <label class="control-label">Sub Account</label>
+                    <select asp-items="@Model.SubAccountList" class="form-select js-select2 subAccountId" style="width:100%;" >
+                        <option></option>
+                    </select>
                 </div>
             </div>
             <div class="modal-footer">
@@ -260,6 +271,11 @@
                     </td>
                     <td><input name='Details[@i].Debit' value='@Model.Details[i].Debit.ToString("N2")' style='border:none' class='w-100 money editable-amount' oninput='updateTotalDebitAndCredit()' /></td>
                     <td><input name='Details[@i].Credit' value='@Model.Details[i].Credit.ToString("N2")' style='border:none' class='w-100 money editable-amount' oninput='updateTotalDebitAndCredit()' /></td>
+                    <td>
+                    <input type='hidden' name='Details[@i].SubAccountType' value='@Model.Details[i].SubAccountType'/>
+                    <input type='hidden' name='Details[@i].SubAccountId' value='@Model.Details[i].SubAccountId'/>
+                    <input type='text' name='Details[@i].SubAccountName' value='@Model.Details[i].SubAccountName' style='border:none' class='w-100' readonly />
+                    </td>
                     <td><button type='button' class='btn btn-danger btn-sm' onclick='removeRow(this)'>Remove</button></td>
                 </tr>`);
                 </text>
@@ -268,21 +284,39 @@
             updateTotalDebitAndCredit();
 
             $('#AccountNo').select2({
-                dropdownParent: $('#AddAccEntry'),
+                dropdownParent: $('.addAccEntry'),
                 placeholder: "Select an option...",
                 allowClear: true,
                 width: 'resolve',
                 theme: 'classic'
             });
+
+            $('select[name="subAccountType"]').select2({
+                dropdownParent: $('.addAccEntry'),
+                placeholder: "Select sub account type...",
+                allowClear: true,
+                width: 'resolve',
+                theme: 'classic'
+            });
+
+            $('.subAccountId').select2({
+                dropdownParent: $('.addAccEntry'),
+                placeholder: "Select sub account...",
+                allowClear: true,
+                width: 'resolve',
+                theme: 'classic'
+            });
         })
-    </script>
-    <script>
+
         function saveAccountingEntry(event) {
             // Get the values from the modal inputs
-            var accountNumber = $("#AccountNo").val();
-            var accountNumberText = $("#AccountNo option:selected").text();
-            var debit = parseNumber($("#debit").val());
-            var credit = parseNumber($("#credit").val());
+            let accountNumber = $("#AccountNo").val();
+            let accountNumberText = $("#AccountNo option:selected").text();
+            let debit = parseNumber($("#debit").val());
+            let credit = parseNumber($("#credit").val());
+            let subAccountId = $('.subAccountId').val();
+            let subAccountName = $('.subAccountId option:selected').text();
+            let subAccountTypeId = $('select[name="subAccountType"] option:selected').val();
 
             if (debit === 0 && credit === 0) {
                 event.preventDefault();
@@ -316,6 +350,11 @@
                 </td>
                 <td><input name='Details[${index}].Debit' value='${formattedDebit}' style='border:none' class='w-100 money editable-amount' oninput='updateTotalDebitAndCredit()' /></td>
                 <td><input name='Details[${index}].Credit' value='${formattedCredit}' style='border:none' class='w-100 money editable-amount' oninput='updateTotalDebitAndCredit()' /></td>
+                <td>
+                    <input type='hidden' name='Details[${index}].SubAccountType' value='${subAccountTypeId}'/>
+                    <input type='hidden' name='Details[${index}].SubAccountId' value='${subAccountId ?? ""}'/>
+                    <input type='text' name='Details[${index}].SubAccountName' value="${subAccountName}" style='border:none' class='w-100' readonly />
+                </td>
                 <td><button type='button' class='btn btn-danger btn-sm' onclick='removeRow(this)'>Remove</button></td>
             </tr>`;
 
@@ -330,6 +369,10 @@
             $("#AccountNo").trigger("change"); // Trigger change event for the select
             $("#debit").val("0.0000");
             $("#credit").val("0.0000");
+            $('.subAccountId').val("");
+            $('.subAccountId').trigger("change");
+            $('select[name="subAccountType"]').val("");
+            $('select[name="subAccountType"]').trigger("change");
 
             updateTotalDebitAndCredit();
         }
@@ -376,10 +419,11 @@
                 $(this).find("input[name*='AccountTitle']").attr("name",`Details[${index}].AccountTitle`);
                 $(this).find("input[name*='Debit']").attr("name", `Details[${index}].Debit`);
                 $(this).find("input[name*='Credit']").attr("name", `Details[${index}].Credit`);
+                $(this).find("input[name*='SubAccountType']").attr("name", `Details[${index}].SubAccountType`);
+                $(this).find("input[name*='SubAccountId']").attr("name", `Details[${index}].SubAccountId`);
+                $(this).find("input[name*='SubAccountName']").attr("name", `Details[${index}].SubAccountName`);
             });
         }
-
-
     </script>
     <script>
         function cvDetails(cvId) {
@@ -501,5 +545,43 @@
         $(document).on("input", ".editable-amount", function() {
             updateTotalDebitAndCredit();
         });
+    </script>
+    <script>
+        $(document).ready(function () {
+            $(".selectSubAccountType").change(function () {
+                let subAccountType = $(this).val();
+                if (subAccountType !== "") {
+                    $.ajax({
+                        url: "@Url.Action("SubAccountTypeList", "JournalVoucher")",
+                        method: "GET",
+                        data: { subAccountType: subAccountType },
+                        success: function (data) {
+                            if (data) {
+                                $(".subAccountId").empty();
+                                $.each(data, function (index, action) {
+                                    if (action) {
+                                        $('.subAccountId').append(
+                                            $('<option>', {
+                                                value: action.value,
+                                                text: action.text
+                                            })
+                                        );
+                                    } else {
+                                        console.error("Invalid Sub Account Type object:", action);
+                                    }
+                                });
+                            } else {
+                                $(".subAccountId").empty();
+                            }
+                        },
+                        error: function (xhr, status, error) {
+                            console.error('Error fetching Sub Account Type:', error);
+                        }
+                    });
+                } else {
+                    $(".subAccountId").empty();
+                }
+            });
+        })
     </script>
 }

@@ -17,6 +17,9 @@ using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
+using IBS.DTOs;
+using IBS.Models.Filpride.MasterFile;
+using IBS.Services;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -34,12 +37,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private const string FilterTypeClaimType = "JournalVoucher.FilterType";
 
-        public JournalVoucherController(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager, IUnitOfWork unitOfWork, ILogger<JournalVoucherController> logger)
+        private readonly ISubAccountResolver _subAccountResolver;
+
+        public JournalVoucherController(ApplicationDbContext dbContext,
+            UserManager<ApplicationUser> userManager,
+            IUnitOfWork unitOfWork,
+            ILogger<JournalVoucherController> logger,
+            ISubAccountResolver subAccountResolver)
         {
             _dbContext = dbContext;
             _userManager = userManager;
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _subAccountResolver = subAccountResolver;
         }
 
         private string GetUserFullName()
@@ -2418,6 +2428,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .GetMinimumPeriodBasedOnThePostedPeriods(Module.JournalVoucher, cancellationToken);
 
             viewModel.CoaList = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
+            viewModel.SubAccountTypeList = Enum.GetValues<SubAccountType>()
+                .Select(x => new SelectListItem
+                {
+                    Value = x.ToString(),
+                    Text = x.ToString()
+                })
+                .ToList();
 
             return View(viewModel);
         }
@@ -2451,6 +2468,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .GetMinimumPeriodBasedOnThePostedPeriods(Module.JournalVoucher, cancellationToken);
 
             viewModel.CoaList = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
+
+            viewModel.SubAccountTypeList = Enum.GetValues<SubAccountType>()
+                .Select(x => new SelectListItem
+                {
+                    Value = x.ToString(),
+                    Text = x.ToString()
+                })
+                .ToList();
 
             if (!ModelState.IsValid)
             {
@@ -2495,6 +2520,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                            .GetAsync(coa => coa.AccountNumber == acctNo.AccountNo, cancellationToken)
                                        ?? throw new NullReferenceException($"Account number {acctNo.AccountNo} not found");
 
+                    string? subAccountName = null;
+
+                    if (acctNo.SubAccountType.HasValue && acctNo.SubAccountId.HasValue)
+                    {
+                        SubAccountInfoDto? subAccountInfo = await _subAccountResolver.ResolveAsync(
+                            acctNo.SubAccountType.Value,
+                            acctNo.SubAccountId.Value,
+                            cancellationToken
+                        );
+
+                        if (subAccountInfo != null)
+                        {
+                            subAccountName = subAccountInfo.Name;
+                        }
+                    }
+
                     jvDetails.Add(
                         new FilprideJournalVoucherDetail
                         {
@@ -2504,6 +2545,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             JournalVoucherHeaderId = model.JournalVoucherHeaderId,
                             Debit = acctNo.Debit,
                             Credit = acctNo.Credit,
+                            SubAccountId = acctNo.SubAccountId,
+                            SubAccountName = subAccountName,
+                            SubAccountType = acctNo.SubAccountType
                         }
                     );
                 }
@@ -2588,9 +2632,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             AccountNo = d.AccountNo,
                             AccountTitle = $"{d.AccountNo} {d.AccountName}",
                             Debit = d.Debit,
-                            Credit = d.Credit
+                            Credit = d.Credit,
+                            SubAccountType = d.SubAccountType,
+                            SubAccountId = d.SubAccountId,
+                            SubAccountName = d.SubAccountName
                         })
                         .ToList(),
+                    SubAccountTypeList = Enum.GetValues<SubAccountType>()
+                        .Select(x => new SelectListItem
+                        {
+                            Value = x.ToString(),
+                            Text = x.ToString()
+                        })
+                        .ToList()
                 };
 
                 return View(model);
@@ -2631,6 +2685,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             viewModel.MinDate = await _unitOfWork
                 .GetMinimumPeriodBasedOnThePostedPeriods(Module.JournalVoucher, cancellationToken);
+
+            viewModel.SubAccountTypeList = Enum.GetValues<SubAccountType>()
+                .Select(x => new SelectListItem
+                {
+                    Value = x.ToString(),
+                    Text = x.ToString()
+                })
+                .ToList();
 
             viewModel.CoaList = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
 
@@ -2681,6 +2743,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                            .GetAsync(coa => coa.AccountNumber == acctNo.AccountNo, cancellationToken)
                                        ?? throw new NullReferenceException($"Account number {acctNo.AccountNo} not found");
 
+
+                    string? subAccountName = null;
+
+                    if (acctNo.SubAccountType.HasValue && acctNo.SubAccountId.HasValue)
+                    {
+                        SubAccountInfoDto? subAccountInfo = await _subAccountResolver.ResolveAsync(
+                            acctNo.SubAccountType.Value,
+                            acctNo.SubAccountId.Value,
+                            cancellationToken
+                        );
+
+                        if (subAccountInfo != null)
+                        {
+                            subAccountName = subAccountInfo.Name;
+                        }
+                    }
+
                     jvDetails.Add(
                         new FilprideJournalVoucherDetail
                         {
@@ -2690,6 +2769,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             JournalVoucherHeaderId = existingHeaderModel.JournalVoucherHeaderId,
                             Debit = acctNo.Debit,
                             Credit = acctNo.Credit,
+                            SubAccountId = acctNo.SubAccountId,
+                            SubAccountName = subAccountName,
+                            SubAccountType = acctNo.SubAccountType
                         }
                     );
                 }
@@ -2837,6 +2919,53 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             var selectList = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(companyClaims, cancellationToken);
             return Json(selectList);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SubAccountTypeList(string subAccountType, CancellationToken cancellationToken)
+        {
+            object subAccountTypeList = subAccountType switch
+            {
+                nameof(SubAccountType.Customer) =>
+                    await _dbContext.FilprideCustomers
+                        .Select(x => new SelectListItem
+                        {
+                            Value = x.CustomerId.ToString(),
+                            Text = x.CustomerName
+                        })
+                        .ToListAsync(cancellationToken),
+
+                nameof(SubAccountType.Supplier) =>
+                    await _dbContext.FilprideSuppliers
+                        .Select(x => new SelectListItem
+                        {
+                            Value = x.SupplierId.ToString(),
+                            Text = x.SupplierName
+                        })
+                        .ToListAsync(cancellationToken),
+
+                nameof(SubAccountType.BankAccount) =>
+                    await _dbContext.FilprideBankAccounts
+                        .Select(x => new SelectListItem
+                        {
+                            Value = x.BankAccountId.ToString(),
+                            Text = x.AccountName + " - " + x.AccountNo
+                        })
+                        .ToListAsync(cancellationToken),
+
+                nameof(SubAccountType.Company) =>
+                    await _dbContext.Companies
+                        .Select(x => new SelectListItem
+                        {
+                            Value = x.CompanyId.ToString(),
+                            Text = x.CompanyName
+                        })
+                        .ToListAsync(cancellationToken),
+
+                _ => new List<SelectListItem>()
+            };
+
+            return Json(subAccountTypeList);
         }
     }
 }
