@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.ComponentModel.DataAnnotations;
+using IBS.Models.Enums;
 
 namespace IBS.Models.Filpride.ViewModels
 {
@@ -32,6 +33,10 @@ namespace IBS.Models.Filpride.ViewModels
         public List<JvCreateReclassDetailViewModel> Details { get; set; } = [];
 
         public List<SelectListItem>? CoaList { get; set; }
+
+        public List<SelectListItem>? SubAccountTypeList { get; set; }
+
+        public List<SelectListItem>? SubAccountList { get; set; }
     }
 
     public class JvCreateReclassDetailViewModel
@@ -40,5 +45,8 @@ namespace IBS.Models.Filpride.ViewModels
         public string AccountTitle { get; set; } = string.Empty;
         public decimal Debit { get; set; }
         public decimal Credit { get; set; }
+        public SubAccountType? SubAccountType { get; set; }
+        public int? SubAccountId { get; set; }
+        public string? SubAccountName { get; set; }
     }
 }
