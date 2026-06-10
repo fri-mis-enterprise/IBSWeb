@@ -2890,7 +2890,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .Select(x => new SelectListItem
                         {
                             Value = x.BankAccountId.ToString(),
-                            Text = x.AccountName
+                            Text = x.AccountName + " - " + x.AccountNo
                         })
                         .ToListAsync(cancellationToken),
 
