@@ -6,6 +6,16 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v3.0.6] - 2026-06-10
+
+### Added
+- Added sub-account selection support to the Filpride Journal Voucher reclass create and edit flows, including selectable customer, supplier, bank account, and company sub-account records.
+
+### Changed
+- Updated Filpride Journal Voucher reclass entry handling to persist the selected sub-account type, record, and resolved sub-account name on each journal voucher detail line.
+
+---
+
 ## [v3.0.5] - 2026-06-10
 
 ### Fixed
