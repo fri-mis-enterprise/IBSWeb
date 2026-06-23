@@ -288,6 +288,9 @@ namespace IBS.DataAccess.Repository.Filpride
                 var netOfEwtAmount = arTradeCwtAmount > 0 || arTradeCwvAmount > 0
                     ? ComputeNetOfEwt(deliveryReceipt.TotalAmount, (arTradeCwtAmount + arTradeCwvAmount))
                     : deliveryReceipt.TotalAmount;
+                var deliveredFreight = deliveryReceipt.CustomerOrderSlip.DeliveryOption == SD.DeliveryOption_DirectDelivery
+                    ? (decimal)deliveryReceipt.CustomerOrderSlip!.Freight!
+                    : 0;
 
                 if (arTradeCwtAmount > 0)
                 {
@@ -382,7 +385,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     ModuleType = nameof(ModuleType.Sales)
                 });
 
-                var poPrice = await unitOfWork.FilpridePurchaseOrder.GetPurchaseOrderCost((int)deliveryReceipt.PurchaseOrderId!, cancellationToken);
+                var poPrice = await unitOfWork.FilpridePurchaseOrder.GetPurchaseOrderCost((int)deliveryReceipt.PurchaseOrderId!, cancellationToken) + deliveredFreight;
                 var cogsGrossAmount = poPrice * deliveryReceipt.Quantity;
                 var cogsNetOfVat = deliveryReceipt.PurchaseOrder.VatType == SD.VatType_Vatable
                     ? ComputeNetOfVat(cogsGrossAmount)
