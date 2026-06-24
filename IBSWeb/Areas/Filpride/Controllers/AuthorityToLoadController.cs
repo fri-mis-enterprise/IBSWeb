@@ -600,6 +600,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         appointedSupplier.UnreservedQuantity += oldDetail.Quantity;
                         appointedSupplier.CustomerOrderSlip!.IsCosAtlFinalized = false;
                     }
+                    else
+                    {
+                        // Appointed supplier was deleted (e.g. COS was edited & re-appointed).
+                        var cos = await _dbContext.FilprideCustomerOrderSlips
+                            .FindAsync(new object[] { oldDetail.CustomerOrderSlipId }, cancellationToken);
+                        if (cos != null)
+                        {
+                            cos.IsCosAtlFinalized = false;
+                        }
+                    }
                 }
 
                 _dbContext.FilprideBookAtlDetails.RemoveRange(atl.Details);
