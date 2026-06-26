@@ -4555,13 +4555,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ToList();
                 var debitMemoDictionary = await _dbContext.FilprideDebitMemos
                     .Where(x => x.SalesInvoiceId.HasValue &&
-                                salesInvoiceId.Contains(x.SalesInvoiceId.Value))
+                                salesInvoiceId.Contains(x.SalesInvoiceId.Value) &&
+                                x.Status != nameof(DmCmStatus.Canceled) &&
+                                x.Status != nameof(DmCmStatus.Voided))
                     .GroupBy(x => x.SalesInvoiceId!.Value)
                     .Select(x => x.First())
                     .ToDictionaryAsync(x => x.SalesInvoiceId!.Value, cancellationToken);
                 var creditMemoDictionary = await _dbContext.FilprideCreditMemos
                     .Where(x => x.SalesInvoiceId.HasValue &&
-                                salesInvoiceId.Contains(x.SalesInvoiceId.Value))
+                                salesInvoiceId.Contains(x.SalesInvoiceId.Value) &&
+                                x.Status != nameof(DmCmStatus.Canceled) &&
+                                x.Status != nameof(DmCmStatus.Voided))
                     .GroupBy(x => x.SalesInvoiceId!.Value)
                     .Select(x => x.First())
                     .ToDictionaryAsync(x => x.SalesInvoiceId!.Value, cancellationToken);
