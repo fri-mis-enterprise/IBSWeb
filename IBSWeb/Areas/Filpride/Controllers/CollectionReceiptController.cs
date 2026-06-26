@@ -2670,8 +2670,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptRedeposit))]
         [HttpGet]
-        public async Task<IActionResult> Redeposit(int id, DateOnly redepositDate, CancellationToken cancellationToken)
+        public async Task<IActionResult> Redeposit(int id, int bankId, DateOnly redepositDate, CancellationToken cancellationToken)
         {
+            var bank = await _unitOfWork.FilprideBankAccount
+                .GetAsync(b => b.BankAccountId == bankId, cancellationToken);
+
+            if (bank == null)
+            {
+                return NotFound();
+            }
+
             var model = await _unitOfWork.FilprideCollectionReceipt
                 .GetAsync(cr => cr.CollectionReceiptId == id, cancellationToken);
 
@@ -2686,6 +2694,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 model.DepositedDate = redepositDate;
                 model.Status = nameof(CollectionReceiptStatus.Redeposited);
+                model.BankId = bank.BankAccountId;
+                model.BankAccountName = bank.AccountName;
+                model.BankAccountNumber = bank.AccountNo;
 
                 #region --Audit Trail Recording
 
