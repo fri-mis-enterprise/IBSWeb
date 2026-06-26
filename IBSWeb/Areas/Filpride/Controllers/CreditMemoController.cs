@@ -928,6 +928,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.VoidedBy = GetUserFullName();
                 model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.Status = nameof(DmCmStatus.Voided);
+                model.SalesInvoice!.Balance += Math.Abs(model.CreditAmount);
 
                 await _unitOfWork.GeneralLedger.ReverseEntries(model.CreditMemoNo, cancellationToken);
 
@@ -972,6 +973,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.CanceledDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.Status = nameof(DmCmStatus.Canceled);
                 model.CancellationRemarks = cancellationRemarks;
+                model.SalesInvoice!.Balance += Math.Abs(model.CreditAmount);
 
                 #region --Audit Trail Recording
 

@@ -704,6 +704,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.VoidedBy = GetUserFullName();
                 model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.Status = nameof(DmCmStatus.Voided);
+                model.SalesInvoice!.Balance -= model.DebitAmount;
 
                 await _unitOfWork.GeneralLedger.ReverseEntries(model.DebitMemoNo, cancellationToken);
 
@@ -748,6 +749,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.CanceledDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.CancellationRemarks = cancellationRemarks;
                 model.Status = nameof(DmCmStatus.Canceled);
+                model.SalesInvoice!.Balance -= model.DebitAmount;
 
                 #region --Audit Trail Recording
 
