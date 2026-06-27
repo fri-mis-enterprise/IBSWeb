@@ -37,7 +37,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         private readonly ILogger<GeneralLedgerReportController> _logger;
 
         private const string _apNonTradeAccount = "201020200";
-        private const string _apTradeAccount = "202010100";
+        private const string _apTradeAccount = "201010100";
         private const string _arTradeAccount = "101020100";
         private const string _advancesToSupplierAccount = "101060100";
         private const string _advancesToEmployeeAccount = "101020400";
