@@ -750,6 +750,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         await _dbContext.FilprideCOSAppointedSuppliers
                             .Where(a => a.CustomerOrderSlipId == existingRecord.CustomerOrderSlipId)
                             .ExecuteDeleteAsync(cancellationToken);
+
+                        existingRecord.IsCosAtlFinalized = false;
                     }
 
                     await _unitOfWork.Notifications.AddNotificationToMultipleUsersAsync(users, message);
