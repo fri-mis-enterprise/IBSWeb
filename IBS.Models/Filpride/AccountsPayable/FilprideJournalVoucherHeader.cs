@@ -88,5 +88,9 @@ namespace IBS.Models.Filpride.AccountsPayable
 
         [Column(TypeName = "timestamp without time zone")]
         public DateTime? ApprovedDate { get; set; }
+
+        [Display(Name = "Payee")]
+        [StringLength(150)]
+        public string? Payee { get; set; }
     }
 }

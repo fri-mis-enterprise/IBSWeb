@@ -152,7 +152,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         s.Quantity.ToString().Contains(searchValue) ||
                         s.Remarks.ToLower().Contains(searchValue) ||
                         s.CreatedBy!.ToLower().Contains(searchValue) ||
-                        s.Status.ToLower().Contains(searchValue)
+                        s.Status!.ToLower().Contains(searchValue) ||
+                        (s.SubPoSeries != null && s.SubPoSeries.ToLower().Contains(searchValue))
                         );
                 }
                 if (filterDate != DateOnly.MinValue && filterDate != default)
@@ -198,6 +199,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         po.PostedBy,
                         po.UnTriggeredQuantity,
                         po.IsSubPo,
+                        po.SubPoSeries,
                         po.IsClosed,
                         TypeOfPurchase = po.TypeOfPurchase.ToUpper()
                     })

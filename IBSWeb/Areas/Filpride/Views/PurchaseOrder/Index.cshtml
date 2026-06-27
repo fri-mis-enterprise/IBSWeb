@@ -261,6 +261,24 @@
                 {
                     "data": "purchaseOrderNo",
                     "name": "purchaseOrderNo",
+                    "render": function(data, type, row) {
+                        let series = "";
+
+                        if (row.isSubPo) {
+
+                            let subPoSeries = row.subPoSeries;
+
+                            let match = subPoSeries?.match(/^(PO\d{10})/);
+                            let cleanedSeries = match ? match[1] : subPoSeries;
+
+                            series = `${row.purchaseOrderNo} / ${cleanedSeries}`;
+                        }
+                        else {
+                            series = row.purchaseOrderNo;
+                        }
+
+                        return series;
+                    }
                 },
                 {
                     "data": "date",

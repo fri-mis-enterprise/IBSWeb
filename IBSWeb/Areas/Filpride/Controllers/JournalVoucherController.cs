@@ -314,6 +314,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #region --Saving the default entries
 
                 var generateJvNo = await _unitOfWork.FilprideJournalVoucher.GenerateCodeAsync(companyClaims, viewModel.Type, cancellationToken: cancellationToken);
+                var getCheckVoucherHeader = await _unitOfWork.FilprideCheckVoucher
+                    .GetAsync(x => x.CheckVoucherHeaderId == viewModel.CVId, cancellationToken: cancellationToken);
                 //JV Header Entry
                 var model = new FilprideJournalVoucherHeader
                 {
@@ -327,7 +329,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     JVReason = viewModel.JVReason,
                     CreatedBy = GetUserFullName(),
                     Company = companyClaims,
-                    JvType = nameof(JvType.Liquidation)
+                    JvType = nameof(JvType.Liquidation),
+                    Payee = getCheckVoucherHeader!.Payee
                 };
 
                 await _dbContext.AddAsync(model, cancellationToken);
@@ -751,8 +754,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var existingHeaderModel = await _dbContext.FilprideJournalVoucherHeaders
-                    .FirstOrDefaultAsync(x => x.JournalVoucherHeaderId == viewModel.JVId, cancellationToken);
+                var existingHeaderModel = await _unitOfWork.FilprideJournalVoucher
+                    .GetAsync(x => x.JournalVoucherHeaderId == viewModel.JVId, cancellationToken);
 
                 if (existingHeaderModel == null)
                 {
@@ -765,6 +768,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
 
+                var getCheckVoucherHeader = await _unitOfWork.FilprideCheckVoucher
+                    .GetAsync(x => x.CheckVoucherHeaderId == viewModel.CVId, cancellationToken: cancellationToken);
+
                 #region --Saving the default entries
 
                 existingHeaderModel.JournalVoucherHeaderNo = viewModel.JVNo;
@@ -776,6 +782,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingHeaderModel.JVReason = viewModel.JVReason;
                 existingHeaderModel.EditedBy = GetUserFullName();
                 existingHeaderModel.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
+                existingHeaderModel.Payee = getCheckVoucherHeader!.Payee;
 
                 #endregion --Saving the default entries
 
@@ -1655,7 +1662,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     JVReason = viewModel.Reason,
                     CreatedBy = GetUserFullName(),
                     Company = companyClaims,
-                    JvType = nameof(JvType.Accrual)
+                    JvType = nameof(JvType.Accrual),
+                    Payee = cv.Payee
                 };
 
                 await _dbContext.AddAsync(model, cancellationToken);
@@ -1862,6 +1870,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingHeaderModel.EditedBy = GetUserFullName();
                 existingHeaderModel.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 existingHeaderModel.Status = nameof(JvStatus.ForApproval);
+                existingHeaderModel.Payee = cv.Payee;
 
                 #endregion --Saving the default entries
 
@@ -2077,7 +2086,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     JVReason = viewModel.Reason,
                     CreatedBy = GetUserFullName(),
                     Company = companyClaims,
-                    JvType = nameof(JvType.Amortization)
+                    JvType = nameof(JvType.Amortization),
+                    Payee = cv.Payee
                 };
 
                 await _dbContext.AddAsync(model, cancellationToken);
@@ -2336,6 +2346,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingHeaderModel.JVReason = viewModel.Reason;
                 existingHeaderModel.EditedBy = GetUserFullName();
                 existingHeaderModel.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
+                existingHeaderModel.Payee = cv.Payee;
 
                 amortizationSetting.StartDate = startingMonth;
                 amortizationSetting.EndDate = endingMonth;
@@ -2490,6 +2501,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #region --Saving the default entries
 
                 var generateJvNo = await _unitOfWork.FilprideJournalVoucher.GenerateCodeAsync(companyClaims, viewModel.Type, cancellationToken: cancellationToken);
+                var getCheckVoucherHeader = await _unitOfWork.FilprideCheckVoucher.GetAsync(x => x.CheckVoucherHeaderId == viewModel.CvId, cancellationToken: cancellationToken);
+
                 var model = new FilprideJournalVoucherHeader
                 {
                     Type = viewModel.Type,
@@ -2502,7 +2515,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     JVReason = viewModel.Reason,
                     CreatedBy = GetUserFullName(),
                     Company = companyClaims,
-                    JvType = nameof(JvType.Reclass)
+                    JvType = nameof(JvType.Reclass),
+                    Payee = getCheckVoucherHeader!.Payee
                 };
 
                 await _dbContext.AddAsync(model, cancellationToken);
@@ -2706,8 +2720,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var existingHeaderModel = await _dbContext.FilprideJournalVoucherHeaders
-                    .FirstOrDefaultAsync(x => x.JournalVoucherHeaderId == viewModel.JvId, cancellationToken);
+                var existingHeaderModel = await _unitOfWork.FilprideJournalVoucher
+                    .GetAsync(x => x.JournalVoucherHeaderId == viewModel.JvId, cancellationToken);
 
                 if (existingHeaderModel == null)
                 {
@@ -2720,6 +2734,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
 
+                var getCheckVoucherHeader = await _unitOfWork.FilprideCheckVoucher.GetAsync(x => x.CheckVoucherHeaderId == viewModel.CvId, cancellationToken: cancellationToken);
+
                 #region --Saving the default entries
 
                 existingHeaderModel.Date = viewModel.TransactionDate;
@@ -2730,6 +2746,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingHeaderModel.JVReason = viewModel.Reason;
                 existingHeaderModel.EditedBy = GetUserFullName();
                 existingHeaderModel.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
+                existingHeaderModel.Payee = getCheckVoucherHeader!.Payee;
 
                 #endregion --Saving the default entries
 

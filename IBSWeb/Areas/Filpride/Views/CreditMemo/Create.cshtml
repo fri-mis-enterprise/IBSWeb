@@ -1,7 +1,7 @@
 ﻿@model CreditMemoViewModel
 
 @{
-    ViewData["Title"] = "Credit Memo - Create";
+    ViewData["Title"] = "Credit Memo (Decrease) - Create";
 }
 
 <link rel="stylesheet" href="~/css/form-style.css">
@@ -59,7 +59,7 @@
                     <span asp-validation-for="Quantity" class="text-danger"></span>
                 </div>
                 <div class="form-group mb-3">
-                    <label asp-for="AdjustedPrice" class="control-label"></label><span class="required">*</span>
+                    <label class="control-label">SRP/Adjustment</label><span class="required">*</span>
                     <input asp-for="AdjustedPrice" class="form-control money" value="" placeholder="0.0000" required/>
                     <span asp-validation-for="AdjustedPrice" class="text-danger"></span>
                 </div>

@@ -279,6 +279,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     model.DebitMemoNo = await _unitOfWork.FilprideDebitMemo.GenerateCodeAsync(companyClaims, existingSalesInvoice!.Type, cancellationToken);
                     model.Type = existingSalesInvoice.Type;
                     model.DebitAmount = (decimal)(model.Quantity! * model.AdjustedPrice!);
+                    existingSalesInvoice.Balance += model.DebitAmount;
                 }
                 else if (model.Source == "Service Invoice")
                 {
@@ -366,7 +367,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 model.PostedBy = GetUserFullName();
                 model.PostedDate = DateTimeHelper.GetCurrentPhilippineTime();
-                model.Status = nameof(Status.Posted);
+                model.Status = nameof(DmCmStatus.Posted);
 
                 var accountTitlesDto = await _unitOfWork.FilprideServiceInvoice.GetListOfAccountTitleDto(cancellationToken);
                 var arTradeReceivableTitle = accountTitlesDto.Find(c => c.AccountNumber == "101020100") ?? throw new ArgumentException("Account title '101020100' not found.");
@@ -702,7 +703,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.PostedBy = null;
                 model.VoidedBy = GetUserFullName();
                 model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
-                model.Status = nameof(Status.Voided);
+                model.Status = nameof(DmCmStatus.Voided);
+                model.SalesInvoice!.Balance -= model.DebitAmount;
 
                 await _unitOfWork.GeneralLedger.ReverseEntries(model.DebitMemoNo, cancellationToken);
 
@@ -746,7 +748,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.CanceledBy = GetUserFullName();
                 model.CanceledDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.CancellationRemarks = cancellationRemarks;
-                model.Status = nameof(Status.Canceled);
+                model.Status = nameof(DmCmStatus.Canceled);
+                model.SalesInvoice!.Balance -= model.DebitAmount;
 
                 #region --Audit Trail Recording
 
@@ -891,6 +894,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         existingDm.AdjustedPrice = model.AdjustedPrice;
                         existingDm.Description = model.Description;
                         existingDm.Remarks = model.Remarks;
+                        existingDm.SalesInvoice!.Balance -= existingDm.DebitAmount;
+                        existingDm.SalesInvoice!.Balance += (decimal)(model.Quantity! * model.AdjustedPrice!);
 
                         #endregion -- Saving Default Enries --
 
@@ -913,6 +918,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                         existingDm.DebitAmount = model.Amount ?? 0;
                         break;
+                }
+
+                if (existingDm.Status == nameof(DmCmStatus.ForPosting))
+                {
+                    existingDm.Status = nameof(DmCmStatus.ForCNCApproval);
                 }
 
                 existingDm.EditedBy = GetUserFullName();
@@ -1379,7 +1389,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 debitMemo.PostedBy = null;
                 debitMemo.PostedDate = null;
-                debitMemo.Status = nameof(Status.Pending);
+                debitMemo.Status = nameof(DmCmStatus.ForPosting);
 
                 await _unitOfWork.FilprideDebitMemo.RemoveRecords<FilprideGeneralLedgerBook>(x => x.Reference == debitMemo.DebitMemoNo, cancellationToken);
 
@@ -1402,6 +1412,64 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
                 await transaction.RollbackAsync(cancellationToken);
                 TempData["error"] = ex.Message;
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        [Authorize(Roles = "Admin,CncManager")]
+        public async Task<IActionResult> Approve(int id, CancellationToken cancellationToken)
+        {
+            var model = await _unitOfWork.FilprideDebitMemo
+                .GetAsync(x => x.DebitMemoId == id, cancellationToken);
+
+            if (model == null)
+            {
+                return NotFound();
+            }
+
+            if (model.Status != nameof(DmCmStatus.ForCNCApproval))
+            {
+                TempData["error"] = "This record is not pending for approval.";
+                return RedirectToAction(nameof(Print), new { id });
+            }
+
+            var isApprover =
+                User.IsInRole("Admin") ||
+                User.IsInRole("CncManager");
+
+            if (!isApprover)
+            {
+                TempData["error"] = "You have no access to do this action.";
+                return RedirectToAction(nameof(Print), new { id });
+            }
+
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                model.ApprovedBy = GetUserFullName();
+                model.ApprovedDate = DateTimeHelper.GetCurrentPhilippineTime();
+                model.Status = nameof(DmCmStatus.ForPosting);
+
+                #region --Audit Trail Recording
+
+                FilprideAuditTrail auditTrailBook = new(GetUserFullName(), $"Approved debit memo# {model.DebitMemoNo}", "Debit Memo", model.Company);
+                await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
+
+                #endregion --Audit Trail Recording
+
+                await _unitOfWork.SaveAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                TempData["success"] = "Debit Memo has been Approved.";
+                return RedirectToAction(nameof(Print), new { id });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to approve debit memo. Error: {ErrorMessage}, Stack: {StackTrace}. Approved by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+                await transaction.RollbackAsync(cancellationToken);
+                TempData["error"] = ex.Message;
+                //return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });  --implement this if need to show in dashboard the approval of cnc
                 return RedirectToAction(nameof(Index));
             }
         }

@@ -34,6 +34,10 @@
     var product = Model.SalesInvoice != null
         ? Model.SalesInvoice.CustomerOrderSlip?.ProductName ?? string.Empty
         : Model.ServiceInvoice?.ServiceName ?? string.Empty;
+
+    var isApprover =
+        User.IsInRole("Admin") ||
+        User.IsInRole("CncManager");
 }
 
 <style>
@@ -247,7 +251,16 @@
 
 <div class="row pt-2">
     @{
-        if (Model.PostedBy == null)
+        if (Model.Status == nameof(DmCmStatus.ForCNCApproval))
+        {
+            if (isApprover)
+            {
+                <div class="col-6 col-md-3">
+                    <a class="btn btn-success form-control buttons" onclick="confirmApprove(@Model.CreditMemoId)">Approve</a>
+                </div>
+            }
+        }
+        else if (Model.Status == nameof(DmCmStatus.ForPosting))
         {
             <div class="col-6 col-md-3">
                 <a id="approveButton" class="btn btn-primary form-control buttons" onclick="confirmPost(@Model.CreditMemoId)">Post</a>
@@ -259,7 +272,7 @@
                 <a onclick="confirmPrint(@Model.CreditMemoId)" class="btn btn-primary form-control buttons">Print</a>
             </div>
 
-            if (Model.Status == nameof(Status.Posted))
+            if (Model.Status == nameof(DmCmStatus.Posted))
             {
                 <div class="col-6 col-md-3">
                     <a class="btn btn-secondary form-control buttons" onclick="confirmUnpost(@Model.CreditMemoId)">Unpost</a>
@@ -365,6 +378,22 @@
             })
         }
 
+        function confirmApprove(id) {
+            Swal.fire({
+                title: 'Approve this record?',
+                text: "This will mark the credit memo as ForPosting.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Approve'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var url = `@Url.Action("Approve", "CreditMemo", new { area = "Filpride" })/${id}`;
+                    window.location.href = url;
+                }
+            })
+        }
     </script>
     <script src="~/js/disable-dev-tools-in-print.js" asp-append-version="true"></script>
 }

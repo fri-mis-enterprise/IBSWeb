@@ -4495,21 +4495,26 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["R7"].Value = "VAT/LTR";
                 worksheet.Cells["S7"].Value = "VAT AMT.";
                 worksheet.Cells["T7"].Value = "TOTAL AMT. (G. VAT)";
-                worksheet.Cells["U7"].Value = "AMT. PAID";
-                worksheet.Cells["V7"].Value = "SI BALANCE";
-                worksheet.Cells["W7"].Value = "EWT AMT.";
-                worksheet.Cells["X7"].Value = "EWT PAID";
-                worksheet.Cells["Y7"].Value = "CWT BALANCE";
+                worksheet.Cells["U7"].Value = "DM";
+                worksheet.Cells["V7"].Value = "CM";
+                worksheet.Cells["W7"].Value = "AMT. PAID";
+                worksheet.Cells["X7"].Value = "SI BALANCE";
+                worksheet.Cells["Y7"].Value = "EWT AMT.";
+                worksheet.Cells["Z7"].Value = "EWT PAID";
+                worksheet.Cells["AA7"].Value = "CWT BALANCE";
+                worksheet.Cells["AB7"].Value = "WVAT AMT.";
+                worksheet.Cells["AC7"].Value = "WVAT PAID";
+                worksheet.Cells["AD7"].Value = "CWVAT BALANCE";
 
                 // Add void/cancel columns — only for All or InvalidOnly
                 if (showVoidCancelColumns)
                 {
-                    worksheet.Cells["Z7"].Value = "VOIDED BY";
-                    worksheet.Cells["AA7"].Value = "VOIDED DATE";
+                    worksheet.Cells["AE7"].Value = "VOIDED BY";
+                    worksheet.Cells["AF7"].Value = "VOIDED DATE";
                 }
 
                 // Apply styling to the header row
-                string headerEndColumn = showVoidCancelColumns ? "AA7" : "Y7";
+                string headerEndColumn = showVoidCancelColumns ? "AF7" : "AD7";
                 using (var range = worksheet.Cells[$"A7:{headerEndColumn}"])
                 {
                     range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
@@ -4538,7 +4543,36 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var totalEwtAmount = 0m;
                 var totalEwtAmountPaid = 0m;
                 var totalEwtBalance = 0m;
+                var totalCwVatAmount = 0m;
+                var totalCwVatAmountPaid = 0m;
+                var totalCwVatBalance = 0m;
+                var totalDebitAmount = 0m;
+                var totalCreditAmount = 0m;
                 var repoCalculator = _unitOfWork.FilprideDeliveryReceipt;
+                var salesInvoiceId = salesInvoice
+                    .Select(x => x.SalesInvoiceId)
+                    .Distinct()
+                    .ToList();
+                var debitMemoDictionary = await _dbContext.FilprideDebitMemos
+                    .Where(x => x.SalesInvoiceId.HasValue &&
+                                salesInvoiceId.Contains(x.SalesInvoiceId.Value) &&
+                                x.Status != nameof(DmCmStatus.Canceled) &&
+                                x.Status != nameof(DmCmStatus.Voided))
+                    .GroupBy(x => x.SalesInvoiceId!.Value)
+                    .ToDictionaryAsync(
+                        g => g.Key,
+                        g => g.Sum(x => x.DebitAmount),
+                        cancellationToken);
+                var creditMemoDictionary = await _dbContext.FilprideCreditMemos
+                    .Where(x => x.SalesInvoiceId.HasValue &&
+                                salesInvoiceId.Contains(x.SalesInvoiceId.Value) &&
+                                x.Status != nameof(DmCmStatus.Canceled) &&
+                                x.Status != nameof(DmCmStatus.Voided))
+                    .GroupBy(x => x.SalesInvoiceId!.Value)
+                    .ToDictionaryAsync(
+                        g => g.Key,
+                        g => g.Sum(x => x.CreditAmount),
+                        cancellationToken);
 
                 foreach (var groupByCustomer in salesInvoice.GroupBy(x => x.Customer))
                 {
@@ -4546,6 +4580,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     {
                         var isVatable = (si.CustomerOrderSlip?.VatType ?? SD.VatType_Vatable) == SD.VatType_Vatable;
                         var isTaxable = si.CustomerOrderSlip?.HasEWT ?? true;
+                        var hasCwVat = si.CustomerOrderSlip?.HasWVAT ?? true;
                         var freight = si.DeliveryReceipt?.FreightAmount;
                         var grossAmount = si.Amount;
                         var netOfVat = isVatable
@@ -4556,6 +4591,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         var ewtAmount = isTaxable ? RoundToFour(repoCalculator.ComputeEwtAmount(netOfVat, 0.01m)) : 0m;
                         var isEwtAmountPaid = si.IsTaxAndVatPaid ? ewtAmount : 0m;
                         var ewtBalance = RoundToFour(ewtAmount - isEwtAmountPaid);
+                        var cwvatAmount = hasCwVat ? RoundToFour(repoCalculator.ComputeEwtAmount(netOfVat, 0.05m)) : 0m;
+                        var isCwvatAmountPaid = si.IsTaxAndVatPaid ? cwvatAmount : 0m;
+                        var cwvatBalance = RoundToFour(cwvatAmount - isCwvatAmountPaid);
+
+                        debitMemoDictionary.TryGetValue(si.SalesInvoiceId, out var debitAmount);
+                        creditMemoDictionary.TryGetValue(si.SalesInvoiceId, out var creditAmount);
 
                         worksheet.Cells[row, 1].Value = si.Customer?.CustomerCode;
                         worksheet.Cells[row, 2].Value = si.CustomerOrderSlip?.CustomerName ?? si.Customer?.CustomerName;
@@ -4577,20 +4618,25 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[row, 18].Value = vatPerLiter;
                         worksheet.Cells[row, 19].Value = vatAmount;
                         worksheet.Cells[row, 20].Value = grossAmount;
-                        worksheet.Cells[row, 21].Value = si.AmountPaid;
-                        worksheet.Cells[row, 22].Value = si.Balance;
-                        worksheet.Cells[row, 23].Value = ewtAmount;
-                        worksheet.Cells[row, 24].Value = isEwtAmountPaid;
-                        worksheet.Cells[row, 25].Value = ewtBalance;
+                        worksheet.Cells[row, 21].Value = debitAmount;
+                        worksheet.Cells[row, 22].Value = creditAmount;
+                        worksheet.Cells[row, 23].Value = si.AmountPaid;
+                        worksheet.Cells[row, 24].Value = si.Balance;
+                        worksheet.Cells[row, 25].Value = ewtAmount;
+                        worksheet.Cells[row, 26].Value = isEwtAmountPaid;
+                        worksheet.Cells[row, 27].Value = ewtBalance;
+                        worksheet.Cells[row, 28].Value = cwvatAmount;
+                        worksheet.Cells[row, 29].Value = isCwvatAmountPaid;
+                        worksheet.Cells[row, 30].Value = cwvatBalance;
 
                         // Add void/cancel data — only for All or InvalidOnly
                         if (showVoidCancelColumns)
                         {
-                            worksheet.Cells[row, 26].Value = si.VoidedBy;
-                            worksheet.Cells[row, 27].Value = si.VoidedDate;
+                            worksheet.Cells[row, 31].Value = si.VoidedBy;
+                            worksheet.Cells[row, 32].Value = si.VoidedDate;
                             if (si.VoidedDate.HasValue)
                             {
-                                worksheet.Cells[row, 27].Style.Numberformat.Format = "MMM/dd/yyyy";
+                                worksheet.Cells[row, 32].Style.Numberformat.Format = "MMM/dd/yyyy";
                             }
                         }
 
@@ -4608,6 +4654,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[row, 23].Style.Numberformat.Format = currencyFormatTwoDecimal;
                         worksheet.Cells[row, 24].Style.Numberformat.Format = currencyFormatTwoDecimal;
                         worksheet.Cells[row, 25].Style.Numberformat.Format = currencyFormatTwoDecimal;
+                        worksheet.Cells[row, 26].Style.Numberformat.Format = currencyFormatTwoDecimal;
+                        worksheet.Cells[row, 27].Style.Numberformat.Format = currencyFormatTwoDecimal;
+                        worksheet.Cells[row, 28].Style.Numberformat.Format = currencyFormatTwoDecimal;
+                        worksheet.Cells[row, 29].Style.Numberformat.Format = currencyFormatTwoDecimal;
+                        worksheet.Cells[row, 30].Style.Numberformat.Format = currencyFormatTwoDecimal;
 
                         row++;
 
@@ -4621,11 +4672,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         totalEwtAmount += ewtAmount;
                         totalEwtAmountPaid += isEwtAmountPaid;
                         totalEwtBalance += ewtBalance;
+                        totalCwVatAmount += cwvatAmount;
+                        totalCwVatAmountPaid += isCwvatAmountPaid;
+                        totalCwVatBalance += cwvatBalance;
+                        totalDebitAmount += debitAmount;
+                        totalCreditAmount += creditAmount;
                     }
                     var subTotalQuantity = groupByCustomer.Sum(x => x.Quantity);
 
                     var isVatableSub = groupByCustomer.Select(x => x.CustomerOrderSlip?.VatType).FirstOrDefault();
                     var isTaxableSub = groupByCustomer.Select(x => x.CustomerOrderSlip?.HasEWT).FirstOrDefault();
+                    var hasCwVatSub = groupByCustomer.Select(x => x.CustomerOrderSlip?.HasWVAT).FirstOrDefault();
                     var subTotalFreight = groupByCustomer.Sum(x => x.DeliveryReceipt?.FreightAmount) ?? 0m;
                     var subTotalFreightPerLiter = subTotalFreight != 0m && subTotalQuantity != 0m ? DivideOrZero(subTotalFreight, subTotalQuantity) : 0m;
                     var subTotalGrossAmount = groupByCustomer.Sum(x => x.Amount);
@@ -4645,6 +4702,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var subTotalUnitPrice = DivideOrZero(subTotalGrossAmount, subTotalQuantity);
                     var subTotalBalance = groupByCustomer.Sum(x => x.Balance);
                     var subTotalEwtAmountPaid = isEwtAmountPaidSub;
+                    var subTotalCwVatAmount = hasCwVatSub == true
+                        ? RoundToFour(repoCalculator.ComputeEwtAmount(subTotalNetOfVat, 0.05m))
+                        : 0m;
+                    var isCwVatAmountPaidSub = groupByCustomer.Select(x => x.IsTaxAndVatPaid).FirstOrDefault() ? subTotalCwVatAmount : 0m;
+                    var subTotalCwVatBalance = RoundToFour(subTotalCwVatAmount - isCwVatAmountPaidSub);
+
+                    var subTotalDebitAmount = groupByCustomer
+                        .Sum(x => debitMemoDictionary
+                            .TryGetValue(x.SalesInvoiceId, out var debitAmount)
+                        ? debitAmount
+                        : 0m);
+                    var subTotalCreditAmount = groupByCustomer
+                        .Sum(x => creditMemoDictionary
+                            .TryGetValue(x.SalesInvoiceId, out var creditAmount)
+                        ? creditAmount
+                        : 0m);
 
                     worksheet.Cells[row, 12].Value = "SUB TOTAL ";
 
@@ -4655,11 +4728,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 18].Value = subTotalVatPerLiter;
                     worksheet.Cells[row, 19].Value = subTotalVatAmount;
                     worksheet.Cells[row, 20].Value = subTotalGrossAmount;
-                    worksheet.Cells[row, 21].Value = subTotalAmountPaid;
-                    worksheet.Cells[row, 22].Value = subTotalBalance;
-                    worksheet.Cells[row, 23].Value = subTotalEwtAmount;
-                    worksheet.Cells[row, 24].Value = subTotalEwtAmountPaid;
-                    worksheet.Cells[row, 25].Value = subTotalEwtBalance;
+                    worksheet.Cells[row, 21].Value = subTotalDebitAmount;
+                    worksheet.Cells[row, 22].Value = subTotalCreditAmount;
+                    worksheet.Cells[row, 23].Value = subTotalAmountPaid;
+                    worksheet.Cells[row, 24].Value = subTotalBalance;
+                    worksheet.Cells[row, 25].Value = subTotalEwtAmount;
+                    worksheet.Cells[row, 26].Value = subTotalEwtAmountPaid;
+                    worksheet.Cells[row, 27].Value = subTotalEwtBalance;
+                    worksheet.Cells[row, 28].Value = subTotalCwVatAmount;
+                    worksheet.Cells[row, 29].Value = isCwVatAmountPaidSub;
+                    worksheet.Cells[row, 30].Value = subTotalCwVatBalance;
 
                     worksheet.Cells[row, 13].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[row, 15].Style.Numberformat.Format = currencyFormat;
@@ -4673,9 +4751,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 23].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[row, 24].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[row, 25].Style.Numberformat.Format = currencyFormatTwoDecimal;
+                    worksheet.Cells[row, 26].Style.Numberformat.Format = currencyFormatTwoDecimal;
+                    worksheet.Cells[row, 27].Style.Numberformat.Format = currencyFormatTwoDecimal;
+                    worksheet.Cells[row, 28].Style.Numberformat.Format = currencyFormatTwoDecimal;
+                    worksheet.Cells[row, 29].Style.Numberformat.Format = currencyFormatTwoDecimal;
+                    worksheet.Cells[row, 30].Style.Numberformat.Format = currencyFormatTwoDecimal;
 
                     // Apply style to sub-total row
-                    int lastColumn = showVoidCancelColumns ? 27 : 25;
+                    int lastColumn = showVoidCancelColumns ? 32 : 30;
                     using (var range = worksheet.Cells[row, 1, row, lastColumn])
                     {
                         range.Style.Font.Bold = true;
@@ -4697,11 +4780,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 18].Value = totalVatPerLiter;
                 worksheet.Cells[row, 19].Value = totalVatAmount;
                 worksheet.Cells[row, 20].Value = totalGrossAmount;
-                worksheet.Cells[row, 21].Value = totalAmountPaid;
-                worksheet.Cells[row, 22].Value = totalBalance;
-                worksheet.Cells[row, 23].Value = totalEwtAmount;
-                worksheet.Cells[row, 24].Value = totalEwtAmountPaid;
-                worksheet.Cells[row, 25].Value = totalEwtBalance;
+                worksheet.Cells[row, 21].Value = totalDebitAmount;
+                worksheet.Cells[row, 22].Value = totalCreditAmount;
+                worksheet.Cells[row, 23].Value = totalAmountPaid;
+                worksheet.Cells[row, 24].Value = totalBalance;
+                worksheet.Cells[row, 25].Value = totalEwtAmount;
+                worksheet.Cells[row, 26].Value = totalEwtAmountPaid;
+                worksheet.Cells[row, 27].Value = totalEwtBalance;
+                worksheet.Cells[row, 28].Value = totalCwVatAmount;
+                worksheet.Cells[row, 29].Value = totalCwVatAmountPaid;
+                worksheet.Cells[row, 30].Value = totalCwVatBalance;
 
                 worksheet.Cells[row, 13].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[row, 15].Style.Numberformat.Format = currencyFormat;
@@ -4715,9 +4803,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 23].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[row, 24].Style.Numberformat.Format = currencyFormatTwoDecimal;
                 worksheet.Cells[row, 25].Style.Numberformat.Format = currencyFormatTwoDecimal;
+                worksheet.Cells[row, 26].Style.Numberformat.Format = currencyFormatTwoDecimal;
+                worksheet.Cells[row, 27].Style.Numberformat.Format = currencyFormatTwoDecimal;
+                worksheet.Cells[row, 28].Style.Numberformat.Format = currencyFormatTwoDecimal;
+                worksheet.Cells[row, 29].Style.Numberformat.Format = currencyFormatTwoDecimal;
+                worksheet.Cells[row, 30].Style.Numberformat.Format = currencyFormatTwoDecimal;
 
                 // Apply style to grand total row
-                int grandTotalLastColumn = showVoidCancelColumns ? 27 : 25;
+                int grandTotalLastColumn = showVoidCancelColumns ? 32 : 30;
                 using (var range = worksheet.Cells[row, 1, row, grandTotalLastColumn])
                 {
                     range.Style.Font.Bold = true;

@@ -130,4 +130,13 @@ namespace IBS.Models.Enums
         BankAccount = 3,
         Company = 4
     }
+
+    public enum DmCmStatus
+    {
+        ForCNCApproval,
+        ForPosting,
+        Posted,
+        Voided,
+        Canceled
+    }
 }
