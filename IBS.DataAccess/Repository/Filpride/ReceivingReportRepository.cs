@@ -316,8 +316,8 @@ namespace IBS.DataAccess.Repository.Filpride
                 ewtTitle = accountTitlesDto.FirstOrDefault(c => c.AccountNumber == ewtAccountNo)
                     ?? throw new ArgumentException($"Account title '{ewtAccountNo}' not found.");
             }
-            var apTradeTitle = accountTitlesDto.Find(c => c.AccountNumber == "202010100")
-                               ?? throw new ArgumentException("Account title '202010100' not found.");
+            var apTradeTitle = accountTitlesDto.Find(c => c.AccountNumber == "201010100")
+                               ?? throw new ArgumentException("Account title '201010100' not found.");
             var inventoryTitle = accountTitlesDto.Find(c => c.AccountNumber == inventoryAcctNo)
                                  ?? throw new ArgumentException($"Account title '{inventoryAcctNo}' not found.");
 
@@ -578,7 +578,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 ewtTitle = accountTitlesDto.FirstOrDefault(c => c.AccountNumber == ewtAccountNo)
                                ?? throw new ArgumentException($"Account title '{ewtAccountNo}' not found.");
             }
-            var apTradeTitle = accountTitlesDto.Find(c => c.AccountNumber == "202010100") ?? throw new ArgumentException("Account title '202010100' not found.");
+            var apTradeTitle = accountTitlesDto.Find(c => c.AccountNumber == "201010100") ?? throw new ArgumentException("Account title '201010100' not found.");
             var inventoryTitle = accountTitlesDto.Find(c => c.AccountNumber == inventoryAcctNo) ?? throw new ArgumentException($"Account title '{inventoryAcctNo}' not found.");
             var cogsTitle = accountTitlesDto.Find(c => c.AccountNumber == cogsAcctNo) ?? throw new ArgumentException($"Account title '{cogsAcctNo}' not found.");
 

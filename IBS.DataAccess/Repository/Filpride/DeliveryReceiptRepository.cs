@@ -288,6 +288,9 @@ namespace IBS.DataAccess.Repository.Filpride
                 var netOfEwtAmount = arTradeCwtAmount > 0 || arTradeCwvAmount > 0
                     ? ComputeNetOfEwt(deliveryReceipt.TotalAmount, (arTradeCwtAmount + arTradeCwvAmount))
                     : deliveryReceipt.TotalAmount;
+                var deliveredFreight = deliveryReceipt.CustomerOrderSlip.DeliveryOption == SD.DeliveryOption_DirectDelivery
+                    ? (decimal)deliveryReceipt.CustomerOrderSlip!.Freight!
+                    : 0;
 
                 if (arTradeCwtAmount > 0)
                 {
@@ -382,7 +385,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     ModuleType = nameof(ModuleType.Sales)
                 });
 
-                var poPrice = await unitOfWork.FilpridePurchaseOrder.GetPurchaseOrderCost((int)deliveryReceipt.PurchaseOrderId!, cancellationToken);
+                var poPrice = await unitOfWork.FilpridePurchaseOrder.GetPurchaseOrderCost((int)deliveryReceipt.PurchaseOrderId!, cancellationToken) + deliveredFreight;
                 var cogsGrossAmount = poPrice * deliveryReceipt.Quantity;
                 var cogsNetOfVat = deliveryReceipt.PurchaseOrder.VatType == SD.VatType_Vatable
                     ? ComputeNetOfVat(cogsGrossAmount)
@@ -742,7 +745,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 var (inventoryAcctNo, inventoryAcctTitle) = GetInventoryAccountTitle(productCode);
                 var inventoryTitle = accountTitlesDto.Find(c => c.AccountNumber == inventoryAcctNo) ?? throw new ArgumentException($"Account title '{inventoryAcctNo}' not found.");
                 var vatInputTitle = accountTitlesDto.Find(c => c.AccountNumber == "101060200") ?? throw new ArgumentException("Account title '101060200' not found.");
-                var apTradeTitle = accountTitlesDto.Find(c => c.AccountNumber == "202010100") ?? throw new ArgumentException("Account title '202010100' not found.");
+                var apTradeTitle = accountTitlesDto.Find(c => c.AccountNumber == "201010100") ?? throw new ArgumentException("Account title '201010100' not found.");
                 var ewtOnePercent = accountTitlesDto.Find(c => c.AccountNumber == "201030210") ?? throw new ArgumentException("Account title '201030210' not found.");
 
                 #region In-Transit Entries

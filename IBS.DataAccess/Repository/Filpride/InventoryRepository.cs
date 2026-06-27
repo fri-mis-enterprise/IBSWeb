@@ -49,8 +49,8 @@ namespace IBS.DataAccess.Repository.Filpride
             // Calculate initial values
 
             var cost = Math.Round(receivingReport.PurchaseOrder!.VatType == SD.VatType_Vatable
-                ? ComputeNetOfVat(receivingReport.PurchaseOrder.FinalPrice)
-                : receivingReport.PurchaseOrder.FinalPrice, 4);
+                ? ComputeNetOfVat(receivingReport.Amount / receivingReport.QuantityReceived)
+                : receivingReport.Amount / receivingReport.QuantityReceived, 4);
 
             var inventoryBalance = (previousInventory?.InventoryBalance ?? 0) + receivingReport.QuantityReceived;
             var averageCost = cost;
@@ -150,8 +150,12 @@ namespace IBS.DataAccess.Repository.Filpride
 
                 var unitOfWork = new UnitOfWork(_db);
 
+                var freight = deliveryReceipt.CustomerOrderSlip?.DeliveryOption == SD.DeliveryOption_DirectDelivery
+                    ? (decimal)deliveryReceipt.CustomerOrderSlip?.Freight!
+                    : 0;
+
                 var poPrice = await unitOfWork.FilpridePurchaseOrder
-                    .GetPurchaseOrderCost(purchaseOrder.PurchaseOrderId, cancellationToken);
+                    .GetPurchaseOrderCost(purchaseOrder.PurchaseOrderId, cancellationToken) + freight;
 
                 var netOfVat = purchaseOrder.VatType == SD.VatType_Vatable
                     ? ComputeNetOfVat(poPrice)

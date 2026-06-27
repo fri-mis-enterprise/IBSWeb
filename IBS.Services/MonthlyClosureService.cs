@@ -102,7 +102,7 @@ namespace IBS.Services
                     var accountTitlesDto = await _unitOfWork.FilprideCheckVoucher.GetListOfAccountTitleDto(cancellationToken);
                     var ledgers = new List<FilprideGeneralLedgerBook>();
                     var details = await _dbContext.FilprideCheckVoucherDetails
-                        .Where(cvd => cvd.CheckVoucherHeaderId == cv.CheckVoucherHeaderId)
+                        .Where(cvd => cvd.CheckVoucherHeaderId == cv.CheckVoucherHeaderId && !cvd.IsDisplayEntry)
                         .ToListAsync(cancellationToken);
 
                     foreach (var detail in details)
