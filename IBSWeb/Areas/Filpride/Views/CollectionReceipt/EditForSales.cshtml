@@ -90,6 +90,8 @@ WVAT:           <span id="wvat"></span>
 Less EWT/WVAT:  <span id="total"></span>
 =======================================
 Amount Paid:    <span id="amountPaid"></span>
+Debit Amount:    <span id="debit"></span>
+Credit Amount:    <span id="credit"></span>
 Balance:        <span id="balance"></span>
            </pre>
                 </div>
@@ -375,6 +377,8 @@ Balance:        <span id="balance"></span>
                     document.getElementById("ewt").innerHTML = data.ewt;
                     document.getElementById("wvat").innerHTML = data.wvat;
                     document.getElementById("total").innerHTML = data.total;
+                    document.getElementById("debit").innerHTML = data.debit;
+                    document.getElementById("credit").innerHTML = data.credit;
                 }
             });
 
