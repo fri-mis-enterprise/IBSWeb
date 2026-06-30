@@ -4549,30 +4549,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var totalDebitAmount = 0m;
                 var totalCreditAmount = 0m;
                 var repoCalculator = _unitOfWork.FilprideDeliveryReceipt;
-                var salesInvoiceId = salesInvoice
-                    .Select(x => x.SalesInvoiceId)
-                    .Distinct()
-                    .ToList();
-                var debitMemoDictionary = await _dbContext.FilprideDebitMemos
-                    .Where(x => x.SalesInvoiceId.HasValue &&
-                                salesInvoiceId.Contains(x.SalesInvoiceId.Value) &&
-                                x.Status != nameof(DmCmStatus.Canceled) &&
-                                x.Status != nameof(DmCmStatus.Voided))
-                    .GroupBy(x => x.SalesInvoiceId!.Value)
-                    .ToDictionaryAsync(
-                        g => g.Key,
-                        g => g.Sum(x => x.DebitAmount),
-                        cancellationToken);
-                var creditMemoDictionary = await _dbContext.FilprideCreditMemos
-                    .Where(x => x.SalesInvoiceId.HasValue &&
-                                salesInvoiceId.Contains(x.SalesInvoiceId.Value) &&
-                                x.Status != nameof(DmCmStatus.Canceled) &&
-                                x.Status != nameof(DmCmStatus.Voided))
-                    .GroupBy(x => x.SalesInvoiceId!.Value)
-                    .ToDictionaryAsync(
-                        g => g.Key,
-                        g => g.Sum(x => x.CreditAmount),
-                        cancellationToken);
 
                 foreach (var groupByCustomer in salesInvoice.GroupBy(x => x.Customer))
                 {
@@ -4583,9 +4559,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         var hasCwVat = si.CustomerOrderSlip?.HasWVAT ?? true;
                         var freight = si.DeliveryReceipt?.FreightAmount;
                         var grossAmount = si.Amount;
+                        var siBalanceIncludingDmCmAmount = si.Balance;
                         var netOfVat = isVatable
-                            ? RoundToFour(repoCalculator.ComputeNetOfVat(grossAmount))
-                            : grossAmount;
+                            ? RoundToFour(repoCalculator.ComputeNetOfVat(siBalanceIncludingDmCmAmount))
+                            : siBalanceIncludingDmCmAmount;
                         var vatAmount = isVatable ? RoundToFour(repoCalculator.ComputeVatAmount(netOfVat)) : 0m;
                         var vatPerLiter = DivideOrZero(vatAmount, si.Quantity);
                         var ewtAmount = isTaxable ? RoundToFour(repoCalculator.ComputeEwtAmount(netOfVat, 0.01m)) : 0m;
@@ -4594,9 +4571,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         var cwvatAmount = hasCwVat ? RoundToFour(repoCalculator.ComputeEwtAmount(netOfVat, 0.05m)) : 0m;
                         var isCwvatAmountPaid = si.IsTaxAndVatPaid ? cwvatAmount : 0m;
                         var cwvatBalance = RoundToFour(cwvatAmount - isCwvatAmountPaid);
-
-                        debitMemoDictionary.TryGetValue(si.SalesInvoiceId, out var debitAmount);
-                        creditMemoDictionary.TryGetValue(si.SalesInvoiceId, out var creditAmount);
 
                         worksheet.Cells[row, 1].Value = si.Customer?.CustomerCode;
                         worksheet.Cells[row, 2].Value = si.CustomerOrderSlip?.CustomerName ?? si.Customer?.CustomerName;
@@ -4618,10 +4592,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[row, 18].Value = vatPerLiter;
                         worksheet.Cells[row, 19].Value = vatAmount;
                         worksheet.Cells[row, 20].Value = grossAmount;
-                        worksheet.Cells[row, 21].Value = debitAmount;
-                        worksheet.Cells[row, 22].Value = creditAmount;
+                        worksheet.Cells[row, 21].Value = si.DebitAmount;
+                        worksheet.Cells[row, 22].Value = si.CreditAmount;
                         worksheet.Cells[row, 23].Value = si.AmountPaid;
-                        worksheet.Cells[row, 24].Value = si.Balance;
+                        worksheet.Cells[row, 24].Value = siBalanceIncludingDmCmAmount;
                         worksheet.Cells[row, 25].Value = ewtAmount;
                         worksheet.Cells[row, 26].Value = isEwtAmountPaid;
                         worksheet.Cells[row, 27].Value = ewtBalance;
@@ -4666,7 +4640,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         totalFreight += freight ?? 0m;
                         totalFreightPerLiter += si.DeliveryReceipt?.Freight ?? 0m;
                         totalVatAmount += vatAmount;
-                        totalGrossAmount += grossAmount;
+                        totalGrossAmount += siBalanceIncludingDmCmAmount;
                         totalAmountPaid += si.AmountPaid;
                         totalBalance += si.Balance;
                         totalEwtAmount += ewtAmount;
@@ -4675,8 +4649,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         totalCwVatAmount += cwvatAmount;
                         totalCwVatAmountPaid += isCwvatAmountPaid;
                         totalCwVatBalance += cwvatBalance;
-                        totalDebitAmount += debitAmount;
-                        totalCreditAmount += creditAmount;
+                        totalDebitAmount += si.DebitAmount;
+                        totalCreditAmount += si.CreditAmount;
                     }
                     var subTotalQuantity = groupByCustomer.Sum(x => x.Quantity);
 
@@ -4686,9 +4660,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var subTotalFreight = groupByCustomer.Sum(x => x.DeliveryReceipt?.FreightAmount) ?? 0m;
                     var subTotalFreightPerLiter = subTotalFreight != 0m && subTotalQuantity != 0m ? DivideOrZero(subTotalFreight, subTotalQuantity) : 0m;
                     var subTotalGrossAmount = groupByCustomer.Sum(x => x.Amount);
+                    var subTotalBalanceIncludingDmCmAmount = groupByCustomer.Sum(x => x.Balance);
                     var subTotalNetOfVat = isVatableSub == SD.VatType_Vatable
-                        ? repoCalculator.ComputeNetOfVat(subTotalGrossAmount)
-                        : subTotalGrossAmount;
+                        ? repoCalculator.ComputeNetOfVat(subTotalBalanceIncludingDmCmAmount)
+                        : subTotalBalanceIncludingDmCmAmount;
                     var subTotalVatAmount = isVatableSub == SD.VatType_Vatable
                         ? RoundToFour(repoCalculator.ComputeVatAmount(subTotalNetOfVat))
                         : 0m;
@@ -4699,7 +4674,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         : 0m;
                     var isEwtAmountPaidSub = groupByCustomer.Select(x => x.IsTaxAndVatPaid).FirstOrDefault() ? subTotalEwtAmount : 0m;
                     var subTotalEwtBalance = RoundToFour(subTotalEwtAmount - isEwtAmountPaidSub);
-                    var subTotalUnitPrice = DivideOrZero(subTotalGrossAmount, subTotalQuantity);
+                    var subTotalUnitPrice = DivideOrZero(subTotalBalanceIncludingDmCmAmount, subTotalQuantity);
                     var subTotalBalance = groupByCustomer.Sum(x => x.Balance);
                     var subTotalEwtAmountPaid = isEwtAmountPaidSub;
                     var subTotalCwVatAmount = hasCwVatSub == true
@@ -4708,16 +4683,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var isCwVatAmountPaidSub = groupByCustomer.Select(x => x.IsTaxAndVatPaid).FirstOrDefault() ? subTotalCwVatAmount : 0m;
                     var subTotalCwVatBalance = RoundToFour(subTotalCwVatAmount - isCwVatAmountPaidSub);
 
-                    var subTotalDebitAmount = groupByCustomer
-                        .Sum(x => debitMemoDictionary
-                            .TryGetValue(x.SalesInvoiceId, out var debitAmount)
-                        ? debitAmount
-                        : 0m);
-                    var subTotalCreditAmount = groupByCustomer
-                        .Sum(x => creditMemoDictionary
-                            .TryGetValue(x.SalesInvoiceId, out var creditAmount)
-                        ? creditAmount
-                        : 0m);
+                    var subTotalDebitAmount = groupByCustomer.Sum(x => x.DebitAmount);
+                    var subTotalCreditAmount = groupByCustomer.Sum(x => x.CreditAmount);
 
                     worksheet.Cells[row, 12].Value = "SUB TOTAL ";
 

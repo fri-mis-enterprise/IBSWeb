@@ -280,6 +280,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     model.Type = existingSalesInvoice.Type;
                     model.DebitAmount = (decimal)(model.Quantity! * model.AdjustedPrice!);
                     existingSalesInvoice.Balance += model.DebitAmount;
+                    existingSalesInvoice.DebitAmount += model.DebitAmount;
                 }
                 else if (model.Source == "Service Invoice")
                 {
@@ -705,6 +706,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.Status = nameof(DmCmStatus.Voided);
                 model.SalesInvoice!.Balance -= model.DebitAmount;
+                model.SalesInvoice!.DebitAmount -= model.DebitAmount;
 
                 await _unitOfWork.GeneralLedger.ReverseEntries(model.DebitMemoNo, cancellationToken);
 
@@ -750,6 +752,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.CancellationRemarks = cancellationRemarks;
                 model.Status = nameof(DmCmStatus.Canceled);
                 model.SalesInvoice!.Balance -= model.DebitAmount;
+                model.SalesInvoice!.DebitAmount -= model.DebitAmount;
 
                 #region --Audit Trail Recording
 
@@ -867,6 +870,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 Amount = viewModel.Amount,
                 Remarks = viewModel.Remarks,
                 Description = viewModel.Description,
+                DebitAmount = (decimal)(viewModel.Quantity! * viewModel.AdjustedPrice!)
             };
 
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
@@ -895,11 +899,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         existingDm.Description = model.Description;
                         existingDm.Remarks = model.Remarks;
                         existingDm.SalesInvoice!.Balance -= existingDm.DebitAmount;
-                        existingDm.SalesInvoice!.Balance += (decimal)(model.Quantity! * model.AdjustedPrice!);
+                        existingDm.SalesInvoice!.Balance += model.DebitAmount;
+                        existingDm.SalesInvoice!.DebitAmount -= existingDm.DebitAmount;
+                        existingDm.SalesInvoice!.DebitAmount += model.DebitAmount;
 
                         #endregion -- Saving Default Enries --
 
-                        existingDm.DebitAmount = (decimal)(model.Quantity! * model.AdjustedPrice!);
+                        existingDm.DebitAmount = model.DebitAmount;
                         break;
 
                     case "Service Invoice":

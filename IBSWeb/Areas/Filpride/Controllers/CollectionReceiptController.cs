@@ -1227,9 +1227,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var hasWvat = si.CustomerOrderSlip?.HasWVAT ?? si.Customer!.WithHoldingVat;
 
                 var netDiscount = si.Amount - si.Discount;
+                var balanceWithDmCmAmount = si.Balance - si.Discount;
                 var netOfVatAmount = vatType == SD.VatType_Vatable
-                    ? _unitOfWork.FilprideServiceInvoice.ComputeNetOfVat(netDiscount)
-                    : netDiscount;
+                    ? _unitOfWork.FilprideServiceInvoice.ComputeNetOfVat(balanceWithDmCmAmount)
+                    : balanceWithDmCmAmount;
                 var withHoldingTaxAmount = hasEwt
                     ? _unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVatAmount, 0.01m)
                     : 0;
@@ -1239,25 +1240,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var balance = si.Balance;
                 var amountPaid = si.AmountPaid;
 
-                // it means it is in edit
-                if (crId != null)
-                {
-                    // get the current amount of this cr
-                    var collectionReceiptHeader = await _unitOfWork.FilprideCollectionReceipt
-                        .GetAsync(cr => cr.CollectionReceiptId == crId, cancellationToken);
-                    if (collectionReceiptHeader == null)
-                    {
-                        return NotFound();
-                    }
-
-                    // retain the fresh value, see if the selected cr is the one used to pay this si
-                    if (collectionReceiptHeader.SalesInvoiceId == si.SalesInvoiceId)
-                    {
-                        amountPaid -= collectionReceiptHeader.Total;
-                        balance += collectionReceiptHeader.Total;
-                    }
-                }
-
                 return Json(new
                 {
                     Amount = netDiscount.ToString(SD.Two_Decimal_Format),
@@ -1265,7 +1247,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     Balance = balance.ToString(SD.Two_Decimal_Format),
                     Ewt = withHoldingTaxAmount.ToString(SD.Two_Decimal_Format),
                     Wvat = withHoldingVatAmount.ToString(SD.Two_Decimal_Format),
-                    Total = (netDiscount - (withHoldingTaxAmount + withHoldingVatAmount)).ToString(SD.Two_Decimal_Format)
+                    Total = (netDiscount - (withHoldingTaxAmount + withHoldingVatAmount)).ToString(SD.Two_Decimal_Format),
+                    Debit = si.DebitAmount,
+                    Credit = si.CreditAmount
                 });
             }
 
@@ -2160,21 +2144,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return Json(null);
             }
 
-            var collectionsForThisSi = await _dbContext.FilprideCollectionReceiptDetails
-                .Where(crd => crd.InvoiceNo == salesInvoice.SalesInvoiceNo
-                              && crd.CollectionReceiptId == collectionReceiptId)
-                .FirstOrDefaultAsync(cancellationToken);
-
             var vatType = salesInvoice.CustomerOrderSlip?.VatType ?? salesInvoice.Customer!.VatType;
             var hasEwt = salesInvoice.CustomerOrderSlip?.HasEWT ?? salesInvoice.Customer!.WithHoldingTax;
             var hasWvat = salesInvoice.CustomerOrderSlip?.HasWVAT ?? salesInvoice.Customer!.WithHoldingVat;
 
             var amount = salesInvoice.Amount;
             var amountPaid = salesInvoice.AmountPaid;
-            var netDiscount = salesInvoice.Amount - salesInvoice.Discount;
+            var balanceWithDmCmAmount = salesInvoice.Balance - salesInvoice.Discount;
             var netOfVatAmount = vatType == SD.VatType_Vatable
-                ? _unitOfWork.FilprideCollectionReceipt.ComputeNetOfVat(netDiscount)
-                : netDiscount;
+                ? _unitOfWork.FilprideCollectionReceipt.ComputeNetOfVat(balanceWithDmCmAmount)
+                : balanceWithDmCmAmount;
             var vatAmount = vatType == SD.VatType_Vatable
                 ? _unitOfWork.FilprideCollectionReceipt.ComputeVatAmount(netOfVatAmount)
                 : 0m;
@@ -2184,13 +2163,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var wvatAmount = hasWvat
                 ? _unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVatAmount, 0.05m)
                 : 0m;
-            var balance = amount - amountPaid;
-
-            if (collectionsForThisSi != null)
-            {
-                balance += collectionsForThisSi.Amount;
-                amountPaid -= collectionsForThisSi.Amount;
-            }
+            var balance = balanceWithDmCmAmount;
 
             return Json(new
             {
@@ -2200,7 +2173,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 VatAmount = vatAmount,
                 EwtAmount = ewtAmount,
                 WvatAmount = wvatAmount,
-                Balance = balance
+                Balance = balance,
+                Debit = salesInvoice.DebitAmount,
+                Credit = salesInvoice.CreditAmount
             });
         }
 
