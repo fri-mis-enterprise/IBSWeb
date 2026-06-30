@@ -24,7 +24,7 @@
                 <table class="table table-hover mb-0" id="paginatedTable">
                     <thead class="bg-light">
                     <tr>
-                        <th class="text-start">PO#</th>
+                        <th class="text-start">PO# / Sub PO#</th>
                         <th class="text-start">Date</th>
                         <th class="text-start">Supplier</th>
                         <th class="text-start">Terms</th>
@@ -271,7 +271,7 @@
                             let match = subPoSeries?.match(/^(PO\d{10})/);
                             let cleanedSeries = match ? match[1] : subPoSeries;
 
-                            series = `${row.purchaseOrderNo} / ${cleanedSeries}`;
+                            series = `${cleanedSeries} / ${row.purchaseOrderNo}`;
                         }
                         else {
                             series = row.purchaseOrderNo;
