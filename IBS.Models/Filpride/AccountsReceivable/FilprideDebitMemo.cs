@@ -93,7 +93,7 @@ namespace IBS.Models.Filpride.AccountsReceivable
         public bool IsPrinted { get; set; }
 
         [StringLength(50)]
-        public string Status { get; set; } = nameof(Enums.DmCmStatus.ForCNCApproval);
+        public string Status { get; set; } = nameof(Enums.DmCmStatus.ForApprovalOfFM);
 
         [StringLength(13)]
         public string? Type { get; set; }

@@ -34,7 +34,7 @@
 
     var isApprover =
         User.IsInRole("Admin") ||
-        User.IsInRole("CncManager");
+        User.IsInRole("FinanceManager");
 }
 
 <style>
@@ -253,7 +253,7 @@
 
 <div class="row pt-2">
     @{
-        if (Model.Status == nameof(DmCmStatus.ForCNCApproval))
+        if (Model.Status == nameof(DmCmStatus.ForApprovalOfFM))
         {
             if (isApprover)
             {

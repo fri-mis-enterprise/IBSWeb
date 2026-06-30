@@ -922,7 +922,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 if (existingDm.Status == nameof(DmCmStatus.ForPosting))
                 {
-                    existingDm.Status = nameof(DmCmStatus.ForCNCApproval);
+                    existingDm.Status = nameof(DmCmStatus.ForApprovalOfFM);
                 }
 
                 existingDm.EditedBy = GetUserFullName();
@@ -1416,7 +1416,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        [Authorize(Roles = "Admin,CncManager")]
+        [Authorize(Roles = "Admin,FinanceManager")]
         public async Task<IActionResult> Approve(int id, CancellationToken cancellationToken)
         {
             var model = await _unitOfWork.FilprideDebitMemo
@@ -1427,7 +1427,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
-            if (model.Status != nameof(DmCmStatus.ForCNCApproval))
+            if (model.Status != nameof(DmCmStatus.ForApprovalOfFM))
             {
                 TempData["error"] = "This record is not pending for approval.";
                 return RedirectToAction(nameof(Print), new { id });
@@ -1435,7 +1435,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             var isApprover =
                 User.IsInRole("Admin") ||
-                User.IsInRole("CncManager");
+                User.IsInRole("FinanceManager");
 
             if (!isApprover)
             {

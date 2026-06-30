@@ -133,7 +133,7 @@ namespace IBS.Models.Enums
 
     public enum DmCmStatus
     {
-        ForCNCApproval,
+        ForApprovalOfFM,
         ForPosting,
         Posted,
         Voided,
