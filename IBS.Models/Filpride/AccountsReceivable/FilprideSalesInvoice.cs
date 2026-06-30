@@ -157,5 +157,9 @@ namespace IBS.Models.Filpride.AccountsReceivable
         public string Terms { get; set; } = null!;
 
         #endregion
+
+        public decimal DebitAmount { get; set; }
+
+        public decimal CreditAmount { get; set; }
     }
 }

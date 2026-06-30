@@ -407,7 +407,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
             if (si != null)
             {
-                var netDiscount = si.Amount - si.Discount;
+                var netDiscount = si.Amount - si.Discount + si.DebitAmount - si.CreditAmount;
 
                 si.AmountPaid += paidAmount;
                 si.Balance = netDiscount - si.AmountPaid;
@@ -488,7 +488,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
                 if (!salesInvoice.IsPaid)
                 {
-                    decimal netDiscount = salesInvoice.Amount - salesInvoice.Discount;
+                    decimal netDiscount = salesInvoice.Amount - salesInvoice.Discount + salesInvoice.DebitAmount - salesInvoice.CreditAmount;
 
                     salesInvoice.AmountPaid += paidAmount[i];
 

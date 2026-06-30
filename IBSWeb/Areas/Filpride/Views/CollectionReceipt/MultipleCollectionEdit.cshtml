@@ -84,13 +84,15 @@
                                 <tr>
                                     <th colspan="7" class="text-center py-4">Invoice Details</th>
                                 </tr><tr>
-                                    <th style="width:14%; padding-left:20px;" class="text-center">SI No's</th>
-                                    <th class="text-end" style="width:14%;">Invoice Amount</th>
-                                    <th class="text-end" style="width:14%;">WVat</th>
-                                    <th class="text-end" style="width:14%;">EWT</th>
-                                    <th class="text-end" style="width:14%; padding-left:20px;">Less EWT/WVat</th>
-                                    <th class="text-end" style="width:14%;">Amount Paid</th>
-                                    <th class="text-end" style="width:14%; padding-right:20px;">Balance</th>
+                                    <th style="width:11.11%; padding-left:20px;" class="text-center">SI No's</th>
+                                    <th class="text-end" style="width:11.11%;">Invoice Amount</th>
+                                    <th class="text-end" style="width:11.11%;">WVat</th>
+                                    <th class="text-end" style="width:11.11%;">EWT</th>
+                                    <th class="text-end" style="width:11.11%; padding-left:20px;">Less EWT/WVat</th>
+                                    <th class="text-end" style="width:11.11%;">Amount Paid</th>
+                                    <th class="text-end" style="width:11.11%;">Debit</th>
+                                    <th class="text-end" style="width:11.11%;">Credit</th>
+                                    <th class="text-end" style="width:11.11%; padding-right:20px;">Balance</th>
                                 </tr>
                             </thead>
                             <tbody class="siAmount">
@@ -106,6 +108,8 @@
                                 <td class="text-end" id="grandTotalEWTAmount">0.0000</td>
                                 <td class="text-end" id="grandTotalNetOfEWT" style="padding-left:20px;">0.0000</td>
                                 <td class="text-end" id="grandTotalAmountPaid">0.0000</td>
+                                <td class="text-end" id="grandTotalDebit">0.0000</td>
+                                <td class="text-end" id="grandTotalCredit">0.0000</td>
                                 <td class="text-end" id="grandTotalBalance" style="padding-right:20px;">0.0000</td>
                             </tr>
                             </tbody>
@@ -444,6 +448,8 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
                         <td class="text-end" id='ewtAmount_${siNo}'>0.00</td>
                         <td class="text-end" id='siAmountNetOfEWT_${siNo}' style="padding-left:20px;">0.00</td>
                         <td class="text-end" id='amountPaid_${siNo}'>0.00</td>
+                        <td class="text-end" id='debit_${siNo}'>0.00</td>
+                        <td class="text-end" id='credit_${siNo}'>0.00</td>
                         <td class="text-end" id='balance_${siNo}' style="padding-right:20px;">0.00</td>
                     </tr>`);
         }
@@ -463,6 +469,8 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
                     const netOfEWT = gross - (vatAmount + ewtAmount);
                     const amountPaid = data.amountPaid;
                     const balance = data.balance;
+                    const debit = data.debit;
+                    const credit = data.credit;
 
                     $(`#amount_${siNo}`).text(formatNumber(gross));
                     $(`#netAmount_${siNo}`).text(formatNumber(netAmount));
@@ -470,6 +478,8 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
                     $(`#ewtAmount_${siNo}`).text(formatNumber(ewtAmount));
                     $(`#siAmountNetOfEWT_${siNo}`).text(formatNumber(netOfEWT));
                     $(`#amountPaid_${siNo}`).text(formatNumber(amountPaid));
+                    $(`#debit_${siNo}`).text(formatNumber(debit));
+                    $(`#credit_${siNo}`).text(formatNumber(credit));
                     $(`#balance_${siNo}`).text(formatNumber(balance));
 
                     // Only set balance if no existing amount
@@ -498,7 +508,9 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
                 grandTotalEWTAmount = 0,
                 grandTotalNetOfEWT = 0,
                 grandTotalAmountPaid = 0,
-                grandTotalBalance = 0;
+                grandTotalBalance = 0,
+                grandTotalDebit = 0,
+                grandTotalCredit = 0;
 
             $(".siAmount tr").each(function () {
                 const $row = $(this);
@@ -509,6 +521,8 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
                 grandTotalEWTAmount += parseNumber($row.find("[id^='ewtAmount_']").text());
                 grandTotalNetOfEWT += parseNumber($row.find("[id^='siAmountNetOfEWT_']").text());
                 grandTotalAmountPaid += parseNumber($row.find("[id^='amountPaid_']").text());
+                grandTotalDebit += parseNumber($row.find("[id^='debit_']").text());
+                grandTotalCredit += parseNumber($row.find("[id^='credit_']").text());
                 grandTotalBalance += parseNumber($row.find("[id^='balance_']").text());
             });
 
@@ -519,6 +533,8 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
             $("#grandTotalNetOfEWT").text(formatNumber(grandTotalNetOfEWT));
             $("#grandTotalAmountPaid").text(formatNumber(grandTotalAmountPaid));
             $("#grandTotalBalance").text(formatNumber(grandTotalBalance));
+            $("#grandTotalDebit").text(formatNumber(grandTotalDebit));
+            $("#grandTotalCredit").text(formatNumber(grandTotalCredit));
         }
     });
 </script>

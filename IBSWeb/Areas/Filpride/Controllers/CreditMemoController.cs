@@ -277,6 +277,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     model.Type = existingSalesInvoice.Type;
                     model.CreditAmount = (decimal)(model.Quantity! * -model.AdjustedPrice!);
                     existingSalesInvoice.Balance -= Math.Abs(model.CreditAmount);
+                    existingSalesInvoice.CreditAmount += Math.Abs(model.CreditAmount);
                 }
                 else if (model.Source == "Service Invoice")
                 {
@@ -392,6 +393,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 Amount = viewModel.Amount,
                 Remarks = viewModel.Remarks,
                 Description = viewModel.Description,
+                CreditAmount = (decimal)(viewModel.Quantity! * viewModel.AdjustedPrice!)
             };
 
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
@@ -423,7 +425,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         existingCm.Description = model.Description;
                         existingCm.Remarks = model.Remarks;
                         existingCm.SalesInvoice!.Balance += Math.Abs(existingCm.CreditAmount);
-                        existingCm.SalesInvoice!.Balance -= (decimal)(model.Quantity! * model.AdjustedPrice!);
+                        existingCm.SalesInvoice!.Balance -= model.CreditAmount;
+                        existingCm.SalesInvoice!.CreditAmount -= Math.Abs(existingCm.CreditAmount);
+                        existingCm.SalesInvoice!.CreditAmount += model.CreditAmount;
 
                         #endregion -- Saving Default Enries --
 
@@ -929,6 +933,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.Status = nameof(DmCmStatus.Voided);
                 model.SalesInvoice!.Balance += Math.Abs(model.CreditAmount);
+                model.SalesInvoice!.CreditAmount -= Math.Abs(model.CreditAmount);
 
                 await _unitOfWork.GeneralLedger.ReverseEntries(model.CreditMemoNo, cancellationToken);
 
@@ -974,6 +979,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.Status = nameof(DmCmStatus.Canceled);
                 model.CancellationRemarks = cancellationRemarks;
                 model.SalesInvoice!.Balance += Math.Abs(model.CreditAmount);
+                model.SalesInvoice!.CreditAmount -= Math.Abs(model.CreditAmount);
 
                 #region --Audit Trail Recording
 
