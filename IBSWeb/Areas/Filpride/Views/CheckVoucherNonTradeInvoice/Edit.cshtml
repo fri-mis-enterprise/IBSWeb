@@ -113,6 +113,7 @@
                                             <input type="hidden" name="AccountingEntries[@i].CompanyMasterFileId" value="@Model.AccountingEntries[i].CompanyMasterFileId" class="company-master-file-id" />
                                             <input type="hidden" name="AccountingEntries[@i].CustomerMasterFileId" value="@Model.AccountingEntries[i].CustomerMasterFileId" class="customer-master-file-id" />
                                             <input type="hidden" name="AccountingEntries[@i].SupplierMasterFileId" value="@Model.AccountingEntries[i].SupplierMasterFileId" class="supplier-master-file-id" />
+                                            <input type="hidden" name="AccountingEntries[@i].EmployeeMasterFileId" value="@Model.AccountingEntries[i].SupplierMasterFileId" class="employee-master-file-id" />
                                         </td>
                                         <td>
                                             <input type="number" name="AccountingEntries[@i].Amount" value="@Model.AccountingEntries[i].Amount" class="form-control form-control-sm text-end amount" />
@@ -433,6 +434,7 @@
                     <input type="hidden" name="AccountingEntries[${rowCount}].CompanyMasterFileId" class="company-master-file-id" />
                     <input type="hidden" name="AccountingEntries[${rowCount}].CustomerMasterFileId" class="customer-master-file-id" />
                     <input type="hidden" name="AccountingEntries[${rowCount}].SupplierMasterFileId" class="supplier-master-file-id" />
+                    <input type="hidden" name="AccountingEntries[${rowCount}].EmployeeMasterFileId" class="employee-master-file-id" />
                 </td>
                 <td class="px-2">
                     <input type="number" name="AccountingEntries[${rowCount}].Amount" class="form-control form-control-sm text-end amount" value="0" />
@@ -509,7 +511,7 @@
                         accountSelect.find('option:selected').text(originalText);
                     }
 
-                    row.find('input[name$=".BankMasterFileId"], input[name$=".CompanyMasterFileId"], input[name$=".CustomerMasterFileId"], input[name$=".SupplierMasterFileId"]').remove();
+                    row.find('input[name$=".BankMasterFileId"], input[name$=".CompanyMasterFileId"], input[name$=".CustomerMasterFileId"], input[name$=".SupplierMasterFileId"], input[name$=".EmployeeMasterFileId"]').remove();
                     accountSelect.removeData('original-text').trigger('change.select2');
                 });
             }
@@ -645,7 +647,7 @@
 
     </script>
 
-    <script src="~/js/masterFileSelector.js"></script>
+    <script src="~/js/masterFileSelector.js" asp-append-version="true"></script>
     <script>
         // Initialize the master file selector with URLs
         $(document).ready(function() {
@@ -654,6 +656,7 @@
                 getCompanies: '@Url.Action("GetCompanies", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })',
                 getCustomers: '@Url.Action("GetCustomers", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })',
                 getSuppliers: '@Url.Action("GetSuppliers", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })',
+                getEmployees: '@Url.Action("GetEmployees", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })',
             });
 
             // Handle selection button clicks
@@ -686,7 +689,8 @@
                     bankId: row.querySelector('.bank-master-file-id')?.value,
                     companyId: row.querySelector('.company-master-file-id')?.value,
                     customerId: row.querySelector('.customer-master-file-id')?.value,
-                    supplierId: row.querySelector('.supplier-master-file-id')?.value
+                    supplierId: row.querySelector('.supplier-master-file-id')?.value,
+                    employeeId: row.querySelector('.employee-master-file-id')?.value
                 };
 
                 const accountSelect = row.querySelector('.chart-of-accounts');

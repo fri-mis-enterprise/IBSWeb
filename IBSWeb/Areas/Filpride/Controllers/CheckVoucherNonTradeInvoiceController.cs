@@ -387,7 +387,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         accountEntry.CustomerMasterFileId,
                         accountEntry.SupplierMasterFileId,
                         accountEntry.BankMasterFileId,
-                        accountEntry.CompanyMasterFileId
+                        accountEntry.CompanyMasterFileId,
+                        accountEntry.EmployeeMasterFileId
                     );
 
                     string? subAccountName = null;
@@ -833,6 +834,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         SupplierMasterFileId = details.SubAccountType == SubAccountType.Supplier
                             ? details.SubAccountId
                             : null,
+                        EmployeeMasterFileId = details.SubAccountType == SubAccountType.Employee
+                            ? details.SubAccountId
+                            : null,
                     });
                 }
 
@@ -952,7 +956,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         accountEntry.CustomerMasterFileId,
                         accountEntry.SupplierMasterFileId,
                         accountEntry.BankMasterFileId,
-                        accountEntry.CompanyMasterFileId
+                        accountEntry.CompanyMasterFileId,
+                        accountEntry.EmployeeMasterFileId
                     );
 
                     string? subAccountName = null;
@@ -1758,7 +1763,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             string? companyClaims = await GetCompanyClaimAsync();
             IEnumerable<FilprideSupplier> suppliers = await _unitOfWork.FilprideSupplier
-                .GetAllAsync(s => companyClaims == nameof(Filpride));
+                .GetAllAsync(s => companyClaims == nameof(Filpride) && s.Category != "Employee");
 
             return Json(suppliers.OrderBy(c => c.SupplierCode).Select(c => new
             {
