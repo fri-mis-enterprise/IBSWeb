@@ -23,5 +23,7 @@ namespace IBS.Models.Filpride.ViewModels
         public int? CustomerMasterFileId { get; set; }
 
         public int? SupplierMasterFileId { get; set; }
+
+        public int? EmployeeMasterFileId { get; set; }
     }
 }

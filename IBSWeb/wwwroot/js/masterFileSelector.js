@@ -33,10 +33,19 @@ class MasterFileSelector {
                 id: 'supplier',
                 title: 'Supplier',
                 url: urls.getSuppliers,
-                triggerAccounts: ['101020400 Advances from Officers and Employees', '101020500 AR-Non Trade Receivable', '101060900 Security Deposit'],
+                triggerAccounts: ['101020500 AR-Non Trade Receivable', '101060900 Security Deposit', '101060100 Advances to Suppliers'],
                 placeholder: 'Select a supplier',
                 formatOption: (item) => `${item.accountNumber} - ${item.accountName}`,
                 inputName: 'SupplierMasterFileId'
+            },
+            EMPLOYEE: {
+                id: 'employee',
+                title: 'employee',
+                url: urls.getEmployees,
+                triggerAccount: '101020400 Advances to Employees',
+                placeholder: 'Select a employee',
+                formatOption: (item) => `${item.accountNumber} - ${item.accountName}`,
+                inputName: 'EmployeeMasterFileId'
             },
         };
 
@@ -319,9 +328,9 @@ class MasterFileSelector {
         let newDisplayText;
 
         if (firstParenIndex !== -1) {
-            const accountType = originalText.substring(0, firstParenIndex + 1); 
+            const accountType = originalText.substring(0, firstParenIndex + 1);
             const accountInfo = originalText.substring(firstParenIndex + 1).trim();
-            
+
             newDisplayText = `${accountType} ${accountInfo} (${selectedText})`;
         } else {
             // Fallback if format is different
