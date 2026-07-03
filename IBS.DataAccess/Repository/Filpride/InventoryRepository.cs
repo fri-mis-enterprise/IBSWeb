@@ -48,14 +48,14 @@ namespace IBS.DataAccess.Repository.Filpride
 
             // Calculate initial values
 
-            var cost = Math.Round(receivingReport.PurchaseOrder!.VatType == SD.VatType_Vatable
+            var cost = receivingReport.PurchaseOrder!.VatType == SD.VatType_Vatable
                 ? ComputeNetOfVat(receivingReport.Amount / receivingReport.QuantityReceived)
-                : receivingReport.Amount / receivingReport.QuantityReceived, 4);
+                : receivingReport.Amount / receivingReport.QuantityReceived;
 
             var inventoryBalance = (previousInventory?.InventoryBalance ?? 0) + receivingReport.QuantityReceived;
             var averageCost = cost;
-            var total = receivingReport.QuantityReceived * cost;
-            var totalBalance = inventoryBalance * averageCost;
+            var total = Math.Round(receivingReport.QuantityReceived * cost, 4);
+            var totalBalance = Math.Round(inventoryBalance * averageCost, 4);
 
             // Create new inventory entry
             var inventory = new FilprideInventory
