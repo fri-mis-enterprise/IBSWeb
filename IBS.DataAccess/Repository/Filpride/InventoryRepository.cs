@@ -48,14 +48,14 @@ namespace IBS.DataAccess.Repository.Filpride
 
             // Calculate initial values
 
-            var cost = receivingReport.PurchaseOrder!.VatType == SD.VatType_Vatable
-                ? ComputeNetOfVat(receivingReport.Amount / receivingReport.QuantityReceived)
-                : receivingReport.Amount / receivingReport.QuantityReceived;
+            var cost = Math.Round(receivingReport.Amount / receivingReport.QuantityReceived, 4);
 
             var inventoryBalance = (previousInventory?.InventoryBalance ?? 0) + receivingReport.QuantityReceived;
             var averageCost = cost;
-            var total = Math.Round(receivingReport.QuantityReceived * cost, 4);
-            var totalBalance = Math.Round(inventoryBalance * averageCost, 4);
+            var total = receivingReport.PurchaseOrder!.VatType == SD.VatType_Vatable
+                ? ComputeNetOfVat(receivingReport.QuantityReceived * cost)
+                : receivingReport.QuantityReceived * cost;
+            var totalBalance = inventoryBalance * averageCost;
 
             // Create new inventory entry
             var inventory = new FilprideInventory
@@ -141,13 +141,12 @@ namespace IBS.DataAccess.Repository.Filpride
             var previousInventory = lastIndex >= 0 ? sortedInventory[lastIndex] : null;
             var subsequentTransactions = sortedInventory.Skip(lastIndex + 1).ToList();
             decimal cost;
+            var purchaseOrder = await _db.FilpridePurchaseOrders
+                                    .FirstOrDefaultAsync(x => x.PurchaseOrderId == deliveryReceipt.PurchaseOrderId, cancellationToken)
+                                ?? throw new NullReferenceException("Purchase order not found");
 
             if (previousInventory == null)
             {
-                var purchaseOrder = await _db.FilpridePurchaseOrders
-                    .FirstOrDefaultAsync(x => x.PurchaseOrderId == deliveryReceipt.PurchaseOrderId, cancellationToken)
-                                    ?? throw new NullReferenceException("Purchase order not found");
-
                 var unitOfWork = new UnitOfWork(_db);
 
                 var freight = deliveryReceipt.CustomerOrderSlip?.DeliveryOption == SD.DeliveryOption_DirectDelivery
@@ -157,11 +156,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 var poPrice = await unitOfWork.FilpridePurchaseOrder
                     .GetPurchaseOrderCost(purchaseOrder.PurchaseOrderId, cancellationToken) + freight;
 
-                var netOfVat = purchaseOrder.VatType == SD.VatType_Vatable
-                    ? ComputeNetOfVat(poPrice)
-                    : poPrice;
-
-                cost = Math.Round(netOfVat, 4);
+                cost = Math.Round(poPrice, 4);
             }
             else
             {
@@ -171,7 +166,9 @@ namespace IBS.DataAccess.Repository.Filpride
             // Calculate initial values for new inventory entry
             var inventoryBalance = (previousInventory?.InventoryBalance ?? 0) - deliveryReceipt.Quantity;
             var averageCost = cost;
-            var total = deliveryReceipt.Quantity * cost;
+            var total = purchaseOrder.VatType == SD.VatType_Vatable
+                ? ComputeNetOfVat(deliveryReceipt.Quantity * cost)
+                : deliveryReceipt.Quantity * cost;
             var totalBalance = inventoryBalance * averageCost;
 
             // Create new inventory entry
