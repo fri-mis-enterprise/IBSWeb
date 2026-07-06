@@ -1854,7 +1854,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         ? RoundToFour(_unitOfWork.FilpridePurchaseOrder.ComputeNetOfVat(freight))
                         : freight; // freight n vat
                     var freightAmount = pr.DeliveryReceipt!.FreightAmount; // purchase total net
-                    var freightAmountNet = RoundToFour(netFreight * volume); // purchase total net
+                    var freightAmountNet =
+                        isHaulerVatable && freight != 0m
+                            ? RoundToFour(_unitOfWork.FilpridePurchaseOrder.ComputeNetOfVat(freight * volume))
+                            : freight * volume; // purchase total net
                     var vatAmount = isSupplierVatable
                         ? RoundToFour(_unitOfWork.FilpridePurchaseOrder.ComputeVatAmount(netPurchases))
                         : 0m; // vat total
@@ -1867,8 +1870,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var commission = RoundToFour((pr.DeliveryReceipt?.CustomerOrderSlip?.CommissionRate ?? 0m) * volume);
                     var purchaseNetOfWht = RoundToFour(costAmount - whtAmount);
                     var freightNetOfVatAmount = isHaulerVatable
-                        ? RoundToFour(_unitOfWork.FilpridePurchaseOrder.ComputeNetOfVat(freightAmount))
-                        : freightAmount;
+                        ? RoundToFour(_unitOfWork.FilpridePurchaseOrder.ComputeNetOfVat(freightAmountNet))
+                        : freightAmountNet;
                     var freightWhtAmount = isHaulerTaxable
                         ? RoundToFour(_unitOfWork.FilpridePurchaseOrder.ComputeEwtAmount(freightNetOfVatAmount, pr.DeliveryReceipt?.Hauler?.WithholdingTaxPercent ?? 0))
                         : 0m;
