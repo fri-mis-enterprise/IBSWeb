@@ -167,5 +167,6 @@ namespace IBS.Models.Filpride.Integrated
         [Column(TypeName = "varchar(15)")]
         public string Type { get; set; } = string.Empty;
 
+        public bool IsCostOfMoneyApplied { get; set; }
     }
 }

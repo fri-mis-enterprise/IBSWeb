@@ -2751,7 +2751,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var getHolidays = await DateTimeHelper.GetNonWorkingDays(salesInvoice.DueDate, model.DepositedDate.Value);
                     var daysDelayed = model.DepositedDate.Value.DayNumber - salesInvoice.DueDate.DayNumber - getHolidays.Count;
 
-                    if (daysDelayed <= 0 || dr.CommissionAmount <= 0)
+                    if (daysDelayed <= 0 || dr.CommissionAmount <= 0 || dr.IsCostOfMoneyApplied)
                     {
                         continue;
                     }
