@@ -385,10 +385,12 @@ namespace IBS.DataAccess.Repository.Filpride
                     ModuleType = nameof(ModuleType.Sales)
                 });
 
-                var poPrice = await unitOfWork.FilpridePurchaseOrder.GetPurchaseOrderCost((int)deliveryReceipt.PurchaseOrderId!, cancellationToken) + deliveredFreight;
+                var poPrice =
+                    Math.Round(await unitOfWork.FilpridePurchaseOrder.GetPurchaseOrderCost((int)deliveryReceipt.PurchaseOrderId!,
+                        cancellationToken) + deliveredFreight, 4);
                 var cogsGrossAmount = poPrice * deliveryReceipt.Quantity;
                 var cogsNetOfVat = deliveryReceipt.PurchaseOrder.VatType == SD.VatType_Vatable
-                    ? ComputeNetOfVat(cogsGrossAmount)
+                    ? Math.Round(ComputeNetOfVat(cogsGrossAmount), 4)
                     : cogsGrossAmount;
 
                 ledgers.Add(new FilprideGeneralLedgerBook

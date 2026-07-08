@@ -398,9 +398,19 @@ namespace IBS.Services
                 await dbContext.SaveChangesAsync(cancellationToken);
             }
 
+            var inventory = await dbContext.FilprideInventories
+                .Where(x => x.Company == company && references.Contains(x.Reference!))
+                .ToListAsync(cancellationToken);
+
+            if (inventory.Count != 0)
+            {
+                dbContext.FilprideInventories.RemoveRange(inventory);
+            }
+
             foreach (var receivingReport in records)
             {
                 await unitOfWork.FilprideReceivingReport.PostAsync(receivingReport, cancellationToken);
+                await unitOfWork.FilprideInventory.AddPurchaseToInventoryAsync(receivingReport, cancellationToken);
             }
 
             return records.Count;
@@ -436,6 +446,15 @@ namespace IBS.Services
                 .Where(x => x.Company == company && references.Contains(x.Reference))
                 .ToListAsync(cancellationToken);
 
+            var inventory = await dbContext.FilprideInventories
+                .Where(x => x.Company == company && references.Contains(x.Reference!))
+                .ToListAsync(cancellationToken);
+
+            if (inventory.Count != 0)
+            {
+                dbContext.FilprideInventories.RemoveRange(inventory);
+            }
+
             if (existingGlEntries.Count != 0)
             {
                 dbContext.FilprideGeneralLedgerBooks.RemoveRange(existingGlEntries);
@@ -445,6 +464,7 @@ namespace IBS.Services
             foreach (var dr in records)
             {
                 await unitOfWork.FilprideDeliveryReceipt.PostAsync(dr, cancellationToken);
+                await unitOfWork.FilprideInventory.AddSalesToInventoryAsync(dr, cancellationToken);
             }
 
             return records.Count;

@@ -2739,11 +2739,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .GetAsync(x => x.SalesInvoiceNo == receipt.InvoiceNo
                                        && x.Company == model.Company, cancellationToken);
 
-                    if (salesInvoice?.DeliveryReceipt == null)
+                    if (salesInvoice?.DeliveryReceipt == null || salesInvoice.CustomerOrderSlip == null)
                     {
                         continue;
                     }
 
+                    var hasWvat = salesInvoice.CustomerOrderSlip.HasWVAT;
+                    var hasWtax = salesInvoice.CustomerOrderSlip.HasEWT;
+                    var isVatable = salesInvoice.CustomerOrderSlip.VatType == SD.VatType_Vatable;
                     var dr = salesInvoice.DeliveryReceipt!;
                     var getHolidays = await DateTimeHelper.GetNonWorkingDays(salesInvoice.DueDate, model.DepositedDate.Value);
                     var daysDelayed = model.DepositedDate.Value.DayNumber - salesInvoice.DueDate.DayNumber - getHolidays.Count;
@@ -2753,7 +2756,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         continue;
                     }
 
-                    var paymentAmount = model.CashAmount + model.CheckAmount + model.ManagersCheckAmount;
+                    var netOfVat = isVatable
+                        ? _unitOfWork.FilprideCollectionReceipt.ComputeNetOfVat(receipt.Amount)
+                        : receipt.Amount;
+                    var wvatAmount = hasWvat
+                        ? _unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, 0.05m)
+                        : 0m;
+                    var wtaxAmount = hasWtax
+                        ? _unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, 0.01m)
+                        : 0m;
+
+                    var paymentAmount = receipt.Amount - (wvatAmount - wtaxAmount);
 
                     //Formula: Payment Amount x 3% x Days Delayed / 360
                     var costOfMoney = paymentAmount * .03m * daysDelayed / 360m;
