@@ -690,7 +690,7 @@ namespace IBS.Services
                 var getHolidays = await DateTimeHelper.GetNonWorkingDays(salesInvoice.DueDate, collectionReceipt.DepositedDate.Value);
                 var daysDelayed = collectionReceipt.DepositedDate.Value.DayNumber - salesInvoice.DueDate.DayNumber - getHolidays.Count;
 
-                if (daysDelayed <= 0 || dr.CommissionAmount <= 0)
+                if (daysDelayed <= 0 || dr.CommissionAmount <= 0 || dr.IsCostOfMoneyApplied)
                 {
                     continue;
                 }
