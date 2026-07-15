@@ -239,7 +239,7 @@
                 <input type="hidden" asp-for="ArrayOfFileNames" id="arrayOfFileNames" />
                 <div id="newAttachmentGroup" class="row py-2 px-2 justify-content-start text-start">
                     <div class="form-group col-12">
-                        
+
                         <div class="row">
                             <div class="col">
                                 <label for="fileUploadArea">New attachments</label>
@@ -258,7 +258,7 @@
                                 <input asp-for="UploadedFiles" type="file" multiple style="display: none;"/> <!-- Input for uploads -->
                             </div>
                         </div>
-                        
+
                     </div>
                 </div>
                 <div id="previewContainer" class="pt-2"></div>
@@ -302,10 +302,12 @@
                                         .prop('checked', true)
                                         .trigger('change');
 
-                                    if (isInitialize && @Model.CommissioneeId) {
+                                    let modelCommissioneeId = @Html.Raw(Json.Serialize(Model.CommissioneeId));
+                                    let modelCommissionRate = @Html.Raw(Json.Serialize(Model.CommissionRate));
+                                    if (isInitialize && modelCommissioneeId) {
                                         // Master
-                                        $('select[name="CommissioneeId"]').val(@Model.CommissioneeId).trigger('change');
-                                        $('input[name="CommissionRate"]').val(@Model.CommissionRate);
+                                        $('select[name="CommissioneeId"]').val(modelCommissioneeId).trigger('change');
+                                        $('input[name="CommissionRate"]').val(modelCommissionRate);
                                     } else {
                                         // Customer (only first load)
                                         $('select[name="CommissioneeId"]').val(data.commissioneeId).trigger('change');
@@ -402,7 +404,7 @@
                     $('input[name="Terms"]').val(selectedValue);
                 }
             }
-            
+
         });
     </script>
     <script>
@@ -413,13 +415,13 @@
                     $('#commissionInfo').show();
                     $('input[name="CommissioneeId"]').prop('required', true);
                     $('input[name="CommissionRate"]').prop('required', true);
-                    
-                    
+
+
                 } else {
                     $('#commissionInfo').hide();
                     $('select[name="CommissioneeId"]')
-                        .val('') 
-                        .trigger('change') 
+                        .val('')
+                        .trigger('change')
                         .prop('required', false);
                     $('input[name="CommissionRate"]')
                         .val('0.00')
@@ -500,7 +502,7 @@
     <script>
         $(document).ready(function () {
             let fileInfos = @Html.Raw(JsonSerializer.Serialize(Model.FileInfos));
-            
+
             const DragOverlayHandler = (function () {
                 const $overlay = $('#dragOverlay');
                 const $fileUploadArea = $('#fileUploadArea');
@@ -523,7 +525,7 @@
                     $arrayOfFileNames.push(uploadedFile);
                     displayExistingFileName(uploadedFile.name);
                 });
-                
+
                 document.getElementById("arrayOfFileNames").value = JSON.stringify(uploadedFiles.map(file => file.name)); // assign the array value to the input
 
                 function init() {
@@ -545,7 +547,7 @@
 
                 // Trigger file input on clicking the contenteditable div
                 function triggerFileInput() {
-                    $fileInput.click(); 
+                    $fileInput.click();
                 }
 
                 function onFileInputChange(event) {
@@ -617,7 +619,7 @@
                             dataTransfer.items.add(file);
                         }
                     });
-                    
+
                     $fileInput[0].files = dataTransfer.files; // Store the transfer objects in the html input
                     const fileNames = newFiles.map(file => file.name); // Get names of new files
                     fileNames.forEach(fileName => displayFileName({ name: fileName })); // Create elements for each new files
@@ -651,7 +653,7 @@
                 // Create html element for new file
                 function displayExistingFileName(fileName) {
                     let fileInfo = fileInfos.find(f => f.FileName === fileName);
-                    
+
                     let signedUrl = fileInfo.SignedUrl;
 
                     const container = document.createElement('div');
@@ -680,7 +682,7 @@
                     event.preventDefault();
                     const fileName = $(this).data('name'); // Get file name
                     uploadedFiles = uploadedFiles.filter(f => f.name !== fileName); // Filter out to remove the name
-                    $(this).closest('.file-item').remove(); // Remove the div element 
+                    $(this).closest('.file-item').remove(); // Remove the div element
                     $fileUploadArea.data('allFiles', uploadedFiles.map(file => file.name));
                     const dataTransfer = new DataTransfer(); // Initialize DataTransfer
                     uploadedFiles.forEach(file => {
@@ -696,7 +698,7 @@
                     document.getElementById("arrayOfFileNames").value = JSON.stringify(uploadedFiles.map(file => file.name));
                     console.log(JSON.stringify(uploadedFiles.map(file => file.name)));
                 }
-                
+
                 function onPaste(event) {
                     const clipboardData = event.originalEvent ? event.originalEvent.clipboardData : event.clipboardData;
                     if (!clipboardData) {

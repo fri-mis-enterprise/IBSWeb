@@ -47,7 +47,7 @@ function formatNumberToFour(number) {
 }
 
 function parseNumber(formattedNum) {
-    return parseFloat(formattedNum.replace(/,/g, '')) || 0;
+    return parseFloat(String(formattedNum).replace(/,/g, '')) || 0;
 }
 
 // Dynamic date to in books

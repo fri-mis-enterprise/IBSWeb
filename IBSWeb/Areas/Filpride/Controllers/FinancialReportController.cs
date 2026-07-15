@@ -506,7 +506,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[row, 6].Style.Font.Bold = true;
                         worksheet.Cells[row, 6].Style.Border.Top.Style = ExcelBorderStyle.Thin;
                         worksheet.Cells[row, 6].Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
-                        grandTotal += subTotal;
+                        if (levelTwo.AccountName == "Other Expense")
+                        {
+                            grandTotal -= subTotal;
+                        }
+                        else
+                        {
+                            grandTotal += subTotal;
+                        }
                         row++;
                     }
 
