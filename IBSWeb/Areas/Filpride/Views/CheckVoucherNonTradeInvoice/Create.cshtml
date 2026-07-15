@@ -383,8 +383,8 @@
             const totalsRow = document.createElement("tr");
             totalsRow.innerHTML = `
             <td><strong>Totals</strong></td>
-            <td id="totalDebitCell" class="text-end"><strong>${formatNumber(grandTotalDebits)}</strong></td>
-            <td id="totalCreditCell" class="text-end"><strong>${formatNumber(grandTotalCredits)}</strong></td>
+            <td id="totalDebitCell" class="text-end"><strong>${formatNumberToFour(grandTotalDebits)}</strong></td>
+            <td id="totalCreditCell" class="text-end"><strong>${formatNumberToFour(grandTotalCredits)}</strong></td>
         `;
             tbody.appendChild(totalsRow);
             validateDebitAndCredit();
@@ -394,8 +394,8 @@
             const row = document.createElement("tr");
             row.innerHTML = `
             <td>${account}</td>
-            <td class="text-end">${debit > 0 ? formatNumber(debit) : ""}</td>
-            <td class="text-end">${credit > 0 ? formatNumber(credit) : ""}</td>
+            <td class="text-end">${debit > 0 ? formatNumberToFour(debit) : ""}</td>
+            <td class="text-end">${credit > 0 ? formatNumberToFour(credit) : ""}</td>
         `;
             tbody.appendChild(row);
         }
@@ -607,7 +607,7 @@
             }
 
             // Check if debits equal credits
-            if (Math.abs(grandTotalDebits - grandTotalCredits) > 0.01) { // Using 0.01 to account for rounding differences
+            if (Math.abs(grandTotalDebits - grandTotalCredits) > 0.0001) { // Using 0.0001 to account for rounding differences
                 Swal.fire({
                     title: 'Validation Error',
                     text: 'Debit and Credit totals must be equal.',
@@ -618,7 +618,7 @@
             }
 
             // Check if accounting entries match total amount
-            if (Math.abs(totalAmount - grandTotalDebits) > 0.01) {
+            if (Math.abs(totalAmount - grandTotalDebits) > 0.0001) {
                 Swal.fire({
                     title: 'Validation Error',
                     text: 'Total amount must match the sum of accounting entries.',
@@ -676,13 +676,13 @@
                 $("#journalEntriesTable").after('<div id="balance-error-message" class="text-danger mt-2"></div>');
             }
 
-            if (totalDebit !== totalCredit) {
+            if (Math.abs(totalDebit - totalCredit) > 0.0001) {
                 errorMessage = "Debit and Credit totals must be equal.";
                 isValid = false;
             } else if (totalDebit === 0 || totalCredit === 0) {
                 errorMessage = "Debit or Credit cannot be zero.";
                 isValid = false;
-            } else if (totalValue !== totalDebit || totalValue !== totalCredit) {
+            else if (Math.abs(totalValue - totalDebit) > 0.0001 || Math.abs(totalValue - totalCredit) > 0.0001) {
                 errorMessage = "Total Amount should be equal to Total Debit and Credit.";
                 isValid = false;
             }
@@ -698,4 +698,3 @@
         $(document).on("input change", "#totalAmount", validateDebitAndCredit);
     </script>
 }
-
