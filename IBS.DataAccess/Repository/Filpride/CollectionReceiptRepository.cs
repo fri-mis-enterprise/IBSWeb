@@ -120,7 +120,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     {
                         Date = collectionReceipt.TransactionDate,
                         Reference = collectionReceipt.CollectionReceiptNo!,
-                        Description = "Collection for Receivable",
+                        Description = $"Collection of Receivable, Manual CR No. {collectionReceipt.ReferenceNo}",
                         AccountId = cashInBankTitle.AccountId,
                         AccountNo = cashInBankTitle.AccountNumber,
                         AccountTitle = cashInBankTitle.AccountName,
@@ -141,7 +141,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     {
                         Date = collectionReceipt.TransactionDate,
                         Reference = collectionReceipt.CollectionReceiptNo!,
-                        Description = "Collection for Receivable",
+                        Description = $"Collection of Receivable, Manual CR No. {collectionReceipt.ReferenceNo}",
                         AccountId = cwt.AccountId,
                         AccountNo = cwt.AccountNumber,
                         AccountTitle = cwt.AccountName,
@@ -162,7 +162,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     {
                         Date = collectionReceipt.TransactionDate,
                         Reference = collectionReceipt.CollectionReceiptNo!,
-                        Description = "Collection for Receivable",
+                        Description = $"Collection of Receivable, Manual CR No. {collectionReceipt.ReferenceNo}",
                         AccountId = cwv.AccountId,
                         AccountNo = cwv.AccountNumber,
                         AccountTitle = cwv.AccountName,
@@ -183,7 +183,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     {
                         Date = collectionReceipt.TransactionDate,
                         Reference = collectionReceipt.CollectionReceiptNo!,
-                        Description = "Collection for Receivable",
+                        Description = $"Collection of Receivable, Manual CR No. {collectionReceipt.ReferenceNo}",
                         AccountId = arTradeTitle.AccountId,
                         AccountNo = arTradeTitle.AccountNumber,
                         AccountTitle = arTradeTitle.AccountName,
@@ -207,7 +207,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     {
                         Date = collectionReceipt.TransactionDate,
                         Reference = collectionReceipt.CollectionReceiptNo!,
-                        Description = "Collection for Receivable",
+                        Description = $"Collection of Receivable, Manual CR No. {collectionReceipt.ReferenceNo}",
                         AccountId = arTradeCwt.AccountId,
                         AccountNo = arTradeCwt.AccountNumber,
                         AccountTitle = arTradeCwt.AccountName,
@@ -228,7 +228,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     {
                         Date = collectionReceipt.TransactionDate,
                         Reference = collectionReceipt.CollectionReceiptNo!,
-                        Description = "Collection for Receivable",
+                        Description = $"Collection of Receivable, Manual CR No. {collectionReceipt.ReferenceNo}",
                         AccountId = arTradeCwv.AccountId,
                         AccountNo = arTradeCwv.AccountNumber,
                         AccountTitle = arTradeCwv.AccountName,
