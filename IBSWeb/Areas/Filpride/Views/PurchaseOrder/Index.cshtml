@@ -268,7 +268,7 @@
 
                             let subPoSeries = row.subPoSeries;
 
-                            let match = subPoSeries?.match(/^(PO\d{10})/);
+                            let match = subPoSeries?.match(/^(PO\d{10}|POU\d{9})/);
                             let cleanedSeries = match ? match[1] : subPoSeries;
 
                             series = `${cleanedSeries} / ${row.purchaseOrderNo}`;
