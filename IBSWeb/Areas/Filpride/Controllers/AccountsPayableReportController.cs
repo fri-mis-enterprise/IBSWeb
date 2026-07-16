@@ -9317,9 +9317,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var statusFilter = NormalizeStatusFilter(model.StatusFilter);
 
                 var cvTradePayments = await _dbContext.FilprideCVTradePayments
-                    .Where(x => x.DocumentType == "RR" && (statusFilter == "ValidOnly"
-                        ? x.CV.PostedBy != null
-                        : statusFilter != "InvalidOnly" || x.CV.VoidedBy != null))
+                    .Where(x => x.DocumentType == "RR" &&
+                                x.CV.Company == companyClaims &&
+                                x.CV.Date >= dateFrom &&
+                                x.CV.Date <= dateTo &&
+                                (statusFilter == "ValidOnly"
+                                    ? x.CV.PostedBy != null
+                                    : statusFilter != "InvalidOnly" || x.CV.VoidedBy != null))
                     .Include(x => x.CV)
                     .ToListAsync(cancellationToken);
 
@@ -9543,6 +9547,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var cvTradePayments = await _dbContext.FilprideCVTradePayments
                     .Where(x => x.DocumentType == "DR" &&
                                 x.CV.CvType == "Commission" &&
+                                x.CV.Company == companyClaims &&
+                                x.CV.Date >= dateFrom &&
+                                x.CV.Date <= dateTo &&
                                 (statusFilter == "ValidOnly"
                                     ? x.CV.PostedBy != null
                                     : statusFilter != "InvalidOnly" || x.CV.VoidedBy != null))
@@ -9756,6 +9763,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var cvTradePayments = await _dbContext.FilprideCVTradePayments
                     .Where(x => x.DocumentType == "DR" &&
                                 x.CV.CvType == "Hauler" &&
+                                x.CV.Company == companyClaims &&
+                                x.CV.Date >= dateFrom &&
+                                x.CV.Date <= dateTo &&
                                 (statusFilter == "ValidOnly"
                                     ? x.CV.PostedBy != null
                                     : statusFilter != "InvalidOnly" || x.CV.VoidedBy != null))
