@@ -703,8 +703,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.VoidedBy = GetUserFullName();
                 model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.Status = nameof(DmCmStatus.Voided);
-                model.SalesInvoice!.Balance -= model.DebitAmount;
-                model.SalesInvoice!.DebitAmount -= model.DebitAmount;
+                if (model.SalesInvoice != null)
+                {
+                    model.SalesInvoice.Balance -= model.DebitAmount;
+                    model.SalesInvoice.DebitAmount -= model.DebitAmount;
+                }
 
                 await _unitOfWork.GeneralLedger.ReverseEntries(model.DebitMemoNo, cancellationToken);
 
@@ -748,10 +751,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.CanceledBy = GetUserFullName();
                 model.CanceledDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.CancellationRemarks = cancellationRemarks;
-                if (model.Status == nameof(DmCmStatus.ForPosting))
+                if (model.Status == nameof(DmCmStatus.ForPosting) && model.SalesInvoice != null)
                 {
-                    model.SalesInvoice!.Balance -= model.DebitAmount;
-                    model.SalesInvoice!.DebitAmount -= model.DebitAmount;
+                    model.SalesInvoice.Balance -= model.DebitAmount;
+                    model.SalesInvoice.DebitAmount -= model.DebitAmount;
                 }
                 model.Status = nameof(DmCmStatus.Canceled);
 

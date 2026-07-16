@@ -931,8 +931,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.VoidedBy = GetUserFullName();
                 model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.Status = nameof(DmCmStatus.Voided);
-                model.SalesInvoice!.Balance += Math.Abs(model.CreditAmount);
-                model.SalesInvoice!.CreditAmount -= Math.Abs(model.CreditAmount);
+                if (model.SalesInvoice != null)
+                {
+                    model.SalesInvoice!.Balance += Math.Abs(model.CreditAmount);
+                    model.SalesInvoice!.CreditAmount -= Math.Abs(model.CreditAmount);
+                }
 
                 await _unitOfWork.GeneralLedger.ReverseEntries(model.CreditMemoNo, cancellationToken);
 
@@ -976,10 +979,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.CanceledBy = GetUserFullName();
                 model.CanceledDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.CancellationRemarks = cancellationRemarks;
-                if (model.Status == nameof(DmCmStatus.ForPosting))
+                if (model.Status == nameof(DmCmStatus.ForPosting) && model.SalesInvoice != null)
                 {
-                    model.SalesInvoice!.Balance += Math.Abs(model.CreditAmount);
-                    model.SalesInvoice!.CreditAmount -= Math.Abs(model.CreditAmount);
+                    model.SalesInvoice.Balance += Math.Abs(model.CreditAmount);
+                    model.SalesInvoice.CreditAmount -= Math.Abs(model.CreditAmount);
                 }
                 model.Status = nameof(DmCmStatus.Canceled);
 
