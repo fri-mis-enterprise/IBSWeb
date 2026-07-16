@@ -276,8 +276,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     model.CreditMemoNo = await _unitOfWork.FilprideCreditMemo.GenerateCodeAsync(companyClaims, existingSalesInvoice!.Type, cancellationToken);
                     model.Type = existingSalesInvoice.Type;
                     model.CreditAmount = (decimal)(model.Quantity! * -model.AdjustedPrice!);
-                    existingSalesInvoice.Balance -= Math.Abs(model.CreditAmount);
-                    existingSalesInvoice.CreditAmount += Math.Abs(model.CreditAmount);
                 }
                 else if (model.Source == "Service Invoice")
                 {
@@ -424,10 +422,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         existingCm.AdjustedPrice = model.AdjustedPrice;
                         existingCm.Description = model.Description;
                         existingCm.Remarks = model.Remarks;
-                        existingCm.SalesInvoice!.Balance += Math.Abs(existingCm.CreditAmount);
-                        existingCm.SalesInvoice!.Balance -= model.CreditAmount;
-                        existingCm.SalesInvoice!.CreditAmount -= Math.Abs(existingCm.CreditAmount);
-                        existingCm.SalesInvoice!.CreditAmount += model.CreditAmount;
+                        if (existingCm.Status == nameof(DmCmStatus.ForPosting))
+                        {
+                            existingCm.SalesInvoice!.Balance += Math.Abs(existingCm.CreditAmount);
+                            existingCm.SalesInvoice!.CreditAmount -= Math.Abs(existingCm.CreditAmount);
+                        }
 
                         #endregion -- Saving Default Enries --
 
@@ -976,10 +975,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 model.CanceledBy = GetUserFullName();
                 model.CanceledDate = DateTimeHelper.GetCurrentPhilippineTime();
-                model.Status = nameof(DmCmStatus.Canceled);
                 model.CancellationRemarks = cancellationRemarks;
-                model.SalesInvoice!.Balance += Math.Abs(model.CreditAmount);
-                model.SalesInvoice!.CreditAmount -= Math.Abs(model.CreditAmount);
+                if (model.Status == nameof(DmCmStatus.ForPosting))
+                {
+                    model.SalesInvoice!.Balance += Math.Abs(model.CreditAmount);
+                    model.SalesInvoice!.CreditAmount -= Math.Abs(model.CreditAmount);
+                }
+                model.Status = nameof(DmCmStatus.Canceled);
 
                 #region --Audit Trail Recording
 
@@ -1515,6 +1517,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
+                if (model.SalesInvoice != null)
+                {
+                    model.SalesInvoice.Balance -= Math.Abs(model.CreditAmount);
+                    model.SalesInvoice.CreditAmount += Math.Abs(model.CreditAmount);
+                }
+
                 model.ApprovedBy = GetUserFullName();
                 model.ApprovedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.Status = nameof(DmCmStatus.ForPosting);
