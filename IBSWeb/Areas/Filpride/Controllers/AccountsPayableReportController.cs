@@ -9401,8 +9401,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 row++;
                 var currencyFormat = "#,##0.00";
-                var totalCredit = 0m;
-                var totalDebit = 0m;
 
                 foreach (var record in cvTradePayments)
                 {
@@ -9433,10 +9431,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, col].Value = rr.Date;
                     worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy";
                     col++;
-                    worksheet.Cells[row, col].Value = rr.Amount; col++;
-                    worksheet.Cells[row, col].Value = netOfVatAmount; col++;
-                    worksheet.Cells[row, col].Value = withHoldingTaxAmount; col++;
-                    worksheet.Cells[row, col].Value = rr.AmountPaid; col++;
+                    worksheet.Cells[row, col].Value = rr.Amount;
+                    worksheet.Cells[row, col].Style.Numberformat.Format = currencyFormat;
+                    col++;
+                    worksheet.Cells[row, col].Value = netOfVatAmount;
+                    worksheet.Cells[row, col].Style.Numberformat.Format = currencyFormat;
+                    col++;
+                    worksheet.Cells[row, col].Value = withHoldingTaxAmount;
+                    worksheet.Cells[row, col].Style.Numberformat.Format = currencyFormat;
+                    col++;
+                    worksheet.Cells[row, col].Value = rr.AmountPaid;
+                    worksheet.Cells[row, col].Style.Numberformat.Format = currencyFormat;
+                    col++;
                     worksheet.Cells[row, col].Value = record.CV.CheckVoucherHeaderNo; col++;
                     worksheet.Cells[row, col].Value = record.CV.Date;
                     worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy";
@@ -9456,22 +9462,24 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     row++;
                 }
 
-                int totalRow = row;
-                int lastDataCol = showVoidCancelColumns ? 16 : 14;
-                worksheet.Cells[totalRow, 11].Value = "TOTAL: ";
-                worksheet.Cells[totalRow, 12].Value = totalDebit;
-                worksheet.Cells[totalRow, 13].Value = totalCredit;
-
-                using (var range = worksheet.Cells[totalRow, 1, totalRow, lastDataCol])
-                {
-                    range.Style.Font.Bold = true;
-                    range.Style.Border.Top.Style = ExcelBorderStyle.Double;
-                    range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
-                }
-                using (var range = worksheet.Cells[totalRow, 11, totalRow, lastDataCol])
-                {
-                    range.Style.Numberformat.Format = currencyFormat;
-                }
+                // int totalRow = row;
+                // int lastDataCol = showVoidCancelColumns ? 16 : 14;
+                // worksheet.Cells[totalRow, 5].Value = "TOTAL: ";
+                // worksheet.Cells[totalRow, 6].Value = 1;
+                // worksheet.Cells[totalRow, 7].Value = 2;
+                // worksheet.Cells[totalRow, 8].Value = 3;
+                // worksheet.Cells[totalRow, 9].Value = 4;
+                //
+                // using (var range = worksheet.Cells[totalRow, 1, totalRow, lastDataCol])
+                // {
+                //     range.Style.Font.Bold = true;
+                //     range.Style.Border.Top.Style = ExcelBorderStyle.Double;
+                //     range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                // }
+                // using (var range = worksheet.Cells[totalRow, 11, totalRow, lastDataCol])
+                // {
+                //     range.Style.Numberformat.Format = currencyFormat;
+                // }
 
                 worksheet.Cells.AutoFitColumns();
 
@@ -9624,8 +9632,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 row++;
                 var currencyFormat = "#,##0.00";
-                var totalCredit = 0m;
-                var totalDebit = 0m;
 
                 foreach (var record in cvTradePayments)
                 {
@@ -9656,10 +9662,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             worksheet.Cells[row, col].Value = rr.Date;
                             worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy";
                             col++;
-                            worksheet.Cells[row, col].Value = rr.Amount; col++;
-                            worksheet.Cells[row, col].Value = netOfVatAmount; col++;
-                            worksheet.Cells[row, col].Value = withHoldingTaxAmount; col++;
-                            worksheet.Cells[row, col].Value = rr.AmountPaid; col++;
+                            worksheet.Cells[row, col].Value = rr.Amount;
+                            worksheet.Cells[row, col].Style.Numberformat.Format = currencyFormat;
+                            col++;
+                            worksheet.Cells[row, col].Value = netOfVatAmount;
+                            worksheet.Cells[row, col].Style.Numberformat.Format = currencyFormat;
+                            col++;
+                            worksheet.Cells[row, col].Value = withHoldingTaxAmount;
+                            worksheet.Cells[row, col].Style.Numberformat.Format = currencyFormat;
+                            col++;
+                            worksheet.Cells[row, col].Value = rr.AmountPaid;
+                            worksheet.Cells[row, col].Style.Numberformat.Format = currencyFormat;
+                            col++;
                             worksheet.Cells[row, col].Value = record.CV.CheckVoucherHeaderNo; col++;
                             worksheet.Cells[row, col].Value = record.CV.Date;
                             worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy";
@@ -9679,23 +9693,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             row++;
                         }
                     }
-                }
-
-                int totalRow = row;
-                int lastDataCol = showVoidCancelColumns ? 16 : 14;
-                worksheet.Cells[totalRow, 11].Value = "TOTAL: ";
-                worksheet.Cells[totalRow, 12].Value = totalDebit;
-                worksheet.Cells[totalRow, 13].Value = totalCredit;
-
-                using (var range = worksheet.Cells[totalRow, 1, totalRow, lastDataCol])
-                {
-                    range.Style.Font.Bold = true;
-                    range.Style.Border.Top.Style = ExcelBorderStyle.Double;
-                    range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
-                }
-                using (var range = worksheet.Cells[totalRow, 11, totalRow, lastDataCol])
-                {
-                    range.Style.Numberformat.Format = currencyFormat;
                 }
 
                 worksheet.Cells.AutoFitColumns();
@@ -9848,8 +9845,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 row++;
                 var currencyFormat = "#,##0.00";
-                var totalCredit = 0m;
-                var totalDebit = 0m;
 
                 foreach (var record in cvTradePayments)
                 {
@@ -9880,10 +9875,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             worksheet.Cells[row, col].Value = rr.Date;
                             worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy";
                             col++;
-                            worksheet.Cells[row, col].Value = rr.Amount; col++;
-                            worksheet.Cells[row, col].Value = netOfVatAmount; col++;
-                            worksheet.Cells[row, col].Value = withHoldingTaxAmount; col++;
-                            worksheet.Cells[row, col].Value = rr.AmountPaid; col++;
+                            worksheet.Cells[row, col].Value = rr.Amount;
+                            worksheet.Cells[row, col].Style.Numberformat.Format = currencyFormat;
+                            col++;
+                            worksheet.Cells[row, col].Value = netOfVatAmount;
+                            worksheet.Cells[row, col].Style.Numberformat.Format = currencyFormat;
+                            col++;
+                            worksheet.Cells[row, col].Value = withHoldingTaxAmount;
+                            worksheet.Cells[row, col].Style.Numberformat.Format = currencyFormat;
+                            col++;
+                            worksheet.Cells[row, col].Value = rr.AmountPaid;
+                            worksheet.Cells[row, col].Style.Numberformat.Format = currencyFormat;
+                            col++;
                             worksheet.Cells[row, col].Value = record.CV.CheckVoucherHeaderNo; col++;
                             worksheet.Cells[row, col].Value = record.CV.Date;
                             worksheet.Cells[row, col].Style.Numberformat.Format = "MMM/dd/yyyy";
@@ -9903,23 +9906,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             row++;
                         }
                     }
-                }
-
-                int totalRow = row;
-                int lastDataCol = showVoidCancelColumns ? 16 : 14;
-                worksheet.Cells[totalRow, 11].Value = "TOTAL: ";
-                worksheet.Cells[totalRow, 12].Value = totalDebit;
-                worksheet.Cells[totalRow, 13].Value = totalCredit;
-
-                using (var range = worksheet.Cells[totalRow, 1, totalRow, lastDataCol])
-                {
-                    range.Style.Font.Bold = true;
-                    range.Style.Border.Top.Style = ExcelBorderStyle.Double;
-                    range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
-                }
-                using (var range = worksheet.Cells[totalRow, 11, totalRow, lastDataCol])
-                {
-                    range.Style.Numberformat.Format = currencyFormat;
                 }
 
                 worksheet.Cells.AutoFitColumns();
