@@ -279,8 +279,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     model.DebitMemoNo = await _unitOfWork.FilprideDebitMemo.GenerateCodeAsync(companyClaims, existingSalesInvoice!.Type, cancellationToken);
                     model.Type = existingSalesInvoice.Type;
                     model.DebitAmount = (decimal)(model.Quantity! * model.AdjustedPrice!);
-                    existingSalesInvoice.Balance += model.DebitAmount;
-                    existingSalesInvoice.DebitAmount += model.DebitAmount;
                 }
                 else if (model.Source == "Service Invoice")
                 {
@@ -750,9 +748,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.CanceledBy = GetUserFullName();
                 model.CanceledDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.CancellationRemarks = cancellationRemarks;
+                if (model.Status == nameof(DmCmStatus.ForPosting))
+                {
+                    model.SalesInvoice!.Balance -= model.DebitAmount;
+                    model.SalesInvoice!.DebitAmount -= model.DebitAmount;
+                }
                 model.Status = nameof(DmCmStatus.Canceled);
-                model.SalesInvoice!.Balance -= model.DebitAmount;
-                model.SalesInvoice!.DebitAmount -= model.DebitAmount;
 
                 #region --Audit Trail Recording
 
@@ -898,10 +899,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         existingDm.AdjustedPrice = model.AdjustedPrice;
                         existingDm.Description = model.Description;
                         existingDm.Remarks = model.Remarks;
-                        existingDm.SalesInvoice!.Balance -= existingDm.DebitAmount;
-                        existingDm.SalesInvoice!.Balance += model.DebitAmount;
-                        existingDm.SalesInvoice!.DebitAmount -= existingDm.DebitAmount;
-                        existingDm.SalesInvoice!.DebitAmount += model.DebitAmount;
+                        if (existingDm.Status == nameof(DmCmStatus.ForPosting))
+                        {
+                            existingDm.SalesInvoice!.Balance -= existingDm.DebitAmount;
+                            existingDm.SalesInvoice!.DebitAmount -= existingDm.DebitAmount;
+                        }
 
                         #endregion -- Saving Default Enries --
 
@@ -1453,6 +1455,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
+                if (model.SalesInvoice != null)
+                {
+                    model.SalesInvoice.Balance += model.DebitAmount;
+                    model.SalesInvoice.DebitAmount += model.DebitAmount;
+                }
+
                 model.ApprovedBy = GetUserFullName();
                 model.ApprovedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.Status = nameof(DmCmStatus.ForPosting);

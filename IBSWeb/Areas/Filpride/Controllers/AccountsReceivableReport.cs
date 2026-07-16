@@ -4561,10 +4561,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         var hasCwVat = si.CustomerOrderSlip?.HasWVAT ?? true;
                         var freight = si.DeliveryReceipt?.FreightAmount;
                         var grossAmount = si.Amount;
-                        var siBalanceIncludingDmCmAmount = si.Balance;
+                        var siAmountIncludingDmCmAmount = si.Amount + si.DebitAmount - si.CreditAmount;
                         var netOfVat = isVatable
-                            ? RoundToFour(repoCalculator.ComputeNetOfVat(siBalanceIncludingDmCmAmount))
-                            : siBalanceIncludingDmCmAmount;
+                            ? RoundToFour(repoCalculator.ComputeNetOfVat(siAmountIncludingDmCmAmount))
+                            : siAmountIncludingDmCmAmount;
                         var vatAmount = isVatable ? RoundToFour(repoCalculator.ComputeVatAmount(netOfVat)) : 0m;
                         var vatPerLiter = DivideOrZero(vatAmount, si.Quantity);
                         var ewtAmount = isTaxable ? RoundToFour(repoCalculator.ComputeEwtAmount(netOfVat, 0.01m)) : 0m;
@@ -4597,7 +4597,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[row, 21].Value = si.DebitAmount;
                         worksheet.Cells[row, 22].Value = si.CreditAmount;
                         worksheet.Cells[row, 23].Value = si.AmountPaid;
-                        worksheet.Cells[row, 24].Value = siBalanceIncludingDmCmAmount;
+                        worksheet.Cells[row, 24].Value = si.Balance;
                         worksheet.Cells[row, 25].Value = ewtAmount;
                         worksheet.Cells[row, 26].Value = isEwtAmountPaid;
                         worksheet.Cells[row, 27].Value = ewtBalance;
@@ -4642,7 +4642,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         totalFreight += freight ?? 0m;
                         totalFreightPerLiter += si.DeliveryReceipt?.Freight ?? 0m;
                         totalVatAmount += vatAmount;
-                        totalGrossAmount += siBalanceIncludingDmCmAmount;
+                        totalGrossAmount += siAmountIncludingDmCmAmount;
                         totalAmountPaid += si.AmountPaid;
                         totalBalance += si.Balance;
                         totalEwtAmount += ewtAmount;
