@@ -4642,7 +4642,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         totalFreight += freight ?? 0m;
                         totalFreightPerLiter += si.DeliveryReceipt?.Freight ?? 0m;
                         totalVatAmount += vatAmount;
-                        totalGrossAmount += siAmountIncludingDmCmAmount;
+                        totalGrossAmount += grossAmount;
                         totalAmountPaid += si.AmountPaid;
                         totalBalance += si.Balance;
                         totalEwtAmount += ewtAmount;
