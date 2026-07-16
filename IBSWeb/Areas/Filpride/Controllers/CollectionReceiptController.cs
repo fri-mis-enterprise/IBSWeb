@@ -186,7 +186,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         c.CanceledBy,
                         c.MultipleSIId,
                         c.DepositedDate,
-                        c.ClearedDate
+                        c.ClearedDate,
+                        c.BankId
                     })
                     .ToListAsync(cancellationToken);
 

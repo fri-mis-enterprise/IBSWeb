@@ -239,13 +239,14 @@
         }
     </script>
     <script>
-        async function redeposit(collectionReceiptId) {
+        async function redeposit(collectionReceiptId, bankId) {
+            console.log(bankId);
             // Fetch banks
             const response = await fetch('@Url.Action("GetBanks", "CollectionReceipt", new { area = "Filpride" })');
             const banks = await response.json();
 
             // Build <option>s
-            let bankOptions = '<option value="">Select a bank</option>' + banks.map(b => `<option value="${b.value}">${b.text}</option>`).join('');
+            let bankOptions = '<option value="">Select a bank</option>' + banks.map(b => `<option value="${b.value}" ${b.value == bankId ? "selected" : ""}>${b.text}</option>`).join('');
             let bankSelect = `<select id="swal-input2" class="swal2-select w-75" style="width: 75%;">${bankOptions}</select>`;
 
             // Convert ViewBag.MinDate to JavaScript date string format
@@ -574,7 +575,7 @@
                                 }
 
                                 if (row.status === returnedStatus) {
-                                    dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="redeposit(${row.collectionReceiptId})">Redeposit</a></li>`;
+                                    dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="redeposit(${row.collectionReceiptId}, ${row.bankId})">Redeposit</a></li>`;
                                 }
 
                                 if (row.multipleSIId != null) {

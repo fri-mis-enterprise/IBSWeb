@@ -40,7 +40,7 @@ class MasterFileSelector {
             },
             EMPLOYEE: {
                 id: 'employee',
-                title: 'employee',
+                title: 'Employee',
                 url: urls.getEmployees,
                 triggerAccount: '101020400 Advances to Employees',
                 placeholder: 'Select a employee',
