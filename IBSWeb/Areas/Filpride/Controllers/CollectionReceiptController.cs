@@ -4772,43 +4772,74 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        public async Task<IActionResult> BatchApplyClearingDateV2(CancellationToken cancellationToken)
+        public async Task<IActionResult> BatchApplyClearingDateThatHasAlreadyCleared(CancellationToken cancellationToken)
         {
+            var filprideCollectionReceipts = await _unitOfWork.FilprideCollectionReceipt
+                .GetAllAsync(x => x.Status == "Cleared", cancellationToken);
+
+            if (!filprideCollectionReceipts.Any())
+            {
+                return NotFound();
+            }
+
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
             try
             {
-                var collectionReceipt = await _dbContext.FilprideCollectionReceipts
-                    .Include(cr => cr.Customer)
-                    .Include(cr => cr.SalesInvoice)
-                    .ThenInclude(s => s!.Customer)
-                    .Include(cr => cr.SalesInvoice)
-                    .ThenInclude(s => s!.Product)
-                    .Include(cr => cr.SalesInvoice)
-                    .ThenInclude(s => s!.CustomerOrderSlip)
-                    .Include(cr => cr.ServiceInvoice)
-                    .ThenInclude(sv => sv!.Customer)
-                    .Include(cr => cr.ServiceInvoice)
-                    .ThenInclude(sv => sv!.Service)
-                    .Include(cr => cr.BankAccount)
-                    .Include(cr => cr.ReceiptDetails)
-                    .Where(x => x.Status == "Cleared")
-                    .AsSplitQuery()
-                    .AsQueryable()
-                    .ToListAsync(cancellationToken);
+                var salesInvoiceDictionary = await _dbContext.FilprideSalesInvoices
+                    .ToDictionaryAsync(x => x.SalesInvoiceNo!, cancellationToken);
 
-                if (!collectionReceipt.Any())
+                foreach (var model in filprideCollectionReceipts)
                 {
-                    throw new ArgumentException("Collection not found.");
-                }
-
-                foreach (var record in collectionReceipt)
-                {
-                    if (record.ClearedDate != null)
+                    if (model.DepositedDate == null)
                     {
-                        await ApplyClearingDate(record.CollectionReceiptId, record.ClearedDate ?? DateOnly.MinValue, cancellationToken);
+                        throw new InvalidOperationException("Deposited date cannot be null.");
                     }
-                }
 
-                await _dbContext.SaveChangesAsync(cancellationToken);
+                    foreach (var receipt in model.ReceiptDetails!)
+                    {
+                        salesInvoiceDictionary.TryGetValue(receipt.InvoiceNo, out var salesInvoice);
+
+                        if (salesInvoice?.DeliveryReceipt == null || salesInvoice.CustomerOrderSlip == null)
+                        {
+                            continue;
+                        }
+
+                        var hasWvat = salesInvoice.CustomerOrderSlip.HasWVAT;
+                        var hasWtax = salesInvoice.CustomerOrderSlip.HasEWT;
+                        var isVatable = salesInvoice.CustomerOrderSlip.VatType == SD.VatType_Vatable;
+                        var dr = salesInvoice.DeliveryReceipt!;
+                        var getHolidays = await DateTimeHelper.GetNonWorkingDays(salesInvoice.DueDate, model.DepositedDate.Value);
+                        var daysDelayed = model.DepositedDate.Value.DayNumber - salesInvoice.DueDate.DayNumber - getHolidays.Count;
+
+                        if (daysDelayed <= 0 || dr.CommissionAmount <= 0 || dr.IsCostOfMoneyApplied)
+                        {
+                            continue;
+                        }
+
+                        var netOfVat = isVatable
+                            ? _unitOfWork.FilprideCollectionReceipt.ComputeNetOfVat(receipt.Amount)
+                            : receipt.Amount;
+                        var wvatAmount = hasWvat
+                            ? _unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, 0.05m)
+                            : 0m;
+                        var wtaxAmount = hasWtax
+                            ? _unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, 0.01m)
+                            : 0m;
+
+                        var paymentAmount = receipt.Amount - wvatAmount - wtaxAmount;
+
+                        //Formula: Payment Amount x 3% x Days Delayed / 360
+                        var costOfMoney = paymentAmount * .03m * daysDelayed / 360m;
+
+                        await _unitOfWork.FilprideCollectionReceipt.ApplyCostOfMoney(dr, costOfMoney,
+                            GetUserFullName(), model.DepositedDate.Value, cancellationToken);
+                    }
+
+                    await _unitOfWork.SaveAsync(cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
+                    TempData["success"] = "Collection Receipt clearing date has been applied successfully.";
+                }
             }
             catch (Exception ex)
             {
