@@ -2767,7 +2767,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         ? _unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, 0.01m)
                         : 0m;
 
-                    var paymentAmount = receipt.Amount - (wvatAmount - wtaxAmount);
+                    var paymentAmount = receipt.Amount - wvatAmount - wtaxAmount;
 
                     //Formula: Payment Amount x 3% x Days Delayed / 360
                     var costOfMoney = paymentAmount * .03m * daysDelayed / 360m;
@@ -4519,7 +4519,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     throw new ArgumentException($"Collection not found.");
                 }
 
-                foreach (var record in collectionReceipt)
+                foreach (var record in collectionReceipt.Where(x => x.Status == "Cleared"))
                 {
 
                     await BatchDepositForCollection(record.CollectionReceiptId,
@@ -4531,6 +4531,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         accountTitlesDtoDictionary,
                         cancellationToken);
 
+                    if (record.ClearedDate != null)
+                    {
+                        await ApplyClearingDate(record.CollectionReceiptId, record.ClearedDate ?? DateOnly.MinValue, cancellationToken);
+                    }
                     BatchApplyClearingDate(record.CollectionReceiptId,
                         record.ClearedDate,
                         record);
@@ -4745,7 +4749,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         var wtaxAmount = hasWtax
                             ? _unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, 0.01m)
                             : 0m;
-                        var paymentAmount = receipt.Amount - (wvatAmount - wtaxAmount);
+                        var paymentAmount = receipt.Amount - wvatAmount - wtaxAmount;
 
                         //Formula: Payment Amount x 3% x Days Delayed / 360
                         var costOfMoney = paymentAmount * .03m * daysDelayed / 360m;
@@ -4766,6 +4770,56 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 await transaction.RollbackAsync(cancellationToken);
                 throw;
             }
+        }
+
+        public async Task<IActionResult> BatchApplyClearingDateV2(CancellationToken cancellationToken)
+        {
+            try
+            {
+                var collectionReceipt = await _dbContext.FilprideCollectionReceipts
+                    .Include(cr => cr.Customer)
+                    .Include(cr => cr.SalesInvoice)
+                    .ThenInclude(s => s!.Customer)
+                    .Include(cr => cr.SalesInvoice)
+                    .ThenInclude(s => s!.Product)
+                    .Include(cr => cr.SalesInvoice)
+                    .ThenInclude(s => s!.CustomerOrderSlip)
+                    .Include(cr => cr.ServiceInvoice)
+                    .ThenInclude(sv => sv!.Customer)
+                    .Include(cr => cr.ServiceInvoice)
+                    .ThenInclude(sv => sv!.Service)
+                    .Include(cr => cr.BankAccount)
+                    .Include(cr => cr.ReceiptDetails)
+                    .Where(x => x.Status == "Cleared")
+                    .AsSplitQuery()
+                    .AsQueryable()
+                    .ToListAsync(cancellationToken);
+
+                if (!collectionReceipt.Any())
+                {
+                    throw new ArgumentException("Collection not found.");
+                }
+
+                foreach (var record in collectionReceipt)
+                {
+                    if (record.ClearedDate != null)
+                    {
+                        await ApplyClearingDate(record.CollectionReceiptId, record.ClearedDate ?? DateOnly.MinValue, cancellationToken);
+                    }
+                }
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to process batch apply clearing date in collection receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Created by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+                TempData["error"] = ex.Message;
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
+
+            return Ok();
         }
     }
 }

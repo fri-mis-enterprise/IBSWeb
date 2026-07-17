@@ -704,7 +704,7 @@ namespace IBS.Services
                 var wtaxAmount = hasWtax
                     ? unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, 0.01m)
                     : 0m;
-                var paymentAmount = receipt.Amount - (wvatAmount - wtaxAmount);
+                var paymentAmount = receipt.Amount - wvatAmount - wtaxAmount;
 
                 var costOfMoney = paymentAmount * .03m * daysDelayed / 360m;
 
