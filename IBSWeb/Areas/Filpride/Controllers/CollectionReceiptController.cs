@@ -4835,11 +4835,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         await _unitOfWork.FilprideCollectionReceipt.ApplyCostOfMoney(dr, costOfMoney,
                             GetUserFullName(), model.DepositedDate.Value, cancellationToken);
                     }
-
-                    await _unitOfWork.SaveAsync(cancellationToken);
-                    await transaction.CommitAsync(cancellationToken);
-                    TempData["success"] = "Collection Receipt clearing date has been applied successfully.";
                 }
+                await _unitOfWork.SaveAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                TempData["success"] = "Collection Receipt clearing date has been applied successfully.";
             }
             catch (Exception ex)
             {
