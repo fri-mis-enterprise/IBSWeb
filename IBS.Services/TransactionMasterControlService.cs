@@ -18,7 +18,6 @@ namespace IBS.Services
         Task<TransactionMasterControlViewModel?> GetTransactionDetailsAsync(string referenceNo, string type, string? company, CancellationToken cancellationToken);
         Task UpdateTransactionAsync(TransactionMasterControlViewModel model, string? company, string userFullName, CancellationToken cancellationToken);
         Task<ReJournalBatchResult> ReJournalAllAsync(int month, int year, string company, string userFullName, CancellationToken cancellationToken);
-        Task<int> ReJournalCollectionAsync(int month, int year, string company, CancellationToken cancellationToken);
     }
 
     public sealed class ReJournalBatchResult
@@ -564,7 +563,7 @@ namespace IBS.Services
             return cvs.Count;
         }
 
-        public async Task<int> ReJournalCollectionAsync(int month, int year, string company, CancellationToken cancellationToken)
+        private async Task<int> ReJournalCollectionAsync(int month, int year, string company, CancellationToken cancellationToken)
         {
             var records = (await unitOfWork.FilprideCollectionReceipt.GetAllAsync(x =>
                     x.Company == company &&

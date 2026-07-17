@@ -164,17 +164,5 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return Json(new { success = false, error = ex.Message });
             }
         }
-
-        [HttpGet]
-        public async Task<IActionResult> ReJournalCollection(
-            int month,
-            int year,
-            string company,
-            CancellationToken cancellationToken)
-        {
-            var collectionCount = await transactionMasterControlService.ReJournalCollectionAsync(month, year, company, cancellationToken);
-
-            return Ok(collectionCount);
-        }
     }
 }
