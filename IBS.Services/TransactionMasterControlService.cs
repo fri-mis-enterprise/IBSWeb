@@ -18,6 +18,7 @@ namespace IBS.Services
         Task<TransactionMasterControlViewModel?> GetTransactionDetailsAsync(string referenceNo, string type, string? company, CancellationToken cancellationToken);
         Task UpdateTransactionAsync(TransactionMasterControlViewModel model, string? company, string userFullName, CancellationToken cancellationToken);
         Task<ReJournalBatchResult> ReJournalAllAsync(int month, int year, string company, string userFullName, CancellationToken cancellationToken);
+        Task<int> ReJournalCollectionAsync(int month, int year, string company, CancellationToken cancellationToken);
     }
 
     public sealed class ReJournalBatchResult
@@ -563,7 +564,7 @@ namespace IBS.Services
             return cvs.Count;
         }
 
-        private async Task<int> ReJournalCollectionAsync(int month, int year, string company, CancellationToken cancellationToken)
+        public async Task<int> ReJournalCollectionAsync(int month, int year, string company, CancellationToken cancellationToken)
         {
             var records = (await unitOfWork.FilprideCollectionReceipt.GetAllAsync(x =>
                     x.Company == company &&
@@ -704,7 +705,7 @@ namespace IBS.Services
                 var wtaxAmount = hasWtax
                     ? unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, 0.01m)
                     : 0m;
-                var paymentAmount = receipt.Amount - (wvatAmount - wtaxAmount);
+                var paymentAmount = receipt.Amount - wvatAmount - wtaxAmount;
 
                 var costOfMoney = paymentAmount * .03m * daysDelayed / 360m;
 

@@ -2767,7 +2767,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         ? _unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, 0.01m)
                         : 0m;
 
-                    var paymentAmount = receipt.Amount - (wvatAmount - wtaxAmount);
+                    var paymentAmount = receipt.Amount - wvatAmount - wtaxAmount;
 
                     //Formula: Payment Amount x 3% x Days Delayed / 360
                     var costOfMoney = paymentAmount * .03m * daysDelayed / 360m;
@@ -4745,7 +4745,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         var wtaxAmount = hasWtax
                             ? _unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, 0.01m)
                             : 0m;
-                        var paymentAmount = receipt.Amount - (wvatAmount - wtaxAmount);
+                        var paymentAmount = receipt.Amount - wvatAmount - wtaxAmount;
 
                         //Formula: Payment Amount x 3% x Days Delayed / 360
                         var costOfMoney = paymentAmount * .03m * daysDelayed / 360m;
