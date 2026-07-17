@@ -4787,6 +4787,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
             try
             {
                 var salesInvoiceDictionary = await _dbContext.FilprideSalesInvoices
+                    .Include(si => si.Product)
+                    .Include(si => si.Customer)
+                    .Include(si => si.DeliveryReceipt)
+                    .ThenInclude(dr => dr!.Hauler)
+                    .Include(si => si.DeliveryReceipt)
+                    .ThenInclude(dr => dr!.Commissionee)
+                    .Include(si => si.CustomerOrderSlip)
                     .ToDictionaryAsync(x => x.SalesInvoiceNo!, cancellationToken);
 
                 foreach (var model in filprideCollectionReceipts)
@@ -4838,7 +4845,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 await _unitOfWork.SaveAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
-                TempData["success"] = "Collection Receipt clearing date has been applied successfully.";
+                TempData["success"] = "Collection Receipt clearing date has been applied successfully.";gi
             }
             catch (Exception ex)
             {
