@@ -376,8 +376,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     CommissioneeTaxType = commissionee?.TaxType,
                     BusinessStyle = customer.BusinessStyle,
                     AvailableCreditLimit = await _unitOfWork.FilprideCustomerOrderSlip
-                        .GetCustomerCreditBalance(customer.CustomerId, cancellationToken),
-                    IsBlended = viewModel.IsBlended
+                        .GetCustomerCreditBalance(customer.CustomerId, cancellationToken)
                 };
 
                 ///TODO Temporary solution for 14 days expiration of GASSO FUEL TRADING customer
@@ -526,7 +525,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     Freight = existingRecord.Freight ?? 0,
                     MinDate = minDate,
                     PaymentTerms = await _unitOfWork.FilprideTerms.GetFilprideTermsListAsyncByCode(cancellationToken),
-                    IsBlended = existingRecord.IsBlended
                 };
 
                 // If there is uploaded, get signed URL
@@ -1707,33 +1705,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ToListAsync(cancellationToken)
                 : [];
 
-            var purchaseOrders = new List<FilpridePurchaseOrder>();
-            if (customerOrderSlip != null && customerOrderSlip.IsBlended)
-            {
-                purchaseOrders = await _dbContext.FilpridePurchaseOrders
-                    .Include(p => p.PickUpPoint)
-                    .Include(p => p.Supplier)
-                    .Where(p => supplierIdList.Contains(p.SupplierId) &&
-                                p.PickUpPoint!.Depot == depot &&
-                                (p.ProductName == "DIESEL" || p.ProductName == "CME") &&
-                                !p.IsReceived && !p.IsSubPo &&
-                                p.Status == nameof(Status.Posted) &&
-                                p.Company == companyClaims)
-                    .ToListAsync(cancellationToken);
-            }
-            else
-            {
-                purchaseOrders = await _dbContext.FilpridePurchaseOrders
-                    .Include(p => p.PickUpPoint)
-                    .Include(p => p.Supplier)
-                    .Where(p => supplierIdList.Contains(p.SupplierId) &&
-                                p.PickUpPoint!.Depot == depot &&
-                                p.ProductId == productId &&
-                                !p.IsReceived && !p.IsSubPo &&
-                                p.Status == nameof(Status.Posted) &&
-                                p.Company == companyClaims)
-                    .ToListAsync(cancellationToken);
-            }
+            var purchaseOrders = await _dbContext.FilpridePurchaseOrders
+                .Include(p => p.PickUpPoint)
+                .Include(p => p.Supplier)
+                .Where(p => supplierIdList.Contains(p.SupplierId) &&
+                            p.PickUpPoint!.Depot == depot &&
+                            (p.ProductId == productId ||
+                             p.ProductName == "DIESEL" ||
+                             p.ProductName == "CME") &&
+                            !p.IsReceived && !p.IsSubPo &&
+                            p.Status == nameof(Status.Posted) &&
+                            p.Company == companyClaims)
+                .ToListAsync(cancellationToken);
 
 
             var purchaseOrderList = purchaseOrders.OrderBy(p => p.PurchaseOrderNo).Select(p => new

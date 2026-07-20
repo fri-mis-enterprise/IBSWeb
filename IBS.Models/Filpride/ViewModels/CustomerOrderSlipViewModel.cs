@@ -89,9 +89,7 @@ namespace IBS.Models.Filpride.ViewModels
 
         public DateTime MinDate { get; set; }
 
-        public List<SelectListItem>? PaymentTerms { get; set; }
-
-        public bool IsBlended { get; set; }
+        public List<SelectListItem>? PaymentTerms { get; set; }public bool IsBlended { get; set; }
     }
 
     public class COSFileInfo

@@ -142,7 +142,6 @@ namespace IBS.DataAccess.Repository.Filpride
             existingRecord.CommissioneeTaxType = commissionee?.TaxType;
             existingRecord.BusinessStyle = customer.BusinessStyle;
             existingRecord.AvailableCreditLimit = await GetCustomerCreditBalance(customer.CustomerId, cancellationToken);
-            existingRecord.IsBlended = viewModel.IsBlended;
 
             if (existingRecord.Branch != null)
             {
