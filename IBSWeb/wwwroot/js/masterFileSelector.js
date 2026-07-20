@@ -144,6 +144,7 @@ class MasterFileSelector {
                                     <option value="COMPANY">Company</option>
                                     <option value="CUSTOMER">Customer</option>
                                     <option value="SUPPLIER">Supplier</option>
+                                    <option value="EMPLOYEE">Employee</option>
                                 </select>
                             </div>
                         </div>

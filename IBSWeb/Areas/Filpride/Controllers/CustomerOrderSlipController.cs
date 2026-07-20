@@ -17,6 +17,7 @@ using IBSWeb.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
@@ -265,11 +266,25 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
+            var product = await _dbContext.Products
+                .OrderBy(p => p.ProductCode)
+                .Where(p => p.IsActive &&
+                            p.ProductCode != "PET004" &&
+                            p.ProductCode != "PET005" &&
+                            p.ProductCode != "PET006" &&
+                            p.ProductCode != "PET007" )
+                .Select(p => new SelectListItem
+                {
+                    Value = p.ProductId.ToString(),
+                    Text = p.ProductCode + " " + p.ProductName
+                })
+                .ToListAsync(cancellationToken);
+
             CustomerOrderSlipViewModel viewModel = new()
             {
                 Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken),
                 Commissionee = await _unitOfWork.GetFilprideCommissioneeListAsyncById(companyClaims, cancellationToken),
-                Products = await _unitOfWork.GetProductListAsyncById(cancellationToken),
+                Products = product,
                 MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CustomerOrderSlip, cancellationToken),
                 PaymentTerms = await _unitOfWork.FilprideTerms.GetFilprideTermsListAsyncByCode(cancellationToken)
             };
@@ -362,6 +377,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     BusinessStyle = customer.BusinessStyle,
                     AvailableCreditLimit = await _unitOfWork.FilprideCustomerOrderSlip
                         .GetCustomerCreditBalance(customer.CustomerId, cancellationToken),
+                    IsBlended = viewModel.IsBlended
                 };
 
                 ///TODO Temporary solution for 14 days expiration of GASSO FUEL TRADING customer
@@ -464,6 +480,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     throw new ArgumentException($"Cannot edit this record because the period {existingRecord.Date:MMM yyyy} is already closed.");
                 }
 
+                var product = await _dbContext.Products
+                    .OrderBy(p => p.ProductCode)
+                    .Where(p => p.IsActive &&
+                                p.ProductCode != "PET004" &&
+                                p.ProductCode != "PET005" &&
+                                p.ProductCode != "PET006" &&
+                                p.ProductCode != "PET007" )
+                    .Select(p => new SelectListItem
+                    {
+                        Value = p.ProductId.ToString(),
+                        Text = p.ProductCode + " " + p.ProductName
+                    })
+                    .ToListAsync(cancellationToken);
+
                 CustomerOrderSlipViewModel viewModel = new()
                 {
                     CustomerOrderSlipId = existingRecord.CustomerOrderSlipId,
@@ -482,7 +512,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     Vat = _unitOfWork.FilprideCustomerOrderSlip.ComputeVatAmount((existingRecord.TotalAmount / 1.12m)),
                     TotalAmount = existingRecord.TotalAmount,
                     ProductId = existingRecord.ProductId,
-                    Products = await _unitOfWork.GetProductListAsyncById(cancellationToken),
+                    Products = product,
                     AccountSpecialist = existingRecord.AccountSpecialist,
                     Remarks = existingRecord.Remarks,
                     OtcCosNo = existingRecord.OldCosNo,
@@ -495,7 +525,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     StationCode = null,
                     Freight = existingRecord.Freight ?? 0,
                     MinDate = minDate,
-                    PaymentTerms = await _unitOfWork.FilprideTerms.GetFilprideTermsListAsyncByCode(cancellationToken)
+                    PaymentTerms = await _unitOfWork.FilprideTerms.GetFilprideTermsListAsyncByCode(cancellationToken),
+                    IsBlended = existingRecord.IsBlended
                 };
 
                 // If there is uploaded, get signed URL
@@ -1657,6 +1688,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
+            var customerOrderSlip = await _unitOfWork.FilprideCustomerOrderSlip
+                .GetAsync(x => x.CustomerOrderSlipId == cosId, cancellationToken);
+
             var supplierIdList = supplierIds.Split(',')
                 .Select(id => int.Parse(id.Trim()))
                 .ToList();
@@ -1673,17 +1707,33 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ToListAsync(cancellationToken)
                 : [];
 
-
-            var purchaseOrders = await _dbContext.FilpridePurchaseOrders
-                .Include(p => p.PickUpPoint)
-                .Include(p => p.Supplier)
-                .Where(p => supplierIdList.Contains(p.SupplierId) &&
-                            p.PickUpPoint!.Depot == depot &&
-                            p.ProductId == productId &&
-                            !p.IsReceived && !p.IsSubPo &&
-                            p.Status == nameof(Status.Posted) &&
-                            p.Company == companyClaims)
-                .ToListAsync(cancellationToken);
+            var purchaseOrders = new List<FilpridePurchaseOrder>();
+            if (customerOrderSlip != null && customerOrderSlip.IsBlended)
+            {
+                purchaseOrders = await _dbContext.FilpridePurchaseOrders
+                    .Include(p => p.PickUpPoint)
+                    .Include(p => p.Supplier)
+                    .Where(p => supplierIdList.Contains(p.SupplierId) &&
+                                p.PickUpPoint!.Depot == depot &&
+                                (p.ProductName == "DIESEL" || p.ProductName == "CME") &&
+                                !p.IsReceived && !p.IsSubPo &&
+                                p.Status == nameof(Status.Posted) &&
+                                p.Company == companyClaims)
+                    .ToListAsync(cancellationToken);
+            }
+            else
+            {
+                purchaseOrders = await _dbContext.FilpridePurchaseOrders
+                    .Include(p => p.PickUpPoint)
+                    .Include(p => p.Supplier)
+                    .Where(p => supplierIdList.Contains(p.SupplierId) &&
+                                p.PickUpPoint!.Depot == depot &&
+                                p.ProductId == productId &&
+                                !p.IsReceived && !p.IsSubPo &&
+                                p.Status == nameof(Status.Posted) &&
+                                p.Company == companyClaims)
+                    .ToListAsync(cancellationToken);
+            }
 
 
             var purchaseOrderList = purchaseOrders.OrderBy(p => p.PurchaseOrderNo).Select(p => new
