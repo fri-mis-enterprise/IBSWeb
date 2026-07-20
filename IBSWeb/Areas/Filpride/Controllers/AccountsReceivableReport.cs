@@ -5873,9 +5873,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     int row = 3;
                     bool isStation = true;
 
-                    var groupByCustomerType = cosSummary
-                        .OrderBy(cos => cos.CustomerType)
-                        .GroupBy(cos => cos.CustomerType)
+                    var salesReport = await _unitOfWork.FilprideReport
+                        .GetSalesReport(model.DateFrom, model.DateTo, companyClaims, cancellationToken: cancellationToken);
+
+                    var groupByCustomerType = salesReport
+                        .OrderBy(cos => cos.DeliveryReceipt.Customer?.CustomerType)
+                        .GroupBy(cos => cos.DeliveryReceipt.Customer?.CustomerType)
                         .OrderBy(g => g.Key != "Retail")
                         .ThenBy(g => g.Key);
 
@@ -5883,7 +5886,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     foreach (var ct in groupByCustomerType)
                     {
-                        worksheet.Cells[row, 1].Value = ct.First().CustomerType;
+                        worksheet.Cells[row, 1].Value = ct.First().DeliveryReceipt.Customer?.CustomerType;
                         worksheet.Cells[row, 1].Style.Font.Bold = true;
                         worksheet.Cells[row, 1].Style.Font.Italic = true;
                         worksheet.Cells[row, 1].Style.Font.Size = 18;
@@ -5913,36 +5916,36 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         row++;
 
                         var groupByCustomerName = ct
-                            .OrderBy(cos => cos.CustomerName)
-                            .GroupBy(cos => cos.CustomerName);
+                            .OrderBy(cos => cos.DeliveryReceipt.Customer?.CustomerName)
+                            .GroupBy(cos => cos.DeliveryReceipt.Customer?.CustomerName);
 
                         foreach (var customerGroup in groupByCustomerName)
                         {
-                            worksheet.Cells[row, 1].Value = customerGroup.First().CustomerName;
+                            worksheet.Cells[row, 1].Value = customerGroup.First().DeliveryReceipt.Customer?.CustomerName;
                             worksheet.Cells[row, 1].Style.Font.Bold = true;
 
                             worksheet.Cells[row, 2].Value = customerGroup
-                                .Where(cg => cg.ProductName == "BIODIESEL")
-                                .Sum(cg => cg.Quantity);
+                                .Where(cg => cg.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "BIODIESEL")
+                                .Sum(cg => cg.DeliveryReceipt.Quantity);
                             worksheet.Cells[row, 3].Value = customerGroup
-                                .Where(cg => cg.ProductName == "BIODIESEL")
-                                .Sum(cg => cg.TotalAmount);
+                                .Where(cg => cg.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "BIODIESEL")
+                                .Sum(cg => cg.DeliveryReceipt.TotalAmount);
                             worksheet.Cells[row, 4].Value = customerGroup
-                                .Where(cg => cg.ProductName == "ECONOGAS")
-                                .Sum(cg => cg.Quantity);
+                                .Where(cg => cg.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "ECONOGAS")
+                                .Sum(cg => cg.DeliveryReceipt.Quantity);
                             worksheet.Cells[row, 5].Value = customerGroup
-                                .Where(cg => cg.ProductName == "ECONOGAS")
-                                .Sum(cg => cg.TotalAmount);
+                                .Where(cg => cg.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "ECONOGAS")
+                                .Sum(cg => cg.DeliveryReceipt.TotalAmount);
                             worksheet.Cells[row, 6].Value = customerGroup
-                                .Where(cg => cg.ProductName == "ENVIROGAS")
-                                .Sum(cg => cg.Quantity);
+                                .Where(cg => cg.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "ENVIROGAS")
+                                .Sum(cg => cg.DeliveryReceipt.Quantity);
                             worksheet.Cells[row, 7].Value = customerGroup
-                                .Where(cg => cg.ProductName == "ENVIROGAS")
-                                .Sum(cg => cg.TotalAmount);
+                                .Where(cg => cg.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "ENVIROGAS")
+                                .Sum(cg => cg.DeliveryReceipt.TotalAmount);
                             worksheet.Cells[row, 8].Value = customerGroup
-                                .Sum(cg => cg.Quantity);
+                                .Sum(cg => cg.DeliveryReceipt.Quantity);
                             worksheet.Cells[row, 9].Value = customerGroup
-                                .Sum(cg => cg.TotalAmount);
+                                .Sum(cg => cg.DeliveryReceipt.TotalAmount);
 
                             worksheet.Cells[row, 2, row, 9].Style.Numberformat.Format = "#,##0.00";
 
@@ -5951,27 +5954,27 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                         worksheet.Cells[row, 1].Value = "Total";
                         worksheet.Cells[row, 2].Value = ct
-                            .Where(cos => cos.ProductName == "BIODIESEL")
-                            .Sum(cos => cos.Quantity);
+                            .Where(cos => cos.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "BIODIESEL")
+                            .Sum(cos => cos.DeliveryReceipt.Quantity);
                         worksheet.Cells[row, 3].Value = ct
-                            .Where(cos => cos.ProductName == "BIODIESEL")
-                            .Sum(cos => cos.TotalAmount);
+                            .Where(cos => cos.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "BIODIESEL")
+                            .Sum(cos => cos.DeliveryReceipt.TotalAmount);
                         worksheet.Cells[row, 4].Value = ct
-                            .Where(cos => cos.ProductName == "ECONOGAS")
-                            .Sum(cos => cos.Quantity);
+                            .Where(cos => cos.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "ECONOGAS")
+                            .Sum(cos => cos.DeliveryReceipt.Quantity);
                         worksheet.Cells[row, 5].Value = ct
-                            .Where(cos => cos.ProductName == "ECONOGAS")
-                            .Sum(cos => cos.TotalAmount);
+                            .Where(cos => cos.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "ECONOGAS")
+                            .Sum(cos => cos.DeliveryReceipt.TotalAmount);
                         worksheet.Cells[row, 6].Value = ct
-                            .Where(cos => cos.ProductName == "ENVIROGAS")
-                            .Sum(cos => cos.Quantity);
+                            .Where(cos => cos.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "ENVIROGAS")
+                            .Sum(cos => cos.DeliveryReceipt.Quantity);
                         worksheet.Cells[row, 7].Value = ct
-                            .Where(cos => cos.ProductName == "ENVIROGAS")
-                            .Sum(cos => cos.TotalAmount);
+                            .Where(cos => cos.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "ENVIROGAS")
+                            .Sum(cos => cos.DeliveryReceipt.TotalAmount);
                         worksheet.Cells[row, 8].Value = ct
-                            .Sum(cos => cos.Quantity);
+                            .Sum(cos => cos.DeliveryReceipt.Quantity);
                         worksheet.Cells[row, 9].Value = ct
-                            .Sum(cos => cos.TotalAmount);
+                            .Sum(cos => cos.DeliveryReceipt.TotalAmount);
 
                         var tillRowToResize = row;
                         worksheet.Cells[rowToResize, 1, tillRowToResize, 9].Style.Font.Size = 10;
@@ -5992,28 +5995,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     #endregion == Contents ==
 
                     worksheet.Cells[row, 1].Value = "Grand Total";
-                    worksheet.Cells[row, 2].Value = cosSummary
-                        .Where(cos => cos.ProductName == "BIODIESEL")
-                        .Sum(cos => cos.Quantity);
-                    worksheet.Cells[row, 3].Value = cosSummary
-                        .Where(cos => cos.ProductName == "BIODIESEL")
-                        .Sum(cos => cos.TotalAmount);
-                    worksheet.Cells[row, 4].Value = cosSummary
-                        .Where(cos => cos.ProductName == "ECONOGAS")
-                        .Sum(cos => cos.Quantity);
-                    worksheet.Cells[row, 5].Value = cosSummary
-                        .Where(cos => cos.ProductName == "ECONOGAS")
-                        .Sum(cos => cos.TotalAmount);
-                    worksheet.Cells[row, 6].Value = cosSummary
-                        .Where(cos => cos.ProductName == "ENVIROGAS")
-                        .Sum(cos => cos.Quantity);
-                    worksheet.Cells[row, 7].Value = cosSummary
-                        .Where(cos => cos.ProductName == "ENVIROGAS")
-                        .Sum(cos => cos.TotalAmount);
-                    worksheet.Cells[row, 8].Value = cosSummary
-                        .Sum(cos => cos.Quantity);
-                    worksheet.Cells[row, 9].Value = cosSummary
-                        .Sum(cos => cos.TotalAmount);
+                    worksheet.Cells[row, 2].Value = salesReport
+                        .Where(cos => cos.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "BIODIESEL")
+                        .Sum(cos => cos.DeliveryReceipt.Quantity);
+                    worksheet.Cells[row, 3].Value = salesReport
+                        .Where(cos => cos.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "BIODIESEL")
+                        .Sum(cos => cos.DeliveryReceipt.TotalAmount);
+                    worksheet.Cells[row, 4].Value = salesReport
+                        .Where(cos => cos.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "ECONOGAS")
+                        .Sum(cos => cos.DeliveryReceipt.Quantity);
+                    worksheet.Cells[row, 5].Value = salesReport
+                        .Where(cos => cos.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "ECONOGAS")
+                        .Sum(cos => cos.DeliveryReceipt.TotalAmount);
+                    worksheet.Cells[row, 6].Value = salesReport
+                        .Where(cos => cos.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "ENVIROGAS")
+                        .Sum(cos => cos.DeliveryReceipt.Quantity);
+                    worksheet.Cells[row, 7].Value = salesReport
+                        .Where(cos => cos.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "ENVIROGAS")
+                        .Sum(cos => cos.DeliveryReceipt.TotalAmount);
+                    worksheet.Cells[row, 8].Value = salesReport
+                        .Sum(cos => cos.DeliveryReceipt.Quantity);
+                    worksheet.Cells[row, 9].Value = salesReport
+                        .Sum(cos => cos.DeliveryReceipt.TotalAmount);
 
                     using (var range = worksheet.Cells[row, 1, row, 9])
                     {
@@ -6046,20 +6049,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     foreach (var typeGroup in groupByCustomerType)
                     {
-                        worksheet.Cells[row, 1].Value = typeGroup.First().CustomerType;
+                        worksheet.Cells[row, 1].Value = typeGroup.First().DeliveryReceipt.Customer?.CustomerType;
                         worksheet.Cells[row, 1].Style.Font.Italic = true;
                         worksheet.Cells[row, 1].Style.Font.Bold = true;
                         worksheet.Cells[row, 2].Value = typeGroup
-                            .Where(tg => tg.ProductName == "BIODIESEL")
-                            .Sum(tg => tg.Quantity);
+                            .Where(tg => tg.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "BIODIESEL")
+                            .Sum(tg => tg.DeliveryReceipt.Quantity);
                         worksheet.Cells[row, 3].Value = typeGroup
-                            .Where(tg => tg.ProductName == "ECONOGAS")
-                            .Sum(tg => tg.Quantity);
+                            .Where(tg => tg.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "ECONOGAS")
+                            .Sum(tg => tg.DeliveryReceipt.Quantity);
                         worksheet.Cells[row, 4].Value = typeGroup
-                            .Where(tg => tg.ProductName == "ENVIROGAS")
-                            .Sum(tg => tg.Quantity);
+                            .Where(tg => tg.DeliveryReceipt.CustomerOrderSlip!.Product?.ProductName == "ENVIROGAS")
+                            .Sum(tg => tg.DeliveryReceipt.Quantity);
                         worksheet.Cells[row, 5].Value = typeGroup
-                            .Sum(tg => tg.Quantity);
+                            .Sum(tg => tg.DeliveryReceipt.Quantity);
                         row++;
                     }
 
@@ -6071,7 +6074,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
                     }
 
-                    worksheet.Cells[row, 5].Value = cosSummary.Sum(cos => cos.Quantity);
+                    worksheet.Cells[row, 5].Value = salesReport.Sum(cos => cos.DeliveryReceipt.Quantity);
                     worksheet.Cells[row, 5].Style.Border.Bottom.Style = ExcelBorderStyle.Double;
                     worksheet.Cells[row, 5].Style.Fill.PatternType = ExcelFillStyle.Solid;
                     worksheet.Cells[row, 5].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(204, 156, 252));
