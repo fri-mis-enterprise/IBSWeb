@@ -249,13 +249,14 @@
 
                 $('#formProgress').css('width', `${progressPercent}%`).attr('aria-valuenow', progressPercent).text(stepText);
             }
-            
+
             // Function to fetch Purchase Orders based on selected suppliers
             function fetchPurchaseOrders() {
                 const supplierIds = $('#SupplierIds').val();
                 const depot = $('#PickUpPointId option:selected').text();
                 const productId = $('#ProductId').val();
                 const $poSelect = $('#PurchaseOrderIds');
+                const cosId = @Model.CustomerOrderSlipId;
 
                 // Show loading indicator
                 $('.loader-container').show();
@@ -271,6 +272,7 @@
                             supplierIds: supplierIds.join(','),
                             depot: depot,
                             productId: productId,
+                            cosId: cosId,
                         },
                         success: function (data) {
                             if (data.length === 0) {
@@ -303,7 +305,7 @@
                                     $poSelect.append($optgroup);
                                 });
                             }
-                            
+
                             $poSelect.trigger('change');
 
                             // Hide loading indicator
@@ -348,21 +350,21 @@
                                 <strong>${supplierName}</strong>
                             </div>
                             <div class="card-body">
-                                <h6 class="card-title">${selectedText}</h6>                   
+                                <h6 class="card-title">${selectedText}</h6>
                                 <div class="form-group">
                                     <input type="hidden" name="PurchaseOrderQuantities[${index}].PurchaseOrderId" value="${po}" />
-                                    <input type="hidden" name="PurchaseOrderQuantities[${index}].SupplierId" value="${supplierId}" />           
+                                    <input type="hidden" name="PurchaseOrderQuantities[${index}].SupplierId" value="${supplierId}" />
                                     <label for="quantity_${index}" class="form-label">Quantity</label>
                                     <div class="input-group">
-                                        <input type="number" 
-                                               name="PurchaseOrderQuantities[${index}].Quantity" 
-                                               class="form-control quantity-input" 
-                                               id="quantity_${index}" 
-                                               min="0" 
-                                               max="${availableBalance}" 
+                                        <input type="number"
+                                               name="PurchaseOrderQuantities[${index}].Quantity"
+                                               class="form-control quantity-input"
+                                               id="quantity_${index}"
+                                               min="0"
+                                               max="${availableBalance}"
                                                step="0.01"
-                                               placeholder="Enter quantity" 
-                                               value="${defaultValue > 0 && defaultValue <= availableBalance ? defaultValue.toFixed(2) : ''}" 
+                                               placeholder="Enter quantity"
+                                               value="${defaultValue > 0 && defaultValue <= availableBalance ? defaultValue.toFixed(2) : ''}"
                                                required
                                                aria-describedby="quantity_help_${index}" />
                                         <span class="input-group-text">Max: ${formatNumber(availableBalance)}</span>
