@@ -1711,8 +1711,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .Where(p => supplierIdList.Contains(p.SupplierId) &&
                             p.PickUpPoint!.Depot == depot &&
                             (p.ProductId == productId ||
+                             customerOrderSlip != null &&
+                             customerOrderSlip.ProductName == "BIODIESEL" &&
                              p.ProductName == "DIESEL" ||
-                             p.ProductName == "CME") &&
+                             customerOrderSlip != null &&
+                             customerOrderSlip.ProductName == "BIODIESEL" &&
+                             p.ProductName == "CME" ||
+                             customerOrderSlip != null &&
+                             customerOrderSlip.ProductName == "ECONOGAS" &&
+                             p.ProductName == "UNLEADED" ||
+                             customerOrderSlip != null &&
+                             customerOrderSlip.ProductName == "ENVIROGAS" &&
+                             p.ProductName == "PREMIUM") &&
                             !p.IsReceived && !p.IsSubPo &&
                             p.Status == nameof(Status.Posted) &&
                             p.Company == companyClaims)
