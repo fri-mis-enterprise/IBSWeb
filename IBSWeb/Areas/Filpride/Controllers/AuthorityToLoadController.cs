@@ -345,7 +345,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var cosList = await _dbContext.FilprideCOSAppointedSuppliers
                 .Include(a => a.CustomerOrderSlip)
                 .Include(a => a.PurchaseOrder)
-                .Where(a => supplierId.Contains(a.SupplierId)
+                .Where(a => ((IEnumerable<int>)supplierId).Contains(a.SupplierId)
                             && !a.CustomerOrderSlip!.IsCosAtlFinalized
                             && a.CustomerOrderSlip.Status != nameof(CosStatus.Closed)
                             && a.CustomerOrderSlip.Status != nameof(CosStatus.Expired)
