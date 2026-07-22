@@ -36,7 +36,6 @@
             <div class="form-group py-2 col-12">
                 <label class="control-label">Supplier List<span class="required">*</span></label>
                 <select asp-for="SupplierId" asp-items="@Model.SupplierList" class="form-select js-multiple border-0 shadow" id="SupplierId" style="width:100%" multiple="multiple">
-                    <option value="" selected>Select supplier</option>
                 </select>
                 <span asp-validation-for="SupplierId" class="text-danger"></span>
             </div>
