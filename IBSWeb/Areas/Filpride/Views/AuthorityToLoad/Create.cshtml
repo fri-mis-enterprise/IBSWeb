@@ -75,7 +75,8 @@
             const loadPortInput = $('#LoadPortSelect');
 
             supplierIdInput.on('change', function () {
-                $('#uppiAtlWrapper').toggle($(this).val() === '19');
+                const values = $(this).val() || [];
+                $('#uppiAtlWrapper').toggle(values.includes('19'));
                 loadCosList();
             });
 
