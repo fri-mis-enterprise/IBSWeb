@@ -185,13 +185,18 @@
                     <span asp-validation-for="ProofOfRegistrationFilePath" class="text-danger"></span>
                 </div>
             }
-            
+
             <div class="form-check pb-2">
                 <label class="form-check-label">
                     <input class="form-check-input" asp-for="RequiresPriceAdjustment" /> @Html.DisplayNameFor(model => model.RequiresPriceAdjustment)
                 </label>
             </div>
 
+            <div class="form-check">
+                <label class="form-check-label">
+                    <input class="form-check-input" asp-for="IsMnvP" /> Is this for MNV P?
+                </label>
+            </div>
             <label class="control-label">Please select where the record will be added:</label>
             <div class="form-check">
                 <label class="form-check-label">
@@ -203,7 +208,7 @@
                     <input class="form-check-input" asp-for="IsBienes" /> BIENES
                 </label>
             </div>
-            
+
             <div class="row pt-2">
                 <div class="col-6 col-md-3">
                     <button type="submit" class="btn btn-primary form-control">Save</button>
@@ -241,13 +246,13 @@
                 document.getElementById('employeeList').style.display = 'block';
                 document.getElementById('EmployeeNumber').required = true;
             }
-            
+
             var taxType = document.getElementById('TaxType');
             toggleExemptionFields(taxType);
-            
+
             var validity = document.getElementById('Validity');
             toggleValidityDate(validity);
-            
+
         });
 
         function toggleExemptionFields(selectElement) {
