@@ -4,8 +4,33 @@
 @model FilprideMasterFileRequest
 
 @functions {
+    private sealed class FieldGroup
+    {
+        public FieldGroup(string title, params string[] fields)
+        {
+            Title = title;
+            Fields = fields;
+        }
+
+        public string Title { get; }
+
+        public string[] Fields { get; }
+    }
+
     private static string DisplayName(string value) =>
-        Regex.Replace(Regex.Replace(value, "([a-z0-9])([A-Z])", "$1 $2"), " Id$", " ID");
+        value switch
+        {
+            "CustomerTin" or "SupplierTin" or "BranchTin" => "TIN",
+            "CreditLimitAsOfToday" => "Available Credit Limit",
+            "CwVatPercent" => "Withholding VAT Percentage",
+            "CwtPercent" => "Withholding Tax Percentage",
+            "WithHoldingVat" => "Subject to Withholding VAT",
+            "WithHoldingTax" => "Subject to Withholding Tax",
+            "ProofOfRegistrationFileName" => "Proof of BIR Registration",
+            "ProofOfExemptionFileName" => "Proof of Exemption",
+            "RequiresPriceAdjustment" => "Requires Price Adjustment",
+            _ => Regex.Replace(Regex.Replace(value, "([a-z0-9])([A-Z])", "$1 $2"), " Id$", " ID")
+        };
 
     private static string DisplayValue(JsonElement value) => value.ValueKind switch
     {
@@ -14,6 +39,53 @@
         JsonValueKind.False => "No",
         JsonValueKind.String => string.IsNullOrWhiteSpace(value.GetString()) ? "Not provided" : value.GetString()!,
         _ => value.ToString()
+    };
+
+    private static bool ShouldDisplay(JsonElement value) => value.ValueKind switch
+    {
+        JsonValueKind.Null or JsonValueKind.Undefined => false,
+        JsonValueKind.String => !string.IsNullOrWhiteSpace(value.GetString()),
+        _ => true
+    };
+
+    private static FieldGroup[] FieldGroups(FilprideMasterFileType type) => type switch
+    {
+        FilprideMasterFileType.Customer =>
+        [
+            new("Customer Details", "Type", "CustomerName", "CustomerAddress", "ZipCode", "CustomerTin", "BusinessStyle", "CustomerType", "ClusterCode", "StationCode"),
+            new("Commercial Terms", "CustomerTerms", "VatType", "CreditLimit", "CreditLimitAsOfToday", "RetentionRate", "RequiresPriceAdjustment"),
+            new("Withholding Taxes", "WithHoldingVat", "CwVatPercent", "WithHoldingTax", "CwtPercent"),
+            new("Commission", "CommissionRate")
+        ],
+        FilprideMasterFileType.CustomerBranch =>
+        [
+            new("Branch Details", "BranchName", "BranchAddress", "BranchTin")
+        ],
+        FilprideMasterFileType.Supplier =>
+        [
+            new("Supplier Details", "Category", "TradeName", "SupplierName", "SupplierAddress", "ZipCode", "SupplierTin", "Branch", "EmployeeNumber"),
+            new("Terms and Tax", "SupplierTerms", "VatType", "TaxType", "DefaultExpenseNumber", "WithholdingTaxPercent", "WithholdingTaxTitle"),
+            new("Tax Exemption", "ReasonOfExemption", "Validity", "ValidityDate"),
+            new("Supporting Documents", "ProofOfRegistrationFileName", "ProofOfExemptionFileName"),
+            new("Pricing", "RequiresPriceAdjustment")
+        ],
+        FilprideMasterFileType.BankAccount =>
+        [
+            new("Bank Account Details", "AccountNo", "AccountName", "Bank", "Branch")
+        ],
+        FilprideMasterFileType.Service =>
+        [
+            new("Service Details", "Name", "Percent")
+        ],
+        FilprideMasterFileType.ChartOfAccount =>
+        [
+            new("Account Details", "AccountName")
+        ],
+        FilprideMasterFileType.PickupPoint =>
+        [
+            new("Pickup Point Details", "Depot")
+        ],
+        _ => []
     };
 
     private static string StatusClass(FilprideMasterFileRequestStatus status) => status switch
@@ -29,11 +101,17 @@
     ViewData["Title"] = $"Master File Request #{Model.Id}";
     bool approver = User.IsInRole("Admin") || User.IsInRole("ManagementAccountingManager");
     using JsonDocument payload = JsonDocument.Parse(Model.PayloadJson);
+    var values = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+    foreach (JsonProperty property in payload.RootElement.EnumerateObject())
+    {
+        values[property.Name] = property.Value;
+    }
 }
 
+<link rel="stylesheet" href="~/css/index-style.css" />
 <link rel="stylesheet" href="~/css/master-file-request.css" />
 
-<div class="master-file-request-page">
+<div class="master-file-request-page master-file-request-details">
     <div class="card master-file-request-card mt-4">
         <div class="card-header request-page-header d-flex justify-content-between align-items-center">
             <div>
@@ -43,58 +121,90 @@
             <span class="request-status @StatusClass(Model.Status)">@DisplayName(Model.Status.ToString())</span>
         </div>
         <div class="card-body">
-            <section class="request-content-card" aria-labelledby="submittedDataTitle">
-                <h2 id="submittedDataTitle" class="request-section-title">
-                    <i class="bi bi-file-earmark-text"></i> Submitted information
-                </h2>
-                <div class="request-data-grid">
-                    @foreach (JsonProperty property in payload.RootElement.EnumerateObject())
+            <div class="request-detail-groups">
+                @foreach (FieldGroup group in FieldGroups(Model.MasterFileType))
+                {
+                    bool hasValues = false;
+                    foreach (string field in group.Fields)
                     {
-                        <div class="request-data-item">
-                            <span class="request-data-label">@DisplayName(property.Name)</span>
-                            <span class="request-data-value">@DisplayValue(property.Value)</span>
-                        </div>
+                        if (values.TryGetValue(field, out JsonElement value) && ShouldDisplay(value))
+                        {
+                            hasValues = true;
+                            break;
+                        }
                     }
-                </div>
-            </section>
+
+                    @if (hasValues)
+                    {
+                        <section class="request-content-card request-detail-section" aria-label="@group.Title">
+                            <h2 class="request-section-title">@group.Title</h2>
+                            <dl class="request-detail-list">
+                                @foreach (string field in group.Fields)
+                                {
+                                    if (!values.TryGetValue(field, out JsonElement value) || !ShouldDisplay(value))
+                                    {
+                                        continue;
+                                    }
+
+                                    <div class="request-detail-row">
+                                        <dt>@DisplayName(field)</dt>
+                                        <dd>@DisplayValue(value)</dd>
+                                    </div>
+                                }
+                            </dl>
+                        </section>
+                    }
+                }
+            </div>
 
             @if (approver && Model.Status == FilprideMasterFileRequestStatus.ForApproval)
             {
-                <section class="request-decision-card mt-4" aria-labelledby="decisionTitle">
-                    <h2 id="decisionTitle" class="request-section-title">
-                        <i class="bi bi-person-check"></i> Approval decision
-                    </h2>
-                    <div class="d-flex gap-2">
+                <div class="row pt-3">
+                    <div class="col-6 col-md-3">
                         <form id="approveForm" asp-action="Approve" asp-route-id="@Model.Id" method="post">
                             <input id="approveRemarks" type="hidden" name="remarks" />
-                            <button class="btn btn-success" type="button" data-decision="approve">
-                                <i class="bi bi-check-circle me-1"></i> Approve and create
-                            </button>
                         </form>
                         <form id="rejectForm" asp-action="Reject" asp-route-id="@Model.Id" method="post">
                             <input id="rejectRemarks" type="hidden" name="remarks" />
-                            <button class="btn btn-danger" type="button" data-decision="reject">
-                                <i class="bi bi-x-circle me-1"></i> Reject request
-                            </button>
                         </form>
+                        <button id="requestActionButton" class="btn btn-primary form-control buttons" type="button">Action</button>
                     </div>
-                </section>
+                    <div class="col-6 col-md-3">
+                        <a asp-action="Index" class="btn btn-outline-primary form-control">Back to requests</a>
+                    </div>
+                </div>
             }
 
-            <div class="request-actions mt-4 pt-3 border-top">
-                <a asp-action="Index" class="btn btn-outline-primary">
-                    <i class="bi bi-arrow-left me-1"></i> Back to requests
-                </a>
-            </div>
+            @if (!approver || Model.Status != FilprideMasterFileRequestStatus.ForApproval)
+            {
+                <div class="request-actions mt-4 pt-3 border-top">
+                    <a asp-action="Index" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-left me-1"></i> Back to requests
+                    </a>
+                </div>
+            }
         </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        document.querySelectorAll('[data-decision]').forEach(function (button) {
-            button.addEventListener('click', function () {
-                const isApproval = this.dataset.decision === 'approve';
+        document.getElementById('requestActionButton')?.addEventListener('click', function () {
+            Swal.fire({
+                title: 'Select action',
+                icon: 'question',
+                showCancelButton: true,
+                showDenyButton: true,
+                confirmButtonText: 'Approve',
+                denyButtonText: 'Reject',
+                confirmButtonColor: '#198754',
+                denyButtonColor: '#dc3545'
+            }).then(function (decision) {
+                if (!decision.isConfirmed && !decision.isDenied) {
+                    return;
+                }
+
+                const isApproval = decision.isConfirmed;
                 Swal.fire({
                     title: isApproval ? 'Approve request?' : 'Reject request?',
                     input: 'textarea',

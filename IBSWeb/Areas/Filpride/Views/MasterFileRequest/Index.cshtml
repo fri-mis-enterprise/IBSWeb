@@ -9,10 +9,10 @@
 
     private static string StatusClass(FilprideMasterFileRequestStatus status) => status switch
     {
-        FilprideMasterFileRequestStatus.Approved => "request-status-approved",
-        FilprideMasterFileRequestStatus.Rejected => "request-status-rejected",
-        FilprideMasterFileRequestStatus.Canceled => "request-status-canceled",
-        _ => "request-status-pending"
+        FilprideMasterFileRequestStatus.Approved => "bg-success",
+        FilprideMasterFileRequestStatus.Rejected => "bg-danger",
+        FilprideMasterFileRequestStatus.Canceled => "bg-warning",
+        _ => "bg-secondary"
     };
 }
 
@@ -96,7 +96,7 @@
                                     <td><span class="request-number">#@request.Id</span></td>
                                     <td><span class="request-type">@DisplayName(request.MasterFileType.ToString())</span></td>
                                     <td>
-                                        <span class="request-status @StatusClass(request.Status)">
+                                        <span class="badge rounded-pill @StatusClass(request.Status)">
                                             @DisplayName(request.Status.ToString())
                                         </span>
                                     </td>
