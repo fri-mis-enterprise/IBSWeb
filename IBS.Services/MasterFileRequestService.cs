@@ -215,6 +215,7 @@ namespace IBS.Services
             Require(payload.CustomerTerms, "Customer terms");
             Require(payload.CustomerType, "Customer type");
             Require(payload.VatType, "VAT type");
+            // TINs are intentionally not unique because missing requester TINs use a shared default value.
 
             var model = ToModel(payload);
             model.CustomerCode = await _unitOfWork.FilprideCustomer.GenerateCodeAsync(model.CustomerType, cancellationToken);
@@ -250,6 +251,7 @@ namespace IBS.Services
             {
                 Require(payload.EmployeeNumber, "Employee number");
             }
+            // TINs are intentionally not unique because missing requester TINs use a shared default value.
 
             if (await _unitOfWork.FilprideSupplier.IsSupplierExistAsync(payload.SupplierName, payload.Category, cancellationToken))
             {
