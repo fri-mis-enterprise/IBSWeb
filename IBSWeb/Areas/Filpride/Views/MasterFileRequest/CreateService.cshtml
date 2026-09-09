@@ -21,7 +21,7 @@
         </div>
     </div>
     <div class="card-body p-4">
-        <form asp-action="@action">
+        <form asp-action="@action" method="post">
             @Html.AntiForgeryToken()
             @if (ViewBag.RequestId != null)
             {

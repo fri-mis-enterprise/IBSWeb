@@ -493,7 +493,7 @@ namespace IBS.Services
         private async Task<string> GenerateNextAccountNumberAsync(FilprideChartOfAccount parent, CancellationToken cancellationToken)
         {
             string? last = await _dbContext.FilprideChartOfAccounts.IgnoreQueryFilters()
-                .Where(c => c.ParentAccountId == parent.AccountId && c.AccountNumber != null)
+                .Where(c => c.ParentAccountId == parent.AccountId && !string.IsNullOrWhiteSpace(c.AccountNumber))
                 .OrderByDescending(c => c.AccountNumber!.Length)
                 .ThenByDescending(c => c.AccountNumber)
                 .Select(c => c.AccountNumber)

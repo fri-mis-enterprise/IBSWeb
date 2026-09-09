@@ -26,6 +26,11 @@
             "CwtPercent" => "Withholding Tax Percentage",
             "WithHoldingVat" => "Subject to Withholding VAT",
             "WithHoldingTax" => "Subject to Withholding Tax",
+            "CustomerId" => "Customer",
+            "SupplierId" => "Supplier",
+            "ParentAccountId" => "Parent Account",
+            "CurrentAndPreviousId" => "Current and Previous Account",
+            "UnearnedId" => "Unearned Account",
             "ProofOfRegistrationFileName" => "Proof of BIR Registration",
             "ProofOfExemptionFileName" => "Proof of Exemption",
             "RequiresPriceAdjustment" => "Requires Price Adjustment",
@@ -59,7 +64,7 @@
         ],
         FilprideMasterFileType.CustomerBranch =>
         [
-            new("Branch Details", "BranchName", "BranchAddress", "BranchTin")
+            new("Branch Details", "CustomerId", "BranchName", "BranchAddress", "BranchTin")
         ],
         FilprideMasterFileType.Supplier =>
         [
@@ -75,15 +80,15 @@
         ],
         FilprideMasterFileType.Service =>
         [
-            new("Service Details", "Name", "Percent")
+            new("Service Details", "Name", "CurrentAndPreviousId", "UnearnedId", "Percent")
         ],
         FilprideMasterFileType.ChartOfAccount =>
         [
-            new("Account Details", "AccountName")
+            new("Account Details", "ParentAccountId", "AccountName")
         ],
         FilprideMasterFileType.PickupPoint =>
         [
-            new("Pickup Point Details", "Depot")
+            new("Pickup Point Details", "Depot", "SupplierId")
         ],
         _ => []
     };
@@ -106,6 +111,8 @@
     {
         values[property.Name] = property.Value;
     }
+    var referenceNames = ViewBag.ReferenceNames as IReadOnlyDictionary<string, string>
+        ?? new Dictionary<string, string>();
 }
 
 <link rel="stylesheet" href="~/css/index-style.css" />
@@ -148,7 +155,22 @@
 
                                     <div class="request-detail-row">
                                         <dt>@DisplayName(field)</dt>
-                                        <dd>@DisplayValue(value)</dd>
+                                        <dd>
+                                            @if (field is "ProofOfRegistrationFileName" or "ProofOfExemptionFileName")
+                                            {
+                                                <a asp-action="DownloadSupplierDocument"
+                                                   asp-route-id="@Model.Id"
+                                                   asp-route-registration="@(field == "ProofOfRegistrationFileName")"
+                                                   target="_blank"
+                                                   rel="noopener">@DisplayValue(value)</a>
+                                            }
+                                            else
+                                            {
+                                                @(referenceNames.TryGetValue(field, out string? referenceName)
+                                                    ? referenceName
+                                                    : DisplayValue(value))
+                                            }
+                                        </dd>
                                     </div>
                                 }
                             </dl>

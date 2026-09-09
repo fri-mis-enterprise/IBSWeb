@@ -169,7 +169,7 @@
                 </fieldset>
                 <div id="validityDateField" class="form-group mb-3">
                     <label asp-for="ValidityDate" class="control-label">Validity Date<span class="required">*</span></label>
-                    <input asp-for="ValidityDate" type="date" value="yyyy-MM-dd" class="form-control" required />
+                    <input asp-for="ValidityDate" type="date" class="form-control" required />
                     <span asp-validation-for="ValidityDate" class="text-danger"></span>
                 </div>
                 <div class="form-group mb-3">
@@ -207,6 +207,8 @@
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
     <script>
+        const hasExemptionDocument = @((!string.IsNullOrWhiteSpace(Model.ProofOfExemptionFileName)).ToString().ToLowerInvariant());
+
         function toggleExemptionFields(selectElement) {
             const exemptionFields = document.getElementById("exemptionFields");
             const withHoldingTaxPercent = document.getElementById("WithholdingTaxPercent");
@@ -218,7 +220,7 @@
 
             reason.required = isExempt;
             validity.forEach(input => input.required = isExempt);
-            documentUpload.required = isExempt;
+            documentUpload.required = isExempt && !hasExemptionDocument;
 
             if (isExempt) {
                 exemptionFields.style.display = "block";

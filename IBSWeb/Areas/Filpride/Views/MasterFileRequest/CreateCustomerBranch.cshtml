@@ -95,7 +95,10 @@
                 $.ajax({
                     url: '@Url.Action("GetCustomerDetails", "MasterFileRequest", new { area = "Filpride" })',
                     type: 'POST',
-                    data: { customerId: customerId },
+                    data: {
+                        customerId: customerId,
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    },
                     dataType: 'json',
                     success: function (data) {
                         addressField.val(data.address);

@@ -19,6 +19,9 @@
 @{
     ViewData["Title"] = "Master File Requests";
     string userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+    int currentPage = ViewBag.Page ?? 1;
+    int totalPages = ViewBag.TotalPages ?? 1;
+    string search = ViewBag.Search as string ?? string.Empty;
 }
 
 <link rel="stylesheet" href="~/css/index-style.css" />
@@ -70,6 +73,13 @@
                             </option>
                         }
                     </select>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <label for="searchFilter" class="form-label">Search</label>
+                    <input id="searchFilter" name="search" value="@search" class="form-control" placeholder="Requester or request details" />
+                </div>
+                <div class="col-sm-6 col-lg-3 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" type="submit">Search</button>
                 </div>
             </form>
 
@@ -131,6 +141,20 @@
                     </tbody>
                 </table>
             </div>
+            @if (totalPages > 1)
+            {
+                <nav class="d-flex justify-content-center mt-3" aria-label="Request pages">
+                    <ul class="pagination mb-0">
+                        <li class="page-item @(currentPage == 1 ? "disabled" : string.Empty)">
+                            <a class="page-link" asp-route-status="@ViewBag.Status" asp-route-type="@ViewBag.Type" asp-route-search="@search" asp-route-page="@(currentPage - 1)">Previous</a>
+                        </li>
+                        <li class="page-item disabled"><span class="page-link">Page @currentPage of @totalPages</span></li>
+                        <li class="page-item @(currentPage == totalPages ? "disabled" : string.Empty)">
+                            <a class="page-link" asp-route-status="@ViewBag.Status" asp-route-type="@ViewBag.Type" asp-route-search="@search" asp-route-page="@(currentPage + 1)">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            }
         </div>
     </div>
 </div>
@@ -150,6 +174,7 @@
                 } else {
                     url.searchParams.delete(name);
                 }
+                url.searchParams.delete('page');
 
                 window.location.assign(url.toString());
             }
@@ -160,10 +185,6 @@
 
             $('#typeFilter').on('change', function () {
                 applyFilter('type', this.value);
-            });
-
-            $('.request-filter-panel').on('submit', function (event) {
-                event.preventDefault();
             });
         });
     </script>

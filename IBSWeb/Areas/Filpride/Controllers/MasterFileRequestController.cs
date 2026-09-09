@@ -14,10 +14,11 @@ using Microsoft.EntityFrameworkCore;
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [CompanyAuthorize(nameof(Filpride))]
+    [Authorize]
     public class MasterFileRequestController : Controller
     {
         private const string ApproverRoles = "Admin,ManagementAccountingManager";
+        private const int PageSize = 100;
         private static readonly string[] AllowedUploadExtensions = [".pdf", ".jpg", ".jpeg", ".png"];
         private const long MaximumUploadSize = 10 * 1024 * 1024;
         private readonly MasterFileRequestService _requestService;
@@ -41,7 +42,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             FilprideMasterFileRequestStatus? status,
             FilprideMasterFileType? type,
             string? search,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            int page = 1)
         {
             string userId = GetUserId();
             IQueryable<FilprideMasterFileRequest> query = _requestService.GetRequests();
@@ -57,17 +59,25 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 query = query.Where(r => r.MasterFileType == type);
             }
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                string searchTerm = search.Trim();
+                query = query.Where(r =>
+                    EF.Functions.ILike(r.RequestedByName, $"%{searchTerm}%")
+                    || EF.Functions.ILike(r.PayloadJson, $"%{searchTerm}%"));
+            }
+            int totalRequests = await query.CountAsync(cancellationToken);
+            int totalPages = Math.Max(1, (int)Math.Ceiling(totalRequests / (double)PageSize));
+            page = Math.Clamp(page, 1, totalPages);
             ViewBag.Status = status;
             ViewBag.Type = type;
             ViewBag.Search = search;
-            var requests = await query.OrderByDescending(r => r.RequestedDate).ToListAsync(cancellationToken);
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                requests = requests.Where(r =>
-                        r.RequestedByName.Contains(search, StringComparison.OrdinalIgnoreCase)
-                        || r.PayloadJson.Contains(search, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-            }
+            ViewBag.Page = page;
+            ViewBag.TotalPages = totalPages;
+            var requests = await query.OrderByDescending(r => r.RequestedDate)
+                .Skip((page - 1) * PageSize)
+                .Take(PageSize)
+                .ToListAsync(cancellationToken);
             return View(requests);
         }
 
@@ -82,10 +92,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 return Forbid();
             }
+            ViewBag.ReferenceNames = await GetReferenceNamesAsync(request, cancellationToken);
             return View(request);
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> GetCustomerDetails(int customerId, CancellationToken cancellationToken)
         {
             var customer = await _dbContext.FilprideCustomers
@@ -93,6 +105,34 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .Select(c => new { address = c.CustomerAddress, tin = c.CustomerTin })
                 .FirstOrDefaultAsync(cancellationToken);
             return customer == null ? NotFound() : Json(customer);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DownloadSupplierDocument(
+            int id,
+            bool registration,
+            CancellationToken cancellationToken)
+        {
+            var request = await _requestService.GetAsync(id, cancellationToken);
+            if (request == null || request.MasterFileType != FilprideMasterFileType.Supplier)
+            {
+                return NotFound();
+            }
+            if (!IsApprover() && request.RequestedBy != GetUserId())
+            {
+                return Forbid();
+            }
+
+            var supplier = (FilprideSupplier)_requestService.DeserializeModel(request);
+            string? fileName = registration
+                ? supplier.ProofOfRegistrationFileName
+                : supplier.ProofOfExemptionFileName;
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                return NotFound();
+            }
+
+            return Redirect(await _cloudStorageService.GetSignedUrlAsync(fileName));
         }
 
         [HttpGet]
@@ -206,7 +246,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateChartOfAccount(ChartOfAccountRequestPayload model, CancellationToken cancellationToken)
         {
-            if (model.ParentAccountId == 0 || string.IsNullOrWhiteSpace(model.AccountName))
+            if (!ModelState.IsValid || model.ParentAccountId == 0 || string.IsNullOrWhiteSpace(model.AccountName))
             {
                 ModelState.AddModelError(string.Empty, "Parent account and account name are required.");
                 ViewBag.Parents = await GetAllowedParentAccountsAsync(cancellationToken);
@@ -262,12 +302,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public Task<IActionResult> EditCustomer(int requestId, FilprideCustomer model, CancellationToken cancellationToken) =>
-            SaveAsync(FilprideMasterFileType.Customer, model, requestId, cancellationToken);
+            EditAsync(FilprideMasterFileType.Customer, requestId, model, cancellationToken);
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public Task<IActionResult> EditCustomerBranch(int requestId, FilprideCustomerBranch model, CancellationToken cancellationToken) =>
-            SaveAsync(FilprideMasterFileType.CustomerBranch, model, requestId, cancellationToken);
+            EditAsync(FilprideMasterFileType.CustomerBranch, requestId, model, cancellationToken);
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -316,22 +356,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public Task<IActionResult> EditBankAccount(int requestId, FilprideBankAccount model, CancellationToken cancellationToken) =>
-            SaveAsync(FilprideMasterFileType.BankAccount, model, requestId, cancellationToken);
+            EditAsync(FilprideMasterFileType.BankAccount, requestId, model, cancellationToken);
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public Task<IActionResult> EditService(int requestId, FilprideService model, CancellationToken cancellationToken) =>
-            SaveAsync(FilprideMasterFileType.Service, model, requestId, cancellationToken);
+            EditAsync(FilprideMasterFileType.Service, requestId, model, cancellationToken);
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public Task<IActionResult> EditChartOfAccount(int requestId, ChartOfAccountRequestPayload model, CancellationToken cancellationToken) =>
-            SaveAsync(FilprideMasterFileType.ChartOfAccount, model, requestId, cancellationToken);
+            EditAsync(FilprideMasterFileType.ChartOfAccount, requestId, model, cancellationToken);
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public Task<IActionResult> EditPickupPoint(int requestId, FilpridePickUpPoint model, CancellationToken cancellationToken) =>
-            SaveAsync(FilprideMasterFileType.PickupPoint, model, requestId, cancellationToken);
+            EditAsync(FilprideMasterFileType.PickupPoint, requestId, model, cancellationToken);
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -419,6 +459,84 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 await DeleteUploadedFilesAsync(uploadedFiles);
                 TempData["error"] = ex.Message;
                 return RedirectToAction(nameof(Index));
+            }
+        }
+
+        private async Task<IActionResult> EditAsync(
+            FilprideMasterFileType type,
+            int requestId,
+            object model,
+            CancellationToken cancellationToken)
+        {
+            if (!ModelState.IsValid)
+            {
+                await PopulateListsAsync(type, model, cancellationToken);
+                ViewBag.RequestId = requestId;
+                return View($"Create{type}", model);
+            }
+
+            return await SaveAsync(type, model, requestId, cancellationToken);
+        }
+
+        private async Task<IReadOnlyDictionary<string, string>> GetReferenceNamesAsync(
+            FilprideMasterFileRequest request,
+            CancellationToken cancellationToken)
+        {
+            switch (request.MasterFileType)
+            {
+                case FilprideMasterFileType.CustomerBranch:
+                {
+                    var payload = (CustomerBranchRequestPayload)_requestService.DeserializeModel(request);
+                    string? customerName = await _dbContext.FilprideCustomers
+                        .Where(c => c.CustomerId == payload.CustomerId)
+                        .Select(c => c.CustomerName)
+                        .FirstOrDefaultAsync(cancellationToken);
+                    return customerName == null
+                        ? new Dictionary<string, string>()
+                        : new Dictionary<string, string> { ["CustomerId"] = customerName };
+                }
+                case FilprideMasterFileType.PickupPoint:
+                {
+                    var payload = (FilpridePickUpPoint)_requestService.DeserializeModel(request);
+                    string? supplierName = await _dbContext.FilprideSuppliers
+                        .Where(s => s.SupplierId == payload.SupplierId)
+                        .Select(s => s.SupplierName)
+                        .FirstOrDefaultAsync(cancellationToken);
+                    return supplierName == null
+                        ? new Dictionary<string, string>()
+                        : new Dictionary<string, string> { ["SupplierId"] = supplierName };
+                }
+                case FilprideMasterFileType.ChartOfAccount:
+                {
+                    var payload = (ChartOfAccountRequestPayload)_requestService.DeserializeModel(request);
+                    string? parentName = await _dbContext.FilprideChartOfAccounts
+                        .Where(a => a.AccountId == payload.ParentAccountId)
+                        .Select(a => a.AccountNumber + " " + a.AccountName)
+                        .FirstOrDefaultAsync(cancellationToken);
+                    return parentName == null
+                        ? new Dictionary<string, string>()
+                        : new Dictionary<string, string> { ["ParentAccountId"] = parentName };
+                }
+                case FilprideMasterFileType.Service:
+                {
+                    var payload = (FilprideService)_requestService.DeserializeModel(request);
+                    var accounts = await _dbContext.FilprideChartOfAccounts
+                        .Where(a => a.AccountId == payload.CurrentAndPreviousId || a.AccountId == payload.UnearnedId)
+                        .Select(a => new { a.AccountId, Name = a.AccountNumber + " " + a.AccountName })
+                        .ToDictionaryAsync(a => a.AccountId, a => a.Name, cancellationToken);
+                    var referenceNames = new Dictionary<string, string>();
+                    if (accounts.TryGetValue(payload.CurrentAndPreviousId, out string? currentAndPreviousName))
+                    {
+                        referenceNames["CurrentAndPreviousId"] = currentAndPreviousName;
+                    }
+                    if (accounts.TryGetValue(payload.UnearnedId, out string? unearnedName))
+                    {
+                        referenceNames["UnearnedId"] = unearnedName;
+                    }
+                    return referenceNames;
+                }
+                default:
+                    return new Dictionary<string, string>();
             }
         }
 

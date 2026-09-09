@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using IBS.Models.Enums;
 
 namespace IBS.Models.Filpride.MasterFile
@@ -26,7 +27,9 @@ namespace IBS.Models.Filpride.MasterFile
 
     public sealed record ServiceRequestPayload(string Name, int CurrentAndPreviousId, int UnearnedId, int Percent);
 
-    public sealed record ChartOfAccountRequestPayload(int ParentAccountId, string AccountName);
+    public sealed record ChartOfAccountRequestPayload(
+        int ParentAccountId,
+        [property: StringLength(200)] string AccountName);
 
     public sealed record PickupPointRequestPayload(string Depot, int SupplierId);
 }
