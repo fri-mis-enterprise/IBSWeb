@@ -55,6 +55,7 @@ namespace IBS.Services
             CancellationToken cancellationToken = default)
         {
             ValidateSubmission(type, model);
+            await ValidateReferencesAsync(type, model, cancellationToken);
             string payloadJson = SerializePayload(type, model);
             DateTime now = DateTimeHelper.GetCurrentPhilippineTime();
 
@@ -291,12 +292,10 @@ namespace IBS.Services
                 throw new InvalidOperationException("Service already exists.");
             }
 
-            var current = await _dbContext.FilprideChartOfAccounts
-                .FirstOrDefaultAsync(c => c.AccountId == payload.CurrentAndPreviousId, cancellationToken)
-                ?? throw new InvalidOperationException("The current and previous account no longer exists.");
-            var unearned = await _dbContext.FilprideChartOfAccounts
-                .FirstOrDefaultAsync(c => c.AccountId == payload.UnearnedId, cancellationToken)
-                ?? throw new InvalidOperationException("The unearned account no longer exists.");
+            var current = await GetEligibleServiceAccountAsync(
+                payload.CurrentAndPreviousId, "current and previous", cancellationToken);
+            var unearned = await GetEligibleServiceAccountAsync(
+                payload.UnearnedId, "unearned", cancellationToken);
 
             var model = ToModel(payload);
             model.ServiceNo = await _unitOfWork.FilprideService.GetLastNumber(cancellationToken);
@@ -461,6 +460,27 @@ namespace IBS.Services
                     throw new InvalidOperationException("The submitted model does not match the request type.");
             }
         }
+
+        private async Task ValidateReferencesAsync(
+            FilprideMasterFileType type,
+            object model,
+            CancellationToken cancellationToken)
+        {
+            if (type == FilprideMasterFileType.Service && model is FilprideService service)
+            {
+                await GetEligibleServiceAccountAsync(
+                    service.CurrentAndPreviousId, "current and previous", cancellationToken);
+                await GetEligibleServiceAccountAsync(service.UnearnedId, "unearned", cancellationToken);
+            }
+        }
+
+        private async Task<FilprideChartOfAccount> GetEligibleServiceAccountAsync(
+            int id,
+            string accountName,
+            CancellationToken cancellationToken) =>
+            await _dbContext.FilprideChartOfAccounts
+                .FirstOrDefaultAsync(c => c.AccountId == id && (c.Level == 4 || c.Level == 5), cancellationToken)
+            ?? throw new InvalidOperationException($"The {accountName} account is not eligible for services.");
 
         private static T Deserialize<T>(FilprideMasterFileRequest request) =>
             JsonSerializer.Deserialize<T>(request.PayloadJson, JsonOptions)

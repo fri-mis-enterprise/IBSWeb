@@ -70,6 +70,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpGet]
+        [NonAction]
         public IActionResult Create()
         {
             return View();
@@ -77,6 +78,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [NonAction]
         public async Task<IActionResult> Create(FilprideBankAccount model, CancellationToken cancellationToken)
         {
             if (!ModelState.IsValid)

@@ -351,6 +351,7 @@ namespace IBS.DataAccess.Data
             builder.Entity<FilprideMasterFileRequest>(request =>
             {
                 request.Property(r => r.Status).IsConcurrencyToken();
+                request.Property(r => r.LastModifiedDate).IsConcurrencyToken();
                 request.HasIndex(r => new { r.Status, r.RequestedDate });
                 request.HasIndex(r => new { r.MasterFileType, r.RequestedDate });
                 request.HasIndex(r => new { r.RequestedBy, r.RequestedDate });

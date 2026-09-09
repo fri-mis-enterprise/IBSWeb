@@ -4704,6 +4704,7 @@ namespace IBS.DataAccess.Migrations
                         .HasColumnName("approved_date");
 
                     b.Property<DateTime>("LastModifiedDate")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("last_modified_date");
 

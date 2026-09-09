@@ -280,6 +280,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 return NotFound();
             }
+            if (request.RequestedBy != GetUserId())
+            {
+                return Forbid();
+            }
+            if (request.MasterFileType != FilprideMasterFileType.Supplier
+                || request.Status is not (FilprideMasterFileRequestStatus.ForApproval or FilprideMasterFileRequestStatus.Rejected))
+            {
+                TempData["error"] = "This request can no longer be edited.";
+                return RedirectToAction(nameof(Details), new { id = requestId });
+            }
             var previous = (FilprideSupplier)_requestService.DeserializeModel(request);
             model.ProofOfRegistrationFileName = previous.ProofOfRegistrationFileName;
             model.ProofOfRegistrationFilePath = previous.ProofOfRegistrationFilePath;
@@ -390,6 +400,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
             catch (UnauthorizedAccessException)
             {
                 return Forbid();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                TempData["error"] = "This request changed while it was being processed. Please review it and try again.";
+                return RedirectToAction(nameof(Details), new { id = requestId });
             }
             catch (InvalidOperationException ex)
             {

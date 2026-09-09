@@ -67,6 +67,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpGet]
+        [NonAction]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
             var viewModel = new FilprideService
@@ -96,6 +97,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [NonAction]
         public async Task<IActionResult> Create(FilprideService services, CancellationToken cancellationToken)
         {
             services.CurrentAndPreviousTitles = await _dbContext.FilprideChartOfAccounts

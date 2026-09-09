@@ -122,6 +122,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpGet]
+        [NonAction]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
             FilprideSupplier model = new();
@@ -133,6 +134,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [NonAction]
         public async Task<IActionResult> Create(FilprideSupplier model, IFormFile? registration, IFormFile? document, CancellationToken cancellationToken)
         {
             var companyClaims = await GetCompanyClaimAsync();
