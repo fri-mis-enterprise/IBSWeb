@@ -1,0 +1,246 @@
+@using IBS.Models.Enums
+@using IBS.Utility.Constants
+@model FilprideCustomer
+
+@{
+    ViewData["Title"] = "Customer Master File Request";
+    var action = ViewBag.RequestId == null ? "CreateCustomer" : "EditCustomer";
+}
+
+<link rel="stylesheet" href="~/css/form-style.css">
+<link rel="stylesheet" href="~/css/master-file-request.css" />
+
+<div class="loader-container">
+    <div class="loader"></div>
+    <div class="loader-text">Loading...</div>
+</div>
+<div class="card master-file-request-card mt-4">
+    <div class="card-header bg-secondary bg-gradient ml-0 py-3">
+        <div class="row">
+            <div class="col-12 text-center">
+                <h2 class="text-white py-2">@ViewData["Title"]</h2>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-4">
+        <form asp-action="@action" method="post" class="row">
+            @Html.AntiForgeryToken()
+            @if (ViewBag.RequestId != null)
+            {
+                <input type="hidden" name="requestId" value="@ViewBag.RequestId" />
+            }
+            <div class="border p-3">
+                <div asp-validation-summary="ModelOnly"></div>
+                <div class="form-group mb-3">
+                    <label class="control-label">Type<span class="required">*</span></label>
+                    <select asp-for="Type" class="form-select js-select2 border-0 shadow" style="width:100%; max-height: 200px;" required>
+                        <option value="" selected disabled>Select Customer Document Type</option>
+                        @foreach (var customerDocumentType in Enum.GetValues<DocumentType>())
+                        {
+                            <option value="@customerDocumentType">@customerDocumentType.ToString()</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Type" class="text-danger"></span>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="CustomerName" class="form-control border-0 shadow " placeholder="" required />
+                    <label asp-for="CustomerName" class="ms-2">Customer Name<span class="required">*</span></label>
+                    <span asp-validation-for="CustomerName" class="text-danger"></span>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="CustomerAddress" class="form-control border-0 shadow " placeholder="" required />
+                    <label asp-for="CustomerAddress" class="ms-2">Customer Address<span class="required">*</span></label>
+                    <span asp-validation-for="CustomerAddress" class="text-danger"></span>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="ZipCode" class="form-control border-0 shadow " placeholder="" maxlength="4" required />
+                    <label asp-for="ZipCode" class="ms-2">Zip Code<span class="required">*</span></label>
+                    <span asp-validation-for="ZipCode" class="text-danger"></span>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="CustomerTin" class="form-control border-0 shadow formattedTinNumberInput" placeholder="" maxlength="17" required />
+                    <label asp-for="CustomerTin" class="ms-2">Customer Tin<span class="required">*</span></label>
+                    <span asp-validation-for="CustomerTin" class="text-danger"></span>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="CreditLimit" class="form-control border-0 shadow" placeholder="" required />
+                    <label asp-for="CreditLimit" class="ms-2">Credit Limit<span class="required">*</span></label>
+                    <span asp-validation-for="CreditLimit" class="text-danger"></span>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="CreditLimitAsOfToday" class="form-control border-0 shadow" placeholder="" required />
+                    <label asp-for="CreditLimitAsOfToday" class="ms-2">Available Credit Limit As of Today<span class="required">*</span></label>
+                    <span asp-validation-for="CreditLimitAsOfToday" class="text-danger"></span>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="BusinessStyle" class="form-control border-0 shadow " placeholder="" />
+                    <label asp-for="BusinessStyle" class="ms-2">Business Style</label>
+                    <span asp-validation-for="BusinessStyle" class="text-danger"></span>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="CommissionRate" class="form-control border-0 shadow " placeholder="" />
+                    <label asp-for="CommissionRate" class="ms-2">Commission Rate</label>
+                    <span asp-validation-for="CommissionRate" class="text-danger"></span>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label class="control-label">Commissionee</label>
+                    <select asp-for="CommissioneeId" asp-items="@Model.Commissionees" class="form-select js-select2" style="width:100%">
+                        <option></option>
+                    </select>
+                    <span asp-validation-for="CommissioneeId" class="text-danger"></span>
+                </div>
+
+                <div class="form-group py-2 col-12">
+                    <label class="control-label">Cluster Area<span class="required">*</span></label>
+                    <select asp-for="ClusterCode" class="form-select js-select2 border-0 shadow" style="width:100%; max-height: 200px;" required>
+                        <option value="" selected disabled>Select cluster area</option>
+                        @foreach (var clusterArea in Enum.GetValues(typeof(ClusterArea)).Cast<ClusterArea>())
+                        {
+                            <option value="@clusterArea">@clusterArea</option>
+                        }
+                    </select>
+                    <span asp-validation-for="ClusterCode" class="text-danger"></span>
+                </div>
+
+
+                <div class="form-group py-2 col-12">
+                    <label class="control-label">Customer Type<span class="required">*</span></label>
+                    <select asp-for="CustomerType" class="form-select js-select2 border-0 shadow" style="width:100%; max-height: 200px;" id="customerTypeSelect" required>
+                        <option value="" selected disabled>Select customer type</option>
+                        @foreach (CustomerType customerType in Enum.GetValues<CustomerType>())
+                        {
+                            <option value="@customerType">@customerType.ToString()</option>
+                        }
+                    </select>
+                    <span asp-validation-for="CustomerType" class="text-danger"></span>
+                </div>
+
+                <!-- Station Code input (initially hidden) -->
+                <div id="station-div" class="form-floating py-2 col-12" style="display:none;">
+                    <input asp-for="StationCode" class="form-control border-0 shadow " placeholder="" />
+                    <label asp-for="StationCode" class="ms-2">Station Code<span class="required">*</span></label>
+                    <span asp-validation-for="StationCode" class="text-danger"></span>
+                </div>
+
+                <div class="form-group mb-3">
+                <label class="control-label">Customer Terms</label><span class="required">*</span>
+                <select asp-for="CustomerTerms" asp-items="@Model.PaymentTerms" class="form-select js-select2" style="width:100%" required>
+                    <option></option>
+                </select>
+                <span asp-validation-for="CustomerTerms" class="text-danger"></span>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label class="control-label">Retention Rate</label>
+                    <select asp-for="RetentionRate" class="form-select js-select2" style="width: 100%">
+                        <option value="" selected disabled>%</option>
+                        <option value="0.0000">0%</option>
+                        <option value="0.0100">1%</option>
+                        <option value="0.0200">2%</option>
+                        <option value="0.0500">5%</option>
+                        <option value="0.1000">10%</option>
+                    </select>
+                    <span asp-validation-for="RetentionRate" class="text-danger"></span>
+                </div>
+
+                <div class="form-group py-2 col-12">
+                    <label class="control-label">Vat Type<span class="required">*</span></label>
+                    <select asp-for="VatType" class="form-select js-select2 border-0 shadow" style="width:100%; max-height: 200px;" required>
+                        <option value="" selected disabled>Select vat type</option>
+                        <option value="@SD.VatType_Vatable">@SD.VatType_Vatable</option>
+                        <option value="@SD.VatType_ZeroRated">@SD.VatType_ZeroRated</option>
+                        <option value="@SD.VatType_Exempt">@SD.VatType_Exempt</option>
+                    </select>
+                    <span asp-validation-for="VatType" class="text-danger"></span>
+                </div>
+                <div class="form-check pt-2">
+                    <label class="form-check-label">
+                        <input class="form-check-input" asp-for="WithHoldingVat" onchange="toggleCwvFields(this)" /> @Html.DisplayNameFor(model => model.WithHoldingVat)
+                    </label>
+                </div>
+                <div class="form-group mb-3" id="WithholdingVatPercent" style="display: none;">
+                    <label class="control-label">Withholding Vat Percentage</label>
+                    <select asp-for="CwVatPercent" asp-items="@Model.CwVatPercentList" class="form-select js-select2 withHoldingVatPercent" style="width: 100%">
+                        <option></option>
+                    </select>
+                    <span asp-validation-for="CwVatPercent" class="text-danger"></span>
+                </div>
+                <div class="form-check pb-2">
+                    <label class="form-check-label">
+                        <input class="form-check-input" asp-for="WithHoldingTax" onchange="toggleCwtFields(this)"/> @Html.DisplayNameFor(model => model.WithHoldingTax)
+                    </label>
+                </div>
+                <div class="form-group mb-3" id="WithholdingTaxPercent" style="display: none;">
+                    <label class="control-label">Withholding Tax Percentage</label>
+                    <select asp-for="CwtPercent" asp-items="@Model.CwtPercentList" class="form-select js-select2 withHoldingTaxPercent" style="width: 100%">
+                        <option></option>
+                    </select>
+                    <span asp-validation-for="CwtPercent" class="text-danger"></span>
+                </div>
+                <div class="form-check pb-2">
+                    <label class="form-check-label">
+                        <input class="form-check-input" asp-for="RequiresPriceAdjustment" /> @Html.DisplayNameFor(model => model.RequiresPriceAdjustment)
+                    </label>
+                </div>
+                <div class="row pt-2">
+                    <div class="col-6 col-md-3">
+                        <button type="submit" class="btn btn-primary form-control">Submit Request</button>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <a asp-area="Filpride" asp-controller="MasterFileRequest" asp-action="Index" class="btn btn-outline-primary border  form-control ">Back to List</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        $(document).ready(function () {
+            function toggleStationDiv() {
+                var selectedCompany = $('select[name="CustomerType"]').val();
+                var stationDiv = $('#station-div');
+
+                if (selectedCompany === 'Retail') {
+                    stationDiv.show();
+                    $('#StationCode').prop('required', true);
+                } else {
+                    stationDiv.hide();
+                    $('#StationCode').prop('required', false).val('');
+                }
+            }
+
+            // Attach the change event listener
+            $('select[name="CustomerType"]').on('change', toggleStationDiv);
+
+            // Initial check on page load
+            toggleStationDiv();
+        });
+
+        $(function () {
+            toggleCwvFields(document.getElementById("WithHoldingVat"));
+            toggleCwtFields(document.getElementById("WithHoldingTax"));
+        });
+
+        function toggleCwvFields(element) {
+            const withHoldingVatPercent = document.getElementById("WithholdingVatPercent");
+
+            withHoldingVatPercent.style.display = element.checked
+                ? "block"
+                : ($(".withHoldingVatPercent").val(0).trigger("change"), "none");
+        }
+
+        function toggleCwtFields(element) {
+            const withHoldingTaxPercent = document.getElementById("WithholdingTaxPercent");
+
+            withHoldingTaxPercent.style.display = element.checked
+                ? "block"
+                : ($(".withHoldingTaxPercent").val(0).trigger("change"), "none");
+        }
+    </script>
+}

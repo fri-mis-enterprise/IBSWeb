@@ -1,0 +1,316 @@
+.master-file-request-page,
+.master-file-request-card {
+    --request-border: #e1e7e8;
+    --request-muted: #647477;
+    --request-surface: #f7f9f9;
+}
+
+.master-file-request-page {
+    max-width: 1440px;
+    margin: 0 auto;
+}
+
+.master-file-request-card {
+    overflow: hidden;
+    border: 1px solid var(--request-border, #e1e7e8) !important;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(25, 46, 47, 0.08) !important;
+}
+
+.master-file-request-card > .card-header,
+.request-page-header {
+    padding: 1.25rem 1.5rem;
+    border: 0;
+    background: linear-gradient(135deg, var(--brand-primary, #192e2f), #134b5f);
+    color: #fff;
+}
+
+.request-page-header h1,
+.request-page-header h2,
+.master-file-request-card > .card-header h2 {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(1.25rem, 2vw, 1.65rem);
+    font-weight: 700;
+}
+
+.request-page-header p {
+    margin: 0.35rem 0 0;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.875rem;
+}
+
+.request-page-header .btn-light {
+    color: var(--brand-primary, #192e2f);
+    font-weight: 700;
+}
+
+.request-filter-panel {
+    padding: 1rem;
+    border: 1px solid var(--request-border);
+    border-radius: 10px;
+    background: var(--request-surface);
+}
+
+.request-filter-panel .form-label {
+    margin-bottom: 0.35rem;
+    color: #405154;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.request-table thead th {
+    padding: 0.85rem 0.75rem;
+    border-bottom-width: 1px;
+    background: #f7f9f9;
+    color: #526265;
+    font-size: 0.75rem;
+}
+
+.request-table tbody td {
+    padding: 0.9rem 0.75rem;
+    border-color: #edf1f2;
+    vertical-align: middle;
+}
+
+.request-number {
+    color: var(--brand-primary, #192e2f);
+    font-weight: 700;
+}
+
+.request-type {
+    color: #26383b;
+    font-weight: 600;
+}
+
+.request-subtext {
+    display: block;
+    margin-top: 0.15rem;
+    color: var(--request-muted);
+    font-size: 0.75rem;
+}
+
+.request-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.65rem;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.request-status::before {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: currentColor;
+    content: "";
+}
+
+.request-status-pending {
+    border-color: #f0d59c;
+    background: #fff8e8;
+    color: #8a5a00;
+}
+
+.request-status-approved {
+    border-color: #bcd9bf;
+    background: #edf7ee;
+    color: #37663a;
+}
+
+.request-status-rejected {
+    border-color: #edbec3;
+    background: #fff0f1;
+    color: #a52331;
+}
+
+.request-status-canceled {
+    border-color: #d4dade;
+    background: #f3f5f6;
+    color: #687579;
+}
+
+.request-empty-state {
+    padding: 4rem 1rem !important;
+    color: var(--request-muted);
+    text-align: center;
+}
+
+.request-empty-state i {
+    display: block;
+    margin-bottom: 0.75rem;
+    color: #9ba9ac;
+    font-size: 2rem;
+}
+
+.request-summary-card,
+.request-content-card,
+.request-decision-card {
+    height: 100%;
+    padding: 1.25rem;
+    border: 1px solid var(--request-border);
+    border-radius: 10px;
+    background: #fff;
+}
+
+.request-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 1rem;
+    color: #26383b;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.request-section-title i {
+    color: #134b5f;
+}
+
+.request-meta-list {
+    display: grid;
+    gap: 0;
+    margin: 0;
+}
+
+.request-meta-row {
+    display: grid;
+    grid-template-columns: minmax(110px, 0.75fr) minmax(0, 1.25fr);
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #edf1f2;
+}
+
+.request-meta-row:last-child {
+    border-bottom: 0;
+}
+
+.request-meta-row dt {
+    color: var(--request-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.request-meta-row dd {
+    margin: 0;
+    color: #26383b;
+    font-size: 0.85rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.request-data-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.request-data-item {
+    min-width: 0;
+    padding: 0.85rem 1rem;
+    border: 1px solid #e5eaeb;
+    border-radius: 8px;
+    background: var(--request-surface);
+}
+
+.request-data-label {
+    display: block;
+    margin-bottom: 0.3rem;
+    color: var(--request-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+}
+
+.request-data-value {
+    color: #26383b;
+    font-size: 0.9rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.request-json {
+    margin-top: 1rem;
+    border: 1px solid var(--request-border);
+    border-radius: 8px;
+    background: #f7f9f9;
+}
+
+.request-json summary {
+    padding: 0.75rem 1rem;
+    color: #405154;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.request-json pre {
+    max-height: 28rem;
+    margin: 0;
+    padding: 1rem;
+    overflow: auto;
+    border-top: 1px solid var(--request-border);
+    background: #1f2d2f;
+    color: #eaf2f2;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    white-space: pre;
+}
+
+.request-remarks {
+    margin: 0;
+    padding: 0.85rem 1rem;
+    border-left: 3px solid #134b5f;
+    background: #f3f7f8;
+    color: #405154;
+    white-space: pre-wrap;
+}
+
+.request-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.master-file-request-card > .card-body {
+    padding: 1.5rem;
+}
+
+.master-file-request-card form > .border {
+    border-color: var(--request-border) !important;
+    border-radius: 10px;
+}
+
+@media (max-width: 767.98px) {
+    .request-page-header {
+        align-items: flex-start !important;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .request-page-header .dropdown,
+    .request-page-header .btn {
+        width: 100%;
+    }
+
+    .request-data-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .request-meta-row {
+        grid-template-columns: 1fr;
+        gap: 0.2rem;
+    }
+
+    .master-file-request-card > .card-body {
+        padding: 1rem;
+    }
+}

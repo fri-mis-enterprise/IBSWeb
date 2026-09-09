@@ -14,8 +14,7 @@
 
     var isAdmin = User.IsInRole("Admin");
     var isHead = User.IsInRole("HeadApprover");
-    var isAccounting = User.IsInRole("AccountingManager");
-    var isManagementAccounting = User.IsInRole("ManagementAccountingManager");
+    var isAccounting = User.IsInRole("AccountingManager") || User.IsInRole("ManagementAccountingManager");
     var isFinance = User.IsInRole("FinanceManager");
     var isOps = User.IsInRole("OperationManager");
     var isCnc = User.IsInRole("CncManager");
@@ -158,8 +157,24 @@ else
                                 </div>
                                 <span class="pri-count">@Model.CheckVoucherNonTradeInvoiceForApprovalCount.ToString("N0")</span>
                             </a>
+                        }
 
-                            <a href="@Url.Action("Index", "JournalVoucher", new { area = "Filpride", filterType = "ForApprovalOfOA" })" class="pri-card">
+                        @if (isAdmin || User.IsInRole("ManagementAccountingManager"))
+                        {
+                            <a href="@Url.Action("Index", "MasterFileRequest", new { area = "Filpride", status = "ForApproval" })" class="pri-card">
+                                <div class="pri-card-body">
+                                    <div class="pri-icon-wrap pri-icon-blue">
+                                        <span class="material-symbols-outlined pri-icon">approval</span>
+                                    </div>
+                                    <span class="pri-label">Master File Requests</span>
+                                </div>
+                                <span class="pri-count">@Model.MasterFileRequestForApprovalCount.ToString("N0")</span>
+                            </a>
+                        }
+
+                        @if (isAdmin || isHead || isAccounting)
+                        {
+                            <a href="@Url.Action("Index", "JournalVoucher", new { area = "Filpride", filterType = "ForApproval" })" class="pri-card">
                                 <div class="pri-card-body">
                                     <div class="pri-icon-wrap pri-icon-red">
                                         <span class="material-symbols-outlined pri-icon">assignment</span>
@@ -167,19 +182,6 @@ else
                                     <span class="pri-label">JV Approval</span>
                                 </div>
                                 <span class="pri-count">@Model.JournalVoucherForApprovalCount.ToString("N0")</span>
-                            </a>
-                        }
-
-                        @if (isAdmin || isHead || isManagementAccounting)
-                        {
-                            <a href="@Url.Action("Index", "JournalVoucher", new { area = "Filpride", filterType = "ForApprovalOfMA" })" class="pri-card">
-                                <div class="pri-card-body">
-                                    <div class="pri-icon-wrap pri-icon-red">
-                                        <span class="material-symbols-outlined pri-icon">assignment</span>
-                                    </div>
-                                    <span class="pri-label">MA Approval (JV)</span>
-                                </div>
-                                <span class="pri-count">@Model.MAJournalVoucherForApprovalCount.ToString("N0")</span>
                             </a>
                         }
 
@@ -437,7 +439,7 @@ else
                         </div>
                         <span class="pipe-label">CV Approval</span>
                     </a>
-                    <a href="@Url.Action("Index", "JournalVoucher", new { area = "Filpride", filterType = "ForApprovalOfOA" })" class="pipe-card">
+                    <a href="@Url.Action("Index", "JournalVoucher", new { area = "Filpride", filterType = "ForApproval" })" class="pipe-card">
                         <div class="pipe-card-top">
                             <div class="pipe-icon-wrap pipe-icon-red">
                                 <span class="material-symbols-outlined pipe-icon">assignment</span>
@@ -445,15 +447,6 @@ else
                             <span class="pipe-count">@Model.JournalVoucherForApprovalCount.ToString("N0")</span>
                         </div>
                         <span class="pipe-label">JV Approval</span>
-                    </a>
-                    <a href="@Url.Action("Index", "JournalVoucher", new { area = "Filpride", filterType = "ForApprovalOfMA" })" class="pipe-card">
-                        <div class="pipe-card-top">
-                            <div class="pipe-icon-wrap pipe-icon-red">
-                                <span class="material-symbols-outlined pipe-icon">assignment</span>
-                            </div>
-                            <span class="pipe-count">@Model.MAJournalVoucherForApprovalCount.ToString("N0")</span>
-                        </div>
-                        <span class="pipe-label">MA Approval (JV)</span>
                     </a>
                 </div>
             </section>

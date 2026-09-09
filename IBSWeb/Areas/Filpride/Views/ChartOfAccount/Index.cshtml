@@ -272,55 +272,8 @@
             $('.createAccount').on('click', function(e) {
                 e.preventDefault();
                 let parentId = $(this).data('account-id');
-                let parentNumber = $(this).data('parent-number');
-                let nextLevel = $(this).data('next-level');
-
-                Swal.fire({
-                    title: `Create Level ${nextLevel} Account`,
-                    text: `Parent account: ${parentNumber}`,
-                    input: 'text',
-                    inputLabel: 'Account name',
-                    inputPlaceholder: 'Enter account name',
-                    inputAttributes: {
-                        autocapitalize: 'off'
-                    },
-                    showCancelButton: true,
-                    confirmButtonText: 'Create',
-                    showLoaderOnConfirm: true,
-                    preConfirm: (accountName) => {
-                        const normalizedAccountName = accountName?.trim();
-                        if (!normalizedAccountName) {
-                            Swal.showValidationMessage('Account name is required');
-                            return false;
-                        }
-                        return normalizedAccountName;
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        let accountName = result.value;
-
-                        $.ajax({
-                            url: '@Url.Action("Create", "ChartOfAccount", new { area = "Filpride" })',
-                            type: 'POST',
-                            data: {
-                                __RequestVerificationToken: requestVerificationToken,
-                                parentId: parentId,
-                                accountName: accountName,
-                                showHidden: showHidden
-                            },
-                            success: function (response) {
-                                if (response.redirectUrl) {
-                                    window.location.href = response.redirectUrl;
-                                } else {
-                                    Swal.fire('Saved', 'Account created successfully.', 'success');
-                                }
-                            },
-                            error: function (xhr, status, error) {
-                                Swal.fire('Error', xhr.responseText || 'Unable to create account.', 'error');
-                            }
-                        });
-                    }
-                });
+                window.location.href = '@Url.Action("CreateChartOfAccount", "MasterFileRequest", new { area = "Filpride" })'
+                    + '?parentId=' + encodeURIComponent(parentId);
             });
 
 

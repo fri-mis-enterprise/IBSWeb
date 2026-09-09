@@ -90,6 +90,59 @@
                     </a>
                 </li>
 
+                <li class="mnav-item" data-nav-deck role="none">
+                    <button class="mnav-trigger" role="menuitem" aria-haspopup="true" aria-expanded="false">
+                        <span>Master File Requests</span>
+                        <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+                    </button>
+                    <div class="mnav-column-deck" role="menu">
+                        <div class="mnav-col" data-col-level="1" data-col-id="mfr-root">
+                            <div class="mnav-col-header">Request Management</div>
+                            <a class="mnav-col-item" asp-area="Filpride" asp-controller="MasterFileRequest" asp-action="Index" role="menuitem">
+                                <div class="mnav-col-item-content">
+                                    <span class="material-symbols-outlined">history</span>
+                                    <div class="mnav-col-item-text">
+                                        <div class="mnav-col-item-title">Request History</div>
+                                        <div class="mnav-col-item-sub">View and manage submissions</div>
+                                    </div>
+                                </div>
+                            </a>
+                            @if (User.IsInRole("Admin") || User.IsInRole("ManagementAccountingManager"))
+                            {
+                                <a class="mnav-col-item" asp-area="Filpride" asp-controller="MasterFileRequest" asp-action="Index" asp-route-status="ForApproval" role="menuitem">
+                                    <div class="mnav-col-item-content">
+                                        <span class="material-symbols-outlined">pending_actions</span>
+                                        <div class="mnav-col-item-text">
+                                            <div class="mnav-col-item-title">Pending Approval</div>
+                                            <div class="mnav-col-item-sub">Review submitted requests</div>
+                                        </div>
+                                    </div>
+                                </a>
+                            }
+                            <button class="mnav-col-item" type="button" data-expand="mfr-create" role="menuitem" aria-haspopup="true" aria-expanded="false">
+                                <div class="mnav-col-item-content">
+                                    <span class="material-symbols-outlined">add_circle</span>
+                                    <div class="mnav-col-item-text">
+                                        <div class="mnav-col-item-title">New Request</div>
+                                        <div class="mnav-col-item-sub">Choose a master-file type</div>
+                                    </div>
+                                </div>
+                                <span class="material-symbols-outlined mnav-chevron">chevron_right</span>
+                            </button>
+                        </div>
+                        <div class="mnav-col" data-col-level="2" data-col-id="mfr-create" data-parent-col="mfr-root" style="display:none;">
+                            <div class="mnav-col-header">Create Master File Request</div>
+                            <a class="mnav-col-item" asp-area="Filpride" asp-controller="MasterFileRequest" asp-action="CreateCustomer" role="menuitem"><div class="mnav-col-item-content"><span class="material-symbols-outlined">person_add</span><div class="mnav-col-item-text"><div class="mnav-col-item-title">Customer</div></div></div></a>
+                            <a class="mnav-col-item" asp-area="Filpride" asp-controller="MasterFileRequest" asp-action="CreateCustomerBranch" role="menuitem"><div class="mnav-col-item-content"><span class="material-symbols-outlined">add_business</span><div class="mnav-col-item-text"><div class="mnav-col-item-title">Customer Branch</div></div></div></a>
+                            <a class="mnav-col-item" asp-area="Filpride" asp-controller="MasterFileRequest" asp-action="CreateSupplier" role="menuitem"><div class="mnav-col-item-content"><span class="material-symbols-outlined">local_shipping</span><div class="mnav-col-item-text"><div class="mnav-col-item-title">Supplier</div></div></div></a>
+                            <a class="mnav-col-item" asp-area="Filpride" asp-controller="MasterFileRequest" asp-action="CreateBankAccount" role="menuitem"><div class="mnav-col-item-content"><span class="material-symbols-outlined">account_balance</span><div class="mnav-col-item-text"><div class="mnav-col-item-title">Bank Account</div></div></div></a>
+                            <a class="mnav-col-item" asp-area="Filpride" asp-controller="MasterFileRequest" asp-action="CreateService" role="menuitem"><div class="mnav-col-item-content"><span class="material-symbols-outlined">design_services</span><div class="mnav-col-item-text"><div class="mnav-col-item-title">Service</div></div></div></a>
+                            <a class="mnav-col-item" asp-area="Filpride" asp-controller="MasterFileRequest" asp-action="CreateChartOfAccount" role="menuitem"><div class="mnav-col-item-content"><span class="material-symbols-outlined">account_tree</span><div class="mnav-col-item-text"><div class="mnav-col-item-title">Chart of Accounts</div></div></div></a>
+                            <a class="mnav-col-item" asp-area="Filpride" asp-controller="MasterFileRequest" asp-action="CreatePickupPoint" role="menuitem"><div class="mnav-col-item-content"><span class="material-symbols-outlined">pin_drop</span><div class="mnav-col-item-text"><div class="mnav-col-item-title">Pickup Point</div></div></div></a>
+                        </div>
+                    </div>
+                </li>
+
                 @* ══════════════════════════════════════════════════════
                    FILPRIDE MODULE
                    ══════════════════════════════════════════════════════ *@

@@ -75,6 +75,8 @@ namespace IBS.DataAccess.Data
 
         public DbSet<FilprideCustomer> FilprideCustomers { get; set; }
 
+        public DbSet<FilprideMasterFileRequest> FilprideMasterFileRequests { get; set; }
+
         public DbSet<FilprideSupplier> FilprideSuppliers { get; set; }
 
         public DbSet<FilpridePickUpPoint> FilpridePickUpPoints { get; set; }
@@ -344,6 +346,14 @@ namespace IBS.DataAccess.Data
             {
                 c.HasIndex(c => c.CustomerCode);
                 c.HasIndex(c => c.CustomerName);
+            });
+
+            builder.Entity<FilprideMasterFileRequest>(request =>
+            {
+                request.Property(r => r.Status).IsConcurrencyToken();
+                request.HasIndex(r => new { r.Status, r.RequestedDate });
+                request.HasIndex(r => new { r.MasterFileType, r.RequestedDate });
+                request.HasIndex(r => new { r.RequestedBy, r.RequestedDate });
             });
 
             // FilprideSupplier

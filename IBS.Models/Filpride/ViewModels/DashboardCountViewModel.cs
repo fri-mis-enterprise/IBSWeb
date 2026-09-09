@@ -21,8 +21,9 @@ namespace IBS.Models.Filpride.ViewModels
 
         // Accounting - For Approval Counts
         public int JournalVoucherForApprovalCount { get; set; }
-        public int MAJournalVoucherForApprovalCount { get; set; }
         public int CheckVoucherNonTradeInvoiceForApprovalCount { get; set; }
+        public int CheckVoucherNonTradePayrollInvoiceForApprovalCount { get; set; }
+        public int MasterFileRequestForApprovalCount { get; set; }
 
         // Sidebar data
         public List<PendingApprovalItem> MySubmissions { get; set; } = new();
