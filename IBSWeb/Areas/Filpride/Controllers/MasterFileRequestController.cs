@@ -4,6 +4,7 @@ using IBS.DataAccess.Repository.IRepository;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.MasterFile;
 using IBS.Services;
+using IBS.Services.Attributes;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
+    [CompanyAuthorize(nameof(Filpride))]
     public class MasterFileRequestController : Controller
     {
         private const string ApproverRoles = "Admin,ManagementAccountingManager";
@@ -159,7 +161,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
 
             await UploadSupplierDocumentsAsync(model, registration, document);
-            return await SaveAsync(FilprideMasterFileType.Supplier, model, null, cancellationToken);
+            return await SaveAsync(FilprideMasterFileType.Supplier, model, null, cancellationToken,
+                model.ProofOfRegistrationFileName, model.ProofOfExemptionFileName);
         }
 
         [HttpGet]
@@ -305,7 +308,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return View("CreateSupplier", model);
             }
             await UploadSupplierDocumentsAsync(model, registration, document);
-            return await SaveAsync(FilprideMasterFileType.Supplier, model, requestId, cancellationToken);
+            return await SaveAsync(FilprideMasterFileType.Supplier, model, requestId, cancellationToken,
+                registration == null ? null : model.ProofOfRegistrationFileName,
+                document == null ? null : model.ProofOfExemptionFileName);
         }
 
         [HttpPost]
@@ -388,7 +393,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             FilprideMasterFileType type,
             object model,
             int? requestId,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            params string?[] uploadedFiles)
         {
             try
             {
@@ -399,17 +405,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
             catch (UnauthorizedAccessException)
             {
+                await DeleteUploadedFilesAsync(uploadedFiles);
                 return Forbid();
             }
             catch (DbUpdateConcurrencyException)
             {
+                await DeleteUploadedFilesAsync(uploadedFiles);
                 TempData["error"] = "This request changed while it was being processed. Please review it and try again.";
                 return RedirectToAction(nameof(Details), new { id = requestId });
             }
             catch (InvalidOperationException ex)
             {
+                await DeleteUploadedFilesAsync(uploadedFiles);
                 TempData["error"] = ex.Message;
                 return RedirectToAction(nameof(Index));
+            }
+        }
+
+        private async Task DeleteUploadedFilesAsync(IEnumerable<string?> uploadedFiles)
+        {
+            foreach (string? file in uploadedFiles.Where(file => !string.IsNullOrWhiteSpace(file)))
+            {
+                await _cloudStorageService.DeleteFileAsync(file!);
             }
         }
 
