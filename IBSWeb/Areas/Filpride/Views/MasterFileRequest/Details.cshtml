@@ -31,6 +31,7 @@
             "ParentAccountId" => "Parent Account",
             "CurrentAndPreviousId" => "Current and Previous Account",
             "UnearnedId" => "Unearned Account",
+            "CommissioneeId" => "Commissionee",
             "ProofOfRegistrationFileName" => "Proof of BIR Registration",
             "ProofOfExemptionFileName" => "Proof of Exemption",
             "RequiresPriceAdjustment" => "Requires Price Adjustment",
@@ -60,7 +61,7 @@
             new("Customer Details", "Type", "CustomerName", "CustomerAddress", "ZipCode", "CustomerTin", "BusinessStyle", "CustomerType", "ClusterCode", "StationCode"),
             new("Commercial Terms", "CustomerTerms", "VatType", "CreditLimit", "CreditLimitAsOfToday", "RetentionRate", "RequiresPriceAdjustment"),
             new("Withholding Taxes", "WithHoldingVat", "CwVatPercent", "WithHoldingTax", "CwtPercent"),
-            new("Commission", "CommissionRate")
+            new("Commission", "CommissioneeId", "CommissionRate")
         ],
         FilprideMasterFileType.CustomerBranch =>
         [
@@ -128,6 +129,17 @@
             <span class="request-status @StatusClass(Model.Status)">@DisplayName(Model.Status.ToString())</span>
         </div>
         <div class="card-body">
+            @if (!string.IsNullOrWhiteSpace(Model.Remarks))
+            {
+                <section class="request-content-card request-detail-section mb-3" aria-label="Decision remarks">
+                    <h2 class="request-section-title">@(Model.Status == FilprideMasterFileRequestStatus.Rejected ? "Rejection Remarks" : "Approver Remarks")</h2>
+                    <p class="mb-1">@Model.Remarks</p>
+                    @if (!string.IsNullOrWhiteSpace(Model.ApprovedBy) && Model.ApprovedDate.HasValue)
+                    {
+                        <small class="text-muted">@Model.ApprovedBy · @Model.ApprovedDate.Value.ToString("MMM dd, yyyy h:mm tt")</small>
+                    }
+                </section>
+            }
             <div class="request-detail-groups">
                 @foreach (FieldGroup group in FieldGroups(Model.MasterFileType))
                 {
@@ -234,6 +246,7 @@
                     inputPlaceholder: isApproval ? 'Add context for the requester' : 'Explain what needs to be corrected',
                     icon: isApproval ? 'question' : 'warning',
                     showCancelButton: true,
+                    inputAttributes: { maxlength: 1000 },
                     confirmButtonText: isApproval ? 'Approve' : 'Reject',
                     confirmButtonColor: isApproval ? '#198754' : '#dc3545',
                     inputValidator: function (value) {

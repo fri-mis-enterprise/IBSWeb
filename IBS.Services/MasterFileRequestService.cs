@@ -14,6 +14,7 @@ namespace IBS.Services
     public sealed class MasterFileRequestService
     {
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+        private const int MaximumRemarksLength = 1000;
         private readonly ApplicationDbContext _dbContext;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
@@ -129,10 +130,7 @@ namespace IBS.Services
 
         public async Task RejectAsync(int id, string approver, string remarks, CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrWhiteSpace(remarks))
-            {
-                throw new InvalidOperationException("Remarks are required when rejecting a request.");
-            }
+            string? normalizedRemarks = NormalizeRemarks(remarks, required: true);
 
             var request = await _dbContext.FilprideMasterFileRequests
                 .FirstOrDefaultAsync(r => r.Id == id, cancellationToken)
@@ -146,12 +144,13 @@ namespace IBS.Services
             request.Status = FilprideMasterFileRequestStatus.Rejected;
             request.ApprovedBy = approver;
             request.ApprovedDate = DateTimeHelper.GetCurrentPhilippineTime();
-            request.Remarks = remarks.Trim();
+            request.Remarks = normalizedRemarks;
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
         public async Task ApproveAsync(int id, string approver, string? remarks, CancellationToken cancellationToken = default)
         {
+            string? normalizedRemarks = NormalizeRemarks(remarks, required: false);
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(
                 IsolationLevel.Serializable, cancellationToken);
             bool invalidateChartCache = false;
@@ -183,7 +182,7 @@ namespace IBS.Services
                 request.Status = FilprideMasterFileRequestStatus.Approved;
                 request.ApprovedBy = approver;
                 request.ApprovedDate = DateTimeHelper.GetCurrentPhilippineTime();
-                request.Remarks = string.IsNullOrWhiteSpace(remarks) ? null : remarks.Trim();
+                request.Remarks = normalizedRemarks;
 
                 _dbContext.FilprideAuditTrails.Add(new FilprideAuditTrail(approver, activity, request.MasterFileType.ToString())
                 {
@@ -511,6 +510,21 @@ namespace IBS.Services
             string.IsNullOrWhiteSpace(value)
                 ? throw new InvalidOperationException($"{fieldName} is required.")
                 : value;
+
+        private static string? NormalizeRemarks(string? remarks, bool required)
+        {
+            string? normalizedRemarks = string.IsNullOrWhiteSpace(remarks) ? null : remarks.Trim();
+            if (required && normalizedRemarks == null)
+            {
+                throw new InvalidOperationException("Remarks are required when rejecting a request.");
+            }
+            if (normalizedRemarks?.Length > MaximumRemarksLength)
+            {
+                throw new InvalidOperationException($"Remarks cannot exceed {MaximumRemarksLength} characters.");
+            }
+
+            return normalizedRemarks;
+        }
 
         private static FilprideCustomer ToModel(CustomerRequestPayload p) => new()
         {

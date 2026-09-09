@@ -704,8 +704,6 @@
                     </li>
                 }
 
-                @if (selectedCompany == "Filpride")
-                {
                 <li class="mnav-item" data-nav-deck role="none">
                     <button class="mnav-trigger" role="menuitem" aria-haspopup="true" aria-expanded="false">
                         <span>Master File Requests</span>
@@ -758,7 +756,6 @@
                         </div>
                     </div>
                 </li>
-                }
 
                     @if (User.IsInRole("Admin") && selectedCompany == "Filpride")
                     {

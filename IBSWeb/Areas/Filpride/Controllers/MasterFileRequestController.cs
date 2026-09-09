@@ -62,9 +62,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
             if (!string.IsNullOrWhiteSpace(search))
             {
                 string searchTerm = search.Trim();
+                string searchPattern = $"%{searchTerm}%";
+                IQueryable<int> matchingPayloadIds = _dbContext.FilprideMasterFileRequests
+                    .FromSqlInterpolated($"SELECT * FROM filpride_master_file_requests WHERE payload_json::text ILIKE {searchPattern}")
+                    .Select(r => r.Id);
                 query = query.Where(r =>
-                    EF.Functions.ILike(r.RequestedByName, $"%{searchTerm}%")
-                    || EF.Functions.ILike(r.PayloadJson, $"%{searchTerm}%"));
+                    EF.Functions.ILike(r.RequestedByName, searchPattern)
+                    || matchingPayloadIds.Contains(r.Id));
             }
             int totalRequests = await query.CountAsync(cancellationToken);
             int totalPages = Math.Max(1, (int)Math.Ceiling(totalRequests / (double)PageSize));
@@ -484,6 +488,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             switch (request.MasterFileType)
             {
+                case FilprideMasterFileType.Customer:
+                {
+                    var payload = (FilprideCustomer)_requestService.DeserializeModel(request);
+                    if (!payload.CommissioneeId.HasValue)
+                    {
+                        return new Dictionary<string, string>();
+                    }
+
+                    string? commissioneeName = await _dbContext.FilprideSuppliers
+                        .Where(s => s.SupplierId == payload.CommissioneeId.Value)
+                        .Select(s => s.SupplierName)
+                        .FirstOrDefaultAsync(cancellationToken);
+                    return commissioneeName == null
+                        ? new Dictionary<string, string>()
+                        : new Dictionary<string, string> { ["CommissioneeId"] = commissioneeName };
+                }
                 case FilprideMasterFileType.CustomerBranch:
                 {
                     var payload = (CustomerBranchRequestPayload)_requestService.DeserializeModel(request);
