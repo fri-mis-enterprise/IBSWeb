@@ -1,3 +1,4 @@
+@using System.Security.Claims
 @using System.Text.RegularExpressions
 @using IBS.Models.Enums
 @model IReadOnlyList<FilprideMasterFileRequest>
@@ -17,34 +18,34 @@
 
 @{
     ViewData["Title"] = "Master File Requests";
+    string userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
 }
 
+<link rel="stylesheet" href="~/css/index-style.css" />
 <link rel="stylesheet" href="~/css/master-file-request.css" />
 
-<div class="master-file-request-page">
-    <div class="card master-file-request-card mt-4">
-        <div class="card-header request-page-header d-flex justify-content-between align-items-center">
-            <div>
-                <h1>Master File Requests</h1>
-                <p>Submit new records and track each request through approval.</p>
-            </div>
-            <div class="dropdown">
-                <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-plus-circle me-1"></i> New request
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                    @foreach (var requestType in Enum.GetValues<FilprideMasterFileType>())
-                    {
-                        <li>
-                            <a class="dropdown-item" asp-action="@($"Create{requestType}")">
-                                @DisplayName(requestType.ToString())
-                            </a>
-                        </li>
-                    }
-                </ul>
-            </div>
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center bg-secondary p-3 rounded shadow">
+        <h2 class="text-white m-0">@ViewData["Title"]</h2>
+        <div class="dropdown">
+            <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-plus-circle me-1"></i> New request
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                @foreach (var requestType in Enum.GetValues<FilprideMasterFileType>())
+                {
+                    <li>
+                        <a class="dropdown-item" asp-action="@($"Create{requestType}")">
+                            @DisplayName(requestType.ToString())
+                        </a>
+                    </li>
+                }
+            </ul>
         </div>
-        <div class="card-body">
+    </div>
+
+    <div class="card shadow border-0 mt-3">
+        <div class="card-body p-3">
             <form method="get" class="request-filter-panel row g-3 mb-4">
                 <div class="col-sm-6 col-lg-3">
                     <label for="statusFilter" class="form-label">Status</label>
@@ -70,43 +71,27 @@
                         }
                     </select>
                 </div>
-                <div class="col-lg-4">
-                    <label for="requestSearch" class="form-label">Search</label>
-                    <input id="requestSearch" name="search" value="@ViewBag.Search" class="form-control" placeholder="Requester or submitted value" />
-                </div>
-                <div class="col-lg-2 d-flex align-items-end">
-                    <button class="btn btn-primary w-100" type="submit">
-                        <i class="bi bi-search me-1"></i> Apply filters
-                    </button>
-                </div>
             </form>
 
-            <div class="table-responsive">
-                <table class="table request-table align-middle mb-0">
-                    <thead>
+            <div class="table-responsive" style="max-height: 70vh">
+                <table class="table table-hover mb-0" id="paginatedTable">
+                    <thead class="bg-light">
                         <tr>
                             <th scope="col">Request</th>
                             <th scope="col">Type</th>
                             <th scope="col">Status</th>
                             <th scope="col">Requested by</th>
                             <th scope="col">Submitted</th>
-                            <th scope="col" class="text-end">Action</th>
+                            <th scope="col" class="text-center" style="width: 100px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @if (Model.Count == 0)
-                        {
-                            <tr>
-                                <td colspan="6" class="request-empty-state">
-                                    <i class="bi bi-inbox"></i>
-                                    No master file requests match the selected filters.
-                                </td>
-                            </tr>
-                        }
-                        else
+                        @if (Model.Count > 0)
                         {
                             @foreach (var request in Model)
                             {
+                                bool isOwner = request.RequestedBy == userId;
+                                bool editable = request.Status is FilprideMasterFileRequestStatus.ForApproval or FilprideMasterFileRequestStatus.Rejected;
                                 <tr>
                                     <td><span class="request-number">#@request.Id</span></td>
                                     <td><span class="request-type">@DisplayName(request.MasterFileType.ToString())</span></td>
@@ -120,10 +105,25 @@
                                         @request.RequestedDate.ToString("MMM dd, yyyy")
                                         <span class="request-subtext">@request.RequestedDate.ToString("h:mm tt")</span>
                                     </td>
-                                    <td class="text-end">
-                                        <a asp-action="Details" asp-route-id="@request.Id" class="btn btn-sm btn-outline-primary">
-                                            View details <i class="bi bi-arrow-right ms-1"></i>
-                                        </a>
+                                    <td class="text-center">
+                                        <div class="dropdown actions-dropdown">
+                                            <button class="btn btn-light btn-sm dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                Actions
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                                <li><a class="dropdown-item" asp-action="Details" asp-route-id="@request.Id">View</a></li>
+                                                @if (isOwner && editable)
+                                                {
+                                                    <li><a class="dropdown-item" asp-action="Edit" asp-route-id="@request.Id">Edit</a></li>
+                                                    <li><hr class="dropdown-divider" /></li>
+                                                    <li>
+                                                        <form asp-action="Cancel" asp-route-id="@request.Id" method="post">
+                                                            <button class="dropdown-item text-danger" type="submit">Cancel</button>
+                                                        </form>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        </div>
                                     </td>
                                 </tr>
                             }
@@ -134,3 +134,37 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            const table = $('#paginatedTable').DataTable({
+                order: [[4, 'desc']],
+                columnDefs: [{ orderable: false, searchable: false, targets: 5 }]
+            });
+
+            function applyFilter(name, value) {
+                const url = new URL(window.location.href);
+                if (value) {
+                    url.searchParams.set(name, value);
+                } else {
+                    url.searchParams.delete(name);
+                }
+
+                window.location.assign(url.toString());
+            }
+
+            $('#statusFilter').on('change', function () {
+                applyFilter('status', this.value);
+            });
+
+            $('#typeFilter').on('change', function () {
+                applyFilter('type', this.value);
+            });
+
+            $('.request-filter-panel').on('submit', function (event) {
+                event.preventDefault();
+            });
+        });
+    </script>
+}

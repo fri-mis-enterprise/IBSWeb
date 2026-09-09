@@ -1,4 +1,3 @@
-@using System.Security.Claims
 @using System.Text.Json
 @using System.Text.RegularExpressions
 @using IBS.Models.Enums
@@ -28,11 +27,8 @@
 
 @{
     ViewData["Title"] = $"Master File Request #{Model.Id}";
-    bool isOwner = Model.RequestedBy == User.FindFirstValue(ClaimTypes.NameIdentifier);
-    bool editable = Model.Status is FilprideMasterFileRequestStatus.ForApproval or FilprideMasterFileRequestStatus.Rejected;
     bool approver = User.IsInRole("Admin") || User.IsInRole("ManagementAccountingManager");
     using JsonDocument payload = JsonDocument.Parse(Model.PayloadJson);
-    string formattedPayload = JsonSerializer.Serialize(payload.RootElement, new JsonSerializerOptions { WriteIndented = true });
 }
 
 <link rel="stylesheet" href="~/css/master-file-request.css" />
@@ -47,77 +43,20 @@
             <span class="request-status @StatusClass(Model.Status)">@DisplayName(Model.Status.ToString())</span>
         </div>
         <div class="card-body">
-            <div class="row g-4">
-                <div class="col-lg-4">
-                    <section class="request-summary-card" aria-labelledby="requestSummaryTitle">
-                        <h2 id="requestSummaryTitle" class="request-section-title">
-                            <i class="bi bi-card-checklist"></i> Request summary
-                        </h2>
-                        <dl class="request-meta-list">
-                            <div class="request-meta-row">
-                                <dt>Request type</dt>
-                                <dd>@DisplayName(Model.MasterFileType.ToString())</dd>
-                            </div>
-                            <div class="request-meta-row">
-                                <dt>Requested by</dt>
-                                <dd>@Model.RequestedByName</dd>
-                            </div>
-                            <div class="request-meta-row">
-                                <dt>Submitted</dt>
-                                <dd>@Model.RequestedDate.ToString("MMM dd, yyyy h:mm tt")</dd>
-                            </div>
-                            <div class="request-meta-row">
-                                <dt>Last updated</dt>
-                                <dd>@Model.LastModifiedDate.ToString("MMM dd, yyyy h:mm tt")</dd>
-                            </div>
-                            @if (!string.IsNullOrWhiteSpace(Model.ApprovedBy))
-                            {
-                                <div class="request-meta-row">
-                                    <dt>Decision by</dt>
-                                    <dd>@Model.ApprovedBy</dd>
-                                </div>
-                            }
-                            @if (Model.ApprovedDate.HasValue)
-                            {
-                                <div class="request-meta-row">
-                                    <dt>Decision date</dt>
-                                    <dd>@Model.ApprovedDate.Value.ToString("MMM dd, yyyy h:mm tt")</dd>
-                                </div>
-                            }
-                        </dl>
-                    </section>
-                </div>
-                <div class="col-lg-8">
-                    <section class="request-content-card" aria-labelledby="submittedDataTitle">
-                        <h2 id="submittedDataTitle" class="request-section-title">
-                            <i class="bi bi-file-earmark-text"></i> Submitted information
-                        </h2>
-                        <div class="request-data-grid">
-                            @foreach (JsonProperty property in payload.RootElement.EnumerateObject())
-                            {
-                                <div class="request-data-item">
-                                    <span class="request-data-label">@DisplayName(property.Name)</span>
-                                    <span class="request-data-value">@DisplayValue(property.Value)</span>
-                                </div>
-                            }
+            <section class="request-content-card" aria-labelledby="submittedDataTitle">
+                <h2 id="submittedDataTitle" class="request-section-title">
+                    <i class="bi bi-file-earmark-text"></i> Submitted information
+                </h2>
+                <div class="request-data-grid">
+                    @foreach (JsonProperty property in payload.RootElement.EnumerateObject())
+                    {
+                        <div class="request-data-item">
+                            <span class="request-data-label">@DisplayName(property.Name)</span>
+                            <span class="request-data-value">@DisplayValue(property.Value)</span>
                         </div>
-                        <details class="request-json">
-                            <summary>View formatted JSON</summary>
-                            <pre><code>@formattedPayload</code></pre>
-                        </details>
-                    </section>
+                    }
                 </div>
-            </div>
-
-            @if (!string.IsNullOrWhiteSpace(Model.Remarks))
-            {
-                <section class="mt-4" aria-labelledby="remarksTitle">
-                    <h2 id="remarksTitle" class="request-section-title">
-                        <i class="bi bi-chat-left-text"></i> Review remarks
-                    </h2>
-                    <p class="request-remarks">@Model.Remarks</p>
-                </section>
-            }
+            </section>
 
             @if (approver && Model.Status == FilprideMasterFileRequestStatus.ForApproval)
             {
@@ -125,25 +64,19 @@
                     <h2 id="decisionTitle" class="request-section-title">
                         <i class="bi bi-person-check"></i> Approval decision
                     </h2>
-                    <div class="row g-3">
-                        <div class="col-lg-6">
-                            <form asp-action="Approve" asp-route-id="@Model.Id" method="post">
-                                <label for="approvalRemarks" class="form-label">Approval remarks <span class="text-muted">(optional)</span></label>
-                                <textarea id="approvalRemarks" name="remarks" class="form-control mb-2" rows="3" placeholder="Add context for the requester"></textarea>
-                                <button class="btn btn-success" type="submit">
-                                    <i class="bi bi-check-circle me-1"></i> Approve and create
-                                </button>
-                            </form>
-                        </div>
-                        <div class="col-lg-6">
-                            <form asp-action="Reject" asp-route-id="@Model.Id" method="post">
-                                <label for="rejectionRemarks" class="form-label">Reason for rejection <span class="required">*</span></label>
-                                <textarea id="rejectionRemarks" name="remarks" class="form-control mb-2" rows="3" placeholder="Explain what needs to be corrected" required></textarea>
-                                <button class="btn btn-danger" type="submit">
-                                    <i class="bi bi-x-circle me-1"></i> Reject request
-                                </button>
-                            </form>
-                        </div>
+                    <div class="d-flex gap-2">
+                        <form id="approveForm" asp-action="Approve" asp-route-id="@Model.Id" method="post">
+                            <input id="approveRemarks" type="hidden" name="remarks" />
+                            <button class="btn btn-success" type="button" data-decision="approve">
+                                <i class="bi bi-check-circle me-1"></i> Approve and create
+                            </button>
+                        </form>
+                        <form id="rejectForm" asp-action="Reject" asp-route-id="@Model.Id" method="post">
+                            <input id="rejectRemarks" type="hidden" name="remarks" />
+                            <button class="btn btn-danger" type="button" data-decision="reject">
+                                <i class="bi bi-x-circle me-1"></i> Reject request
+                            </button>
+                        </form>
                     </div>
                 </section>
             }
@@ -152,18 +85,37 @@
                 <a asp-action="Index" class="btn btn-outline-primary">
                     <i class="bi bi-arrow-left me-1"></i> Back to requests
                 </a>
-                @if (isOwner && editable)
-                {
-                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
-                        <i class="bi bi-pencil-square me-1"></i> Edit and resubmit
-                    </a>
-                    <form asp-action="Cancel" asp-route-id="@Model.Id" method="post">
-                        <button class="btn btn-outline-danger" type="submit">
-                            <i class="bi bi-x-lg me-1"></i> Cancel request
-                        </button>
-                    </form>
-                }
             </div>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('[data-decision]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const isApproval = this.dataset.decision === 'approve';
+                Swal.fire({
+                    title: isApproval ? 'Approve request?' : 'Reject request?',
+                    input: 'textarea',
+                    inputLabel: isApproval ? 'Remarks (optional)' : 'Reason for rejection',
+                    inputPlaceholder: isApproval ? 'Add context for the requester' : 'Explain what needs to be corrected',
+                    icon: isApproval ? 'question' : 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: isApproval ? 'Approve' : 'Reject',
+                    confirmButtonColor: isApproval ? '#198754' : '#dc3545',
+                    inputValidator: function (value) {
+                        return !isApproval && !value.trim() ? 'A reason for rejection is required.' : null;
+                    }
+                }).then(function (result) {
+                    if (!result.isConfirmed) {
+                        return;
+                    }
+
+                    document.getElementById(isApproval ? 'approveRemarks' : 'rejectRemarks').value = result.value || '';
+                    document.getElementById(isApproval ? 'approveForm' : 'rejectForm').submit();
+                });
+            });
+        });
+    </script>
+}

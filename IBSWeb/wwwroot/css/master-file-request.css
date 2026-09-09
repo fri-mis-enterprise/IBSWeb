@@ -10,6 +10,10 @@
     margin: 0 auto;
 }
 
+.master-file-request-index {
+    max-width: none;
+}
+
 .master-file-request-card {
     overflow: hidden;
     border: 1px solid var(--request-border, #e1e7e8) !important;
@@ -46,7 +50,6 @@
 }
 
 .request-filter-panel {
-    padding: 1rem;
     border: 1px solid var(--request-border);
     border-radius: 10px;
     background: var(--request-surface);
