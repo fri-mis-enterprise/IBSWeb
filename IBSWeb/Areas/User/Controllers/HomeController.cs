@@ -244,10 +244,11 @@ namespace IBSWeb.Areas.User.Controllers
             var ctx = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
             var masterFileRequests = await ProjectMasterFileRequests(ctx.FilprideMasterFileRequests
-                    .Where(r => r.RequestedBy == userId
-                        && r.RequestedDate >= twoMonthsAgo
-                        && r.Status is FilprideMasterFileRequestStatus.ForApproval or FilprideMasterFileRequestStatus.Rejected))
-                .OrderByDescending(r => r.CreatedDate)
+                .Where(r => r.RequestedBy == userId
+                            && r.RequestedDate >= twoMonthsAgo
+                            && r.Status == FilprideMasterFileRequestStatus.ForApproval
+                            || r.Status == FilprideMasterFileRequestStatus.Rejected))
+        .OrderByDescending(r => r.CreatedDate)
                 .Take(20)
                 .ToListAsync();
 
