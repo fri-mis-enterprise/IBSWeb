@@ -157,7 +157,7 @@
         $(document).ready(function () {
             const table = $('#paginatedTable').DataTable({
                 paging: false,
-                searching: false,
+                searching: true,
                 info: false,
                 order: [[4, 'desc']],
                 columnDefs: [{ orderable: false, searchable: false, targets: 5 }]

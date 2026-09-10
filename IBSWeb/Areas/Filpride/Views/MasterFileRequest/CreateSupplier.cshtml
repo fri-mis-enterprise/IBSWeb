@@ -131,8 +131,8 @@
                 <span asp-validation-for="TaxType" class="text-danger"></span>
             </div>
             <div class="form-group mb-3" id="WithholdingTaxPercent" style="display: none;">
-                <label class="control-label">Percent</label>
-                <select asp-for="WithholdingTaxPercent" class="form-select js-select2 withHoldingTaxPercent" style="width: 100%">
+                <label class="control-label">Tax Percent</label>
+                <select asp-for="WithholdingTaxPercent" class="form-select js-select2 withHoldingTaxPercent" onchange="setWithholdingTaxTitle(this.value)" style="width: 100%">
                     <option value="" selected disabled>%</option>
                     <option value="0.0050">.5%</option>
                     <option value="0.0100">1%</option>
@@ -142,9 +142,9 @@
                 </select>
                 <span asp-validation-for="WithholdingTaxPercent" class="text-danger"></span>
             </div>
-            <div class="form-group mb-3" id="WithholdingTaxTitle" style="display: none;">
+            <div class="form-group mb-3" id="WithholdingTaxTitle" style="display: none !important;">
                 <label class="control-label">Withholding Tax Title</label>
-                <select asp-for="WithholdingTaxTitle" asp-items="@Model.WithholdingTaxList" class="form-select js-select2" style="width: 100%">
+                <select asp-for="WithholdingTaxTitle" asp-items="@Model.WithholdingTaxList" class="form-select js-select2" style="width: 100%" tabindex="-1" aria-hidden="true">
                     <option></option>
                 </select>
                 <span asp-validation-for="WithholdingTaxTitle" class="text-danger"></span>
@@ -229,7 +229,6 @@
                 $(".withHoldingTaxPercent").val(null).trigger('change');
             } else if (selectElement.value === "Withholding Tax") {
                 withHoldingTaxPercent.style.display = "block";
-                withHoldingTaxTitle.style.display = "block";
                 exemptionFields.style.display = "none";
             } else {
                 exemptionFields.style.display = "none";
@@ -243,6 +242,21 @@
             const validityDateField = document.getElementById("validityDateField");
             validityDateField.style.display = radioButton.value === "Permanent" ? "none" : "block";
             document.getElementById("ValidityDate").required = radioButton.value === "Temporary";
+        }
+
+        function setWithholdingTaxTitle(percent) {
+            const accountNumberByPercent = {
+                "0.0050": "201030250",
+                "0.0100": "201030210",
+                "0.0200": "201030220",
+                "0.0500": "201030230",
+                "0.1000": "201030240"
+            };
+            const accountNumber = accountNumberByPercent[percent];
+            const titleSelect = document.getElementById("WithholdingTaxTitle").querySelector("select");
+            const titleOption = Array.from(titleSelect.options).find(option => option.value.startsWith(accountNumber + " "));
+
+            $(titleSelect).val(titleOption?.value ?? null).trigger("change");
         }
 
         window.onload = function () {
@@ -267,6 +281,7 @@
             }
 
             toggleExemptionFields(document.getElementById("TaxType"));
+            setWithholdingTaxTitle(document.getElementById("WithholdingTaxPercent").querySelector("select").value);
         };
 
         function toggleSelect(id) {
@@ -309,7 +324,6 @@
                     tradeName.required = true;
                     radios[id === 'tradeList' ? 0 : (id === 'commissioneeList' ? 2 : 3)].checked = true;
                     withHoldingTaxPercent.style.display = 'block';
-                    withHoldingTaxTitle.style.display = 'block';
                     break;
                 case 'nonTradeList':
                     nonTradeList.style.display = 'block';
@@ -319,7 +333,6 @@
                     employeeNumber.classList.remove('input-validation-error');
                     $("[data-valmsg-for='EmployeeNumber']").text("");
                     withHoldingTaxPercent.style.display = 'block';
-                    withHoldingTaxTitle.style.display = 'block';
                     $("#TaxType").val(null).trigger('change');
                     break;
                 case 'employeeList':
