@@ -29,7 +29,7 @@ namespace IBS.Models.Filpride.MasterFile
 
     public sealed record ChartOfAccountRequestPayload(
         int ParentAccountId,
-        [property: StringLength(200)] string AccountName);
+        [param: StringLength(200)] string AccountName);
 
     public sealed record PickupPointRequestPayload(string Depot, int SupplierId);
 }

@@ -461,6 +461,10 @@ namespace IBS.Services
                     break;
                 case (FilprideMasterFileType.ChartOfAccount, ChartOfAccountRequestPayload account):
                     Require(account.AccountName, "Account name");
+                    if (account.AccountName.Length > 200)
+                    {
+                        throw new InvalidOperationException("Account name cannot exceed 200 characters.");
+                    }
                     break;
                 case (FilprideMasterFileType.PickupPoint, FilpridePickUpPoint pickup):
                     Require(pickup.Depot, "Depot");

@@ -190,6 +190,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateSupplier(
+            [Bind(
+                nameof(FilprideSupplier.SupplierName), nameof(FilprideSupplier.SupplierAddress),
+                nameof(FilprideSupplier.SupplierTin), nameof(FilprideSupplier.SupplierTerms),
+                nameof(FilprideSupplier.VatType), nameof(FilprideSupplier.TaxType),
+                nameof(FilprideSupplier.Category), nameof(FilprideSupplier.EmployeeNumber),
+                nameof(FilprideSupplier.TradeName), nameof(FilprideSupplier.Branch),
+                nameof(FilprideSupplier.DefaultExpenseNumber), nameof(FilprideSupplier.WithholdingTaxPercent),
+                nameof(FilprideSupplier.WithholdingTaxTitle), nameof(FilprideSupplier.ReasonOfExemption),
+                nameof(FilprideSupplier.Validity), nameof(FilprideSupplier.ValidityDate),
+                nameof(FilprideSupplier.ZipCode), nameof(FilprideSupplier.RequiresPriceAdjustment))]
             FilprideSupplier model,
             IFormFile? registration,
             IFormFile? document,
@@ -317,6 +327,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditSupplier(
             int requestId,
+            [Bind(
+                nameof(FilprideSupplier.SupplierName), nameof(FilprideSupplier.SupplierAddress),
+                nameof(FilprideSupplier.SupplierTin), nameof(FilprideSupplier.SupplierTerms),
+                nameof(FilprideSupplier.VatType), nameof(FilprideSupplier.TaxType),
+                nameof(FilprideSupplier.Category), nameof(FilprideSupplier.EmployeeNumber),
+                nameof(FilprideSupplier.TradeName), nameof(FilprideSupplier.Branch),
+                nameof(FilprideSupplier.DefaultExpenseNumber), nameof(FilprideSupplier.WithholdingTaxPercent),
+                nameof(FilprideSupplier.WithholdingTaxTitle), nameof(FilprideSupplier.ReasonOfExemption),
+                nameof(FilprideSupplier.Validity), nameof(FilprideSupplier.ValidityDate),
+                nameof(FilprideSupplier.ZipCode), nameof(FilprideSupplier.RequiresPriceAdjustment))]
             FilprideSupplier model,
             IFormFile? registration,
             IFormFile? document,
@@ -648,7 +668,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .ToListAsync(cancellationToken);
 
         private async Task<List<SelectListItem>> GetAllowedParentAccountsAsync(CancellationToken cancellationToken) =>
-            await _dbContext.FilprideChartOfAccounts.IgnoreQueryFilters()
+            await _dbContext.FilprideChartOfAccounts
                 .Where(c => c.Level == 3 || c.Level == 4)
                 .OrderBy(c => c.AccountNumber)
                 .Select(c => new SelectListItem(c.AccountNumber + " " + c.AccountName, c.AccountId.ToString()))
