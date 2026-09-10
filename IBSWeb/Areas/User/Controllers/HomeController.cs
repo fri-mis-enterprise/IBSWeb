@@ -31,26 +31,11 @@ namespace IBSWeb.Areas.User.Controllers
             _scopeFactory = scopeFactory;
         }
 
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return string.Empty;
-            }
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
-        }
-
         public async Task<IActionResult> Index()
         {
             var findUser = await _dbContext.ApplicationUsers
                 .Where(user => user.Id == _userManager.GetUserId(this.User))
                 .FirstOrDefaultAsync();
-
-            var companyClaims = findUser != null ? await GetCompanyClaimAsync() : string.Empty;
 
             var userFullName = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value
                                ?? findUser?.Name ?? string.Empty;
@@ -82,8 +67,8 @@ namespace IBSWeb.Areas.User.Controllers
                 nameof(DRStatus.ForInvoicing)
             };
 
-            var countTask = RunCountQueriesAsync(companyClaims ?? string.Empty);
-            var submissionTask = RunSubmissionQueriesAsync(findUser?.Id ?? string.Empty, userFullName, companyClaims ?? string.Empty, twoMonthsAgo, terminalStatuses);
+            var countTask = RunCountQueriesAsync();
+            var submissionTask = RunSubmissionQueriesAsync(findUser?.Id ?? string.Empty, userFullName,twoMonthsAgo, terminalStatuses);
             var approvalTask = RunApprovalQueriesAsync(
                 isAdmin,
                 isHead,
@@ -94,7 +79,6 @@ namespace IBSWeb.Areas.User.Controllers
                 isCnc,
                 isMarketing,
                 isMasterFileApprover,
-                companyClaims ?? string.Empty,
                 twoMonthsAgo);
 
             await Task.WhenAll(countTask, submissionTask, approvalTask);
@@ -131,7 +115,7 @@ namespace IBSWeb.Areas.User.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        private async Task<DashboardCountViewModel> RunCountQueriesAsync(string companyClaims)
+        private async Task<DashboardCountViewModel> RunCountQueriesAsync()
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
             var ctx = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -229,7 +213,6 @@ namespace IBSWeb.Areas.User.Controllers
         private async Task<List<PendingApprovalItem>> RunSubmissionQueriesAsync(
             string userId,
             string userFullName,
-            string companyClaims,
             DateTime twoMonthsAgo,
             HashSet<string> terminalStatuses)
         {
@@ -385,7 +368,6 @@ namespace IBSWeb.Areas.User.Controllers
             bool isCnc,
             bool isMarketing,
             bool isMasterFileApprover,
-            string companyClaims,
             DateTime twoMonthsAgo)
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
