@@ -469,6 +469,25 @@ namespace IBS.Services
             object model,
             CancellationToken cancellationToken)
         {
+            if (type == FilprideMasterFileType.CustomerBranch && model is FilprideCustomerBranch customerBranch &&
+                !await _dbContext.FilprideCustomers.AnyAsync(c => c.CustomerId == customerBranch.CustomerId, cancellationToken))
+            {
+                throw new InvalidOperationException("The selected customer does not exist.");
+            }
+
+            if (type == FilprideMasterFileType.PickupPoint && model is FilpridePickUpPoint pickupPoint &&
+                !await _dbContext.FilprideSuppliers.AnyAsync(s => s.SupplierId == pickupPoint.SupplierId, cancellationToken))
+            {
+                throw new InvalidOperationException("The selected supplier does not exist.");
+            }
+
+            if (type == FilprideMasterFileType.ChartOfAccount && model is FilprideChartOfAccount chartOfAccount &&
+                (!chartOfAccount.ParentAccountId.HasValue ||
+                 !await _dbContext.FilprideChartOfAccounts.AnyAsync(c => c.AccountId == chartOfAccount.ParentAccountId.Value, cancellationToken)))
+            {
+                throw new InvalidOperationException("The selected parent account does not exist.");
+            }
+
             if (type == FilprideMasterFileType.Service && model is FilprideService service)
             {
                 await GetEligibleServiceAccountAsync(

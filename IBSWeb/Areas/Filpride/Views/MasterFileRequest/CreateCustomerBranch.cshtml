@@ -79,11 +79,11 @@
         $(document).ready(function () {
             const customerField = $('select[name="CustomerId"]');
             
-            function toggleStationDiv() {
+            function toggleStationDiv(fetchDetails = true) {
                 const branchDiv = $('#branch-div');
                 if (customerField.length && customerField.val()) {
                     branchDiv.show();
-                    updateWithCustomerDetails(customerField.val());
+                    if (fetchDetails) updateWithCustomerDetails(customerField.val());
                 } else {
                     branchDiv.hide();
                 }
@@ -111,10 +111,10 @@
             }
 
             // Attach the change event listener
-            customerField.on('change', toggleStationDiv);
+            customerField.on('change', () => toggleStationDiv(true));
 
             // Initial check on page load
-            toggleStationDiv();
+            toggleStationDiv(false);
         });
     </script>
 }

@@ -506,7 +506,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 case FilprideMasterFileType.CustomerBranch:
                 {
-                    var payload = (CustomerBranchRequestPayload)_requestService.DeserializeModel(request);
+                    var payload = (FilprideCustomerBranch)_requestService.DeserializeModel(request);
                     string? customerName = await _dbContext.FilprideCustomers
                         .Where(c => c.CustomerId == payload.CustomerId)
                         .Select(c => c.CustomerName)

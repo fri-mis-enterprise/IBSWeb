@@ -129,11 +129,15 @@
             <span class="request-status @StatusClass(Model.Status)">@DisplayName(Model.Status.ToString())</span>
         </div>
         <div class="card-body">
-            @if (!string.IsNullOrWhiteSpace(Model.Remarks))
+            @if (!string.IsNullOrWhiteSpace(Model.Remarks) ||
+                 (!string.IsNullOrWhiteSpace(Model.ApprovedBy) && Model.ApprovedDate.HasValue))
             {
                 <section class="request-content-card request-detail-section mb-3" aria-label="Decision remarks">
                     <h2 class="request-section-title">@(Model.Status == FilprideMasterFileRequestStatus.Rejected ? "Rejection Remarks" : "Approver Remarks")</h2>
-                    <p class="mb-1">@Model.Remarks</p>
+                    @if (!string.IsNullOrWhiteSpace(Model.Remarks))
+                    {
+                        <p class="mb-1">@Model.Remarks</p>
+                    }
                     @if (!string.IsNullOrWhiteSpace(Model.ApprovedBy) && Model.ApprovedDate.HasValue)
                     {
                         <small class="text-muted">@Model.ApprovedBy · @Model.ApprovedDate.Value.ToString("MMM dd, yyyy h:mm tt")</small>

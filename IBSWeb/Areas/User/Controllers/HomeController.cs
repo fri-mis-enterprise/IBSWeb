@@ -246,8 +246,8 @@ namespace IBSWeb.Areas.User.Controllers
             var masterFileRequests = await ProjectMasterFileRequests(ctx.FilprideMasterFileRequests
                 .Where(r => r.RequestedBy == userId
                             && r.RequestedDate >= twoMonthsAgo
-                            && r.Status == FilprideMasterFileRequestStatus.ForApproval
-                            || r.Status == FilprideMasterFileRequestStatus.Rejected))
+                            && (r.Status == FilprideMasterFileRequestStatus.ForApproval
+                                || r.Status == FilprideMasterFileRequestStatus.Rejected)))
         .OrderByDescending(r => r.CreatedDate)
                 .Take(20)
                 .ToListAsync();
