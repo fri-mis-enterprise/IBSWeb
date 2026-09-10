@@ -431,6 +431,20 @@ namespace IBS.Services
                     {
                         Require(supplier.EmployeeNumber, "Employee number");
                     }
+                    if (string.Equals(supplier.TaxType, "Exempt", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Require(supplier.ReasonOfExemption, "Exemption reason");
+                        Require(supplier.Validity, "Exemption validity");
+                        if (string.Equals(supplier.Validity, "Temporary", StringComparison.OrdinalIgnoreCase) &&
+                            !supplier.ValidityDate.HasValue)
+                        {
+                            throw new InvalidOperationException("Validity date is required for temporary exemptions.");
+                        }
+                        if (string.IsNullOrWhiteSpace(supplier.ProofOfExemptionFileName))
+                        {
+                            throw new InvalidOperationException("Proof of exemption is required.");
+                        }
+                    }
                     break;
                 case (FilprideMasterFileType.BankAccount, FilprideBankAccount bank):
                     Require(bank.Bank, "Bank");
@@ -447,10 +461,6 @@ namespace IBS.Services
                     break;
                 case (FilprideMasterFileType.ChartOfAccount, ChartOfAccountRequestPayload account):
                     Require(account.AccountName, "Account name");
-                    if (account.ParentAccountId == 0)
-                    {
-                        throw new InvalidOperationException("Parent account is required.");
-                    }
                     break;
                 case (FilprideMasterFileType.PickupPoint, FilpridePickUpPoint pickup):
                     Require(pickup.Depot, "Depot");
@@ -481,9 +491,10 @@ namespace IBS.Services
                 throw new InvalidOperationException("The selected supplier does not exist.");
             }
 
-            if (type == FilprideMasterFileType.ChartOfAccount && model is FilprideChartOfAccount chartOfAccount &&
-                (!chartOfAccount.ParentAccountId.HasValue ||
-                 !await _dbContext.FilprideChartOfAccounts.AnyAsync(c => c.AccountId == chartOfAccount.ParentAccountId.Value, cancellationToken)))
+            if (type == FilprideMasterFileType.ChartOfAccount && model is ChartOfAccountRequestPayload account &&
+                account.ParentAccountId != 0 &&
+                !await _dbContext.FilprideChartOfAccounts.AnyAsync(
+                    c => c.AccountId == account.ParentAccountId, cancellationToken))
             {
                 throw new InvalidOperationException("The selected parent account does not exist.");
             }
