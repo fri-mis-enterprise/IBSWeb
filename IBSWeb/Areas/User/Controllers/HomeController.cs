@@ -57,7 +57,8 @@ namespace IBSWeb.Areas.User.Controllers
 
             bool isAdmin = User.IsInRole("Admin");
             bool isHead = User.IsInRole("HeadApprover");
-            bool isAccounting = User.IsInRole("AccountingManager") || User.IsInRole("ManagementAccountingManager");
+            bool isAccounting = User.IsInRole("AccountingManager");
+            bool isManagementAccounting = User.IsInRole("ManagementAccountingManager");
             bool isFinance = User.IsInRole("FinanceManager");
             bool isOps = User.IsInRole("OperationManager");
             bool isCnc = User.IsInRole("CncManager");
@@ -88,6 +89,7 @@ namespace IBSWeb.Areas.User.Controllers
                 isHead,
                 isFinance,
                 isAccounting,
+                isManagementAccounting,
                 isOps,
                 isCnc,
                 isMarketing,
@@ -99,7 +101,7 @@ namespace IBSWeb.Areas.User.Controllers
 
             var dashboardCounts = await countTask;
             dashboardCounts.UserFullName = userFullName;
-            dashboardCounts.ShowPriority = isAdmin || isHead || isAccounting || isFinance || isOps || isCnc || isMarketing;
+            dashboardCounts.ShowPriority = isAdmin || isHead || isAccounting || isManagementAccounting || isFinance || isOps || isCnc || isMarketing;
             dashboardCounts.MySubmissions = await submissionTask;
             dashboardCounts.PendingMyApproval = await approvalTask;
 
@@ -217,7 +219,12 @@ namespace IBSWeb.Areas.User.Controllers
                     && rr.CanceledBy == null && rr.VoidedBy == null && true)
                 .CountAsync();
             counts.JournalVoucherForApprovalCount = await ctx.FilprideJournalVoucherHeaders
-                .Where(jv => jv.Status == nameof(JvStatus.ForApproval) && true)
+                .Where(jv => jv.Status == nameof(JvStatus.ForApproval)
+                    && jv.JvType == nameof(JvType.Liquidation))
+                .CountAsync();
+            counts.MAJournalVoucherForApprovalCount = await ctx.FilprideJournalVoucherHeaders
+                .Where(jv => jv.Status == nameof(JvStatus.ForApproval)
+                    && jv.JvType != nameof(JvType.Liquidation))
                 .CountAsync();
             counts.CheckVoucherNonTradeInvoiceForApprovalCount = await ctx.FilprideCheckVoucherHeaders
                 .Where(cv => cv.Status == nameof(CheckVoucherInvoiceStatus.ForApproval) && true
@@ -393,6 +400,7 @@ namespace IBSWeb.Areas.User.Controllers
             bool isHead,
             bool isFinance,
             bool isAccounting,
+            bool isManagementAccounting,
             bool isOps,
             bool isCnc,
             bool isMarketing,
@@ -473,6 +481,17 @@ namespace IBSWeb.Areas.User.Controllers
                 pendingApproval.AddRange(await TakeLatestAsync(ProjectJv(ctx.FilprideJournalVoucherHeaders
                     .Where(jv =>
                         jv.Status == nameof(JvStatus.ForApproval) &&
+                        jv.JvType == nameof(JvType.Liquidation) &&
+                        true&&
+                        jv.CreatedDate >= twoMonthsAgo))));
+            }
+
+            if (isAdmin || isHead || isManagementAccounting)
+            {
+                pendingApproval.AddRange(await TakeLatestAsync(ProjectJv(ctx.FilprideJournalVoucherHeaders
+                    .Where(jv =>
+                        jv.Status == nameof(JvStatus.ForApproval) &&
+                        jv.JvType != nameof(JvType.Liquidation) &&
                         true&&
                         jv.CreatedDate >= twoMonthsAgo))));
             }
