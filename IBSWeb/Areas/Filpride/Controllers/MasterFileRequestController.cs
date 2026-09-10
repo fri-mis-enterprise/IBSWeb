@@ -204,9 +204,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return View(model);
             }
 
-            await UploadSupplierDocumentsAsync(model, registration, document);
+            var uploadedFiles = await UploadSupplierDocumentsAsync(model, registration, document);
             return await SaveAsync(FilprideMasterFileType.Supplier, model, null, cancellationToken,
-                model.ProofOfRegistrationFileName, model.ProofOfExemptionFileName);
+                uploadedFiles.ToArray());
         }
 
         [HttpGet]
@@ -351,10 +351,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 ViewBag.RequestId = requestId;
                 return View("CreateSupplier", model);
             }
-            await UploadSupplierDocumentsAsync(model, registration, document);
-            return await SaveAsync(FilprideMasterFileType.Supplier, model, requestId, cancellationToken,
-                registration == null ? null : model.ProofOfRegistrationFileName,
-                document == null ? null : model.ProofOfExemptionFileName);
+            var uploadedFiles = await UploadSupplierDocumentsAsync(model, registration, document);
+            var result = await SaveAsync(FilprideMasterFileType.Supplier, model, requestId, cancellationToken,
+                uploadedFiles.ToArray());
+            if (TempData.ContainsKey("success"))
+            {
+                await DeleteUploadedFilesAsync(new[]
+                {
+                    registration == null ? null : previous.ProofOfRegistrationFileName,
+                    document == null ? null : previous.ProofOfExemptionFileName
+                });
+            }
+            return result;
         }
 
         [HttpPost]
@@ -681,17 +689,29 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        private async Task UploadSupplierDocumentsAsync(FilprideSupplier model, IFormFile? registration, IFormFile? document)
+        private async Task<List<string>> UploadSupplierDocumentsAsync(FilprideSupplier model, IFormFile? registration, IFormFile? document)
         {
-            if (registration != null)
+            var uploadedFiles = new List<string>();
+            try
             {
-                model.ProofOfRegistrationFileName = GenerateFileName(registration.FileName);
-                model.ProofOfRegistrationFilePath = await _cloudStorageService.UploadFileAsync(registration, model.ProofOfRegistrationFileName);
+                if (registration != null)
+                {
+                    model.ProofOfRegistrationFileName = GenerateFileName(registration.FileName);
+                    model.ProofOfRegistrationFilePath = await _cloudStorageService.UploadFileAsync(registration, model.ProofOfRegistrationFileName);
+                    uploadedFiles.Add(model.ProofOfRegistrationFileName);
+                }
+                if (document != null)
+                {
+                    model.ProofOfExemptionFileName = GenerateFileName(document.FileName);
+                    model.ProofOfExemptionFilePath = await _cloudStorageService.UploadFileAsync(document, model.ProofOfExemptionFileName);
+                    uploadedFiles.Add(model.ProofOfExemptionFileName);
+                }
+                return uploadedFiles;
             }
-            if (document != null)
+            catch
             {
-                model.ProofOfExemptionFileName = GenerateFileName(document.FileName);
-                model.ProofOfExemptionFilePath = await _cloudStorageService.UploadFileAsync(document, model.ProofOfExemptionFileName);
+                await DeleteUploadedFilesAsync(uploadedFiles);
+                throw;
             }
         }
 
