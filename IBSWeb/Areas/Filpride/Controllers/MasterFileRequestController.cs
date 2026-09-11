@@ -192,7 +192,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             IFormFile? birDocument,
             CancellationToken cancellationToken)
         {
-            ValidateUpload(birDocument, nameof(birDocument));
+            ValidateUpload(birDocument, nameof(birDocument), allowAnyFile: true);
             if (!ModelState.IsValid)
             {
                 await PopulateCustomerListsAsync(model, cancellationToken);
@@ -384,7 +384,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var previous = (FilprideCustomer)_requestService.DeserializeModel(request);
             model.BirDocumentFileName = previous.BirDocumentFileName;
             model.BirDocumentFilePath = previous.BirDocumentFilePath;
-            ValidateUpload(birDocument, nameof(birDocument));
+            ValidateUpload(birDocument, nameof(birDocument), allowAnyFile: true);
             if (!ModelState.IsValid)
             {
                 await PopulateCustomerListsAsync(model, cancellationToken);
@@ -791,7 +791,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        private void ValidateUpload(IFormFile? file, string fieldName)
+        private void ValidateUpload(IFormFile? file, string fieldName, bool allowAnyFile = false)
         {
             if (file == null)
             {
@@ -801,7 +801,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 ModelState.AddModelError(fieldName, "Files must be non-empty and no larger than 20 MB.");
             }
-            if (!AllowedUploadExtensions.Contains(Path.GetExtension(file.FileName), StringComparer.OrdinalIgnoreCase))
+            if (!allowAnyFile && !AllowedUploadExtensions.Contains(Path.GetExtension(file.FileName), StringComparer.OrdinalIgnoreCase))
             {
                 ModelState.AddModelError(fieldName, "Only PDF, JPG, and PNG files are allowed.");
             }
