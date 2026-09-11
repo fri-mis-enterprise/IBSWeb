@@ -369,7 +369,7 @@ namespace IBS.Services
                     value.WithHoldingTax, value.ClusterCode, value.StationCode, value.CreditLimit,
                     value.CreditLimitAsOfToday, value.ZipCode, value.RetentionRate, value.HasMultipleTerms,
                     value.Type, value.RequiresPriceAdjustment, value.CommissioneeId, value.CommissionRate,
-                    value.CwtPercent, value.CwVatPercent),
+                    value.CwtPercent, value.CwVatPercent, value.BirDocumentFilePath, value.BirDocumentFileName),
                 (FilprideMasterFileType.CustomerBranch, FilprideCustomerBranch value) =>
                     new CustomerBranchRequestPayload(value.CustomerId, value.BranchName, value.BranchAddress, value.BranchTin),
                 (FilprideMasterFileType.Supplier, FilprideSupplier value) => new SupplierRequestPayload(
@@ -569,7 +569,8 @@ namespace IBS.Services
             CreditLimitAsOfToday = p.CreditLimitAsOfToday, ZipCode = p.ZipCode, RetentionRate = p.RetentionRate,
             HasMultipleTerms = p.HasMultipleTerms, Type = p.Type, RequiresPriceAdjustment = p.RequiresPriceAdjustment,
             CommissioneeId = p.CommissioneeId, CommissionRate = p.CommissionRate,
-            CwtPercent = p.CwtPercent, CwVatPercent = p.CwVatPercent
+            CwtPercent = p.CwtPercent, CwVatPercent = p.CwVatPercent,
+            BirDocumentFilePath = p.BirDocumentFilePath, BirDocumentFileName = p.BirDocumentFileName
         };
 
         private static FilprideCustomerBranch ToModel(CustomerBranchRequestPayload p) => new()

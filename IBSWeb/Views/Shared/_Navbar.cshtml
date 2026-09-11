@@ -704,6 +704,8 @@
                     </li>
                 }
 
+                @if (User.IsInRole("Admin"))
+                {
                 <li class="mnav-item" data-nav-deck role="none">
                     <button class="mnav-trigger" role="menuitem" aria-haspopup="true" aria-expanded="false">
                         <span>Master File Requests</span>
@@ -731,18 +733,15 @@
                                     </div>
                                 </div>
                             </a>
-                            @if (User.IsInRole("Admin") || User.IsInRole("ManagementAccountingManager"))
-                            {
-                                <a class="mnav-col-item" asp-area="Filpride" asp-controller="MasterFileRequest" asp-action="Index" asp-route-status="ForApproval" role="menuitem">
-                                    <div class="mnav-col-item-content">
-                                        <span class="material-symbols-outlined">pending_actions</span>
-                                        <div class="mnav-col-item-text">
-                                            <div class="mnav-col-item-title">Pending Approval</div>
-                                            <div class="mnav-col-item-sub">Review submitted requests</div>
-                                        </div>
+                            <a class="mnav-col-item" asp-area="Filpride" asp-controller="MasterFileRequest" asp-action="Index" asp-route-status="ForApproval" role="menuitem">
+                                <div class="mnav-col-item-content">
+                                    <span class="material-symbols-outlined">pending_actions</span>
+                                    <div class="mnav-col-item-text">
+                                        <div class="mnav-col-item-title">Pending Approval</div>
+                                        <div class="mnav-col-item-sub">Review submitted requests</div>
                                     </div>
-                                </a>
-                            }
+                                </div>
+                            </a>
                         </div>
                         <div class="mnav-col" data-col-level="2" data-col-id="mfr-create" data-parent-col="mfr-root" style="display:none;">
                             <div class="mnav-col-header">Create Master File Request</div>
@@ -756,6 +755,7 @@
                         </div>
                     </div>
                 </li>
+                }
 
                     @if (User.IsInRole("Admin") && selectedCompany == "Filpride")
                     {

@@ -173,7 +173,7 @@ else
                             </a>
                         }
 
-                        @if (isAdmin || User.IsInRole("ManagementAccountingManager"))
+                        @if (isAdmin)
                         {
                             <a href="@Url.Action("Index", "MasterFileRequest", new { area = "Filpride", status = "ForApproval" })" class="pri-card">
                                 <div class="pri-card-body">

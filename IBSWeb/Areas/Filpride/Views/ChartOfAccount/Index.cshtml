@@ -120,12 +120,15 @@
                                                                                     @(l3.IsHidden ? "Unhide Account" : "Hide Account")
                                                                                 </button>
 
-                                                                                <button class="btn btn-primary mb-3 createAccount"
-                                                                                        data-account-id="@l3.AccountId"
-                                                                                        data-parent-number="@l3.AccountNumber"
-                                                                                        data-next-level="4">
-                                                                                    Create Level 4 Account
-                                                                                </button>
+                                                                                @if (User.IsInRole("Admin"))
+                                                                                {
+                                                                                    <button class="btn btn-primary mb-3 createAccount"
+                                                                                            data-account-id="@l3.AccountId"
+                                                                                            data-parent-number="@l3.AccountNumber"
+                                                                                            data-next-level="4">
+                                                                                        Create Level 4 Account
+                                                                                    </button>
+                                                                                }
 
                                                                                 <div class="accordion" id="LGroup-@l3.AccountNumber">
                                                                                     @foreach (var l4 in l3.Children.OrderBy(coa => coa.AccountNumber))
@@ -155,12 +158,15 @@
                                                                                                             @(l4.IsHidden ? "Unhide Account" : "Hide Account")
                                                                                                         </button>
 
-                                                                                                        <button class="btn btn-primary mb-3 createAccount"
-                                                                                                                data-account-id="@l4.AccountId"
-                                                                                                                data-parent-number="@l4.AccountNumber"
-                                                                                                                data-next-level="5">
-                                                                                                            Create Level 5 Account
-                                                                                                        </button>
+                                                                                                        @if (User.IsInRole("Admin"))
+                                                                                                        {
+                                                                                                            <button class="btn btn-primary mb-3 createAccount"
+                                                                                                                    data-account-id="@l4.AccountId"
+                                                                                                                    data-parent-number="@l4.AccountNumber"
+                                                                                                                    data-next-level="5">
+                                                                                                                Create Level 5 Account
+                                                                                                            </button>
+                                                                                                        }
 
                                                                                                         <div class="accordion" id="LGroup-@l4.AccountNumber">
                                                                                                             @foreach (var l5 in l4.Children.OrderBy(coa => coa.AccountNumber))

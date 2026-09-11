@@ -14,13 +14,13 @@ using Microsoft.EntityFrameworkCore;
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public class MasterFileRequestController : Controller
     {
-        private const string ApproverRoles = "Admin,ManagementAccountingManager";
+        private const string ApproverRoles = "Admin";
         private const int PageSize = 100;
+        private const long MaximumUploadSize = 20 * 1024 * 1024;
         private static readonly string[] AllowedUploadExtensions = [".pdf", ".jpg", ".jpeg", ".png"];
-        private const long MaximumUploadSize = 10 * 1024 * 1024;
         private readonly MasterFileRequestService _requestService;
         private readonly ApplicationDbContext _dbContext;
         private readonly IUnitOfWork _unitOfWork;
@@ -140,6 +140,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> DownloadCustomerDocument(int id, CancellationToken cancellationToken)
+        {
+            var request = await _requestService.GetAsync(id, cancellationToken);
+            if (request == null || request.MasterFileType != FilprideMasterFileType.Customer)
+            {
+                return NotFound();
+            }
+            if (!IsApprover() && request.RequestedBy != GetUserId())
+            {
+                return Forbid();
+            }
+
+            var customer = (FilprideCustomer)_requestService.DeserializeModel(request);
+            if (string.IsNullOrWhiteSpace(customer.BirDocumentFileName))
+            {
+                return NotFound();
+            }
+
+            return Redirect(await _cloudStorageService.GetSignedUrlAsync(customer.BirDocumentFileName));
+        }
+
+        [HttpGet]
         public async Task<IActionResult> CreateCustomer(CancellationToken cancellationToken)
         {
             var model = new FilprideCustomer();
@@ -149,14 +171,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateCustomer(FilprideCustomer model, CancellationToken cancellationToken)
+        public async Task<IActionResult> CreateCustomer(
+            FilprideCustomer model,
+            IFormFile? birDocument,
+            CancellationToken cancellationToken)
         {
+            ValidateUpload(birDocument, nameof(birDocument));
             if (!ModelState.IsValid)
             {
                 await PopulateCustomerListsAsync(model, cancellationToken);
                 return View(model);
             }
-            return await SaveAsync(FilprideMasterFileType.Customer, model, null, cancellationToken);
+
+            string? uploadedFile = await UploadCustomerDocumentAsync(model, birDocument);
+            return await SaveAsync(FilprideMasterFileType.Customer, model, null, cancellationToken, uploadedFile);
         }
 
         [HttpGet]
@@ -315,8 +343,47 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public Task<IActionResult> EditCustomer(int requestId, FilprideCustomer model, CancellationToken cancellationToken) =>
-            EditAsync(FilprideMasterFileType.Customer, requestId, model, cancellationToken);
+        public async Task<IActionResult> EditCustomer(
+            int requestId,
+            FilprideCustomer model,
+            IFormFile? birDocument,
+            CancellationToken cancellationToken)
+        {
+            var request = await _requestService.GetAsync(requestId, cancellationToken);
+            if (request == null)
+            {
+                return NotFound();
+            }
+            if (request.RequestedBy != GetUserId())
+            {
+                return Forbid();
+            }
+            if (request.MasterFileType != FilprideMasterFileType.Customer
+                || request.Status is not (FilprideMasterFileRequestStatus.ForApproval or FilprideMasterFileRequestStatus.Rejected))
+            {
+                TempData["error"] = "This request can no longer be edited.";
+                return RedirectToAction(nameof(Details), new { id = requestId });
+            }
+
+            var previous = (FilprideCustomer)_requestService.DeserializeModel(request);
+            model.BirDocumentFileName = previous.BirDocumentFileName;
+            model.BirDocumentFilePath = previous.BirDocumentFilePath;
+            ValidateUpload(birDocument, nameof(birDocument));
+            if (!ModelState.IsValid)
+            {
+                await PopulateCustomerListsAsync(model, cancellationToken);
+                ViewBag.RequestId = requestId;
+                return View("CreateCustomer", model);
+            }
+
+            string? uploadedFile = await UploadCustomerDocumentAsync(model, birDocument);
+            var result = await SaveAsync(FilprideMasterFileType.Customer, model, requestId, cancellationToken, uploadedFile);
+            if (TempData.ContainsKey("success") && birDocument != null)
+            {
+                await DeleteUploadedFilesAsync([previous.BirDocumentFileName]);
+            }
+            return result;
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -701,7 +768,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
             if (file.Length == 0 || file.Length > MaximumUploadSize)
             {
-                ModelState.AddModelError(fieldName, "Files must be non-empty and no larger than 10 MB.");
+                ModelState.AddModelError(fieldName, "Files must be non-empty and no larger than 20 MB.");
             }
             if (!AllowedUploadExtensions.Contains(Path.GetExtension(file.FileName), StringComparer.OrdinalIgnoreCase))
             {
@@ -735,6 +802,26 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        private async Task<string?> UploadCustomerDocumentAsync(FilprideCustomer model, IFormFile? document)
+        {
+            if (document == null)
+            {
+                return null;
+            }
+
+            model.BirDocumentFileName = GenerateFileName(document.FileName);
+            try
+            {
+                model.BirDocumentFilePath = await _cloudStorageService.UploadFileAsync(document, model.BirDocumentFileName);
+                return model.BirDocumentFileName;
+            }
+            catch
+            {
+                await DeleteUploadedFilesAsync([model.BirDocumentFileName]);
+                throw;
+            }
+        }
+
         private static string GenerateFileName(string incomingFileName)
         {
             string baseName = Path.GetFileNameWithoutExtension(incomingFileName);
@@ -751,6 +838,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private string GetUserName() => User.FindFirstValue(ClaimTypes.GivenName) ?? User.Identity!.Name!;
 
-        private bool IsApprover() => User.IsInRole("Admin") || User.IsInRole("ManagementAccountingManager");
+        private bool IsApprover() => User.IsInRole("Admin");
     }
 }

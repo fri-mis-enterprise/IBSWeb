@@ -23,7 +23,7 @@
         </div>
     </div>
     <div class="card-body p-4">
-        <form asp-action="@action" method="post" class="row">
+        <form asp-action="@action" method="post" enctype="multipart/form-data" class="row">
             @Html.AntiForgeryToken()
             @if (ViewBag.RequestId != null)
             {
@@ -182,6 +182,11 @@
                     <label class="form-check-label">
                         <input class="form-check-input" asp-for="RequiresPriceAdjustment" /> @Html.DisplayNameFor(model => model.RequiresPriceAdjustment)
                     </label>
+                </div>
+                <div class="form-group py-2 col-12">
+                    <label class="form-label">Upload BIR Documents</label>
+                    <input class="form-control form-control-sm" name="birDocument" type="file" accept=".pdf,.jpg,.jpeg,.png">
+                    @Html.ValidationMessage("birDocument", new { @class = "text-danger" })
                 </div>
                 <div class="row pt-2">
                     <div class="col-6 col-md-3">

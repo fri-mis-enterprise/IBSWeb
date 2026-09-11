@@ -32,6 +32,7 @@
             "CurrentAndPreviousId" => "Current and Previous Account",
             "UnearnedId" => "Unearned Account",
             "CommissioneeId" => "Commissionee",
+            "BirDocumentFileName" => "BIR Documents",
             "ProofOfRegistrationFileName" => "Proof of BIR Registration",
             "ProofOfExemptionFileName" => "Proof of Exemption",
             "RequiresPriceAdjustment" => "Requires Price Adjustment",
@@ -61,7 +62,8 @@
             new("Customer Details", "Type", "CustomerName", "CustomerAddress", "ZipCode", "CustomerTin", "BusinessStyle", "CustomerType", "ClusterCode", "StationCode"),
             new("Terms", "CustomerTerms", "VatType", "CreditLimit", "CreditLimitAsOfToday", "RetentionRate", "RequiresPriceAdjustment"),
             new("Withholding Taxes", "WithHoldingVat", "CwVatPercent", "WithHoldingTax", "CwtPercent"),
-            new("Commission", "CommissioneeId", "CommissionRate")
+            new("Commission", "CommissioneeId", "CommissionRate"),
+            new("Supporting Documents", "BirDocumentFileName")
         ],
         FilprideMasterFileType.CustomerBranch =>
         [
@@ -105,7 +107,7 @@
 
 @{
     ViewData["Title"] = $"Master File Request #{Model.Id}";
-    bool approver = User.IsInRole("Admin") || User.IsInRole("ManagementAccountingManager");
+    bool approver = User.IsInRole("Admin");
     using JsonDocument payload = JsonDocument.Parse(Model.PayloadJson);
     var values = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
     foreach (JsonProperty property in payload.RootElement.EnumerateObject())
@@ -177,6 +179,13 @@
                                                 <a asp-action="DownloadSupplierDocument"
                                                    asp-route-id="@Model.Id"
                                                    asp-route-registration="@(field == "ProofOfRegistrationFileName")"
+                                                   target="_blank"
+                                                   rel="noopener">@DisplayValue(value)</a>
+                                            }
+                                            else if (field == "BirDocumentFileName")
+                                            {
+                                                <a asp-action="DownloadCustomerDocument"
+                                                   asp-route-id="@Model.Id"
                                                    target="_blank"
                                                    rel="noopener">@DisplayValue(value)</a>
                                             }

@@ -48,7 +48,7 @@ namespace IBSWeb.Areas.User.Controllers
             bool isOps = User.IsInRole("OperationManager");
             bool isCnc = User.IsInRole("CncManager");
             bool isMarketing = User.IsInRole("MarketingSupervisor");
-            bool isMasterFileApprover = isAdmin || User.IsInRole("ManagementAccountingManager");
+            bool isMasterFileApprover = isAdmin;
 
             var twoMonthsAgo = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila")).AddMonths(-2);
 
@@ -68,7 +68,7 @@ namespace IBSWeb.Areas.User.Controllers
             };
 
             var countTask = RunCountQueriesAsync();
-            var submissionTask = RunSubmissionQueriesAsync(findUser?.Id ?? string.Empty, userFullName,twoMonthsAgo, terminalStatuses);
+            var submissionTask = RunSubmissionQueriesAsync(findUser?.Id ?? string.Empty, userFullName, isAdmin, twoMonthsAgo, terminalStatuses);
             var approvalTask = RunApprovalQueriesAsync(
                 isAdmin,
                 isHead,
@@ -213,20 +213,23 @@ namespace IBSWeb.Areas.User.Controllers
         private async Task<List<PendingApprovalItem>> RunSubmissionQueriesAsync(
             string userId,
             string userFullName,
+            bool isAdmin,
             DateTime twoMonthsAgo,
             HashSet<string> terminalStatuses)
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
             var ctx = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-            var masterFileRequests = await ProjectMasterFileRequests(ctx.FilprideMasterFileRequests
-                .Where(r => r.RequestedBy == userId
-                            && r.RequestedDate >= twoMonthsAgo
-                            && (r.Status == FilprideMasterFileRequestStatus.ForApproval
-                                || r.Status == FilprideMasterFileRequestStatus.Rejected)))
-        .OrderByDescending(r => r.CreatedDate)
-                .Take(20)
-                .ToListAsync();
+            var masterFileRequests = isAdmin
+                ? await ProjectMasterFileRequests(ctx.FilprideMasterFileRequests
+                    .Where(r => r.RequestedBy == userId
+                                && r.RequestedDate >= twoMonthsAgo
+                                && (r.Status == FilprideMasterFileRequestStatus.ForApproval
+                                    || r.Status == FilprideMasterFileRequestStatus.Rejected)))
+                    .OrderByDescending(r => r.CreatedDate)
+                    .Take(20)
+                    .ToListAsync()
+                : new List<PendingApprovalItem>();
 
             var cosList = await ctx.FilprideCustomerOrderSlips
                 .Where(cos =>

@@ -9,9 +9,12 @@
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center bg-secondary p-3 rounded shadow">
         <h2 class="text-white m-0">@ViewData["Title"]</h2>
-        <a asp-area="Filpride" asp-controller="MasterFileRequest" asp-action="CreateSupplier" class="btn btn-light">
-            <i class="bi bi-plus-circle"></i> Create New Supplier
-        </a>
+        @if (User.IsInRole("Admin"))
+        {
+            <a asp-area="Filpride" asp-controller="MasterFileRequest" asp-action="CreateSupplier" class="btn btn-light">
+                <i class="bi bi-plus-circle"></i> Create New Supplier
+            </a>
+        }
     </div>
 
     <div class="card shadow border-0 mt-3">

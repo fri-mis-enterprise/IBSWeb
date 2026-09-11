@@ -9,7 +9,8 @@ namespace IBS.Models.Filpride.MasterFile
         bool WithHoldingTax, ClusterArea? ClusterCode, string? StationCode, decimal CreditLimit,
         decimal CreditLimitAsOfToday, string? ZipCode, decimal? RetentionRate, bool HasMultipleTerms,
         string Type, bool RequiresPriceAdjustment, int? CommissioneeId, decimal CommissionRate,
-        decimal CwtPercent, decimal CwVatPercent);
+        decimal CwtPercent, decimal CwVatPercent, string? BirDocumentFilePath,
+        string? BirDocumentFileName);
 
     public sealed record CustomerBranchRequestPayload(
         int CustomerId, string BranchName, string BranchAddress, string BranchTin);
