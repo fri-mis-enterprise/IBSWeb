@@ -681,14 +681,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Unable to delete uploaded file {FileName}; retrying.", file);
+                    _logger.LogWarning(ex, "Unable to delete an uploaded file; retrying.");
                     try
                     {
                         await _cloudStorageService.DeleteFileAsync(file!);
                     }
                     catch (Exception retryEx)
                     {
-                        _logger.LogError(retryEx, "Unable to delete uploaded file {FileName} after retry.", file);
+                        _logger.LogError(retryEx, "Unable to delete an uploaded file after retry.");
                     }
                 }
             }
