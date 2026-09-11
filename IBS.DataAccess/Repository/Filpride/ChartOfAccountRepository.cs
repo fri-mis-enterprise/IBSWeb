@@ -187,6 +187,7 @@ namespace IBS.DataAccess.Repository.Filpride
         {
             IQueryable<FilprideChartOfAccount> query = dbSet
                 .IgnoreQueryFilters()
+                .Include(c => c.ParentAccount)
                 .Include(c => c.Children);
 
             if (filter != null)

@@ -72,6 +72,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     "supplier" => await GenerateSupplierExcel(extractedBy, companyClaims, cancellationToken),
                     "bankaccount" => await GenerateBankAccountExcel(extractedBy, companyClaims, cancellationToken),
                     "service" => await GenerateServiceExcel(extractedBy, companyClaims, cancellationToken),
+                    "chartofaccount" => await GenerateChartOfAccountMasterFileExcel(extractedBy, companyClaims, cancellationToken),
                     _ => throw new ArgumentException($"Invalid master file type: {masterFileType}")
                 };
 
@@ -102,6 +103,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     safeMasterFileTypeForLog, ex.Message, ex.StackTrace, _userManager.GetUserName(User));
                 return RedirectToAction("Index", "Home");
             }
+        }
+
+        [HttpGet]
+        public Task<IActionResult> GenerateChartOfAccountExcel(CancellationToken cancellationToken)
+        {
+            return GenerateExcel("ChartOfAccount", cancellationToken);
         }
 
         #endregion
@@ -362,6 +369,60 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 columns,
                 customWidths,
                 2,
+                cancellationToken
+            );
+        }
+
+        #endregion
+
+        #region -- Chart of Account Master File --
+
+        private async Task<(MemoryStream? stream, string fileName)> GenerateChartOfAccountMasterFileExcel(
+            string extractedBy,
+            string company,
+            CancellationToken cancellationToken)
+        {
+            var chartOfAccounts = (await _unitOfWork.FilprideChartOfAccount
+                    .GetAllAsyncIgnoreQueryFilters(cancellationToken: cancellationToken))
+                .OrderBy(x => x.AccountNumber)
+                .ThenBy(x => x.AccountId)
+                .ToList();
+
+            if (!chartOfAccounts.Any())
+            {
+                return (null, string.Empty);
+            }
+
+            var columns = new List<ColumnDefinition>
+            {
+                new() { Header = "ACCOUNT NUMBER", ValueSelector = c => ((FilprideChartOfAccount)c).AccountNumber },
+                new() { Header = "ACCOUNT NAME", ValueSelector = c => ((FilprideChartOfAccount)c).AccountName },
+                new() { Header = "MAIN", ValueSelector = c => ((FilprideChartOfAccount)c).IsMain },
+                new() { Header = "ACCOUNT TYPE", ValueSelector = c => ((FilprideChartOfAccount)c).AccountType },
+                new() { Header = "NORMAL BALANCE", ValueSelector = c => ((FilprideChartOfAccount)c).NormalBalance },
+                new() { Header = "LEVEL", ValueSelector = c => ((FilprideChartOfAccount)c).Level },
+                new() { Header = "PARENT ACCOUNT NO", ValueSelector = c => ((FilprideChartOfAccount)c).ParentAccount?.AccountNumber },
+                new() { Header = "PARENT ACCOUNT NAME", ValueSelector = c => ((FilprideChartOfAccount)c).ParentAccount?.AccountName },
+                new() { Header = "HAS CHILDREN", ValueSelector = c => ((FilprideChartOfAccount)c).HasChildren },
+                new() { Header = "HIDDEN", ValueSelector = c => ((FilprideChartOfAccount)c).IsHidden },
+                new() { Header = "FINANCIAL STATEMENT TYPE", ValueSelector = c => ((FilprideChartOfAccount)c).FinancialStatementType }
+            };
+
+            var customWidths = new Dictionary<string, double>
+            {
+                { "ACCOUNT NAME", 40 },
+                { "FINANCIAL STATEMENT TYPE", 30 }
+            };
+
+            return await BuildExcelFile(
+                chartOfAccounts,
+                "Chart Of Account",
+                "ChartOfAccount_MasterFile",
+                extractedBy,
+                company,
+                columns,
+                customWidths,
+                3,
                 cancellationToken
             );
         }
