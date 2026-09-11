@@ -111,6 +111,12 @@ namespace IBS.Models.Filpride.MasterFile
         [StringLength(13)]
         public string Type { get; set; } = string.Empty;
 
+        [StringLength(1024)]
+        public string? BirDocumentFilePath { get; set; }
+
+        [StringLength(200)]
+        public string? BirDocumentFileName { get; set; }
+
         [Display(Name = "Requires Price Adjustment")]
         public bool RequiresPriceAdjustment { get; set; }
 

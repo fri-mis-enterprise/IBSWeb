@@ -120,12 +120,15 @@
                                                                                     @(l3.IsHidden ? "Unhide Account" : "Hide Account")
                                                                                 </button>
 
-                                                                                <button class="btn btn-primary mb-3 createAccount"
-                                                                                        data-account-id="@l3.AccountId"
-                                                                                        data-parent-number="@l3.AccountNumber"
-                                                                                        data-next-level="4">
-                                                                                    Create Level 4 Account
-                                                                                </button>
+                                                                                @if (User.IsInRole("Admin"))
+                                                                                {
+                                                                                    <button class="btn btn-primary mb-3 createAccount"
+                                                                                            data-account-id="@l3.AccountId"
+                                                                                            data-parent-number="@l3.AccountNumber"
+                                                                                            data-next-level="4">
+                                                                                        Create Level 4 Account
+                                                                                    </button>
+                                                                                }
 
                                                                                 <div class="accordion" id="LGroup-@l3.AccountNumber">
                                                                                     @foreach (var l4 in l3.Children.OrderBy(coa => coa.AccountNumber))
@@ -155,12 +158,15 @@
                                                                                                             @(l4.IsHidden ? "Unhide Account" : "Hide Account")
                                                                                                         </button>
 
-                                                                                                        <button class="btn btn-primary mb-3 createAccount"
-                                                                                                                data-account-id="@l4.AccountId"
-                                                                                                                data-parent-number="@l4.AccountNumber"
-                                                                                                                data-next-level="5">
-                                                                                                            Create Level 5 Account
-                                                                                                        </button>
+                                                                                                        @if (User.IsInRole("Admin"))
+                                                                                                        {
+                                                                                                            <button class="btn btn-primary mb-3 createAccount"
+                                                                                                                    data-account-id="@l4.AccountId"
+                                                                                                                    data-parent-number="@l4.AccountNumber"
+                                                                                                                    data-next-level="5">
+                                                                                                                Create Level 5 Account
+                                                                                                            </button>
+                                                                                                        }
 
                                                                                                         <div class="accordion" id="LGroup-@l4.AccountNumber">
                                                                                                             @foreach (var l5 in l4.Children.OrderBy(coa => coa.AccountNumber))
@@ -272,55 +278,8 @@
             $('.createAccount').on('click', function(e) {
                 e.preventDefault();
                 let parentId = $(this).data('account-id');
-                let parentNumber = $(this).data('parent-number');
-                let nextLevel = $(this).data('next-level');
-
-                Swal.fire({
-                    title: `Create Level ${nextLevel} Account`,
-                    text: `Parent account: ${parentNumber}`,
-                    input: 'text',
-                    inputLabel: 'Account name',
-                    inputPlaceholder: 'Enter account name',
-                    inputAttributes: {
-                        autocapitalize: 'off'
-                    },
-                    showCancelButton: true,
-                    confirmButtonText: 'Create',
-                    showLoaderOnConfirm: true,
-                    preConfirm: (accountName) => {
-                        const normalizedAccountName = accountName?.trim();
-                        if (!normalizedAccountName) {
-                            Swal.showValidationMessage('Account name is required');
-                            return false;
-                        }
-                        return normalizedAccountName;
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        let accountName = result.value;
-
-                        $.ajax({
-                            url: '@Url.Action("Create", "ChartOfAccount", new { area = "Filpride" })',
-                            type: 'POST',
-                            data: {
-                                __RequestVerificationToken: requestVerificationToken,
-                                parentId: parentId,
-                                accountName: accountName,
-                                showHidden: showHidden
-                            },
-                            success: function (response) {
-                                if (response.redirectUrl) {
-                                    window.location.href = response.redirectUrl;
-                                } else {
-                                    Swal.fire('Saved', 'Account created successfully.', 'success');
-                                }
-                            },
-                            error: function (xhr, status, error) {
-                                Swal.fire('Error', xhr.responseText || 'Unable to create account.', 'error');
-                            }
-                        });
-                    }
-                });
+                window.location.href = '@Url.Action("CreateChartOfAccount", "MasterFileRequest", new { area = "Filpride" })'
+                    + '?parentId=' + encodeURIComponent(parentId);
             });
 
 

@@ -66,6 +66,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpGet]
+        [NonAction]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
             var companyClaims = await GetCompanyClaimAsync();
@@ -85,6 +86,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [NonAction]
         public async Task<IActionResult> Create(FilprideCustomer model, CancellationToken cancellationToken)
         {
             if (!ModelState.IsValid)

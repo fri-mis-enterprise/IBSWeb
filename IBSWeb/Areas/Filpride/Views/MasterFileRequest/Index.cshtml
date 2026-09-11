@@ -1,0 +1,188 @@
+@using System.Security.Claims
+@using System.Text.RegularExpressions
+@using IBS.Models.Enums
+@model IReadOnlyList<FilprideMasterFileRequest>
+
+@functions {
+    private static string DisplayName(string value) =>
+        Regex.Replace(value, "([a-z0-9])([A-Z])", "$1 $2");
+
+    private static string StatusClass(FilprideMasterFileRequestStatus status) => status switch
+    {
+        FilprideMasterFileRequestStatus.Approved => "bg-success",
+        FilprideMasterFileRequestStatus.Rejected => "bg-danger",
+        FilprideMasterFileRequestStatus.Canceled => "bg-warning",
+        _ => "bg-secondary"
+    };
+}
+
+@{
+    ViewData["Title"] = "Master File Requests";
+    string userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+    int currentPage = ViewBag.Page ?? 1;
+    int totalPages = ViewBag.TotalPages ?? 1;
+    string search = ViewBag.Search as string ?? string.Empty;
+}
+
+<link rel="stylesheet" href="~/css/index-style.css" />
+<link rel="stylesheet" href="~/css/master-file-request.css" />
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center bg-secondary p-3 rounded shadow">
+        <h2 class="text-white m-0">@ViewData["Title"]</h2>
+        <div class="dropdown">
+            <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-plus-circle me-1"></i> New request
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                @foreach (var requestType in Enum.GetValues<FilprideMasterFileType>())
+                {
+                    <li>
+                        <a class="dropdown-item" asp-action="@($"Create{requestType}")">
+                            @DisplayName(requestType.ToString())
+                        </a>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <div class="card shadow border-0 mt-3">
+        <div class="card-body p-3">
+            <form method="get" class="request-filter-panel row g-3 mb-4">
+                <div class="col-sm-6 col-lg-3">
+                    <label for="statusFilter" class="form-label">Status</label>
+                    <select id="statusFilter" name="status" class="form-select">
+                        <option value="">All statuses</option>
+                        @foreach (var requestStatus in Enum.GetValues<FilprideMasterFileRequestStatus>())
+                        {
+                            <option value="@requestStatus" selected="@(ViewBag.Status?.ToString() == requestStatus.ToString())">
+                                @DisplayName(requestStatus.ToString())
+                            </option>
+                        }
+                    </select>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <label for="typeFilter" class="form-label">Request type</label>
+                    <select id="typeFilter" name="type" class="form-select">
+                        <option value="">All types</option>
+                        @foreach (var requestType in Enum.GetValues<FilprideMasterFileType>())
+                        {
+                            <option value="@requestType" selected="@(ViewBag.Type?.ToString() == requestType.ToString())">
+                                @DisplayName(requestType.ToString())
+                            </option>
+                        }
+                    </select>
+                </div>
+            </form>
+
+            <div class="table-responsive" style="max-height: 70vh">
+                <table class="table table-hover mb-0" id="paginatedTable">
+                    <thead class="bg-light">
+                        <tr>
+                            <th scope="col">Request</th>
+                            <th scope="col">Type</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Requested by</th>
+                            <th scope="col">Submitted</th>
+                            <th scope="col" class="text-center" style="width: 100px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Count > 0)
+                        {
+                            @foreach (var request in Model)
+                            {
+                                bool isOwner = request.RequestedBy == userId;
+                                bool editable = request.Status is FilprideMasterFileRequestStatus.ForApproval or FilprideMasterFileRequestStatus.Rejected;
+                                <tr>
+                                    <td><span class="request-number">#@request.Id</span></td>
+                                    <td><span class="request-type">@DisplayName(request.MasterFileType.ToString())</span></td>
+                                    <td>
+                                        <span class="badge rounded-pill @StatusClass(request.Status)">
+                                            @DisplayName(request.Status.ToString())
+                                        </span>
+                                    </td>
+                                    <td>@request.RequestedByName</td>
+                                    <td>
+                                        @request.RequestedDate.ToString("MMM dd, yyyy")
+                                        <span class="request-subtext">@request.RequestedDate.ToString("h:mm tt")</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="dropdown actions-dropdown">
+                                            <button class="btn btn-light btn-sm dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                Actions
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                                <li><a class="dropdown-item" asp-action="Details" asp-route-id="@request.Id">View</a></li>
+                                                @if (isOwner && editable)
+                                                {
+                                                    <li><a class="dropdown-item" asp-action="Edit" asp-route-id="@request.Id">Edit</a></li>
+                                                    <li><hr class="dropdown-divider" /></li>
+                                                    <li>
+                                                        <form asp-action="Cancel" asp-route-id="@request.Id" method="post">
+                                                            @Html.AntiForgeryToken()
+                                                            <button class="dropdown-item text-danger" type="submit">Cancel</button>
+                                                        </form>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (totalPages > 1)
+            {
+                <nav class="d-flex justify-content-center mt-3" aria-label="Request pages">
+                    <ul class="pagination mb-0">
+                        <li class="page-item @(currentPage == 1 ? "disabled" : string.Empty)">
+                            <a class="page-link" asp-route-status="@ViewBag.Status" asp-route-type="@ViewBag.Type" asp-route-search="@search" asp-route-page="@(currentPage - 1)">Previous</a>
+                        </li>
+                        <li class="page-item disabled"><span class="page-link">Page @currentPage of @totalPages</span></li>
+                        <li class="page-item @(currentPage == totalPages ? "disabled" : string.Empty)">
+                            <a class="page-link" asp-route-status="@ViewBag.Status" asp-route-type="@ViewBag.Type" asp-route-search="@search" asp-route-page="@(currentPage + 1)">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            const table = $('#paginatedTable').DataTable({
+                paging: false,
+                searching: false,
+                info: false,
+                order: [[4, 'desc']],
+                columnDefs: [{ orderable: false, searchable: false, targets: 5 }]
+            });
+
+            function applyFilter(name, value) {
+                const url = new URL(window.location.href);
+                if (value) {
+                    url.searchParams.set(name, value);
+                } else {
+                    url.searchParams.delete(name);
+                }
+                url.searchParams.delete('page');
+
+                window.location.assign(url.toString());
+            }
+
+            $('#statusFilter').on('change', function () {
+                applyFilter('status', this.value);
+            });
+
+            $('#typeFilter').on('change', function () {
+                applyFilter('type', this.value);
+            });
+        });
+    </script>
+}

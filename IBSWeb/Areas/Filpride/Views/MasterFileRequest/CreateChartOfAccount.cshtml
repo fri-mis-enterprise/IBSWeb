@@ -1,0 +1,57 @@
+@model ChartOfAccountRequestPayload
+
+@{
+    ViewData["Title"] = "Chart of Account Master File Request";
+    string action = ViewBag.RequestId == null ? "CreateChartOfAccount" : "EditChartOfAccount";
+}
+
+<link rel="stylesheet" href="~/css/form-style.css" />
+<link rel="stylesheet" href="~/css/master-file-request.css" />
+
+<div class="loader-container">
+    <div class="loader"></div>
+    <div class="loader-text">Loading...</div>
+</div>
+<div class="card master-file-request-card mt-4">
+    <div class="card-header bg-secondary bg-gradient py-3">
+        <div class="row">
+            <div class="col-12 text-center">
+                <h2 class="text-white py-2">@ViewData["Title"]</h2>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-4">
+        <form asp-action="@action" method="post">
+            @Html.AntiForgeryToken()
+            @if (ViewBag.RequestId != null)
+            {
+                <input type="hidden" name="requestId" value="@ViewBag.RequestId" />
+            }
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+            <div class="form-group mb-3">
+                <label asp-for="ParentAccountId" class="form-label">Parent account<span class="required">*</span></label>
+                <select asp-for="ParentAccountId" asp-items="ViewBag.Parents" class="form-select js-select2" style="width: 100%" required>
+                    <option value="">Select parent account</option>
+                </select>
+                <span asp-validation-for="ParentAccountId" class="text-danger"></span>
+            </div>
+            <div class="form-floating mb-3">
+                <input asp-for="AccountName" class="form-control" placeholder="Account name" required />
+                <label asp-for="AccountName">Account name<span class="required">*</span></label>
+                <span asp-validation-for="AccountName" class="text-danger"></span>
+            </div>
+            <div class="row pt-2">
+                <div class="col-6 col-md-3">
+                    <button type="submit" class="btn btn-primary form-control">Submit Request</button>
+                </div>
+                <div class="col-6 col-md-3">
+                    <a asp-action="Index" class="btn btn-outline-primary form-control">Back to List</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
