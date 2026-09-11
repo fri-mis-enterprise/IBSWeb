@@ -300,7 +300,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (model.SalesInvoiceId != null)
                 {
                     var existingSidMs = (await _unitOfWork.FilprideDebitMemo
-                                  .GetAllAsync(si => si.SalesInvoiceId == model.SalesInvoiceId && si.PostedBy != null && si.CanceledBy != null && si.VoidedBy != null, cancellationToken))
+                                  .GetAllAsync(si => si.SalesInvoiceId == model.SalesInvoiceId
+                                      && si.PostedBy == null && si.CanceledBy == null && si.VoidedBy == null
+                                      && (si.Status == nameof(DmCmStatus.ForApprovalOfFM) || si.Status == nameof(DmCmStatus.ForPosting)), cancellationToken))
                                   .OrderBy(s => s.SalesInvoiceId)
                                   .ToList();
                     if (existingSidMs.Count > 0)
@@ -311,7 +313,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     }
 
                     var existingSicMs = (await _unitOfWork.FilprideCreditMemo
-                                      .GetAllAsync(si => si.SalesInvoiceId == model.SalesInvoiceId && si.PostedBy != null && si.CanceledBy != null && si.VoidedBy != null, cancellationToken))
+                                      .GetAllAsync(si => si.SalesInvoiceId == model.SalesInvoiceId
+                                      && si.PostedBy == null && si.CanceledBy == null && si.VoidedBy == null
+                                      && (si.Status == nameof(DmCmStatus.ForApprovalOfFM) || si.Status == nameof(DmCmStatus.ForPosting)), cancellationToken))
                                       .OrderBy(s => s.SalesInvoiceId)
                                       .ToList();
                     if (existingSicMs.Count > 0)
@@ -324,7 +328,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 else
                 {
                     var existingSOADMs = (await _unitOfWork.FilprideDebitMemo
-                                  .GetAllAsync(si => si.ServiceInvoiceId == model.ServiceInvoiceId && si.PostedBy != null && si.CanceledBy != null && si.VoidedBy != null, cancellationToken))
+                                  .GetAllAsync(si => si.ServiceInvoiceId == model.ServiceInvoiceId
+                                      && si.PostedBy == null && si.CanceledBy == null && si.VoidedBy == null
+                                      && (si.Status == nameof(DmCmStatus.ForApprovalOfFM) || si.Status == nameof(DmCmStatus.ForPosting)), cancellationToken))
                                   .OrderBy(s => s.ServiceInvoiceId)
                                   .ToList();
                     if (existingSOADMs.Count > 0)
@@ -335,7 +341,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     }
 
                     var existingSOACMs = (await _unitOfWork.FilprideCreditMemo
-                                      .GetAllAsync(si => si.ServiceInvoiceId == model.ServiceInvoiceId && si.PostedBy != null && si.CanceledBy != null && si.VoidedBy != null, cancellationToken))
+                                      .GetAllAsync(si => si.ServiceInvoiceId == model.ServiceInvoiceId
+                                      && si.PostedBy == null && si.CanceledBy == null && si.VoidedBy == null
+                                      && (si.Status == nameof(DmCmStatus.ForApprovalOfFM) || si.Status == nameof(DmCmStatus.ForPosting)), cancellationToken))
                                       .OrderBy(s => s.SalesInvoiceId)
                                       .ToList();
                     if (existingSOACMs.Count > 0)
@@ -381,10 +389,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync(cancellationToken);
                 await IncludeSelectLists(viewModel, cancellationToken);
                 _logger.LogError(ex, "Failed to create credit memo. Error: {ErrorMessage}, Stack: {StackTrace}. Created by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
-                await transaction.RollbackAsync(cancellationToken);
                 TempData["error"] = ex.Message;
                 return View(viewModel);
             }
@@ -407,6 +415,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (creditMemo == null)
                 {
                     return NotFound();
+                }
+
+                if (creditMemo.PostedBy != null || creditMemo.CanceledBy != null || creditMemo.VoidedBy != null
+                    || (creditMemo.Status != nameof(DmCmStatus.ForApprovalOfFM) && creditMemo.Status != nameof(DmCmStatus.ForPosting)))
+                {
+                    throw new InvalidOperationException("Only a pending memo can be edited. Unpost it first.");
                 }
 
                 var minDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CreditMemo, cancellationToken);
@@ -485,6 +499,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return NotFound();
                 }
 
+                if (existingCm.PostedBy != null || existingCm.CanceledBy != null || existingCm.VoidedBy != null
+                    || (existingCm.Status != nameof(DmCmStatus.ForApprovalOfFM) && existingCm.Status != nameof(DmCmStatus.ForPosting)))
+                {
+                    throw new InvalidOperationException("Only a pending memo can be edited. Unpost it first.");
+                }
+
+                if (await _unitOfWork.IsPeriodPostedAsync(Module.CreditMemo, existingCm.TransactionDate, cancellationToken)
+                    || await _unitOfWork.IsPeriodPostedAsync(Module.CreditMemo, model.TransactionDate, cancellationToken))
+                {
+                    throw new InvalidOperationException("Cannot edit a memo in, or move it into, a closed accounting period.");
+                }
+
+                if (model.Source != existingCm.Source)
+                {
+                    throw new InvalidOperationException("The invoice source cannot be changed.");
+                }
+
                 model.EditedBy = GetUserFullName();
                 model.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
 
@@ -501,11 +532,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         existingCm.AdjustedPrice = model.AdjustedPrice;
                         existingCm.Description = model.Description;
                         existingCm.Remarks = model.Remarks;
-                        if (existingCm.Status == nameof(DmCmStatus.ForPosting))
-                        {
-                            existingCm.SalesInvoice!.Balance += Math.Abs(existingCm.CreditAmount);
-                            existingCm.SalesInvoice!.CreditAmount -= Math.Abs(existingCm.CreditAmount);
-                        }
 
                         #endregion -- Saving Default Enries --
 
@@ -535,6 +561,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     existingCm.Status = nameof(DmCmStatus.ForApprovalOfFM);
                 }
 
+                existingCm.ApprovedBy = null;
+                existingCm.ApprovedDate = null;
                 existingCm.EditedBy = GetUserFullName();
                 existingCm.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
 
@@ -552,10 +580,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync(cancellationToken);
                 await IncludeSelectLists(viewModel, cancellationToken);
                 _logger.LogError(ex, "Failed to edit credit memo. Error: {ErrorMessage}, Stack: {StackTrace}. Edited by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
-                await transaction.RollbackAsync(cancellationToken);
                 TempData["error"] = ex.Message;
                 return View(viewModel);
             }
@@ -647,6 +675,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
+                if (model.Status != nameof(DmCmStatus.Posted) || model.PostedBy == null
+                    || model.CanceledBy != null || model.VoidedBy != null)
+                {
+                    throw new InvalidOperationException("Only a posted memo can be voided.");
+                }
+
                 var dateToday = DateTimeHelper.GetCurrentPhilippineTime();
                 model.PostedBy = null;
                 model.VoidedBy = GetUserFullName();
@@ -678,6 +712,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         Reason = "Voided credit memo reversal",
                         CreatedBy = model.VoidedBy
                     }, cancellationToken);
+                }
+
+                if (model.ServiceInvoice != null)
+                {
+                    model.ServiceInvoice.Balance += Math.Abs(model.CreditAmount);
+                    model.ServiceInvoice.IsPaid = model.ServiceInvoice.Balance <= 0;
+                    model.ServiceInvoice.PaymentStatus = model.ServiceInvoice.Balance < 0 ? "OverPaid"
+                        : model.ServiceInvoice.Balance == 0 ? "Paid" : "Pending";
                 }
 
                 await _unitOfWork.GeneralLedger.ReverseEntries(model.CreditMemoNo, cancellationToken);
@@ -719,14 +761,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
+                if (model.PostedBy != null || model.CanceledBy != null || model.VoidedBy != null
+                    || (model.Status != nameof(DmCmStatus.ForApprovalOfFM) && model.Status != nameof(DmCmStatus.ForPosting)))
+                {
+                    throw new InvalidOperationException("Only a pending memo can be canceled. Unpost it first.");
+                }
+
                 model.CanceledBy = GetUserFullName();
                 model.CanceledDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.CancellationRemarks = cancellationRemarks;
-                if (model.Status == nameof(DmCmStatus.ForPosting) && model.SalesInvoice != null)
-                {
-                    model.SalesInvoice.Balance += Math.Abs(model.CreditAmount);
-                    model.SalesInvoice.CreditAmount -= Math.Abs(model.CreditAmount);
-                }
                 model.Status = nameof(DmCmStatus.Canceled);
 
                 #region --Audit Trail Recording
@@ -1233,6 +1276,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                                           .GetAsync(x => x.CreditMemoId == id, cancellationToken)
                                                       ?? throw new NullReferenceException("Credit memo id not found.");
 
+                if (creditMemo.Status != nameof(DmCmStatus.Posted) || creditMemo.PostedBy == null
+                    || creditMemo.CanceledBy != null || creditMemo.VoidedBy != null)
+                {
+                    throw new InvalidOperationException("Only a posted memo can be unposted.");
+                }
+
                 if (await _unitOfWork.IsPeriodPostedAsync(Module.CreditMemo, creditMemo.TransactionDate, cancellationToken))
                 {
                     TempData["error"] = $"Cannot unpost this record because the period {creditMemo.TransactionDate:MMM yyyy} is already closed.";
@@ -1244,6 +1293,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var creditAmount = Math.Abs(creditMemo.CreditAmount);
                     creditMemo.SalesInvoice.Balance += creditAmount;
                     creditMemo.SalesInvoice.CreditAmount -= creditAmount;
+                }
+
+                if (creditMemo.ServiceInvoice != null)
+                {
+                    creditMemo.ServiceInvoice.Balance += Math.Abs(creditMemo.CreditAmount);
+                    creditMemo.ServiceInvoice.IsPaid = creditMemo.ServiceInvoice.Balance <= 0;
+                    creditMemo.ServiceInvoice.PaymentStatus = creditMemo.ServiceInvoice.Balance < 0 ? "OverPaid"
+                        : creditMemo.ServiceInvoice.Balance == 0 ? "Paid" : "Pending";
                 }
 
                 creditMemo.PostedBy = null;
@@ -1289,7 +1346,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
-            if (model.Status != nameof(DmCmStatus.ForApprovalOfFM))
+            if (model.Status != nameof(DmCmStatus.ForApprovalOfFM) || model.PostedBy != null || model.CanceledBy != null || model.VoidedBy != null)
             {
                 TempData["error"] = "This record is not pending for approval.";
                 return RedirectToAction(nameof(Print), new { id });
@@ -1309,36 +1366,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                if (model.SalesInvoice != null)
-                {
-                    var oldBalance = model.SalesInvoice.Balance;
-                    var creditAmount = Math.Abs(model.CreditAmount);
-                    var (supplierId, supplierName) = ResolveLockedPeriodSupplier(model.SalesInvoice);
-                    model.SalesInvoice.Balance -= Math.Abs(model.CreditAmount);
-                    model.SalesInvoice.CreditAmount += creditAmount;
-
-                    await _unitOfWork.LockedPeriodAdjustment.AddIfPeriodPostedAsync(new()
-                    {
-                        Module = Module.SalesInvoice,
-                        TransactionDate = model.SalesInvoice.TransactionDate,
-                        EntityType = Module.CreditMemo,
-                        EntityNo = model.CreditMemoNo ?? string.Empty,
-                        CustomerId = model.SalesInvoice.CustomerOrderSlip?.CustomerId ?? model.SalesInvoice.CustomerId,
-                        CustomerName = model.SalesInvoice.CustomerOrderSlip?.CustomerName ?? model.SalesInvoice.Customer?.CustomerName,
-                        SupplierId = supplierId,
-                        SupplierName = supplierName,
-                        AdjustmentType = LockedPeriodAdjustmentType.CreditMemo,
-                        OldValue = oldBalance,
-                        NewValue = model.SalesInvoice.Balance,
-                        AdjustmentValue = -creditAmount,
-                        AffectedQuantity = model.Quantity ?? 0m,
-                        Reason = "Approved credit memo affecting previous sales",
-                        CreatedBy = GetUserFullName()
-                    }, cancellationToken);
-                }
-
                 model.ApprovedBy = GetUserFullName();
                 model.ApprovedDate = DateTimeHelper.GetCurrentPhilippineTime();
+                model.Status = nameof(DmCmStatus.ForPosting);
 
                 #region --Audit Trail Recording
 
@@ -1367,9 +1397,51 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private async Task PostCreditMemoAsync(FilprideCreditMemo model, CancellationToken cancellationToken)
         {
+            if (model.Status != nameof(DmCmStatus.ForPosting) || string.IsNullOrWhiteSpace(model.ApprovedBy)
+                || model.PostedBy != null || model.CanceledBy != null || model.VoidedBy != null)
+            {
+                throw new InvalidOperationException("Only an approved, unposted memo can be posted.");
+            }
+
             if (await _unitOfWork.IsPeriodPostedAsync(Module.CreditMemo, model.TransactionDate, cancellationToken))
             {
                 throw new ArgumentException($"Cannot post this record because the period {model.TransactionDate:MMM yyyy} is already closed.");
+            }
+
+            if (model.SalesInvoice != null)
+            {
+                var oldBalance = model.SalesInvoice.Balance;
+                var creditAmount = Math.Abs(model.CreditAmount);
+                var (supplierId, supplierName) = ResolveLockedPeriodSupplier(model.SalesInvoice);
+                model.SalesInvoice.Balance -= Math.Abs(model.CreditAmount);
+                model.SalesInvoice.CreditAmount += creditAmount;
+
+                await _unitOfWork.LockedPeriodAdjustment.AddIfPeriodPostedAsync(new()
+                {
+                    Module = Module.SalesInvoice,
+                    TransactionDate = model.SalesInvoice.TransactionDate,
+                    EntityType = Module.CreditMemo,
+                    EntityNo = model.CreditMemoNo ?? string.Empty,
+                    CustomerId = model.SalesInvoice.CustomerOrderSlip?.CustomerId ?? model.SalesInvoice.CustomerId,
+                    CustomerName = model.SalesInvoice.CustomerOrderSlip?.CustomerName ?? model.SalesInvoice.Customer?.CustomerName,
+                    SupplierId = supplierId,
+                    SupplierName = supplierName,
+                    AdjustmentType = LockedPeriodAdjustmentType.CreditMemo,
+                    OldValue = oldBalance,
+                    NewValue = model.SalesInvoice.Balance,
+                    AdjustmentValue = -creditAmount,
+                    AffectedQuantity = model.Quantity ?? 0m,
+                    Reason = "Approved credit memo affecting previous sales",
+                    CreatedBy = GetUserFullName()
+                }, cancellationToken);
+            }
+
+            if (model.ServiceInvoice != null)
+            {
+                model.ServiceInvoice.Balance -= Math.Abs(model.CreditAmount);
+                model.ServiceInvoice.IsPaid = model.ServiceInvoice.Balance <= 0;
+                model.ServiceInvoice.PaymentStatus = model.ServiceInvoice.Balance < 0 ? "OverPaid"
+                    : model.ServiceInvoice.Balance == 0 ? "Paid" : "Pending";
             }
 
             model.PostedBy = GetUserFullName();
@@ -1519,23 +1591,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var serviceAccountNo = existingSv!.Service!.CurrentAndPreviousNo;
                 var serviceTitle = accountTitlesDto.Find(c => c.AccountNumber == serviceAccountNo) ?? throw new ArgumentException($"Account title '{serviceAccountNo}' not found.");
 
-                decimal netAmount;
-                if (model.ServiceInvoice!.VatType == SD.VatType_Vatable)
-                {
-                    netAmount = DecimalRoundingHelper.ComputeNetOfVat((model.Amount ?? 0m) - existingSv.Discount);
-                    var total = DecimalRoundingHelper.ComputeNetOfVat(model.Amount ?? 0m);
-                    var roundedNetAmount = DecimalRoundingHelper.RoundToFour(netAmount);
-
-                    if (roundedNetAmount > total)
-                    {
-                        var shortAmount = netAmount - total;
-                        netAmount -= shortAmount;
-                    }
-                }
-                else
-                {
-                    netAmount = (model.Amount ?? 0) - existingSv.Discount;
-                }
+                decimal netAmount = model.ServiceInvoice!.VatType == SD.VatType_Vatable
+                    ? _unitOfWork.FilprideCreditMemo.ComputeNetOfVat(Math.Abs(model.CreditAmount))
+                    : Math.Abs(model.CreditAmount);
 
                 decimal withHoldingTaxAmount = 0;
                 decimal withHoldingVatAmount = 0;
