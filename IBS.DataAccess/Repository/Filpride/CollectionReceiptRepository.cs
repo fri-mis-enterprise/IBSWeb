@@ -524,18 +524,19 @@ namespace IBS.DataAccess.Repository.Filpride
 
             if (sv != null)
             {
-                var netDiscount = sv.Total - sv.Discount;
+                // Preserve memo adjustments already included in the outstanding balance.
+                decimal adjustedTotal = sv.Balance + sv.AmountPaid - sv.Discount;
 
                 var total = paidAmount + offsetAmount;
                 sv.AmountPaid += total;
-                sv.Balance = netDiscount - sv.AmountPaid;
+                sv.Balance = adjustedTotal - sv.AmountPaid;
 
-                if (sv.Balance == 0 && sv.AmountPaid == netDiscount)
+                if (sv.Balance == 0 && sv.AmountPaid == adjustedTotal)
                 {
                     sv.IsPaid = true;
                     sv.PaymentStatus = "Paid";
                 }
-                else if (sv.AmountPaid > netDiscount)
+                else if (sv.AmountPaid > adjustedTotal)
                 {
                     sv.IsPaid = true;
                     sv.PaymentStatus = "OverPaid";

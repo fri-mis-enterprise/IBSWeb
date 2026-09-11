@@ -301,7 +301,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (model.SalesInvoiceId != null)
                 {
                     var existingSIDMs = (await _unitOfWork.FilprideDebitMemo
-                                  .GetAllAsync(si => si.SalesInvoiceId == model.SalesInvoiceId && si.PostedBy != null && si.CanceledBy != null && si.VoidedBy != null, cancellationToken))
+                                  .GetAllAsync(si => si.SalesInvoiceId == model.SalesInvoiceId
+                                      && si.PostedBy == null && si.CanceledBy == null && si.VoidedBy == null
+                                      && (si.Status == nameof(DmCmStatus.ForApprovalOfFM) || si.Status == nameof(DmCmStatus.ForPosting)), cancellationToken))
                                   .OrderBy(s => s.DebitMemoId)
                                   .ToList();
 
@@ -313,7 +315,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     }
 
                     var existingSICMs = (await _unitOfWork.FilprideCreditMemo
-                                      .GetAllAsync(si => si.SalesInvoiceId == model.SalesInvoiceId && si.PostedBy != null && si.CanceledBy != null && si.VoidedBy != null, cancellationToken))
+                                      .GetAllAsync(si => si.SalesInvoiceId == model.SalesInvoiceId
+                                      && si.PostedBy == null && si.CanceledBy == null && si.VoidedBy == null
+                                      && (si.Status == nameof(DmCmStatus.ForApprovalOfFM) || si.Status == nameof(DmCmStatus.ForPosting)), cancellationToken))
                                       .OrderBy(s => s.CreditMemoId)
                                       .ToList();
 
@@ -327,7 +331,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 else
                 {
                     var existingSVDMs = (await _unitOfWork.FilprideDebitMemo
-                                  .GetAllAsync(si => si.ServiceInvoiceId == model.ServiceInvoiceId && si.PostedBy != null && si.CanceledBy != null && si.VoidedBy != null, cancellationToken))
+                                  .GetAllAsync(si => si.ServiceInvoiceId == model.ServiceInvoiceId
+                                      && si.PostedBy == null && si.CanceledBy == null && si.VoidedBy == null
+                                      && (si.Status == nameof(DmCmStatus.ForApprovalOfFM) || si.Status == nameof(DmCmStatus.ForPosting)), cancellationToken))
                                   .OrderBy(s => s.DebitMemoId)
                                   .ToList();
                     if (existingSVDMs.Count > 0)
@@ -338,7 +344,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     }
 
                     var existingSVCMs = (await _unitOfWork.FilprideCreditMemo
-                                      .GetAllAsync(si => si.ServiceInvoiceId == model.ServiceInvoiceId && si.PostedBy != null && si.CanceledBy != null && si.VoidedBy != null, cancellationToken))
+                                      .GetAllAsync(si => si.ServiceInvoiceId == model.ServiceInvoiceId
+                                      && si.PostedBy == null && si.CanceledBy == null && si.VoidedBy == null
+                                      && (si.Status == nameof(DmCmStatus.ForApprovalOfFM) || si.Status == nameof(DmCmStatus.ForPosting)), cancellationToken))
                                       .OrderBy(s => s.CreditMemoId)
                                       .ToList();
                     if (existingSVCMs.Count > 0)
@@ -382,10 +390,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync(cancellationToken);
                 await IncludeSelectLists(viewModel, cancellationToken);
                 _logger.LogError(ex, "Failed to create debit memo. Error: {ErrorMessage}, Stack: {StackTrace}. Created by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
-                await transaction.RollbackAsync(cancellationToken);
                 TempData["error"] = ex.Message;
                 return View(viewModel);
             }
@@ -440,6 +448,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 await PostDebitMemoAsync(model, cancellationToken);
 
+                await _unitOfWork.SaveAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 TempData["success"] = "Debit Memo has been Posted.";
                 return RedirectToAction(nameof(Print), new { id });
@@ -470,6 +479,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
+                if (model.Status != nameof(DmCmStatus.Posted) || model.PostedBy == null
+                    || model.CanceledBy != null || model.VoidedBy != null)
+                {
+                    throw new InvalidOperationException("Only a posted memo can be voided.");
+                }
+
                 var dateToday = DateTimeHelper.GetCurrentPhilippineTime();
                 model.PostedBy = null;
                 model.VoidedBy = GetUserFullName();
@@ -500,6 +515,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         Reason = "Voided debit memo reversal",
                         CreatedBy = model.VoidedBy
                     }, cancellationToken);
+                }
+
+                if (model.ServiceInvoice != null)
+                {
+                    model.ServiceInvoice.Balance -= model.DebitAmount;
+                    model.ServiceInvoice.IsPaid = model.ServiceInvoice.Balance <= 0;
+                    model.ServiceInvoice.PaymentStatus = model.ServiceInvoice.Balance < 0 ? "OverPaid"
+                        : model.ServiceInvoice.Balance == 0 ? "Paid" : "Pending";
                 }
 
                 await _unitOfWork.GeneralLedger.ReverseEntries(model.DebitMemoNo, cancellationToken);
@@ -541,14 +564,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
+                if (model.PostedBy != null || model.CanceledBy != null || model.VoidedBy != null
+                    || (model.Status != nameof(DmCmStatus.ForApprovalOfFM) && model.Status != nameof(DmCmStatus.ForPosting)))
+                {
+                    throw new InvalidOperationException("Only a pending memo can be canceled. Unpost it first.");
+                }
+
                 model.CanceledBy = GetUserFullName();
                 model.CanceledDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.CancellationRemarks = cancellationRemarks;
-                if (model.Status == nameof(DmCmStatus.ForPosting) && model.SalesInvoice != null)
-                {
-                    model.SalesInvoice.Balance -= model.DebitAmount;
-                    model.SalesInvoice.DebitAmount -= model.DebitAmount;
-                }
                 model.Status = nameof(DmCmStatus.Canceled);
 
                 #region --Audit Trail Recording
@@ -605,6 +629,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (debitMemo == null)
                 {
                     return NotFound();
+                }
+
+                if (debitMemo.PostedBy != null || debitMemo.CanceledBy != null || debitMemo.VoidedBy != null
+                    || (debitMemo.Status != nameof(DmCmStatus.ForApprovalOfFM) && debitMemo.Status != nameof(DmCmStatus.ForPosting)))
+                {
+                    throw new InvalidOperationException("Only a pending memo can be edited. Unpost it first.");
                 }
 
                 var minDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.DebitMemo, cancellationToken);
@@ -682,6 +712,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return NotFound();
                 }
 
+                if (existingDm.PostedBy != null || existingDm.CanceledBy != null || existingDm.VoidedBy != null
+                    || (existingDm.Status != nameof(DmCmStatus.ForApprovalOfFM) && existingDm.Status != nameof(DmCmStatus.ForPosting)))
+                {
+                    throw new InvalidOperationException("Only a pending memo can be edited. Unpost it first.");
+                }
+
+                if (await _unitOfWork.IsPeriodPostedAsync(Module.DebitMemo, existingDm.TransactionDate, cancellationToken)
+                    || await _unitOfWork.IsPeriodPostedAsync(Module.DebitMemo, model.TransactionDate, cancellationToken))
+                {
+                    throw new InvalidOperationException("Cannot edit a memo in, or move it into, a closed accounting period.");
+                }
+
+                if (model.Source != existingDm.Source)
+                {
+                    throw new InvalidOperationException("The invoice source cannot be changed.");
+                }
+
                 switch (model.Source)
                 {
                     case "Sales Invoice":
@@ -695,11 +742,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         existingDm.AdjustedPrice = model.AdjustedPrice;
                         existingDm.Description = model.Description;
                         existingDm.Remarks = model.Remarks;
-                        if (existingDm.Status == nameof(DmCmStatus.ForPosting))
-                        {
-                            existingDm.SalesInvoice!.Balance -= existingDm.DebitAmount;
-                            existingDm.SalesInvoice!.DebitAmount -= existingDm.DebitAmount;
-                        }
 
                         #endregion -- Saving Default Enries --
 
@@ -729,6 +771,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     existingDm.Status = nameof(DmCmStatus.ForApprovalOfFM);
                 }
 
+                existingDm.ApprovedBy = null;
+                existingDm.ApprovedDate = null;
                 existingDm.EditedBy = GetUserFullName();
                 existingDm.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
 
@@ -746,10 +790,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync(cancellationToken);
                 await IncludeSelectLists(viewModel, cancellationToken);
                 _logger.LogError(ex, "Failed to edit debit memo. Error: {ErrorMessage}, Stack: {StackTrace}. Edited by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
-                await transaction.RollbackAsync(cancellationToken);
                 TempData["error"] = ex.Message;
                 return View(viewModel);
             }
@@ -1221,6 +1265,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                                           .GetAsync(x => x.DebitMemoId == id, cancellationToken)
                                                       ?? throw new NullReferenceException("Debit memo id not found.");
 
+                if (debitMemo.Status != nameof(DmCmStatus.Posted) || debitMemo.PostedBy == null
+                    || debitMemo.CanceledBy != null || debitMemo.VoidedBy != null)
+                {
+                    throw new InvalidOperationException("Only a posted memo can be unposted.");
+                }
+
                 if (await _unitOfWork.IsPeriodPostedAsync(Module.DebitMemo, debitMemo.TransactionDate, cancellationToken))
                 {
                     TempData["error"] = $"Cannot unpost this record because the period {debitMemo.TransactionDate:MMM yyyy} is already closed.";
@@ -1231,6 +1281,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     debitMemo.SalesInvoice.Balance -= debitMemo.DebitAmount;
                     debitMemo.SalesInvoice.DebitAmount -= debitMemo.DebitAmount;
+                }
+
+                if (debitMemo.ServiceInvoice != null)
+                {
+                    debitMemo.ServiceInvoice.Balance -= debitMemo.DebitAmount;
+                    debitMemo.ServiceInvoice.IsPaid = debitMemo.ServiceInvoice.Balance <= 0;
+                    debitMemo.ServiceInvoice.PaymentStatus = debitMemo.ServiceInvoice.Balance < 0 ? "OverPaid"
+                        : debitMemo.ServiceInvoice.Balance == 0 ? "Paid" : "Pending";
                 }
 
                 debitMemo.PostedBy = null;
@@ -1276,7 +1334,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
-            if (model.Status != nameof(DmCmStatus.ForApprovalOfFM))
+            if (model.Status != nameof(DmCmStatus.ForApprovalOfFM) || model.PostedBy != null || model.CanceledBy != null || model.VoidedBy != null)
             {
                 TempData["error"] = "This record is not pending for approval.";
                 return RedirectToAction(nameof(Print), new { id });
@@ -1296,35 +1354,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                if (model.SalesInvoice != null)
-                {
-                    var oldBalance = model.SalesInvoice.Balance;
-                    var (supplierId, supplierName) = ResolveLockedPeriodSupplier(model.SalesInvoice);
-                    model.SalesInvoice.Balance += model.DebitAmount;
-                    model.SalesInvoice.DebitAmount += model.DebitAmount;
-
-                    await _unitOfWork.LockedPeriodAdjustment.AddIfPeriodPostedAsync(new()
-                    {
-                        Module = Module.SalesInvoice,
-                        TransactionDate = model.SalesInvoice.TransactionDate,
-                        EntityType = Module.DebitMemo,
-                        EntityNo = model.DebitMemoNo ?? string.Empty,
-                        CustomerId = model.SalesInvoice.CustomerOrderSlip?.CustomerId ?? model.SalesInvoice.CustomerId,
-                        CustomerName = model.SalesInvoice.CustomerOrderSlip?.CustomerName ?? model.SalesInvoice.Customer?.CustomerName,
-                        SupplierId = supplierId,
-                        SupplierName = supplierName,
-                        AdjustmentType = LockedPeriodAdjustmentType.DebitMemo,
-                        OldValue = oldBalance,
-                        NewValue = model.SalesInvoice.Balance,
-                        AdjustmentValue = model.DebitAmount,
-                        AffectedQuantity = model.Quantity ?? 0m,
-                        Reason = "Approved debit memo affecting previous sales",
-                        CreatedBy = GetUserFullName()
-                    }, cancellationToken);
-                }
-
                 model.ApprovedBy = GetUserFullName();
                 model.ApprovedDate = DateTimeHelper.GetCurrentPhilippineTime();
+                model.Status = nameof(DmCmStatus.ForPosting);
 
                 #region --Audit Trail Recording
 
@@ -1353,9 +1385,50 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private async Task PostDebitMemoAsync(FilprideDebitMemo model, CancellationToken cancellationToken)
         {
+            if (model.Status != nameof(DmCmStatus.ForPosting) || string.IsNullOrWhiteSpace(model.ApprovedBy)
+                || model.PostedBy != null || model.CanceledBy != null || model.VoidedBy != null)
+            {
+                throw new InvalidOperationException("Only an approved, unposted memo can be posted.");
+            }
+
             if (await _unitOfWork.IsPeriodPostedAsync(Module.DebitMemo, model.TransactionDate, cancellationToken))
             {
                 throw new ArgumentException($"Cannot post this record because the period {model.TransactionDate:MMM yyyy} is already closed.");
+            }
+
+            if (model.SalesInvoice != null)
+            {
+                var oldBalance = model.SalesInvoice.Balance;
+                var (supplierId, supplierName) = ResolveLockedPeriodSupplier(model.SalesInvoice);
+                model.SalesInvoice.Balance += model.DebitAmount;
+                model.SalesInvoice.DebitAmount += model.DebitAmount;
+
+                await _unitOfWork.LockedPeriodAdjustment.AddIfPeriodPostedAsync(new()
+                {
+                    Module = Module.SalesInvoice,
+                    TransactionDate = model.SalesInvoice.TransactionDate,
+                    EntityType = Module.DebitMemo,
+                    EntityNo = model.DebitMemoNo ?? string.Empty,
+                    CustomerId = model.SalesInvoice.CustomerOrderSlip?.CustomerId ?? model.SalesInvoice.CustomerId,
+                    CustomerName = model.SalesInvoice.CustomerOrderSlip?.CustomerName ?? model.SalesInvoice.Customer?.CustomerName,
+                    SupplierId = supplierId,
+                    SupplierName = supplierName,
+                    AdjustmentType = LockedPeriodAdjustmentType.DebitMemo,
+                    OldValue = oldBalance,
+                    NewValue = model.SalesInvoice.Balance,
+                    AdjustmentValue = model.DebitAmount,
+                    AffectedQuantity = model.Quantity ?? 0m,
+                    Reason = "Approved debit memo affecting previous sales",
+                    CreatedBy = GetUserFullName()
+                }, cancellationToken);
+            }
+
+            if (model.ServiceInvoice != null)
+            {
+                model.ServiceInvoice.Balance += model.DebitAmount;
+                model.ServiceInvoice.IsPaid = model.ServiceInvoice.Balance <= 0;
+                model.ServiceInvoice.PaymentStatus = model.ServiceInvoice.Balance < 0 ? "OverPaid"
+                    : model.ServiceInvoice.Balance == 0 ? "Paid" : "Pending";
             }
 
             model.PostedBy = GetUserFullName();
@@ -1496,7 +1569,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var serviceAccountNo = existingSv!.Service!.CurrentAndPreviousNo;
                 var serviceTitle = accountTitlesDto.Find(c => c.AccountNumber == serviceAccountNo) ?? throw new ArgumentException($"Account title '{serviceAccountNo}' not found.");
 
-                var netDiscount = model.Amount ?? 0 - existingSv.Discount;
+                var netDiscount = model.DebitAmount;
                 var netOfVatAmount = model.ServiceInvoice!.VatType == SD.VatType_Vatable
                     ? _unitOfWork.FilprideServiceInvoice.ComputeNetOfVat(netDiscount)
                     : netDiscount;
