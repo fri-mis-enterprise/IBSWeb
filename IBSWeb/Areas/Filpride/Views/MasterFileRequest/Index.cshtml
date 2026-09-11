@@ -121,6 +121,7 @@
                                                     <li><hr class="dropdown-divider" /></li>
                                                     <li>
                                                         <form asp-action="Cancel" asp-route-id="@request.Id" method="post">
+                                                            @Html.AntiForgeryToken()
                                                             <button class="dropdown-item text-danger" type="submit">Cancel</button>
                                                         </form>
                                                     </li>
