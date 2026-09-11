@@ -166,6 +166,9 @@ namespace IBS.Services
                     throw new InvalidOperationException("Only pending requests can be approved.");
                 }
 
+                await ValidateReferencesAsync(
+                    request.MasterFileType, DeserializeModel(request), cancellationToken);
+
                 string activity = request.MasterFileType switch
                 {
                     FilprideMasterFileType.Customer => await AddCustomerAsync(request, approver, cancellationToken),
@@ -483,16 +486,28 @@ namespace IBS.Services
             object model,
             CancellationToken cancellationToken)
         {
-            if (type == FilprideMasterFileType.CustomerBranch && model is FilprideCustomerBranch customerBranch &&
-                !await _dbContext.FilprideCustomers.AnyAsync(c => c.CustomerId == customerBranch.CustomerId, cancellationToken))
+            if (type == FilprideMasterFileType.Customer && model is FilprideCustomer customer &&
+                customer.CommissioneeId.HasValue &&
+                !await _dbContext.FilprideSuppliers.AnyAsync(
+                    s => s.SupplierId == customer.CommissioneeId && s.IsActive && s.Category == "Commissionee",
+                    cancellationToken))
             {
-                throw new InvalidOperationException("The selected customer does not exist.");
+                throw new InvalidOperationException("The selected commissionee is no longer active.");
+            }
+
+            if (type == FilprideMasterFileType.CustomerBranch && model is FilprideCustomerBranch customerBranch &&
+                !await _dbContext.FilprideCustomers.AnyAsync(
+                    c => c.CustomerId == customerBranch.CustomerId && c.IsActive, cancellationToken))
+            {
+                throw new InvalidOperationException("The selected customer is no longer active.");
             }
 
             if (type == FilprideMasterFileType.PickupPoint && model is FilpridePickUpPoint pickupPoint &&
-                !await _dbContext.FilprideSuppliers.AnyAsync(s => s.SupplierId == pickupPoint.SupplierId, cancellationToken))
+                !await _dbContext.FilprideSuppliers.AnyAsync(
+                    s => s.SupplierId == pickupPoint.SupplierId && s.IsActive && s.Category == "Trade",
+                    cancellationToken))
             {
-                throw new InvalidOperationException("The selected supplier does not exist.");
+                throw new InvalidOperationException("The selected supplier is no longer an active trade supplier.");
             }
 
             if (type == FilprideMasterFileType.ChartOfAccount && model is ChartOfAccountRequestPayload account &&

@@ -704,7 +704,7 @@
                     </li>
                 }
 
-                @if (User.IsInRole("Admin"))
+                @if (selectedCompany == "Filpride" && User.IsInRole("Admin"))
                 {
                 <li class="mnav-item" data-nav-deck role="none">
                     <button class="mnav-trigger" role="menuitem" aria-haspopup="true" aria-expanded="false">

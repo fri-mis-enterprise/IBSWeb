@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
+    [CompanyAuthorize(nameof(Filpride))]
     [Authorize(Roles = "Admin")]
     public class MasterFileRequestController : Controller
     {
@@ -25,17 +26,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
         private readonly ApplicationDbContext _dbContext;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICloudStorageService _cloudStorageService;
+        private readonly ILogger<MasterFileRequestController> _logger;
 
         public MasterFileRequestController(
             MasterFileRequestService requestService,
             ApplicationDbContext dbContext,
             IUnitOfWork unitOfWork,
-            ICloudStorageService cloudStorageService)
+            ICloudStorageService cloudStorageService,
+            ILogger<MasterFileRequestController> logger)
         {
             _requestService = requestService;
             _dbContext = dbContext;
             _unitOfWork = unitOfWork;
             _cloudStorageService = cloudStorageService;
+            _logger = logger;
         }
 
         public async Task<IActionResult> Index(
@@ -172,6 +176,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateCustomer(
+            [Bind(
+                nameof(FilprideCustomer.Type), nameof(FilprideCustomer.CustomerName),
+                nameof(FilprideCustomer.CustomerAddress), nameof(FilprideCustomer.ZipCode),
+                nameof(FilprideCustomer.CustomerTin), nameof(FilprideCustomer.CreditLimit),
+                nameof(FilprideCustomer.CreditLimitAsOfToday), nameof(FilprideCustomer.BusinessStyle),
+                nameof(FilprideCustomer.CommissionRate), nameof(FilprideCustomer.CommissioneeId),
+                nameof(FilprideCustomer.ClusterCode), nameof(FilprideCustomer.CustomerType),
+                nameof(FilprideCustomer.StationCode), nameof(FilprideCustomer.CustomerTerms),
+                nameof(FilprideCustomer.RetentionRate), nameof(FilprideCustomer.VatType),
+                nameof(FilprideCustomer.WithHoldingVat), nameof(FilprideCustomer.CwVatPercent),
+                nameof(FilprideCustomer.WithHoldingTax), nameof(FilprideCustomer.CwtPercent),
+                nameof(FilprideCustomer.RequiresPriceAdjustment))]
             FilprideCustomer model,
             IFormFile? birDocument,
             CancellationToken cancellationToken)
@@ -659,7 +675,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             foreach (string? file in uploadedFiles.Where(file => !string.IsNullOrWhiteSpace(file)))
             {
-                await _cloudStorageService.DeleteFileAsync(file!);
+                try
+                {
+                    await _cloudStorageService.DeleteFileAsync(file!);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Unable to delete uploaded file {FileName}; retrying.", file);
+                    try
+                    {
+                        await _cloudStorageService.DeleteFileAsync(file!);
+                    }
+                    catch (Exception retryEx)
+                    {
+                        _logger.LogError(retryEx, "Unable to delete uploaded file {FileName} after retry.", file);
+                    }
+                }
             }
         }
 
