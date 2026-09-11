@@ -8,6 +8,7 @@ using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.MasterFile;
 using IBS.Utility.Helpers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace IBS.Services
 {
@@ -18,15 +19,18 @@ namespace IBS.Services
         private readonly ApplicationDbContext _dbContext;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICacheService _cacheService;
+        private readonly ILogger<MasterFileRequestService> _logger;
 
         public MasterFileRequestService(
             ApplicationDbContext dbContext,
             IUnitOfWork unitOfWork,
-            ICacheService cacheService)
+            ICacheService cacheService,
+            ILogger<MasterFileRequestService> logger)
         {
             _dbContext = dbContext;
             _unitOfWork = unitOfWork;
             _cacheService = cacheService;
+            _logger = logger;
         }
 
         public IQueryable<FilprideMasterFileRequest> GetRequests() =>
@@ -204,7 +208,23 @@ namespace IBS.Services
 
             if (invalidateChartCache)
             {
-                await _cacheService.RemoveByPrefixAsync("coa:", cancellationToken);
+                try
+                {
+                    await _cacheService.RemoveByPrefixAsync("coa:", cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Unable to invalidate chart-of-account cache; retrying.");
+
+                    try
+                    {
+                        await _cacheService.RemoveByPrefixAsync("coa:", cancellationToken);
+                    }
+                    catch (Exception retryException)
+                    {
+                        _logger.LogError(retryException, "Unable to invalidate chart-of-account cache after retry.");
+                    }
+                }
             }
         }
 
