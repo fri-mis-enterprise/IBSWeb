@@ -130,7 +130,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ThenInclude(cvh => cvh!.Supplier)
                     .AsSplitQuery()
                     .AsNoTracking()
-                    .Where(cvd => 
+                    .Where(cvd =>
                                   cvd.CheckVoucherHeader!.CvType == nameof(CVType.Invoicing) &&
                                   cvd.CheckVoucherHeader.IsPayroll &&
                                   cvd.SubAccountId.HasValue &&
@@ -358,7 +358,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         Debit = detail.Debit,
                         Credit = detail.Credit,
                         Amount = isPayable ? detail.Credit : 0m,
-                        SubAccountType = isPayable ? SubAccountType.Supplier : null,
+                        SubAccountType = supplier != null || detail.MultipleSupplierId != null ? SubAccountType.Supplier : null,
                         SubAccountId = supplier?.SupplierId ?? detail.MultipleSupplierId,
                         SubAccountName = supplier?.SupplierName ?? detail.MultipleSupplierCodeName,
                         IsUserSelected = true
@@ -607,7 +607,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         Debit = detail.Debit,
                         Credit = detail.Credit,
                         Amount = isPayable ? detail.Credit : 0m,
-                        SubAccountType = isPayable ? SubAccountType.Supplier : null,
+                        SubAccountType = supplier != null || detail.MultipleSupplierId != null ? SubAccountType.Supplier : null,
                         SubAccountId = supplier?.SupplierId ?? detail.MultipleSupplierId,
                         SubAccountName = supplier?.SupplierName ?? detail.MultipleSupplierCodeName,
                         IsUserSelected = true
