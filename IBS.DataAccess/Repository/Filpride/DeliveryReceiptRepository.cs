@@ -1069,7 +1069,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 var unitOfWork = new UnitOfWork(_db);
                 var deliveredDate = deliveryReceipt.DeliveredDate
                     ?? throw new InvalidOperationException($"Delivered date is required for DR#{deliveryReceipt.DeliveryReceiptNo}.");
-                var firstDayOfTheMonth = DateTimeHelper.GetFirstDayOfCurrentPhilippineMonth();
+                var firstDayOfTheMonth = DateTimeHelper.GetFirstDayOfMonth();
                 var isDeliveredPeriodPosted = await unitOfWork
                     .IsPeriodPostedAsync(Module.DeliveryReceipt, deliveredDate, cancellationToken);
                 var postingDate = isDeliveredPeriodPosted
@@ -1235,7 +1235,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 var unitOfWork = new UnitOfWork(_db);
                 var deliveredDate = deliveryReceipt.DeliveredDate
                     ?? throw new InvalidOperationException($"Delivered date is required for DR#{deliveryReceipt.DeliveryReceiptNo}.");
-                var firstDayOfMonth = DateTimeHelper.GetFirstDayOfCurrentPhilippineMonth();
+                var firstDayOfMonth = DateTimeHelper.GetFirstDayOfMonth();
                 var isDeliveredPeriodPosted = await unitOfWork
                     .IsPeriodPostedAsync(Module.DeliveryReceipt, deliveredDate, cancellationToken);
                 var postingDate = isDeliveredPeriodPosted
@@ -1362,7 +1362,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 var unitOfWork = new UnitOfWork(_db);
                 var deliveredDate = deliveryReceipt.DeliveredDate
                     ?? throw new InvalidOperationException($"Delivered date is required for DR#{deliveryReceipt.DeliveryReceiptNo}.");
-                var firstDayOfMonth = DateTimeHelper.GetFirstDayOfCurrentPhilippineMonth();
+                var firstDayOfMonth = DateTimeHelper.GetFirstDayOfMonth();
                 var isDeliveredPeriodPosted = await unitOfWork
                     .IsPeriodPostedAsync(Module.DeliveryReceipt, deliveredDate, cancellationToken);
                 var postingDate = isDeliveredPeriodPosted

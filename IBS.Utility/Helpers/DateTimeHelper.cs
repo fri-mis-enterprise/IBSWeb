@@ -30,10 +30,16 @@ namespace IBS.Utility.Helpers
             return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, _philippineTimeZone);
         }
 
-        public static DateOnly GetFirstDayOfCurrentPhilippineMonth()
+        public static DateOnly GetFirstDayOfMonth()
         {
             var currentDate = GetCurrentPhilippineTime();
             return new DateOnly(currentDate.Year, currentDate.Month, 1);
+        }
+
+        public static DateOnly GetLastDayOfMonth()
+        {
+            var currentDate = GetCurrentPhilippineTime();
+            return new DateOnly(currentDate.Year, currentDate.Month, DateTime.DaysInMonth(currentDate.Year, currentDate.Month));
         }
 
         public static DateTime GenerateRandomTransactionDateTime(DateOnly date)

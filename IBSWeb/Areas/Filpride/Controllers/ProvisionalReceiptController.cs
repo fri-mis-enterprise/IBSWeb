@@ -619,12 +619,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            var dateToday = DateTimeHelper.GetCurrentPhilippineTime();
+            var lastDayOfThisMonth = DateTimeHelper.GetLastDayOfMonth();
+
+            if (model.CheckDate.HasValue && model.CheckDate.Value > lastDayOfThisMonth)
+            {
+                TempData["error"] = "Future-dated checks cannot be posted.";
+                return RedirectToAction(nameof(Index));
+            }
+
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             try
             {
                 model.PostedBy = GetUserFullName();
-                model.PostedDate = DateTimeHelper.GetCurrentPhilippineTime();
+                model.PostedDate = dateToday;
                 model.Status = nameof(CollectionReceiptStatus.Posted);
 
                 var auditTrail = new FilprideAuditTrail(model.PostedBy,

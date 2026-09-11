@@ -564,7 +564,7 @@ namespace IBS.DataAccess.Repository.Filpride
             var isIncremental = difference > 0;
             difference = Math.Abs(difference);
             var unitOfWork = new UnitOfWork(_db);
-            var firstDayOfMonth = DateTimeHelper.GetFirstDayOfCurrentPhilippineMonth();
+            var firstDayOfMonth = DateTimeHelper.GetFirstDayOfMonth();
             var receivingReportDate = model.Date;
             var isReceivingReportPeriodPosted = await unitOfWork
                 .IsPeriodPostedAsync(Module.ReceivingReport, receivingReportDate, cancellationToken);
