@@ -1,11 +1,10 @@
-﻿@using IBS.Models
+@using IBS.Models
 @using IBS.Models.Enums
 @using IBS.Utility
 @using IBS.Utility.Constants
 @using Microsoft.Extensions.Options
 @using Microsoft.AspNetCore.Identity
 @model FilprideSalesInvoice
-@inject SignInManager<ApplicationUser> SignInManager
 @inject IOptions<BrandingOptions> BrandingOptions
 
 @{
@@ -30,13 +29,6 @@
     // NOTE: All invoices dated July 3–August 26 that is already printed and submitted to customers will retain the 1% rate to keep the system records aligned with the printed copies.
     var withHoldingTaxAmount = hasEwt ? DecimalRoundingHelper.ComputeEwtAmount(netOfVatAmount, Model.CwtPercent) : 0;
     var withHoldingVatAmount = hasWvat ? DecimalRoundingHelper.ComputeEwtAmount(netOfVatAmount, Model.CwVatPercent) : 0;
-
-    var selectedCompany = string.Empty;
-
-    if (SignInManager.IsSignedIn(User))
-    {
-        selectedCompany = User.Claims.FirstOrDefault(c => c.Type == "Company")?.Value;
-    }
 
     var decimalFormat = customerType != nameof(CustomerType.Government) ? SD.Two_Decimal_Format : SD.Four_Decimal_Format;
 }
@@ -303,19 +295,16 @@
         <i>This is a system generated invoice, no signature required.</i>
     </p>
 
-    if (selectedCompany == "Filpride")
-    {
-        <div class="text-center w-100 compact-section" style="margin-top:10px;">
-            <p class="text-center w-100" style="font-size: 11px;">
-                <span>Acknowledgement Certificate No:</span>
-                <span style="display: inline-block; width:150px;">@CS.ACCN</span>
-                <span>&nbsp;&nbsp;Date Issued:</span>
-                <span style="display: inline-block; width:50px;">@CS.DateIssued</span><br/>
-                Series: SI0000000001 - SI9999999999
-                Date and Time Created:&nbsp;@DateTimeHelper.GetCurrentPhilippineTimeFormatted(Model.CreatedDate)
-            </p>
-        </div>
-    }
+    <div class="text-center w-100 compact-section" style="margin-top:10px;">
+        <p class="text-center w-100" style="font-size: 11px;">
+            <span>Acknowledgement Certificate No:</span>
+            <span style="display: inline-block; width:150px;">@CS.ACCN</span>
+            <span>&nbsp;&nbsp;Date Issued:</span>
+            <span style="display: inline-block; width:50px;">@CS.DateIssued</span><br/>
+            Series: SI0000000001 - SI9999999999
+            Date and Time Created:&nbsp;@DateTimeHelper.GetCurrentPhilippineTimeFormatted(Model.CreatedDate)
+        </p>
+    </div>
 
     @if (!Model.IsPrinted)
     {

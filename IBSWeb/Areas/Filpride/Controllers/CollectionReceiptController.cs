@@ -7,28 +7,27 @@ using CsvHelper;
 using Humanizer;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Enums;
-using IBS.Models.Filpride;
 using IBS.Models.Filpride.AccountsReceivable;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.MasterFile;
 using IBS.Models.Filpride.ViewModels;
+using IBS.Models.Filpride;
+using IBS.Models;
 using IBS.Services;
-using IBS.Services.Attributes;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [CompanyAuthorize(nameof(Filpride))]
+    [Authorize]
     public class CollectionReceiptController : Controller
     {
         private readonly ApplicationDbContext _dbContext;
@@ -58,19 +57,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             return User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value
                    ?? User.Identity?.Name!;
-        }
-
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return null;
-            }
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
         }
 
         private string GenerateFileNameToSave(string incomingFileName)
@@ -126,12 +112,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
 
                 var collectionReceipts = _unitOfWork.FilprideCollectionReceipt
                     .GetAllQuery(c => true);
@@ -238,18 +218,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
             try
             {
                 var viewModel = new CollectionReceiptSingleSiViewModel();
-                var companyClaims = await GetCompanyClaimAsync();
 
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
+                viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
 
-                viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken);
 
-                viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByAccountTitle(cancellationToken);
-
-                viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+                viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
                 viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
 
@@ -268,14 +241,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
 
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
-
-                return Json(await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken));
+                return Json(await _unitOfWork.GetFilprideBankAccountListById(cancellationToken));
             }
             catch (Exception ex)
             {
@@ -363,14 +330,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SingleCollectionCreateForSales(CollectionReceiptSingleSiViewModel viewModel, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
-            viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken);
+            viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
             viewModel.SalesInvoices = (await _unitOfWork.FilprideSalesInvoice.GetAllAsync(
                     si => si.Balance > 0 &&
                           si.CustomerId == viewModel.CustomerId &&
@@ -382,8 +343,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     Text = s.SalesInvoiceNo
                 })
                 .ToList();
-            viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
-            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
 
             var total = viewModel.CashAmount + viewModel.CheckAmount + viewModel.ManagersCheckAmount + viewModel.EWT + viewModel.WVAT;
@@ -416,7 +376,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var model = new FilprideCollectionReceipt
                 {
                     CollectionReceiptNo = await _unitOfWork.FilprideCollectionReceipt
-                        .GenerateCodeAsync(companyClaims, existingSalesInvoice.Type, cancellationToken),
+                        .GenerateCodeAsync(existingSalesInvoice.Type, cancellationToken),
                     SalesInvoiceId = existingSalesInvoice.SalesInvoiceId,
                     SINo = existingSalesInvoice.SalesInvoiceNo,
                     CustomerId = viewModel.CustomerId,
@@ -505,18 +465,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
             try
             {
                 var viewModel = new CollectionReceiptMultipleSiViewModel();
-                var companyClaims = await GetCompanyClaimAsync();
 
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
+                viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
 
-                viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken);
 
-                viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
-
-                viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+                viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
                 viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
 
@@ -536,14 +489,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> MultipleCollectionCreateForSales(CollectionReceiptMultipleSiViewModel viewModel, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
-            viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken);
+            viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
 
             viewModel.SalesInvoices = (await _unitOfWork.FilprideSalesInvoice.GetAllAsync(si => si.Balance > 0
                     && si.CustomerId == viewModel.CustomerId
@@ -556,9 +503,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 })
                 .ToList();
 
-            viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
 
-            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
 
@@ -645,7 +591,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         model.Type = salesInvoice.Type;
 
                         model.CollectionReceiptNo = await _unitOfWork.FilprideCollectionReceipt
-                            .GenerateCodeAsync(companyClaims, model.Type!, cancellationToken);
+                            .GenerateCodeAsync(model.Type!, cancellationToken);
                     }
 
                     details.Add(new FilprideCollectionReceiptDetail
@@ -709,12 +655,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
 
                 if (id == null)
                 {
@@ -769,7 +709,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     CollectionReceiptId = existingModel.CollectionReceiptId,
                     CustomerId = existingModel.CustomerId,
-                    Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken),
+                    Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken),
                     TransactionDate = existingModel.TransactionDate,
                     ReferenceNo = existingModel.ReferenceNo,
                     Remarks = existingModel.Remarks,
@@ -801,23 +741,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     ManagersCheckBank = existingModel.ManagersCheckBank,
                     ManagersCheckBranch = existingModel.ManagersCheckBranch,
                     ManagersCheckAmount = existingModel.ManagersCheckAmount,
-                    BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken),
+                    BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken),
                     EWT = existingModel.EWT,
                     WVAT = existingModel.WVAT,
                     HasAlready2306 = existingModel.F2306FilePath != null,
                     HasAlready2307 = existingModel.F2307FilePath != null,
-                    ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken),
                     SIMultipleAmount = existingModel.SIMultipleAmount!,
                     InvoicePayments = crPayments,
                     MinDate = minDate,
                     BatchNumber = existingModel.BatchNumber
                 };
-
-                var offsettings = await _dbContext.FilprideOffsettings
-                    .Where(offset => offset.Source == existingModel.CollectionReceiptNo)
-                    .ToListAsync(cancellationToken);
-
-                ViewBag.Offsettings = offsettings;
 
                 return View(viewModel);
             }
@@ -850,14 +783,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
-            viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken);
+            viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
 
             var invoicesPaid = await _dbContext.FilprideCollectionReceiptDetails
                 .Where(crd => crd.CollectionReceiptNo == existingModel.CollectionReceiptNo)
@@ -876,9 +802,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 })
                 .ToList();
 
-            viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
 
-            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
 
@@ -1036,16 +961,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
             try
             {
                 var viewModel = new CollectionReceiptServiceViewModel();
-                var companyClaims = await GetCompanyClaimAsync();
 
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
-
-                viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken);
-                viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
-                viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+                viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
+                viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
                 viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
 
                 return View(viewModel);
@@ -1064,15 +982,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateForService(CollectionReceiptServiceViewModel viewModel, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
-            viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken);
-            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+            viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
+            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
             viewModel.ServiceInvoices = (await _unitOfWork.FilprideServiceInvoice
                 .GetAllAsync(si => si.Balance > 0
@@ -1086,7 +998,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 })
                 .ToList();
 
-            viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
 
             var total = viewModel.CashAmount + viewModel.CheckAmount + viewModel.ManagersCheckAmount + viewModel.EWT + viewModel.WVAT;
@@ -1120,7 +1031,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var model = new FilprideCollectionReceipt
                 {
                     CollectionReceiptNo = await _unitOfWork.FilprideCollectionReceipt
-                        .GenerateCodeAsync(companyClaims, existingServiceInvoice.Type, cancellationToken),
+                        .GenerateCodeAsync(existingServiceInvoice.Type, cancellationToken),
                     ServiceInvoiceId = existingServiceInvoice.ServiceInvoiceId,
                     SVNo = existingServiceInvoice.ServiceInvoiceNo,
                     CustomerId = viewModel.CustomerId,
@@ -1175,9 +1086,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await _dbContext.FilprideCollectionReceiptDetails.AddAsync(details, cancellationToken);
 
-                var offset = await _unitOfWork.FilprideCollectionReceipt.GetOffsettings(model.CollectionReceiptNo, model.SINo!, string.Empty, cancellationToken);
-                var offsetAmount = offset.Sum(o => o.Amount);
-                await _unitOfWork.FilprideCollectionReceipt.UpdateSV(model.ServiceInvoice!.ServiceInvoiceId, model.Total, offsetAmount, cancellationToken);
+                await _unitOfWork.FilprideCollectionReceipt.UpdateSV(model.ServiceInvoice!.ServiceInvoiceId, model.Total, cancellationToken);
 
                 #endregion --Saving default value
 
@@ -1556,13 +1465,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
-                var companyClaims = await GetCompanyClaimAsync();
                 var minDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
 
                 // if (await _unitOfWork.IsPeriodPostedAsync(Module.CollectionReceipt, existingModel.TransactionDate, cancellationToken))
                 // {
@@ -1580,7 +1483,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     CollectionReceiptId = existingModel.CollectionReceiptId,
                     CustomerId = existingModel.CustomerId,
-                    Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken),
+                    Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken),
                     TransactionDate = existingModel.TransactionDate,
                     ReferenceNo = existingModel.ReferenceNo,
                     Remarks = existingModel.Remarks,
@@ -1609,21 +1512,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     ManagersCheckBank = existingModel.ManagersCheckBank,
                     ManagersCheckBranch = existingModel.ManagersCheckBranch,
                     ManagersCheckAmount = existingModel.ManagersCheckAmount,
-                    BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken),
+                    BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken),
                     EWT = existingModel.EWT,
                     WVAT = existingModel.WVAT,
-                    ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken),
                     HasAlready2306 = existingModel.F2306FilePath != null,
                     HasAlready2307 = existingModel.F2307FileName != null,
                     MinDate = minDate,
                     BatchNumber = existingModel.BatchNumber
                 };
-
-                var offsettings = await _dbContext.FilprideOffsettings
-                    .Where(offset => offset.Source == existingModel.CollectionReceiptNo)
-                    .ToListAsync(cancellationToken);
-
-                ViewBag.Offsettings = offsettings;
 
                 return View(viewModel);
             }
@@ -1656,14 +1552,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
-            viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken);
+            viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
 
             var invoicesPaid = await _dbContext.FilprideCollectionReceiptDetails
                 .Where(crd => crd.CollectionReceiptNo == existingModel.CollectionReceiptNo)
@@ -1682,9 +1571,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 })
                 .ToList();
 
-            viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
 
-            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
 
@@ -1846,13 +1734,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 //     throw new ArgumentException($"Cannot edit this record because the period {existingModel.TransactionDate:MMM yyyy} is already closed.");
                 // }
 
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
-
                 var invoicesPaid = await _dbContext.FilprideCollectionReceiptDetails
                     .Where(crd => crd.CollectionReceiptId == id)
                     .ToListAsync(cancellationToken);
@@ -1864,7 +1745,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     CollectionReceiptId = existingModel.CollectionReceiptId,
                     CustomerId = existingModel.CustomerId,
-                    Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken),
+                    Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken),
                     TransactionDate = existingModel.TransactionDate,
                     ReferenceNo = existingModel.ReferenceNo,
                     Remarks = existingModel.Remarks,
@@ -1893,21 +1774,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     ManagersCheckBank = existingModel.ManagersCheckBank,
                     ManagersCheckBranch = existingModel.ManagersCheckBranch,
                     ManagersCheckAmount = existingModel.ManagersCheckAmount,
-                    BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken),
+                    BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken),
                     EWT = existingModel.EWT,
                     WVAT = existingModel.WVAT,
-                    ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken),
                     HasAlready2306 = existingModel.F2306FilePath != null,
                     HasAlready2307 = existingModel.F2307FileName != null,
                     MinDate = minDate,
                     BatchNumber = existingModel.BatchNumber
                 };
-
-                var offsettings = await _dbContext.FilprideOffsettings
-                    .Where(offset => offset.Source == existingModel.CollectionReceiptNo)
-                    .ToListAsync(cancellationToken);
-
-                ViewBag.Offsettings = offsettings;
 
                 return View(viewModel);
             }
@@ -1940,14 +1814,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return RedirectToAction(nameof(ServiceInvoiceIndex));
             }
 
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
-            viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken);
+            viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
 
             var invoicesPaid = await _dbContext.FilprideCollectionReceiptDetails
                 .Where(crd => crd.CollectionReceiptNo == existingModel.CollectionReceiptNo)
@@ -1967,9 +1834,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 })
                 .ToList();
 
-            viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
 
-            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
 
@@ -2072,9 +1938,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 await _dbContext.FilprideCollectionReceiptDetails.AddAsync(details, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
 
-                var offset = await _unitOfWork.FilprideCollectionReceipt.GetOffsettings(existingModel.CollectionReceiptNo!, existingModel.SINo!, string.Empty, cancellationToken);
-                var offsetAmount = offset.Sum(o => o.Amount);
-                await _unitOfWork.FilprideCollectionReceipt.UpdateSV(existingModel.ServiceInvoice!.ServiceInvoiceId, existingModel.Total, offsetAmount, cancellationToken);
+                await _unitOfWork.FilprideCollectionReceipt.UpdateSV(existingModel.ServiceInvoice!.ServiceInvoiceId, existingModel.Total, cancellationToken);
 
                 #endregion --Saving default value
 
@@ -2198,27 +2062,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.VoidedBy = GetUserFullName();
                 model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.Status = nameof(CollectionReceiptStatus.Voided);
-                var series = model.SINo ?? model.SVNo;
-
-                var findOffsetting = await _dbContext.FilprideOffsettings.Where(offset => offset.Source == model.CollectionReceiptNo && offset.Reference == series).ToListAsync(cancellationToken);
-
                 await _unitOfWork.GeneralLedger.ReverseEntries(model.CollectionReceiptNo, cancellationToken);
 
-                if (findOffsetting.Any())
-                {
-                    await _unitOfWork.FilprideCollectionReceipt.RemoveRecords<FilprideOffsettings>(offset => offset.Source == model.CollectionReceiptNo && offset.Reference == series, cancellationToken);
-                }
                 if (model.SINo != null)
                 {
-                    await _unitOfWork.FilprideCollectionReceipt.RemoveSIPayment(model.SalesInvoice!.SalesInvoiceId, model.Total, findOffsetting.Sum(offset => offset.Amount), cancellationToken);
+                    await _unitOfWork.FilprideCollectionReceipt.RemoveSIPayment(model.SalesInvoice!.SalesInvoiceId, model.Total, cancellationToken);
                 }
                 else if (model.SVNo != null)
                 {
-                    await _unitOfWork.FilprideCollectionReceipt.RemoveSVPayment(model.ServiceInvoice!.ServiceInvoiceId, model.Total, findOffsetting.Sum(offset => offset.Amount), cancellationToken);
+                    await _unitOfWork.FilprideCollectionReceipt.RemoveSVPayment(model.ServiceInvoice!.ServiceInvoiceId, model.Total, cancellationToken);
                 }
                 else if (model.MultipleSI != null)
                 {
-                    await _unitOfWork.FilprideCollectionReceipt.RemoveMultipleSIPayment(model.MultipleSIId!, model.SIMultipleAmount!, findOffsetting.Sum(offset => offset.Amount), cancellationToken);
+                    await _unitOfWork.FilprideCollectionReceipt.RemoveMultipleSIPayment(model.MultipleSIId!, model.SIMultipleAmount!, cancellationToken);
                 }
                 else
                 {
@@ -2633,21 +2489,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #endregion -- Collection Receipt Table Header --
 
-                #region -- Offsetting Table Header --
-
-                var worksheet2 = package.Workbook.Worksheets.Add("Offsetting");
-
-                worksheet2.Cells["A1"].Value = "AccountNo";
-                worksheet2.Cells["B1"].Value = "Source";
-                worksheet2.Cells["C1"].Value = "Reference";
-                worksheet2.Cells["D1"].Value = "IsRemoved";
-                worksheet2.Cells["E1"].Value = "Amount";
-                worksheet2.Cells["F1"].Value = "CreatedBy";
-                worksheet2.Cells["G1"].Value = "CreatedDate";
-                worksheet2.Cells["H1"].Value = "AccountTitle";
-
-                #endregion -- Offsetting Table Header --
-
                 #region -- Collection Receipt Export --
 
                 int row = 2;
@@ -2854,33 +2695,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 #endregion -- Collection Receipt Export (Multiple SI)--
-
-                #region -- Offsetting Export --
-
-                var crNos = selectedList.Select(item => item.CollectionReceiptNo).ToList();
-
-                var getOffsetting = await _dbContext.FilprideOffsettings
-                    .Where(offset => crNos.Contains(offset.Source))
-                    .OrderBy(offset => offset.OffSettingId)
-                    .ToListAsync();
-
-                int offsetRow = 2;
-
-                foreach (var item in getOffsetting)
-                {
-                    worksheet2.Cells[offsetRow, 1].Value = item.AccountNo;
-                    worksheet2.Cells[offsetRow, 2].Value = item.Source;
-                    worksheet2.Cells[offsetRow, 3].Value = item.Reference;
-                    worksheet2.Cells[offsetRow, 4].Value = item.IsRemoved;
-                    worksheet2.Cells[offsetRow, 5].Value = item.Amount;
-                    worksheet2.Cells[offsetRow, 6].Value = item.CreatedBy;
-                    worksheet2.Cells[offsetRow, 7].Value = item.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
-                    worksheet2.Cells[offsetRow, 8].Value = item.AccountTitle;
-
-                    offsetRow++;
-                }
-
-                #endregion -- Offsetting Export --
 
                 //Set password in Excel
                 foreach (var excelWorkSheet in package.Workbook.Worksheets)
@@ -3347,12 +3161,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> UploadCsvForSingleInvoice(CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                throw new ArgumentException("Company claims not found!");
-            }
 
             using var reader = new StreamReader(@"C:\Users\Administrator\Downloads\Uploading of collection\MOBILITY SINGLE COLLECTION.csv");
             using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
@@ -3577,12 +3385,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> UploadCsvForMultipleInvoice(CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             using var reader = new StreamReader(@"C:\Users\Administrator\Downloads\Uploading of collection\MOBILITY  MULTIPLE COLLECTION.csv");
             using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
@@ -3863,12 +3665,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> UploadCsvForSingleInvoiceExceedingBalance(CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                throw new ArgumentException("Company claims not found!");
-            }
 
             using var reader = new StreamReader(@"C:\Users\Administrator\Documents\SINGLE INVOICE AUGUST 2024 - NOVEMBER 2025(EXCEED PAYMENT).csv");
             using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
@@ -4078,12 +3874,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> UploadCsvForMultipleInvoiceSalesInvoiceNotFound(CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             using var reader = new StreamReader(@"C:\Users\Administrator\Documents\MULTI INVOICE AUGUST 2024 - NOVEMBER 2025(SI NOT FOUND) v2.csv");
             using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
@@ -4170,7 +3960,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                         var salesInvoice = new FilprideSalesInvoice
                         {
-                            SalesInvoiceNo = await _unitOfWork.FilprideSalesInvoice.GenerateCodeAsync(companyClaims, "Undocumented", cancellationToken),
+                            SalesInvoiceNo = await _unitOfWork.FilprideSalesInvoice.GenerateCodeAsync("Undocumented", cancellationToken),
                             CustomerId = customer.CustomerId,
                             ProductId = 4,
                             OtherRefNo = record.ReferenceNo,
@@ -4405,12 +4195,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> UploadCsvForMultipleInvoiceExceedingBalance(CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             using var reader = new StreamReader(@"C:\Users\Administrator\Documents\MULTI INVOICE AUGUST 2024 - NOVEMBER 2025(EXCEED PAYMENT) v2.csv");
             using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
@@ -4676,12 +4460,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
 
                 var collectionReceipts = await _dbContext.FilprideCollectionReceipts
                     .Include(cr => cr.SalesInvoice)

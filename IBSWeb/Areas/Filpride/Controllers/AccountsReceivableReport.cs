@@ -3,22 +3,22 @@ using System.Linq.Expressions;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsReceivable;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.Integrated;
 using IBS.Models.Filpride.ViewModels;
-using IBS.Services.Attributes;
-using IBS.Utility;
+using IBS.Models;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
+using IBS.Utility;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using OfficeOpenXml;
 using OfficeOpenXml.Style;
+using OfficeOpenXml;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -27,9 +27,11 @@ using Color = System.Drawing.Color;
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [CompanyAuthorize(nameof(Filpride))]
+    [Authorize]
     public class AccountsReceivableReport : Controller
     {
+        private readonly BrandingOptions _brandingOptions;
+
         private sealed class SummaryMetric
         {
             public decimal Quantity { get; set; }
@@ -46,8 +48,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private readonly ILogger<GeneralLedgerReportController> _logger;
 
-        public AccountsReceivableReport(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager, IUnitOfWork unitOfWork, IWebHostEnvironment webHostEnvironment, ILogger<GeneralLedgerReportController> logger, IOptions<BrandingOptions> brandingOptions)
+        public AccountsReceivableReport(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager, IUnitOfWork unitOfWork, IWebHostEnvironment webHostEnvironment, ILogger<GeneralLedgerReportController> logger,
+            IOptions<BrandingOptions> brandingOptions)
         {
+            _brandingOptions = brandingOptions.Value;
             _dbContext = dbContext;
             _userManager = userManager;
             _unitOfWork = unitOfWork;
@@ -59,19 +63,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             return User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value
                    ?? User.Identity?.Name!;
-        }
-
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return null;
-            }
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
         }
 
         private static string NormalizeStatusFilter(string? statusFilter) => statusFilter switch
@@ -149,12 +140,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpPost]
         public async Task<IActionResult> GenerateCOSUnservedVolume(ViewModelBook model, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (!ModelState.IsValid)
             {
@@ -339,11 +324,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             ViewBag.DateFrom = model.DateFrom.ToString("MMMM dd, yyyy");
             ViewBag.DateTo = model.DateTo.ToString("MMMM dd, yyyy");
-            var companyClaims = await GetCompanyClaimAsync();
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (!ModelState.IsValid)
             {
@@ -493,12 +473,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
 
                 if (string.IsNullOrEmpty(viewModel.ReportType))
                 {
@@ -1077,7 +1051,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 }
                             });
 
-
                         });
 
                         #endregion
@@ -1136,11 +1109,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
+
                 var currentUser = GetUserFullName();
                 var today = DateTimeHelper.GetCurrentPhilippineTime();
                 Expression<Func<FilprideDeliveryReceipt, bool>>? filter;
@@ -1267,7 +1236,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         : dateRangeType == "AsOf"
                             ? $"DISPATCH REPORT AS OF {viewModel.DateFrom:dd MMM, yyyy}"
                             : $"DISPATCH REPORT from {viewModel.DateFrom:dd MMM, yyyy} to {viewModel.DateTo:dd MMM, yyyy}";
-
 
                 var mergedCellsA7 = worksheet.Cells["A7:B7"];
                 mergedCellsA7.Merge = true;
@@ -1695,15 +1663,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> SalesReport()
         {
-            var companyClaims = await GetCompanyClaimAsync();
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             ViewModelBook viewmodel = new()
             {
-                CommissioneeList = await _unitOfWork.GetFilprideCommissioneeListAsyncById(companyClaims)
+                CommissioneeList = await _unitOfWork.GetFilprideCommissioneeListAsyncById()
             };
             return View(viewmodel);
         }
@@ -1714,12 +1677,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> GeneratedSalesReport(ViewModelBook model, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (!ModelState.IsValid)
             {
@@ -2123,11 +2080,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var dateFrom = model.DateFrom;
                 var dateTo = model.DateTo;
                 var extractedBy = GetUserFullName();
-                var companyClaims = await GetCompanyClaimAsync();
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
 
                 var statusFilter = NormalizeStatusFilter(model.StatusFilter);
 
@@ -2166,7 +2118,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 worksheet.Cells["B2"].Value = $"{dateFrom} - {dateTo}";
                 worksheet.Cells["B3"].Value = $"{extractedBy}";
-                worksheet.Cells["B4"].Value = $"{companyClaims}";
+                worksheet.Cells["B4"].Value = _brandingOptions.CompanyName;
                 worksheet.Cells["B5"].Value = GetStatusFilterLabel(statusFilter);
                 worksheet.Cells["B6"].Value = $"{DateTimeHelper.GetCurrentPhilippineTime()}";
 
@@ -2667,12 +2619,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> GeneratePostedCollection(ViewModelBook model, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (!ModelState.IsValid)
             {
@@ -2928,11 +2874,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var dateFrom = model.DateFrom;
                     var dateTo = model.DateTo;
                     var extractedBy = GetUserFullName();
-                    var companyClaims = await GetCompanyClaimAsync();
-                    if (companyClaims == null)
-                    {
-                        return BadRequest();
-                    }
 
                     var statusFilter = NormalizeStatusFilter(model.StatusFilter);
 
@@ -2969,7 +2910,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     worksheet.Cells["B2"].Value = $"{dateFrom} - {dateTo}";
                     worksheet.Cells["B3"].Value = $"{extractedBy}";
-                    worksheet.Cells["B4"].Value = $"{companyClaims}";
+                    worksheet.Cells["B4"].Value = _brandingOptions.CompanyName;
                     worksheet.Cells["B5"].Value = GetStatusFilterLabel(statusFilter);
                     worksheet.Cells["B6"].Value = $"{DateTimeHelper.GetCurrentPhilippineTime()}";
 
@@ -3368,12 +3309,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> GeneratedAgingReport(ViewModelBook model, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (!ModelState.IsValid)
             {
@@ -3663,7 +3598,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var dateFrom = model.DateFrom;
                 var dateTo = model.DateTo;
                 var extractedBy = GetUserFullName();
-                var companyClaims = await GetCompanyClaimAsync();
 
                 var salesInvoice = await _unitOfWork.FilprideSalesInvoice
                     .GetAllAsync(si => si.PostedBy != null
@@ -3675,11 +3609,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     TempData["info"] = "No Record Found";
                     return RedirectToAction(nameof(AgingReport));
                 }
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
-
                 // Create the Excel package
                 using var package = new ExcelPackage();
                 // Add a new worksheet to the Excel package
@@ -3698,7 +3627,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 worksheet.Cells["B2"].Value = $"{dateFrom} - {dateTo}";
                 worksheet.Cells["B3"].Value = $"{extractedBy}";
-                worksheet.Cells["B4"].Value = $"{companyClaims}";
+                worksheet.Cells["B4"].Value = _brandingOptions.CompanyName;
                 worksheet.Cells["B5"].Value = $"{DateTimeHelper.GetCurrentPhilippineTime()}";
 
                 worksheet.Cells["A7"].Value = "MONTH";
@@ -3912,15 +3841,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> ArPerCustomer()
         {
-            var companyClaims = await GetCompanyClaimAsync();
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             ViewModelBook viewmodel = new()
             {
-                CustomerList = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims)
+                CustomerList = await _unitOfWork.GetFilprideCustomerListAsyncById()
             };
 
             return View(viewmodel);
@@ -3930,12 +3854,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> GeneratedArPerCustomer(ViewModelBook model, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
             var statusFilter = NormalizeStatusFilter(model.StatusFilter);
 
             if (!ModelState.IsValid)
@@ -4264,11 +4183,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var dateFrom = model.DateFrom;
                 var dateTo = model.DateTo;
                 var extractedBy = GetUserFullName();
-                var companyClaims = await GetCompanyClaimAsync();
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
 
                 var statusFilter = NormalizeStatusFilter(model.StatusFilter);
 
@@ -4304,7 +4218,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 worksheet.Cells["B2"].Value = $"{dateFrom.ToString(SD.Date_Format)} - {dateTo.ToString(SD.Date_Format)}";
                 worksheet.Cells["B3"].Value = $"{extractedBy}";
-                worksheet.Cells["B4"].Value = $"{companyClaims}";
+                worksheet.Cells["B4"].Value = _brandingOptions.CompanyName;
                 worksheet.Cells["B5"].Value = GetStatusFilterLabel(statusFilter);
                 worksheet.Cells["B6"].Value = $"{DateTimeHelper.GetCurrentPhilippineTime()}";
 
@@ -4663,13 +4577,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> GeneratedServiceInvoiceReport(ViewModelBook model, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (!ModelState.IsValid)
             {
@@ -4871,11 +4778,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var dateFrom = model.DateFrom;
                 var dateTo = model.DateTo;
                 var extractedBy = GetUserFullName();
-                var companyClaims = await GetCompanyClaimAsync();
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
+
                 var statusFilter = NormalizeStatusFilter(model.StatusFilter);
 
                 var serviceReport = await _unitOfWork.FilprideReport.GetServiceInvoiceReport(model.DateFrom, model.DateTo, statusFilter, cancellationToken);
@@ -4908,7 +4811,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 worksheet.Cells["B2"].Value = $"{dateFrom} - {dateTo}";
                 worksheet.Cells["B3"].Value = $"{extractedBy}";
-                worksheet.Cells["B4"].Value = $"{companyClaims}";
+                worksheet.Cells["B4"].Value = _brandingOptions.CompanyName;
                 worksheet.Cells["B5"].Value = GetStatusFilterLabel(statusFilter);
                 worksheet.Cells["B6"].Value = $"{DateTimeHelper.GetCurrentPhilippineTime()}";
 
@@ -4987,7 +4890,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 9].Style.Numberformat.Format = currencyFormatTwoDecimal;
                     worksheet.Cells[row, 10].Style.Numberformat.Format = currencyFormatTwoDecimal;
 
-
                     totalAmount += sv.Total;
                     totalAmountPaid += sv.AmountPaid;
                     row++;
@@ -5061,11 +4963,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             try
             {
                 var extractedBy = GetUserFullName();
-                var companyClaims = await GetCompanyClaimAsync();
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
 
                 var normalizedStatusFilter = NormalizeStatusFilter(statusFilter);
 
@@ -5097,7 +4994,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 worksheet.Cells["B2"].Value = $"{dateFrom} - {dateTo}";
                 worksheet.Cells["B3"].Value = $"{extractedBy}";
-                worksheet.Cells["B4"].Value = $"{companyClaims}";
+                worksheet.Cells["B4"].Value = _brandingOptions.CompanyName;
                 worksheet.Cells["B5"].Value = GetStatusFilterLabel(normalizedStatusFilter);
                 worksheet.Cells["B6"].Value = $"{DateTimeHelper.GetCurrentPhilippineTime()}";
 
@@ -5301,11 +5198,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 var dateFrom = model.DateFrom;
                 var dateTo = model.DateTo;
-                var companyClaims = await GetCompanyClaimAsync();
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
 
                 // fetch sales report
                 var salesReport = await _unitOfWork.FilprideReport
@@ -5975,11 +5867,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var dateFrom = model.DateFrom;
                 var dateTo = model.DateTo;
                 var extractedBy = GetUserFullName();
-                var companyClaims = await GetCompanyClaimAsync();
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
+
                 var statusFilter = NormalizeStatusFilter(model.StatusFilter);
 
                 var cosSummaryReport = await _unitOfWork.FilprideReport.GetCustomerOrderSlipReport(model.DateFrom, model.DateTo, statusFilter, cancellationToken);
@@ -6009,7 +5897,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 worksheet.Cells["B2"].Value = $"{dateFrom} - {dateTo}";
                 worksheet.Cells["B3"].Value = $"{extractedBy}";
-                worksheet.Cells["B4"].Value = $"{companyClaims}";
+                worksheet.Cells["B4"].Value = _brandingOptions.CompanyName;
                 worksheet.Cells["B5"].Value = GetStatusFilterLabel(statusFilter);
                 worksheet.Cells["B6"].Value = $"{DateTimeHelper.GetCurrentPhilippineTime()}";
 
@@ -6030,8 +5918,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, col].Value = "EXP OF COS";col++;
                 worksheet.Cells[row, col].Value = "COMMISSIONEE";col++;
                 worksheet.Cells[row, col].Value = "COMMISSION RATE";
-
-
 
                 // Apply styling to the header row
                 using (var range = worksheet.Cells[row, 1, row, col])

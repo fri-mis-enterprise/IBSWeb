@@ -146,13 +146,6 @@ namespace IBSWeb.Areas.Identity.Pages.Account
                     // User is guaranteed to exist and be active at this point
                     user = await _signInManager.UserManager.FindByNameAsync(Input.Username);
 
-                    var existingClaims = await _signInManager.UserManager.GetClaimsAsync(user);
-
-                    if (!existingClaims.Any(claim => claim.Type == "Company"))
-                    {
-                        await _signInManager.UserManager.AddClaimAsync(user, new Claim("Company", "Filpride"));
-                    }
-
                     await _signInManager.SignInAsync(user, Input.RememberMe);
 
                     _logger.LogInformation("User logged in.");
@@ -176,8 +169,6 @@ namespace IBSWeb.Areas.Identity.Pages.Account
             await LoadPageData(returnUrl);
             return Page();
         }
-
-
 
         private async Task LoadPageData(string returnUrl)
         {

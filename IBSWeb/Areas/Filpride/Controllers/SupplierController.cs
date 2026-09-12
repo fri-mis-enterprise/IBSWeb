@@ -2,15 +2,15 @@ using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.MasterFile;
+using IBS.Models;
 using IBS.Services;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 
@@ -45,19 +45,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             return User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value
                    ?? User.Identity?.Name!;
-        }
-
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return null;
-            }
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
         }
 
         private string GenerateFileNameToSave(string incomingFileName)
@@ -135,12 +122,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(FilprideSupplier model, IFormFile? registration, IFormFile? document, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             await PopulateSupplierFormListsAsync(model, cancellationToken);
             ApplyEmployeeCategoryRules(model);
@@ -185,7 +166,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.CreatedBy = GetUserFullName();
                 await _unitOfWork.FilprideSupplier.AddAsync(model, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
-                await _cacheService.RemoveAsync($"coa:{companyClaims}", cancellationToken);
+                await _cacheService.RemoveAsync("coa", cancellationToken);
 
                 #region -- Audit Trail Recording --
 
@@ -316,7 +297,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 model.EditedBy = GetUserFullName();
                 await _unitOfWork.FilprideSupplier.UpdateAsync(model, cancellationToken);
-                await _cacheService.RemoveAsync($"coa:{(await GetCompanyClaimAsync())}", cancellationToken);
+                await _cacheService.RemoveAsync("coa", cancellationToken);
 
                 #region -- Audit Trail Recording --
 
@@ -382,7 +363,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 supplier.IsActive = true;
                 await _unitOfWork.SaveAsync(cancellationToken);
-                await _cacheService.RemoveAsync($"coa:{(await GetCompanyClaimAsync())}", cancellationToken);
+                await _cacheService.RemoveAsync("coa", cancellationToken);
 
                 #region --Audit Trail Recording
 
@@ -449,7 +430,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 supplier.IsActive = false;
                 await _unitOfWork.SaveAsync(cancellationToken);
-                await _cacheService.RemoveAsync($"coa:{(await GetCompanyClaimAsync())}", cancellationToken);
+                await _cacheService.RemoveAsync("coa", cancellationToken);
 
                 #region --Audit Trail Recording
 

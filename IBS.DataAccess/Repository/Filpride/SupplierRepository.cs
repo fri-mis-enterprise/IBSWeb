@@ -119,11 +119,11 @@ namespace IBS.DataAccess.Repository.Filpride
             }
         }
 
-        public async Task<List<SelectListItem>> GetFilprideTradeSupplierListAsyncById(string company, CancellationToken cancellationToken = default)
+        public async Task<List<SelectListItem>> GetFilprideTradeSupplierListAsyncById(CancellationToken cancellationToken = default)
         {
             return await _db.FilprideSuppliers
                 .OrderBy(s => s.SupplierCode)
-                .Where(s => s.IsActive && s.Category == "Trade" && company == nameof(Filpride))
+                .Where(s => s.IsActive && s.Category == "Trade")
                 .Select(s => new SelectListItem
                 {
                     Value = s.SupplierId.ToString(),

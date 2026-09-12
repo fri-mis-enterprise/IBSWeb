@@ -1,8 +1,8 @@
 using System.Globalization;
 using System.Linq.Expressions;
+using IBS.DTOs;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Filpride.IRepository;
-using IBS.DTOs;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsReceivable;
 using IBS.Models.Filpride.Books;
@@ -21,12 +21,12 @@ namespace IBS.DataAccess.Repository.Filpride
             _db = db;
         }
 
-        public async Task<string> GenerateSeriesNumberAsync(string company, string type, CancellationToken cancellationToken = default)
+        public async Task<string> GenerateSeriesNumberAsync(string type, CancellationToken cancellationToken = default)
         {
             return type switch
             {
-                nameof(DocumentType.Documented) => await GenerateCodeForDocumented(company, cancellationToken),
-                nameof(DocumentType.Undocumented) => await GenerateCodeForUnDocumented(company, cancellationToken),
+                nameof(DocumentType.Documented) => await GenerateCodeForDocumented(cancellationToken),
+                nameof(DocumentType.Undocumented) => await GenerateCodeForUnDocumented(cancellationToken),
                 _ => throw new ArgumentException("Invalid type")
             };
         }
@@ -196,7 +196,7 @@ namespace IBS.DataAccess.Repository.Filpride
                    ?? throw new KeyNotFoundException("Provisional receipt id not found.");
         }
 
-        private async Task<string> GenerateCodeForDocumented(string company, CancellationToken cancellationToken = default)
+        private async Task<string> GenerateCodeForDocumented(CancellationToken cancellationToken = default)
         {
             var lastCr = await _db
                 .FilprideProvisionalReceipts
@@ -220,7 +220,7 @@ namespace IBS.DataAccess.Repository.Filpride
             return lastSeries.Substring(0, 2) + incrementedNumber.ToString("D10");
         }
 
-        private async Task<string> GenerateCodeForUnDocumented(string company, CancellationToken cancellationToken = default)
+        private async Task<string> GenerateCodeForUnDocumented(CancellationToken cancellationToken = default)
         {
             var lastCr = await _db
                 .FilprideProvisionalReceipts

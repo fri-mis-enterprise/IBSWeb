@@ -1,13 +1,13 @@
 using System.Linq.Expressions;
+using IBS.DTOs;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Filpride.IRepository;
-using IBS.DTOs;
 using IBS.Models.Enums;
-using IBS.Models.Filpride;
 using IBS.Models.Filpride.AccountsReceivable;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.Integrated;
 using IBS.Models.Filpride.MasterFile;
+using IBS.Models.Filpride;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.EntityFrameworkCore;
@@ -23,17 +23,17 @@ namespace IBS.DataAccess.Repository.Filpride
             _db = db;
         }
 
-        public async Task<string> GenerateCodeAsync(string company, string type, CancellationToken cancellationToken = default)
+        public async Task<string> GenerateCodeAsync(string type, CancellationToken cancellationToken = default)
         {
             return type switch
             {
-                nameof(DocumentType.Documented) => await GenerateCodeForDocumented(company, cancellationToken),
-                nameof(DocumentType.Undocumented) => await GenerateCodeForUnDocumented(company, cancellationToken),
+                nameof(DocumentType.Documented) => await GenerateCodeForDocumented(cancellationToken),
+                nameof(DocumentType.Undocumented) => await GenerateCodeForUnDocumented(cancellationToken),
                 _ => throw new ArgumentException("Invalid type")
             };
         }
 
-        private async Task<string> GenerateCodeForDocumented(string company, CancellationToken cancellationToken = default)
+        private async Task<string> GenerateCodeForDocumented(CancellationToken cancellationToken = default)
         {
             var lastCr = await _db
                 .FilprideCollectionReceipts
@@ -57,7 +57,7 @@ namespace IBS.DataAccess.Repository.Filpride
             return lastSeries.Substring(0, 2) + incrementedNumber.ToString("D10");
         }
 
-        private async Task<string> GenerateCodeForUnDocumented(string company, CancellationToken cancellationToken = default)
+        private async Task<string> GenerateCodeForUnDocumented(CancellationToken cancellationToken = default)
         {
             var lastCr = await _db
                 .FilprideCollectionReceipts
@@ -79,16 +79,6 @@ namespace IBS.DataAccess.Repository.Filpride
             var incrementedNumber = long.Parse(numericPart) + 1;
 
             return lastSeries.Substring(0, 3) + incrementedNumber.ToString("D9");
-        }
-
-        public async Task<List<FilprideOffsettings>> GetOffsettings(string source, string reference, string company, CancellationToken cancellationToken = default)
-        {
-            var result = await _db
-                .FilprideOffsettings
-                .Where(o => o.Source == source && o.Reference == reference)
-                .ToListAsync(cancellationToken);
-
-            return result;
         }
 
         public async Task PostAsync(FilprideCollectionReceipt collectionReceipt, CancellationToken cancellationToken = default)
@@ -326,7 +316,7 @@ namespace IBS.DataAccess.Repository.Filpride
             await _db.SaveChangesAsync(cancellationToken);
         }
 
-        public async Task RemoveSIPayment(int id, decimal paidAmount, decimal offsetAmount, CancellationToken cancellationToken = default)
+        public async Task RemoveSIPayment(int id, decimal paidAmount, CancellationToken cancellationToken = default)
         {
             var si = await _db
                 .FilprideSalesInvoices
@@ -334,9 +324,8 @@ namespace IBS.DataAccess.Repository.Filpride
 
             if (si != null)
             {
-                var total = paidAmount + offsetAmount;
-                si.AmountPaid -= total;
-                si.Balance += total;
+                si.AmountPaid -= paidAmount;
+                si.Balance += paidAmount;
 
                 if (si.IsPaid && si.PaymentStatus == "Paid" || si.IsPaid && si.PaymentStatus == "OverPaid")
                 {
@@ -348,7 +337,7 @@ namespace IBS.DataAccess.Repository.Filpride
             }
         }
 
-        public async Task RemoveSVPayment(int id, decimal paidAmount, decimal offsetAmount, CancellationToken cancellationToken = default)
+        public async Task RemoveSVPayment(int id, decimal paidAmount, CancellationToken cancellationToken = default)
         {
             var sv = await _db
                 .FilprideServiceInvoices
@@ -356,9 +345,8 @@ namespace IBS.DataAccess.Repository.Filpride
 
             if (sv != null)
             {
-                var total = paidAmount + offsetAmount;
-                sv.AmountPaid -= total;
-                sv.Balance += total;
+                sv.AmountPaid -= paidAmount;
+                sv.Balance += paidAmount;
 
                 if (sv.IsPaid && sv.PaymentStatus == "Paid" || sv.IsPaid && sv.PaymentStatus == "OverPaid")
                 {
@@ -370,7 +358,7 @@ namespace IBS.DataAccess.Repository.Filpride
             }
         }
 
-        public async Task RemoveMultipleSIPayment(int[] id, decimal[] paidAmount, decimal offsetAmount, CancellationToken cancellationToken = default)
+        public async Task RemoveMultipleSIPayment(int[] id, decimal[] paidAmount, CancellationToken cancellationToken = default)
         {
             if (id.Length == 0 || id.Length != paidAmount.Length)
             {
@@ -390,9 +378,8 @@ namespace IBS.DataAccess.Repository.Filpride
             for (var i = 0; i < paidAmount.Length; i++)
             {
                 var salesInvoice = salesInvoices[id[i]];
-                var total = paidAmount[i] + offsetAmount;
-                salesInvoice.AmountPaid -= total;
-                salesInvoice.Balance += total;
+                salesInvoice.AmountPaid -= paidAmount[i];
+                salesInvoice.Balance += paidAmount[i];
 
                 if ((!salesInvoice.IsPaid || salesInvoice.PaymentStatus != "Paid") &&
                     (!salesInvoice.IsPaid || salesInvoice.PaymentStatus != "OverPaid"))
@@ -516,7 +503,7 @@ namespace IBS.DataAccess.Repository.Filpride
             }
         }
 
-        public async Task UpdateSV(int id, decimal paidAmount, decimal offsetAmount, CancellationToken cancellationToken = default)
+        public async Task UpdateSV(int id, decimal paidAmount, CancellationToken cancellationToken = default)
         {
             var sv = await _db
                 .FilprideServiceInvoices
@@ -527,8 +514,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 // Preserve memo adjustments already included in the outstanding balance.
                 decimal adjustedTotal = sv.Balance + sv.AmountPaid - sv.Discount;
 
-                var total = paidAmount + offsetAmount;
-                sv.AmountPaid += total;
+                sv.AmountPaid += paidAmount;
                 sv.Balance = adjustedTotal - sv.AmountPaid;
 
                 if (sv.Balance == 0 && sv.AmountPaid == adjustedTotal)

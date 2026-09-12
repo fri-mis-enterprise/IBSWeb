@@ -2,10 +2,10 @@ using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.MasterFile;
+using IBS.Models;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -39,19 +39,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                    ?? User.Identity?.Name!;
         }
 
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return null;
-            }
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
-        }
-
         public async Task<IActionResult> Index(string? view, CancellationToken cancellationToken)
         {
             IEnumerable<FilprideCustomer> customer = await _unitOfWork.FilprideCustomer
@@ -68,17 +55,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
+
             var model = new FilprideCustomer()
             {
 
                 PaymentTerms = await _unitOfWork.FilprideTerms
                     .GetFilprideTermsListAsyncByCode(cancellationToken),
-                Commissionees = await _unitOfWork.GetFilprideCommissioneeListAsyncById(companyClaims, cancellationToken),
+                Commissionees = await _unitOfWork.GetFilprideCommissioneeListAsyncById(cancellationToken),
             };
             return View(model);
         }
@@ -91,13 +74,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 ModelState.AddModelError("", "Make sure to fill all the required details.");
                 return View(model);
-            }
-
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
             }
 
             model.PaymentTerms = await _unitOfWork.FilprideTerms
@@ -150,17 +126,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
 
             var customer = await _unitOfWork.FilprideCustomer.GetAsync(c => c.CustomerId == id, cancellationToken);
-            var companyClaims = await GetCompanyClaimAsync();
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (customer != null)
             {
                 customer.PaymentTerms = await _unitOfWork.FilprideTerms
                     .GetFilprideTermsListAsyncByCode(cancellationToken);
-                customer.Commissionees = await _unitOfWork.GetFilprideCommissioneeListAsyncById(companyClaims, cancellationToken);
+                customer.Commissionees = await _unitOfWork.GetFilprideCommissioneeListAsyncById(cancellationToken);
                 return View(customer);
             }
 

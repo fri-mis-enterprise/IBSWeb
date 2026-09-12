@@ -2,9 +2,9 @@ using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.MasterFile;
+using IBS.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -44,11 +44,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> Create(CancellationToken cancellationToken = default)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
             var model = new FilprideCustomerBranch
             {
-                CustomerSelectList = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims!, cancellationToken)
+                CustomerSelectList = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken)
             };
 
             return View(model);
@@ -58,13 +57,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(FilprideCustomerBranch model, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
             if (!ModelState.IsValid)
             {
                 ModelState.AddModelError("", "Make sure to fill all the required details.");
                 model.CustomerSelectList =
-                    await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims!, cancellationToken);
+                    await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
                 return View(model);
             }
 
@@ -100,7 +98,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 _logger.LogError(ex, "Failed to create customer branch master file. Created by: {UserName}", _userManager.GetUserName(User));
                 await transaction.RollbackAsync(cancellationToken);
                 TempData["error"] = ex.Message;
-                model.CustomerSelectList = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims!, cancellationToken);
+                model.CustomerSelectList = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
                 return View(model);
             }
         }
@@ -108,7 +106,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> Edit(int? id, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
+
             if (id == null || id == 0)
             {
                 return NotFound();
@@ -121,7 +119,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
-            branch.CustomerSelectList = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims!, cancellationToken);
+            branch.CustomerSelectList = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
             return View(branch);
         }
 
@@ -129,13 +127,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(FilprideCustomerBranch model, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
             if (!ModelState.IsValid)
             {
                 ModelState.AddModelError("", "Make sure to fill all the required details.");
                 model.CustomerSelectList =
-                    await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims!, cancellationToken);
+                    await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
                 return View(model);
             }
 
@@ -163,22 +160,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 TempData["error"] = $"Error: '{ex.Message}'";
                 await transaction.RollbackAsync(cancellationToken);
                 model.CustomerSelectList =
-                    await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims!, cancellationToken);
+                    await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
                 return View(model);
             }
-        }
-
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return null;
-            }
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
         }
 
         [HttpPost]

@@ -16,10 +16,10 @@ namespace IBS.DataAccess.Repository.Filpride
             _db = db;
         }
 
-        public async Task<List<SelectListItem>> GetBankAccountListAsync(string company, CancellationToken cancellationToken = default)
+        public async Task<List<SelectListItem>> GetBankAccountListAsync(CancellationToken cancellationToken = default)
         {
             return await _db.FilprideBankAccounts
-                 .Where(a => company == nameof(Filpride) && a.IsActive)
+                 .Where(a => a.IsActive)
                  .Select(ba => new SelectListItem
                  {
                      Value = ba.BankAccountId.ToString(),

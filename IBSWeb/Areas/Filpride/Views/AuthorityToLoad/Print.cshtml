@@ -63,7 +63,7 @@
         <table class="table table-bordered">
             <thead>
             <tr>
-                <th colspan="9" class="text-center table-secondary">Filpride's ATL#: @Model.AuthorityToLoadNo</th>
+                <th colspan="9" class="text-center table-secondary">@(BrandingOptions.Value.CompanyShortName)'s ATL#: @Model.AuthorityToLoadNo</th>
             </tr>
             <tr>
                 <th>COS#</th>
@@ -73,7 +73,7 @@
                 <th>Volume</th>
                 <th>Supplier ATL#</th>
                 <th>Supplier SO#</th>
-                <th>Filpride PO#</th>
+                <th>@BrandingOptions.Value.CompanyShortName PO#</th>
                 <th>Customer PO#</th>
             </tr>
             </thead>

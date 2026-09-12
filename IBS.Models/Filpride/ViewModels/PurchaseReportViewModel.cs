@@ -22,10 +22,10 @@ namespace IBS.Models.Filpride.ViewModels
         [Display(Name = "PO No.")]
         public string PurchaseOrderNo { get; set; } = null!;
 
-        [Display(Name = "Filpride RR")]
+        [Display(Name = "RR")]
         public string FilprideRR { get; set; } = null!;
 
-        [Display(Name = "Filpride DR")]
+        [Display(Name = "DR")]
         public string FilprideDR { get; set; } = null!;
 
         [Display(Name = "ATL No")]

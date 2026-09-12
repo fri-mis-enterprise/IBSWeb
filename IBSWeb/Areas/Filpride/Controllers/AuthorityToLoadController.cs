@@ -1,26 +1,29 @@
+using System.Linq.Dynamic.Core;
+using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.Integrated;
 using IBS.Models.Filpride.ViewModels;
-using IBS.Services.Attributes;
+using IBS.Models;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
+using IBS.Utility;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Dynamic.Core;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [CompanyAuthorize(nameof(Filpride))]
+    [Authorize]
     public class AuthorityToLoadController : Controller
     {
+        private readonly BrandingOptions _brandingOptions;
+
         private readonly IUnitOfWork _unitOfWork;
 
         private readonly UserManager<ApplicationUser> _userManager;
@@ -32,8 +35,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         public AuthorityToLoadController(IUnitOfWork unitOfWork,
             UserManager<ApplicationUser> userManager,
             ApplicationDbContext dbContext,
-            ILogger<AuthorityToLoadController> logger)
+            ILogger<AuthorityToLoadController> logger,
+            IOptions<BrandingOptions> brandingOptions)
         {
+            _brandingOptions = brandingOptions.Value;
             _unitOfWork = unitOfWork;
             _userManager = userManager;
             _dbContext = dbContext;
@@ -44,19 +49,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             return User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value
                    ?? User.Identity?.Name!;
-        }
-
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return null;
-            }
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
         }
 
         private static string? GetSupplierAtlNo(BookATLViewModel viewModel, int supplierId)
@@ -93,7 +85,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
 
                 var atlList = _unitOfWork.FilprideAuthorityToLoad.GetAllQuery();
 
@@ -175,16 +166,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             BookATLViewModel viewModel = new()
             {
-                SupplierList = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(companyClaims, cancellationToken),
+                SupplierList = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(cancellationToken),
                 LoadPorts = await _unitOfWork.GetDistinctFilpridePickupPointListById(cancellationToken),
                 Date = DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime()),
                 CurrentUser = _userManager.GetUserName(User)
@@ -198,16 +183,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(BookATLViewModel viewModel, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (!ModelState.IsValid)
             {
-                viewModel.SupplierList = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                viewModel.SupplierList = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(cancellationToken);
                 viewModel.LoadPorts = await _unitOfWork.GetDistinctFilpridePickupPointListById(cancellationToken);
                 TempData["warning"] = "The submitted information is invalid.";
                 return View(viewModel);
@@ -216,7 +195,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var supplierAtlValidationMessage = ValidateSupplierAtlReferences(viewModel);
             if (supplierAtlValidationMessage != null)
             {
-                viewModel.SupplierList = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                viewModel.SupplierList = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(cancellationToken);
                 viewModel.LoadPorts = await _unitOfWork.GetDistinctFilpridePickupPointListById(cancellationToken);
                 TempData["warning"] = supplierAtlValidationMessage;
                 return View(viewModel);
@@ -224,7 +203,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             if (!viewModel.SelectedCosDetails.Any())
             {
-                viewModel.SupplierList = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                viewModel.SupplierList = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(cancellationToken);
                 viewModel.LoadPorts = await _unitOfWork.GetDistinctFilpridePickupPointListById(cancellationToken);
                 TempData["warning"] = "Please select at least one COS.";
                 return View(viewModel);
@@ -246,14 +225,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 FilprideAuthorityToLoad model = new()
                 {
-                    AuthorityToLoadNo = await _unitOfWork.FilprideAuthorityToLoad.GenerateAtlNo(companyClaims, cancellationToken),
+                    AuthorityToLoadNo = await _unitOfWork.FilprideAuthorityToLoad.GenerateAtlNo(cancellationToken),
                     CustomerOrderSlipId = cosRecord.CustomerOrderSlipId,
                     LoadPortId = cosRecord.PickUpPointId ?? 0,
                     Depot = cosRecord.PickUpPoint!.Depot,
                     Freight = cosRecord.Freight ?? 0m,
                     DateBooked = viewModel.Date,
                     ValidUntil = viewModel.Date.AddDays(4),
-                    Remarks = "Please secure delivery documents. FILPRIDE DR / SUPPLIER DR / WITHDRAWAL CERTIFICATE",
+                    Remarks = $"Please secure delivery documents. {_brandingOptions.CompanyShortName} DR / SUPPLIER DR / WITHDRAWAL CERTIFICATE",
                     CreatedBy = GetUserFullName(),
                     CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
                     SupplierId = viewModel.SupplierIds.First(),
@@ -328,7 +307,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             catch (Exception ex)
             {
                 await transaction.RollbackAsync(cancellationToken);
-                viewModel.SupplierList = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                viewModel.SupplierList = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(cancellationToken);
                 TempData["error"] = ex.Message;
                 _logger.LogError(ex, "Failed to book ATL. Error: {ErrorMessage}, Stack: {StackTrace}. Created by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
@@ -354,7 +333,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     return BadRequest();
                 }
-                var companyClaims = await GetCompanyClaimAsync();
 
                 #region --Audit Trail Recording
 
@@ -512,7 +490,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> GetHaulerDetails(int cosId)
         {
-            var companyClaims = await GetCompanyClaimAsync();
+
             // Query your database to get hauler details for the COS
             var existingCos = await _unitOfWork.FilprideCustomerOrderSlip
                 .GetAsync(c => c.CustomerOrderSlipId == cosId);
@@ -538,12 +516,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpPost]
         public async Task<IActionResult> UpdateValidityDate(int id, DateOnly newValidUntil, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
@@ -582,13 +554,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             if (id == null)
             {
                 return NotFound();
-            }
-
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
             }
 
             var atl = await _dbContext.FilprideAuthorityToLoads
@@ -646,7 +611,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 SupplierIds = supplierIds,
                 SupplierAtlReferences = supplierAtlReferences,
                 SelectedCosDetails = selectedCosDetails,
-                SupplierList = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(companyClaims, cancellationToken),
+                SupplierList = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(cancellationToken),
                 LoadPorts = await _unitOfWork.GetDistinctFilpridePickupPointListById(cancellationToken),
                 CurrentUser = _userManager.GetUserName(User)
             };
@@ -659,16 +624,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(BookATLViewModel viewModel, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (!ModelState.IsValid)
             {
-                viewModel.SupplierList = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                viewModel.SupplierList = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(cancellationToken);
                 viewModel.LoadPorts = await _unitOfWork.GetDistinctFilpridePickupPointListById(cancellationToken);
                 TempData["warning"] = "The submitted information is invalid.";
                 return View(viewModel);
@@ -677,7 +636,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var supplierAtlValidationMessage = ValidateSupplierAtlReferences(viewModel);
             if (supplierAtlValidationMessage != null)
             {
-                viewModel.SupplierList = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                viewModel.SupplierList = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(cancellationToken);
                 viewModel.LoadPorts = await _unitOfWork.GetDistinctFilpridePickupPointListById(cancellationToken);
                 TempData["warning"] = supplierAtlValidationMessage;
                 return View(viewModel);
@@ -685,7 +644,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             if (!viewModel.SelectedCosDetails.Any())
             {
-                viewModel.SupplierList = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                viewModel.SupplierList = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(cancellationToken);
                 viewModel.LoadPorts = await _unitOfWork.GetDistinctFilpridePickupPointListById(cancellationToken);
                 TempData["warning"] = "Please select at least one COS.";
                 return View(viewModel);
@@ -814,7 +773,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             catch (Exception ex)
             {
                 await transaction.RollbackAsync(cancellationToken);
-                viewModel.SupplierList = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                viewModel.SupplierList = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(cancellationToken);
                 TempData["error"] = ex.Message;
                 _logger.LogError(ex, "Failed to update ATL. Error: {ErrorMessage}, Stack: {StackTrace}. Edited by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));

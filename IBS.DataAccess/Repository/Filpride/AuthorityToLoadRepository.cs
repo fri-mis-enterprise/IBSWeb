@@ -1,9 +1,9 @@
+using System.Linq.Expressions;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Filpride.IRepository;
 using IBS.Models.Filpride.Integrated;
-using Microsoft.EntityFrameworkCore;
-using System.Linq.Expressions;
 using IBS.Utility.Helpers;
+using Microsoft.EntityFrameworkCore;
 
 namespace IBS.DataAccess.Repository.Filpride
 {
@@ -16,7 +16,7 @@ namespace IBS.DataAccess.Repository.Filpride
             _db = db;
         }
 
-        public async Task<string> GenerateAtlNo(string company, CancellationToken cancellationToken)
+        public async Task<string> GenerateAtlNo(CancellationToken cancellationToken)
         {
             var lastAtl = await _db
                 .FilprideAuthorityToLoads

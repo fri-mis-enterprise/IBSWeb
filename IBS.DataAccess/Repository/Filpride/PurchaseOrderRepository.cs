@@ -1,6 +1,7 @@
+using System.Linq.Expressions;
+using IBS.DTOs;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Filpride.IRepository;
-using IBS.DTOs;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsPayable;
 using IBS.Models.Filpride.Integrated;
@@ -8,7 +9,6 @@ using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Expressions;
 
 namespace IBS.DataAccess.Repository.Filpride
 {
@@ -21,17 +21,17 @@ namespace IBS.DataAccess.Repository.Filpride
             _db = db;
         }
 
-        public async Task<string> GenerateCodeAsync(string company, string type, CancellationToken cancellationToken = default)
+        public async Task<string> GenerateCodeAsync(string type, CancellationToken cancellationToken = default)
         {
             return type switch
             {
-                nameof(DocumentType.Documented) => await GenerateCodeForDocumented(company, cancellationToken),
-                nameof(DocumentType.Undocumented) => await GenerateCodeForUnDocumented(company, cancellationToken),
+                nameof(DocumentType.Documented) => await GenerateCodeForDocumented(cancellationToken),
+                nameof(DocumentType.Undocumented) => await GenerateCodeForUnDocumented(cancellationToken),
                 _ => throw new ArgumentException("Invalid type")
             };
         }
 
-        private async Task<string> GenerateCodeForDocumented(string company, CancellationToken cancellationToken)
+        private async Task<string> GenerateCodeForDocumented(CancellationToken cancellationToken)
         {
             var lastPo = await _db
                 .FilpridePurchaseOrders
@@ -39,7 +39,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .OrderByDescending(x => x.PurchaseOrderNo!.Length)
                 .ThenByDescending(x => x.PurchaseOrderNo)
                 .FirstOrDefaultAsync(x =>
-                    
+
                     x.Type == nameof(DocumentType.Documented) &&
                     !x.PurchaseOrderNo!.Contains("POBEG"),
                     cancellationToken);
@@ -56,7 +56,7 @@ namespace IBS.DataAccess.Repository.Filpride
             return lastSeries.Substring(0, 2) + incrementedNumber.ToString("D10");
         }
 
-        private async Task<string> GenerateCodeForUnDocumented(string company, CancellationToken cancellationToken)
+        private async Task<string> GenerateCodeForUnDocumented(CancellationToken cancellationToken)
         {
             var lastPo = await _db
                 .FilpridePurchaseOrders
@@ -64,7 +64,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .OrderByDescending(x => x.PurchaseOrderNo!.Length)
                 .ThenByDescending(x => x.PurchaseOrderNo)
                 .FirstOrDefaultAsync(x =>
-                        
+
                         x.Type == nameof(DocumentType.Undocumented) &&
                         !x.PurchaseOrderNo!.Contains("POBEG"),
                     cancellationToken);
@@ -123,7 +123,7 @@ namespace IBS.DataAccess.Repository.Filpride
             return query;
         }
 
-        public async Task<List<SelectListItem>> GetPurchaseOrderListAsyncByCode(string company, CancellationToken cancellationToken = default)
+        public async Task<List<SelectListItem>> GetPurchaseOrderListAsyncByCode(CancellationToken cancellationToken = default)
         {
             return await _db.FilpridePurchaseOrders
                 .OrderBy(p => p.PurchaseOrderNo)
@@ -136,7 +136,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<List<SelectListItem>> GetPurchaseOrderListAsyncById(string company, CancellationToken cancellationToken = default)
+        public async Task<List<SelectListItem>> GetPurchaseOrderListAsyncById(CancellationToken cancellationToken = default)
         {
             return await _db.FilpridePurchaseOrders
                 .Where(p => !p.IsReceived && !p.IsSubPo && p.Status == nameof(Status.Posted))
@@ -175,7 +175,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<string> GenerateCodeForSubPoAsync(string purchaseOrderNo, string company, CancellationToken cancellationToken = default)
+        public async Task<string> GenerateCodeForSubPoAsync(string purchaseOrderNo, CancellationToken cancellationToken = default)
         {
             var latestSubPoCode = await _db.FilpridePurchaseOrders
                 .Where(po => po.IsSubPo && po.SubPoSeries!.Contains(purchaseOrderNo))

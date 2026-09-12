@@ -1,11 +1,12 @@
+using System.Linq.Dynamic.Core;
+using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsPayable;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.ViewModels;
-using IBS.Services.Attributes;
+using IBS.Models;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Authorization;
@@ -13,13 +14,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
-using System.Linq.Dynamic.Core;
-using System.Security.Claims;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [CompanyAuthorize(nameof(Filpride))]
+    [Authorize]
     public class ReceivingReportController : Controller
     {
         private readonly ApplicationDbContext _dbContext;
@@ -47,19 +46,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             return User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value
                    ?? User.Identity?.Name!;
-        }
-
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return null;
-            }
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
         }
 
         private async Task UpdateFilterTypeClaim(string filterType)
@@ -121,7 +107,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
+
                 var filterTypeClaim = await GetCurrentFilterType();
 
                 var receivingReports = _unitOfWork.FilprideReceivingReport
@@ -230,16 +216,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
             var viewModel = new ReceivingReportViewModel();
-            var companyClaims = await GetCompanyClaimAsync();
+
             ViewBag.FilterType = await GetCurrentFilterType();
 
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
             viewModel.PurchaseOrders = await _unitOfWork.FilpridePurchaseOrder
-                .GetPurchaseOrderListAsyncById(companyClaims, cancellationToken);
+                .GetPurchaseOrderListAsyncById(cancellationToken);
 
             return View(viewModel);
         }
@@ -249,15 +230,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(ReceivingReportViewModel viewModel, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             viewModel.PurchaseOrders = await _unitOfWork.FilpridePurchaseOrder
-                .GetPurchaseOrderListAsyncById(companyClaims, cancellationToken);
+                .GetPurchaseOrderListAsyncById(cancellationToken);
 
             if (!ModelState.IsValid)
             {
@@ -348,13 +323,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
-                ViewBag.FilterType = await GetCurrentFilterType();
 
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
+                ViewBag.FilterType = await GetCurrentFilterType();
 
                 var receivingReport = await _unitOfWork.FilprideReceivingReport
                     .GetAsync(x => x.ReceivingReportId == id, cancellationToken);
@@ -374,7 +344,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     Date = receivingReport.Date,
                     PurchaseOrderId = receivingReport.POId,
                     PurchaseOrders = await _unitOfWork.FilpridePurchaseOrder
-                        .GetPurchaseOrderListAsyncById(companyClaims, cancellationToken),
+                        .GetPurchaseOrderListAsyncById(cancellationToken),
                     ReceivedDate = receivingReport.ReceivedDate,
                     SupplierSiNo = receivingReport.SupplierInvoiceNumber,
                     SupplierSiDate = receivingReport.SupplierInvoiceDate,
@@ -414,15 +384,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
             viewModel.PurchaseOrders = await _unitOfWork.FilpridePurchaseOrder
-                .GetPurchaseOrderListAsyncById(companyClaims, cancellationToken);
+                .GetPurchaseOrderListAsyncById(cancellationToken);
 
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.ReceivingReport, cancellationToken);
 
@@ -525,8 +488,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 return NotFound();
             }
-
-            var companyClaims = await GetCompanyClaimAsync();
 
             #region --Audit Trail Recording
 
@@ -777,7 +738,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
 
                 var receivingReports = await _unitOfWork.FilprideReceivingReport
                     .GetAllAsync(rr => rr.Type == nameof(DocumentType.Documented), cancellationToken);
@@ -1111,16 +1071,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest("Month and year are required.");
                 }
 
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
-
                 var receivingReports = await _unitOfWork.FilprideReceivingReport
                     .GetAllAsync(x =>
-                        
+
                         x.Status == nameof(Status.Posted) &&
                         x.Date.Month == month &&
                         x.Date.Year == year,

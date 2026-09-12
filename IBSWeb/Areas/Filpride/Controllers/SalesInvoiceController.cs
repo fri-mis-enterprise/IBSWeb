@@ -2,12 +2,11 @@ using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsReceivable;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.ViewModels;
-using IBS.Services.Attributes;
+using IBS.Models;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Authorization;
@@ -19,7 +18,7 @@ using OfficeOpenXml;
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [CompanyAuthorize(nameof(Filpride))]
+    [Authorize]
     public class SalesInvoiceController : Controller
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -44,19 +43,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                    ?? User.Identity?.Name!;
         }
 
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return null;
-            }
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
-        }
-
         public IActionResult Index(string? view)
         {
             if (view == nameof(DynamicView.SalesInvoice))
@@ -72,7 +58,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
 
                 var salesInvoices = _unitOfWork.FilprideSalesInvoice
                     .GetAllQuery(x => true);
@@ -162,16 +147,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             SalesInvoiceViewModel viewModel = new()
             {
-                Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken),
+                Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken),
                 Products = await _unitOfWork.GetProductListAsyncById(cancellationToken),
                 MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.SalesInvoice, cancellationToken)
             };
@@ -184,16 +163,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(SalesInvoiceViewModel viewModel, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (!ModelState.IsValid)
             {
-                viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken);
+                viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
                 viewModel.Products = await _unitOfWork.GetProductListAsyncById(cancellationToken);
                 viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.SalesInvoice, cancellationToken);
                 TempData["warning"] = "The submitted information is invalid.";
@@ -223,7 +196,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 var model = new FilprideSalesInvoice
                 {
-                    SalesInvoiceNo = await _unitOfWork.FilprideSalesInvoice.GenerateCodeAsync(companyClaims, viewModel.Type, cancellationToken),
+                    SalesInvoiceNo = await _unitOfWork.FilprideSalesInvoice.GenerateCodeAsync(viewModel.Type, cancellationToken),
                     CustomerId = viewModel.CustomerId,
                     ProductId = viewModel.ProductId,
                     OtherRefNo = viewModel.OtherRefNo,
@@ -264,7 +237,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
-                viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken);
+                viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
                 viewModel.Products = await _unitOfWork.GetProductListAsyncById(cancellationToken);
                 TempData["warning"] = "Please input below or exact amount based on the Sales Invoice";
                 return View(viewModel);
@@ -276,7 +249,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 _logger.LogError(ex, "Failed to create sales invoice. Error: {ErrorMessage}, Stack: {StackTrace}. Created by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
                 await transaction.RollbackAsync(cancellationToken);
-                viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken);
+                viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
                 viewModel.Products = await _unitOfWork.GetProductListAsyncById(cancellationToken);
                 TempData["error"] = ex.Message;
                 return View(viewModel);
@@ -307,11 +280,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<JsonResult> GetProductAndDRDetails(int cosId, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-            if (companyClaims == null)
-            {
-                return Json(null);
-            }
+
             var cos = await _unitOfWork.FilprideCustomerOrderSlip.GetAsync(c => c.CustomerOrderSlipId == cosId, cancellationToken);
             if (cos == null)
             {
@@ -337,11 +306,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
+
                 var existingModel = await _unitOfWork.FilprideSalesInvoice.GetAsync(si => si.SalesInvoiceId == id, cancellationToken);
 
                 if (existingModel == null)
@@ -358,7 +323,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var viewModel = new SalesInvoiceViewModel
                 {
                     SalesInvoiceId = existingModel.SalesInvoiceId,
-                    Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken),
+                    Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken),
                     Products = await _unitOfWork.GetProductListAsyncById(cancellationToken),
                     SalesInvoiceNo = existingModel.SalesInvoiceNo,
                     BusinessStyle = existingModel.CustomerOrderSlip?.BusinessStyle,
@@ -397,16 +362,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(SalesInvoiceViewModel viewModel, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (!ModelState.IsValid)
             {
-                viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken);
+                viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
                 viewModel.Products = await _unitOfWork.GetProductListAsyncById(cancellationToken);
                 viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.SalesInvoice, cancellationToken);
                 TempData["warning"] = "The submitted information is invalid.";
@@ -480,7 +439,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 _logger.LogError(ex, "Failed to edit sales invoice. Error: {ErrorMessage}, Stack: {StackTrace}. Edited by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
-                viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken);
+                viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
                 viewModel.Products = await _unitOfWork.GetProductListAsyncById(cancellationToken);
                 await transaction.RollbackAsync(cancellationToken);
                 TempData["error"] = ex.Message;
@@ -497,8 +456,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 return NotFound();
             }
-
-            var companyClaims = await GetCompanyClaimAsync();
 
             #region --Audit Trail Recording
 
@@ -686,7 +643,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> GetPOs(int productId)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
             var purchaseOrders = await _unitOfWork.FilpridePurchaseOrder
                 .GetAllAsync(po =>
@@ -777,7 +733,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
 
                 var salesInvoices = await _unitOfWork.FilprideSalesInvoice
                     .GetAllAsync(si => si.Type == nameof(DocumentType.Documented), cancellationToken);

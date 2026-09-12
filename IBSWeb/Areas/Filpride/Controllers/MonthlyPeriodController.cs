@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using IBS.DataAccess.Data;
-using IBS.Models;
 using IBS.Models.Filpride.Books;
+using IBS.Models;
 using IBS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -39,19 +39,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                    ?? User.Identity?.Name!;
         }
 
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return null;
-            }
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
-        }
-
         public IActionResult Index()
         {
             return View();
@@ -61,16 +48,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> TriggerMonthlyClosure(DateOnly monthDate, CancellationToken cancellationToken)
         {
-            var companyClaim = await GetCompanyClaimAsync();
-
-            if (companyClaim == null)
-            {
-                return BadRequest();
-            }
 
             try
             {
-                await _monthlyClosureService.CloseAsync(monthDate, companyClaim, User.Identity!.Name!, cancellationToken);
+                await _monthlyClosureService.CloseAsync(monthDate, User.Identity!.Name!, cancellationToken);
 
                 FilprideAuditTrail auditTrailBook = new(
                     GetUserFullName(),
@@ -78,7 +59,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     "Monthly Period");
 
                 await _dbContext.FilprideAuditTrails.AddAsync(auditTrailBook, cancellationToken);
-
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -97,16 +77,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> TriggerMonthlyOpening(DateOnly monthDate, CancellationToken cancellationToken)
         {
-            var companyClaim = await GetCompanyClaimAsync();
-
-            if (companyClaim == null)
-            {
-                return BadRequest();
-            }
 
             try
             {
-                await _monthlyClosureService.OpenAsync(monthDate, companyClaim, User.Identity!.Name!, cancellationToken);
+                await _monthlyClosureService.OpenAsync(monthDate, User.Identity!.Name!, cancellationToken);
 
                 FilprideAuditTrail auditTrailBook = new(
                     GetUserFullName(),
@@ -114,7 +88,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     "Monthly Period");
 
                 await _dbContext.FilprideAuditTrails.AddAsync(auditTrailBook, cancellationToken);
-
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
 

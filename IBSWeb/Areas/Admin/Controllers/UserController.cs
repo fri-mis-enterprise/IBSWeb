@@ -1,14 +1,14 @@
+using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using IBS.DataAccess.Data;
-using IBS.Models;
 using IBS.Models.Filpride.Books;
+using IBS.Models;
+using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
-using IBS.Utility.Helpers;
-using System.ComponentModel.DataAnnotations;
 
 namespace IBSWeb.Areas.Admin.Controllers
 {
@@ -130,7 +130,6 @@ namespace IBSWeb.Areas.Admin.Controllers
             try
             {
                 var currentUser = User.FindFirstValue(ClaimTypes.Name) ?? "System";
-                var company = User.FindFirstValue("Company") ?? "System";
 
                 if (string.IsNullOrEmpty(model.Id))
                 {
@@ -289,7 +288,7 @@ namespace IBSWeb.Areas.Admin.Controllers
                     return Json(new { success = false, message = "Invalid user id" });
                 }
                 var currentUser = User.FindFirstValue(ClaimTypes.Name) ?? "System";
-                var company = User.FindFirstValue("Company") ?? "System";
+
                 var user = await _userManager.FindByIdAsync(id);
 
                 if (user == null)
@@ -341,7 +340,7 @@ namespace IBSWeb.Areas.Admin.Controllers
             try
             {
                 var currentUser = User.FindFirstValue(ClaimTypes.Name) ?? "System";
-                var company = User.FindFirstValue("Company") ?? "System";
+
                 var user = await _userManager.FindByIdAsync(model.UserId);
 
                 if (user == null)

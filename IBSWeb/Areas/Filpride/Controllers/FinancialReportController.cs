@@ -1,27 +1,27 @@
 using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.ViewModels;
-using IBS.Services.Attributes;
-using IBS.Utility;
+using IBS.Models;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
+using IBS.Utility;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using OfficeOpenXml;
 using OfficeOpenXml.Style;
-using QuestPDF.Helpers;
+using OfficeOpenXml;
 using QuestPDF.Fluent;
+using QuestPDF.Helpers;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [CompanyAuthorize(nameof(Filpride))]
+    [Authorize]
     public class FinancialReportController : Controller
     {
         private readonly ApplicationDbContext _dbContext;
@@ -50,19 +50,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             _documentLogoPath = Path.Combine(webHostEnvironment.WebRootPath, _brandingOptions.DocumentLogoPath.TrimStart('/', '\\'));
         }
 
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return null;
-            }
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
-        }
-
         private string GetUserFullName()
         {
             return User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value
@@ -79,12 +66,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> GenerateProfitAndLossReport(DateOnly monthDate, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (!ModelState.IsValid)
             {
@@ -165,8 +146,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 column.Item().Text("PNL REPORT").FontSize(14).SemiBold().AlignCenter();
                                 column.Item().Text($"As Of {monthDate:MMM yyyy}").SemiBold().AlignCenter();
                             });
-
-
 
                         #endregion
 
@@ -334,13 +313,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
-
                 var firstDayOfMonth = new DateOnly(monthDate.Year, monthDate.Month, 1);
                 var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
 
@@ -393,7 +365,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 row++;
 
-
                 var imagePath = _documentLogoPath;
                 var imageFile = new FileInfo(imagePath);
 
@@ -411,7 +382,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     range.Merge = true;
                 }
                 row++;
-
 
                 using (var range = worksheet.Cells[row, 1, row, 6])
                 {
@@ -596,12 +566,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> GenerateLevelOneReport(DateOnly monthDate, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (!ModelState.IsValid)
             {
@@ -664,8 +628,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 column.Item().Text($"As Of: {monthDate:MMM yyyy}").SemiBold().AlignCenter();
                             });
 
-
-
                         #endregion
 
                         #region -- Content
@@ -697,7 +659,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             #endregion
 
                              #region -- Loop to Show Records
-
 
                                  var groupByLevelOne = generalLedgers
                                      .OrderBy(gl => gl.Account.AccountNumber)
@@ -805,13 +766,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
-
                 var firstDayOfMonth = new DateOnly(monthDate.Year, monthDate.Month, 1);
                 var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
 
@@ -840,7 +794,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 int row = 1;
 
                 #region == Top of Header ==
-
 
                 using (var range = worksheet.Cells[row, 1, row, 4])
                 {
@@ -991,12 +944,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> GenerateTrialBalanceReport(ViewModelBook model, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (!ModelState.IsValid)
             {
@@ -1225,12 +1172,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 var dateFrom = model.DateFrom;
                 var dateTo = model.DateTo;
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
 
                 var periodBalances = await _dbContext.FilprideGlPeriodBalances
                     .IgnoreQueryFilters()
@@ -1308,7 +1249,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 // Add a new worksheet to the Excel package
                 var worksheet = package.Workbook.Worksheets.Add("TrialBalance");
                 var alignmentCenter = ExcelHorizontalAlignment.Center;
-
 
                 // Set the column headers
                 worksheet.Cells["B1"].Value = _brandingOptions.LegalName;
@@ -1495,7 +1435,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         #endregion -- Trial Balance Report Excel File --
 
-
         [HttpGet]
         public IActionResult BalanceSheetReport()
         {
@@ -1506,12 +1445,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> GenerateBalanceSheetReport(DateOnly monthDate, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (!ModelState.IsValid)
             {
@@ -1589,8 +1522,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 column.Item().Text("BALANCE SHEET").FontSize(14).SemiBold().AlignCenter();
                                 column.Item().Text($"As Of {monthDate:MMM yyyy}").SemiBold().AlignCenter();
                             });
-
-
 
                         #endregion
 
@@ -1790,13 +1721,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
-
                 var firstDayOfMonth = new DateOnly(monthDate.Year, monthDate.Month, 1);
                 var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
 
@@ -1851,7 +1775,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 row++;
 
-
                 var imagePath = _documentLogoPath;
                 var imageFile = new FileInfo(imagePath);
 
@@ -1869,7 +1792,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     range.Merge = true;
                 }
                 row++;
-
 
                 using (var range = worksheet.Cells[row, 1, row, 6])
                 {
@@ -2035,7 +1957,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         totalLiabilitiesAndEquity += grandTotal;
                     }
 
-
                 }
 
                 worksheet.Cells[row + 1, 1].Value = "TOTAL LIABILITIES AND EQUITY";
@@ -2047,8 +1968,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row + 1, 6].Style.Font.Bold = true;
                 worksheet.Cells[row + 1, 6].Style.Border.Top.Style = ExcelBorderStyle.Thin;
                 worksheet.Cells[row + 1, 6].Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
-
-
 
                 worksheet.Cells["F"].Style.Numberformat.Format = currencyFormat;
 
@@ -2083,12 +2002,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> GenerateStatementOfRetainedEarningsReport(DateOnly monthDate, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (!ModelState.IsValid)
             {
@@ -2144,8 +2057,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 column.Item().Text("STATEMENT OF RETAINED EARNINGS").FontSize(14).SemiBold().AlignCenter();
                                 column.Item().Text($"As Of {monthDate.ToString(SD.Date_Format)}").SemiBold().AlignCenter();
                             });
-
-
 
                         #endregion
 
@@ -2263,13 +2174,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
-
                 var nibitForThePeriod = await _dbContext.FilprideMonthlyNibits
                     .FirstOrDefaultAsync(m => m.Year == monthDate.Year &&
                                               m.Month == monthDate.Month, cancellationToken);
@@ -2297,7 +2201,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 row++;
 
-
                 var imagePath = _documentLogoPath;
                 var imageFile = new FileInfo(imagePath);
 
@@ -2315,7 +2218,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     range.Merge = true;
                 }
                 row++;
-
 
                 using (var range = worksheet.Cells[row, 1, row, 6])
                 {
