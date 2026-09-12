@@ -78,25 +78,5 @@ namespace IBS.Services
 
             await _dbContext.SaveChangesAsync();
         }
-
-        private async Task LockPlacement(DateTime today)
-        {
-            var placements = await _dbContext.BienesPlacements
-                .Where(p => p.LockedDate <= today && !p.IsLocked)
-                .ToListAsync();
-
-            if (placements.Count == 0)
-            {
-                return;
-            }
-
-            foreach (var placement in placements)
-            {
-                placement.IsLocked = true;
-                placement.Status = nameof(PlacementStatus.Locked);
-            }
-
-            await _dbContext.SaveChangesAsync();
-        }
     }
 }

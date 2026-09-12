@@ -1,4 +1,3 @@
-using IBS.DataAccess.Repository.Bienes.IRepository;
 using IBS.DataAccess.Repository.Filpride.IRepository;
 using IBS.DataAccess.Repository.MasterFile.IRepository;
 using IBS.Models.Enums;
@@ -8,7 +7,7 @@ namespace IBS.DataAccess.Repository.IRepository
 {
     public interface IUnitOfWork : IDisposable
     {
-        MasterFile.IRepository.IProductRepository Product { get; }
+        IProductRepository Product { get; }
 
         ICompanyRepository Company { get; }
 
@@ -30,15 +29,15 @@ namespace IBS.DataAccess.Repository.IRepository
 
         #region--Filpride
 
-        Filpride.IRepository.IChartOfAccountRepository FilprideChartOfAccount { get; }
-        Filpride.IRepository.ICustomerOrderSlipRepository FilprideCustomerOrderSlip { get; }
+        IChartOfAccountRepository FilprideChartOfAccount { get; }
+        ICustomerOrderSlipRepository FilprideCustomerOrderSlip { get; }
         IDeliveryReceiptRepository FilprideDeliveryReceipt { get; }
-        Filpride.IRepository.ISupplierRepository FilprideSupplier { get; }
-        Filpride.IRepository.ICustomerRepository FilprideCustomer { get; }
+        ISupplierRepository FilprideSupplier { get; }
+        ICustomerRepository FilprideCustomer { get; }
         IAuditTrailRepository FilprideAuditTrail { get; }
         ICustomerBranchRepository FilprideCustomerBranch { get; }
         ITermsRepository FilprideTerms { get; }
-        Filpride.IRepository.IGeneralLedgerRepository GeneralLedger { get; }
+        IGeneralLedgerRepository GeneralLedger { get; }
         IProvisionalReceiptRepository ProvisionalReceipt { get; }
         ILockedPeriodAdjustmentRepository LockedPeriodAdjustment { get; }
         IDepartmentAccessRepository DepartmentAccess { get; }
@@ -70,52 +69,44 @@ namespace IBS.DataAccess.Repository.IRepository
         #region Accounts Receivable
         ISalesInvoiceRepository FilprideSalesInvoice { get; }
 
-        Filpride.IRepository.IServiceInvoiceRepository FilprideServiceInvoice { get; }
+        IServiceInvoiceRepository FilprideServiceInvoice { get; }
 
-        Filpride.IRepository.ICollectionReceiptRepository FilprideCollectionReceipt { get; }
+        ICollectionReceiptRepository FilprideCollectionReceipt { get; }
 
-        Filpride.IRepository.IDebitMemoRepository FilprideDebitMemo { get; }
+        IDebitMemoRepository FilprideDebitMemo { get; }
 
-        Filpride.IRepository.ICreditMemoRepository FilprideCreditMemo { get; }
+        ICreditMemoRepository FilprideCreditMemo { get; }
         #endregion
 
         #region Accounts Payable
 
-        Filpride.IRepository.ICheckVoucherRepository FilprideCheckVoucher { get; }
+        ICheckVoucherRepository FilprideCheckVoucher { get; }
 
-        Filpride.IRepository.IJournalVoucherRepository FilprideJournalVoucher { get; }
+        IJournalVoucherRepository FilprideJournalVoucher { get; }
 
-        Filpride.IRepository.IPurchaseOrderRepository FilpridePurchaseOrder { get; }
+        IPurchaseOrderRepository FilpridePurchaseOrder { get; }
 
-        Filpride.IRepository.IReceivingReportRepository FilprideReceivingReport { get; }
+        IReceivingReportRepository FilprideReceivingReport { get; }
 
         #endregion
 
         #region Books and Report
-        Filpride.IRepository.IInventoryRepository FilprideInventory { get; }
+        IInventoryRepository FilprideInventory { get; }
 
         IReportRepository FilprideReport { get; }
         #endregion
 
         #region Master File
 
-        Filpride.IRepository.IBankAccountRepository FilprideBankAccount { get; }
+        IBankAccountRepository FilprideBankAccount { get; }
 
-        Filpride.IRepository.IServiceRepository FilprideService { get; }
+        IServiceRepository FilprideService { get; }
 
-        Filpride.IRepository.IPickUpPointRepository FilpridePickUpPoint { get; }
-
-        IFreightRepository FilprideFreight { get; }
+        IPickUpPointRepository FilpridePickUpPoint { get; }
 
         IAuthorityToLoadRepository FilprideAuthorityToLoad { get; }
 
         #endregion
-
-        #endregion
-
-        #region --Bienes
-
-        IPlacementRepository BienesPlacement { get; }
 
         #endregion
 

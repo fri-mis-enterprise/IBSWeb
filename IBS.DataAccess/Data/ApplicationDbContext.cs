@@ -1,5 +1,4 @@
 using IBS.Models;
-using IBS.Models.Bienes;
 using IBS.Models.Filpride;
 using IBS.Models.Filpride.AccountsPayable;
 using IBS.Models.Filpride.AccountsReceivable;
@@ -49,8 +48,6 @@ namespace IBS.DataAccess.Data
 
         public DbSet<FilprideDeliveryReceiptDetail> FilprideDeliveryReceiptDetails { get; set; }
 
-        public DbSet<FilprideFreight> FilprideFreights { get; set; }
-
         public DbSet<FilprideAuthorityToLoad> FilprideAuthorityToLoads { get; set; }
 
         public DbSet<FilprideCOSAppointedSupplier> FilprideCOSAppointedSuppliers { get; set; }
@@ -82,12 +79,6 @@ namespace IBS.DataAccess.Data
         public DbSet<FilprideTerms> FilprideTerms { get; set; }
 
         #endregion
-
-        #endregion
-
-        #region --BIENES
-
-        public DbSet<BienesPlacement> BienesPlacements { get; set; }
 
         #endregion
 
@@ -711,25 +702,6 @@ namespace IBS.DataAccess.Data
             builder.Entity<AppSetting>(a =>
             {
                 a.HasIndex(a => a.SettingKey).IsUnique();
-            });
-
-            #endregion
-
-            #region --Bienes
-
-            builder.Entity<BienesPlacement>(placement =>
-            {
-                placement.HasOne(p => p.BankAccount)
-                    .WithMany()
-                    .HasForeignKey(p => p.BankId)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-                placement.HasOne(p => p.Company)
-                    .WithMany()
-                    .HasForeignKey(p => p.CompanyId)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-                placement.HasIndex(p => p.ControlNumber);
             });
 
             #endregion
