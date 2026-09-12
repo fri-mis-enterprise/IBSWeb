@@ -101,7 +101,6 @@ namespace IBS.DataAccess.Data
         public DbSet<FilprideDebitMemo> FilprideDebitMemos { get; set; }
         public DbSet<FilprideSalesInvoice> FilprideSalesInvoices { get; set; }
         public DbSet<FilprideServiceInvoice> FilprideServiceInvoices { get; set; }
-        public DbSet<FilprideOffsettings> FilprideOffsettings { get; set; }
         public DbSet<FilprideCollectionReceiptDetail> FilprideCollectionReceiptDetails { get; set; }
         #endregion
 

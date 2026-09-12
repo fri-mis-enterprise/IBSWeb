@@ -19,15 +19,13 @@ namespace IBS.DataAccess.Repository.Filpride.IRepository
 
         Task UpdateMultipleInvoice(string[] siNo, decimal[] paidAmount, CancellationToken cancellationToken = default);
 
-        Task RemoveSIPayment(int id, decimal paidAmount, decimal offsetAmount, CancellationToken cancellationToken = default);
+        Task RemoveSIPayment(int id, decimal paidAmount, CancellationToken cancellationToken = default);
 
-        Task RemoveSVPayment(int id, decimal paidAmount, decimal offsetAmount, CancellationToken cancellationToken = default);
+        Task RemoveSVPayment(int id, decimal paidAmount, CancellationToken cancellationToken = default);
 
-        Task RemoveMultipleSIPayment(int[] id, decimal[] paidAmount, decimal offsetAmount, CancellationToken cancellationToken = default);
+        Task RemoveMultipleSIPayment(int[] id, decimal[] paidAmount, CancellationToken cancellationToken = default);
 
-        Task UpdateSV(int id, decimal paidAmount, decimal offsetAmount, CancellationToken cancellationToken = default);
-
-        Task<List<FilprideOffsettings>> GetOffsettings(string source, string reference, CancellationToken cancellationToken = default);
+        Task UpdateSV(int id, decimal paidAmount, CancellationToken cancellationToken = default);
 
         Task PostAsync(FilprideCollectionReceipt collectionReceipt, CancellationToken cancellationToken = default);
 

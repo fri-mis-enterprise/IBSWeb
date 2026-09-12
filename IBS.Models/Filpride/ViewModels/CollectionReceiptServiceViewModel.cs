@@ -68,7 +68,6 @@ namespace IBS.Models.Filpride.ViewModels
 
         public decimal[]? AccountAmount { get; set; }
 
-        public List<SelectListItem>? ChartOfAccounts { get; set; }
 
         public bool HasAlready2306 { get; set; }
 

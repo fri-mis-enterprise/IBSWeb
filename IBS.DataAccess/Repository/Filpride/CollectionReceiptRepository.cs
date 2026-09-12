@@ -81,16 +81,6 @@ namespace IBS.DataAccess.Repository.Filpride
             return lastSeries.Substring(0, 3) + incrementedNumber.ToString("D9");
         }
 
-        public async Task<List<FilprideOffsettings>> GetOffsettings(string source, string reference, CancellationToken cancellationToken = default)
-        {
-            var result = await _db
-                .FilprideOffsettings
-                .Where(o => o.Source == source && o.Reference == reference)
-                .ToListAsync(cancellationToken);
-
-            return result;
-        }
-
         public async Task PostAsync(FilprideCollectionReceipt collectionReceipt, CancellationToken cancellationToken = default)
         {
             var ledgers = new List<FilprideGeneralLedgerBook>();
@@ -326,7 +316,7 @@ namespace IBS.DataAccess.Repository.Filpride
             await _db.SaveChangesAsync(cancellationToken);
         }
 
-        public async Task RemoveSIPayment(int id, decimal paidAmount, decimal offsetAmount, CancellationToken cancellationToken = default)
+        public async Task RemoveSIPayment(int id, decimal paidAmount, CancellationToken cancellationToken = default)
         {
             var si = await _db
                 .FilprideSalesInvoices
@@ -334,9 +324,8 @@ namespace IBS.DataAccess.Repository.Filpride
 
             if (si != null)
             {
-                var total = paidAmount + offsetAmount;
-                si.AmountPaid -= total;
-                si.Balance += total;
+                si.AmountPaid -= paidAmount;
+                si.Balance += paidAmount;
 
                 if (si.IsPaid && si.PaymentStatus == "Paid" || si.IsPaid && si.PaymentStatus == "OverPaid")
                 {
@@ -348,7 +337,7 @@ namespace IBS.DataAccess.Repository.Filpride
             }
         }
 
-        public async Task RemoveSVPayment(int id, decimal paidAmount, decimal offsetAmount, CancellationToken cancellationToken = default)
+        public async Task RemoveSVPayment(int id, decimal paidAmount, CancellationToken cancellationToken = default)
         {
             var sv = await _db
                 .FilprideServiceInvoices
@@ -356,9 +345,8 @@ namespace IBS.DataAccess.Repository.Filpride
 
             if (sv != null)
             {
-                var total = paidAmount + offsetAmount;
-                sv.AmountPaid -= total;
-                sv.Balance += total;
+                sv.AmountPaid -= paidAmount;
+                sv.Balance += paidAmount;
 
                 if (sv.IsPaid && sv.PaymentStatus == "Paid" || sv.IsPaid && sv.PaymentStatus == "OverPaid")
                 {
@@ -370,7 +358,7 @@ namespace IBS.DataAccess.Repository.Filpride
             }
         }
 
-        public async Task RemoveMultipleSIPayment(int[] id, decimal[] paidAmount, decimal offsetAmount, CancellationToken cancellationToken = default)
+        public async Task RemoveMultipleSIPayment(int[] id, decimal[] paidAmount, CancellationToken cancellationToken = default)
         {
             if (id.Length == 0 || id.Length != paidAmount.Length)
             {
@@ -390,9 +378,8 @@ namespace IBS.DataAccess.Repository.Filpride
             for (var i = 0; i < paidAmount.Length; i++)
             {
                 var salesInvoice = salesInvoices[id[i]];
-                var total = paidAmount[i] + offsetAmount;
-                salesInvoice.AmountPaid -= total;
-                salesInvoice.Balance += total;
+                salesInvoice.AmountPaid -= paidAmount[i];
+                salesInvoice.Balance += paidAmount[i];
 
                 if ((!salesInvoice.IsPaid || salesInvoice.PaymentStatus != "Paid") &&
                     (!salesInvoice.IsPaid || salesInvoice.PaymentStatus != "OverPaid"))
@@ -516,7 +503,7 @@ namespace IBS.DataAccess.Repository.Filpride
             }
         }
 
-        public async Task UpdateSV(int id, decimal paidAmount, decimal offsetAmount, CancellationToken cancellationToken = default)
+        public async Task UpdateSV(int id, decimal paidAmount, CancellationToken cancellationToken = default)
         {
             var sv = await _db
                 .FilprideServiceInvoices
@@ -527,8 +514,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 // Preserve memo adjustments already included in the outstanding balance.
                 decimal adjustedTotal = sv.Balance + sv.AmountPaid - sv.Discount;
 
-                var total = paidAmount + offsetAmount;
-                sv.AmountPaid += total;
+                sv.AmountPaid += paidAmount;
                 sv.Balance = adjustedTotal - sv.AmountPaid;
 
                 if (sv.Balance == 0 && sv.AmountPaid == adjustedTotal)

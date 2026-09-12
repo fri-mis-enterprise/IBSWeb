@@ -221,7 +221,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
 
-                viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByAccountTitle(cancellationToken);
 
                 viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
@@ -344,7 +343,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     Text = s.SalesInvoiceNo
                 })
                 .ToList();
-            viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
             viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
 
@@ -470,7 +468,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
 
-                viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
 
                 viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
@@ -506,7 +503,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 })
                 .ToList();
 
-            viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
 
             viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
@@ -750,18 +746,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     WVAT = existingModel.WVAT,
                     HasAlready2306 = existingModel.F2306FilePath != null,
                     HasAlready2307 = existingModel.F2307FilePath != null,
-                    ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken),
                     SIMultipleAmount = existingModel.SIMultipleAmount!,
                     InvoicePayments = crPayments,
                     MinDate = minDate,
                     BatchNumber = existingModel.BatchNumber
                 };
-
-                var offsettings = await _dbContext.FilprideOffsettings
-                    .Where(offset => offset.Source == existingModel.CollectionReceiptNo)
-                    .ToListAsync(cancellationToken);
-
-                ViewBag.Offsettings = offsettings;
 
                 return View(viewModel);
             }
@@ -813,7 +802,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 })
                 .ToList();
 
-            viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
 
             viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
@@ -975,7 +963,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var viewModel = new CollectionReceiptServiceViewModel();
 
                 viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
-                viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
                 viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
                 viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
 
@@ -1011,7 +998,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 })
                 .ToList();
 
-            viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
 
             var total = viewModel.CashAmount + viewModel.CheckAmount + viewModel.ManagersCheckAmount + viewModel.EWT + viewModel.WVAT;
@@ -1100,9 +1086,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await _dbContext.FilprideCollectionReceiptDetails.AddAsync(details, cancellationToken);
 
-                var offset = await _unitOfWork.FilprideCollectionReceipt.GetOffsettings(model.CollectionReceiptNo, model.SINo!, cancellationToken);
-                var offsetAmount = offset.Sum(o => o.Amount);
-                await _unitOfWork.FilprideCollectionReceipt.UpdateSV(model.ServiceInvoice!.ServiceInvoiceId, model.Total, offsetAmount, cancellationToken);
+                await _unitOfWork.FilprideCollectionReceipt.UpdateSV(model.ServiceInvoice!.ServiceInvoiceId, model.Total, cancellationToken);
 
                 #endregion --Saving default value
 
@@ -1531,18 +1515,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken),
                     EWT = existingModel.EWT,
                     WVAT = existingModel.WVAT,
-                    ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken),
                     HasAlready2306 = existingModel.F2306FilePath != null,
                     HasAlready2307 = existingModel.F2307FileName != null,
                     MinDate = minDate,
                     BatchNumber = existingModel.BatchNumber
                 };
-
-                var offsettings = await _dbContext.FilprideOffsettings
-                    .Where(offset => offset.Source == existingModel.CollectionReceiptNo)
-                    .ToListAsync(cancellationToken);
-
-                ViewBag.Offsettings = offsettings;
 
                 return View(viewModel);
             }
@@ -1594,7 +1571,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 })
                 .ToList();
 
-            viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
 
             viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
@@ -1801,18 +1777,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken),
                     EWT = existingModel.EWT,
                     WVAT = existingModel.WVAT,
-                    ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken),
                     HasAlready2306 = existingModel.F2306FilePath != null,
                     HasAlready2307 = existingModel.F2307FileName != null,
                     MinDate = minDate,
                     BatchNumber = existingModel.BatchNumber
                 };
-
-                var offsettings = await _dbContext.FilprideOffsettings
-                    .Where(offset => offset.Source == existingModel.CollectionReceiptNo)
-                    .ToListAsync(cancellationToken);
-
-                ViewBag.Offsettings = offsettings;
 
                 return View(viewModel);
             }
@@ -1865,7 +1834,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 })
                 .ToList();
 
-            viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
 
             viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
@@ -1970,9 +1938,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 await _dbContext.FilprideCollectionReceiptDetails.AddAsync(details, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
 
-                var offset = await _unitOfWork.FilprideCollectionReceipt.GetOffsettings(existingModel.CollectionReceiptNo!, existingModel.SINo!, cancellationToken);
-                var offsetAmount = offset.Sum(o => o.Amount);
-                await _unitOfWork.FilprideCollectionReceipt.UpdateSV(existingModel.ServiceInvoice!.ServiceInvoiceId, existingModel.Total, offsetAmount, cancellationToken);
+                await _unitOfWork.FilprideCollectionReceipt.UpdateSV(existingModel.ServiceInvoice!.ServiceInvoiceId, existingModel.Total, cancellationToken);
 
                 #endregion --Saving default value
 
@@ -2096,27 +2062,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.VoidedBy = GetUserFullName();
                 model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.Status = nameof(CollectionReceiptStatus.Voided);
-                var series = model.SINo ?? model.SVNo;
-
-                var findOffsetting = await _dbContext.FilprideOffsettings.Where(offset => offset.Source == model.CollectionReceiptNo && offset.Reference == series).ToListAsync(cancellationToken);
-
                 await _unitOfWork.GeneralLedger.ReverseEntries(model.CollectionReceiptNo, cancellationToken);
 
-                if (findOffsetting.Any())
-                {
-                    await _unitOfWork.FilprideCollectionReceipt.RemoveRecords<FilprideOffsettings>(offset => offset.Source == model.CollectionReceiptNo && offset.Reference == series, cancellationToken);
-                }
                 if (model.SINo != null)
                 {
-                    await _unitOfWork.FilprideCollectionReceipt.RemoveSIPayment(model.SalesInvoice!.SalesInvoiceId, model.Total, findOffsetting.Sum(offset => offset.Amount), cancellationToken);
+                    await _unitOfWork.FilprideCollectionReceipt.RemoveSIPayment(model.SalesInvoice!.SalesInvoiceId, model.Total, cancellationToken);
                 }
                 else if (model.SVNo != null)
                 {
-                    await _unitOfWork.FilprideCollectionReceipt.RemoveSVPayment(model.ServiceInvoice!.ServiceInvoiceId, model.Total, findOffsetting.Sum(offset => offset.Amount), cancellationToken);
+                    await _unitOfWork.FilprideCollectionReceipt.RemoveSVPayment(model.ServiceInvoice!.ServiceInvoiceId, model.Total, cancellationToken);
                 }
                 else if (model.MultipleSI != null)
                 {
-                    await _unitOfWork.FilprideCollectionReceipt.RemoveMultipleSIPayment(model.MultipleSIId!, model.SIMultipleAmount!, findOffsetting.Sum(offset => offset.Amount), cancellationToken);
+                    await _unitOfWork.FilprideCollectionReceipt.RemoveMultipleSIPayment(model.MultipleSIId!, model.SIMultipleAmount!, cancellationToken);
                 }
                 else
                 {
@@ -2531,21 +2489,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #endregion -- Collection Receipt Table Header --
 
-                #region -- Offsetting Table Header --
-
-                var worksheet2 = package.Workbook.Worksheets.Add("Offsetting");
-
-                worksheet2.Cells["A1"].Value = "AccountNo";
-                worksheet2.Cells["B1"].Value = "Source";
-                worksheet2.Cells["C1"].Value = "Reference";
-                worksheet2.Cells["D1"].Value = "IsRemoved";
-                worksheet2.Cells["E1"].Value = "Amount";
-                worksheet2.Cells["F1"].Value = "CreatedBy";
-                worksheet2.Cells["G1"].Value = "CreatedDate";
-                worksheet2.Cells["H1"].Value = "AccountTitle";
-
-                #endregion -- Offsetting Table Header --
-
                 #region -- Collection Receipt Export --
 
                 int row = 2;
@@ -2752,33 +2695,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 #endregion -- Collection Receipt Export (Multiple SI)--
-
-                #region -- Offsetting Export --
-
-                var crNos = selectedList.Select(item => item.CollectionReceiptNo).ToList();
-
-                var getOffsetting = await _dbContext.FilprideOffsettings
-                    .Where(offset => crNos.Contains(offset.Source))
-                    .OrderBy(offset => offset.OffSettingId)
-                    .ToListAsync();
-
-                int offsetRow = 2;
-
-                foreach (var item in getOffsetting)
-                {
-                    worksheet2.Cells[offsetRow, 1].Value = item.AccountNo;
-                    worksheet2.Cells[offsetRow, 2].Value = item.Source;
-                    worksheet2.Cells[offsetRow, 3].Value = item.Reference;
-                    worksheet2.Cells[offsetRow, 4].Value = item.IsRemoved;
-                    worksheet2.Cells[offsetRow, 5].Value = item.Amount;
-                    worksheet2.Cells[offsetRow, 6].Value = item.CreatedBy;
-                    worksheet2.Cells[offsetRow, 7].Value = item.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
-                    worksheet2.Cells[offsetRow, 8].Value = item.AccountTitle;
-
-                    offsetRow++;
-                }
-
-                #endregion -- Offsetting Export --
 
                 //Set password in Excel
                 foreach (var excelWorkSheet in package.Workbook.Worksheets)
