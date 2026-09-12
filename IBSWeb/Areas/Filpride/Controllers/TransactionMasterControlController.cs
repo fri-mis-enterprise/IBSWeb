@@ -1,21 +1,19 @@
-using IBS.Models;
-using IBS.Models.Filpride.ViewModels;
-using IBS.Services;
-using IBS.Services.Attributes;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using IBS.Models.Filpride.ViewModels;
+using IBS.Models;
+using IBS.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [CompanyAuthorize(nameof(Filpride))]
+    [Authorize]
     [Authorize(Roles = "Admin")]
     public class TransactionMasterControlController(
         ITransactionMasterControlService transactionMasterControlService,
-        UserManager<ApplicationUser> userManager,
         ILogger<TransactionMasterControlController> logger)
         : Controller
     {
@@ -24,18 +22,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value
                    ?? User.Identity?.Name
                    ?? "Unknown";
-        }
-
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return null;
-            }
-
-            var claims = await userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
         }
 
         public IActionResult Index()
@@ -61,8 +47,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return View(searchModel);
             }
 
-            var company = await GetCompanyClaimAsync();
-            var result = await transactionMasterControlService.FindTransactionAsync(searchModel.ReferenceNo, company, cancellationToken);
+            var result = await transactionMasterControlService.FindTransactionAsync(searchModel.ReferenceNo, cancellationToken);
 
             if (result != null)
             {
@@ -76,8 +61,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(string referenceNo, string type, CancellationToken cancellationToken)
         {
-            var company = await GetCompanyClaimAsync();
-            var model = await transactionMasterControlService.GetTransactionDetailsAsync(referenceNo, type, company, cancellationToken);
+
+            var model = await transactionMasterControlService.GetTransactionDetailsAsync(referenceNo, type, cancellationToken);
 
             if (model == null)
             {
@@ -99,13 +84,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var company = await GetCompanyClaimAsync();
-                if (company == null)
-                {
-                    throw new InvalidOperationException("Company claim is missing for the current user.");
-                }
 
-                await transactionMasterControlService.UpdateTransactionAsync(model, company, GetUserFullName(), cancellationToken);
+                await transactionMasterControlService.UpdateTransactionAsync(model, GetUserFullName(), cancellationToken);
 
                 TempData["success"] = "Transaction updated successfully across all records.";
                 return RedirectToAction(nameof(Index));
@@ -138,20 +118,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest(new { success = false, error = "Invalid rejournal type selected." });
             }
 
-            var company = await GetCompanyClaimAsync();
-
-            if (company == null)
-            {
-                return BadRequest(new { success = false, error = "Company claim is missing for the current user." });
-            }
-
             try
             {
                 var result = await transactionMasterControlService.ReJournalAllAsync(
                     month.Value,
                     year.Value,
-                    company,
-                    "SYSTEM GENERATED",
+                     "SYSTEM GENERATED",
                     transactionType,
                     cancellationToken);
 

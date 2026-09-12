@@ -17,6 +17,6 @@ namespace IBS.DataAccess.Repository.Filpride.IRepository
 
         Task UpdateAsync(FilprideSupplier model, CancellationToken cancellationToken = default);
 
-        Task<List<SelectListItem>> GetFilprideTradeSupplierListAsyncById(string company, CancellationToken cancellationToken = default);
+        Task<List<SelectListItem>> GetFilprideTradeSupplierListAsyncById(CancellationToken cancellationToken = default);
     }
 }

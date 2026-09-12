@@ -2,10 +2,9 @@ using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.MasterFile;
-using IBS.Services.Attributes;
+using IBS.Models;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -38,19 +37,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                    ?? User.Identity?.Name!;
         }
 
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return null;
-            }
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
-        }
-
         public async Task<IActionResult> Index(CancellationToken cancellationToken)
         {
             var pickupPoints = await _dbContext.FilpridePickUpPoints
@@ -63,16 +49,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             var model = new FilpridePickUpPoint
             {
-                Suppliers = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(companyClaims, cancellationToken)
+                Suppliers = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(cancellationToken)
             };
 
             return View(model);
@@ -82,16 +62,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(FilpridePickUpPoint model, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (!ModelState.IsValid)
             {
-                model.Suppliers = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                model.Suppliers = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(cancellationToken);
                 ModelState.AddModelError("", "Make sure to fill all the required details.");
                 return View(model);
             }
@@ -197,13 +171,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return NotFound();
                 }
 
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
-
                 var model = await _unitOfWork.FilpridePickUpPoint
                     .GetAsync(p => p.PickUpPointId == id, cancellationToken);
 
@@ -212,7 +179,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return NotFound();
                 }
 
-                model.Suppliers = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                model.Suppliers = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(cancellationToken);
 
                 return View(model);
             }

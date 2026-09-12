@@ -1,22 +1,21 @@
+using System.Linq.Dynamic.Core;
+using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsPayable;
 using IBS.Models.Filpride.Books;
-using IBS.Services.Attributes;
+using IBS.Models;
 using IBS.Utility.Constants;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using System.Linq.Dynamic.Core;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [CompanyAuthorize(nameof(Filpride))]
+    [Authorize]
     public class DisbursementController : Controller
     {
         private readonly ApplicationDbContext _dbContext;
@@ -38,19 +37,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             _logger = logger;
         }
 
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return null;
-            }
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
-        }
-
         private string GetUserFullName()
         {
             return User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value
@@ -67,7 +53,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
 
                 var disbursements = _unitOfWork.FilprideCheckVoucher
                     .GetAllQuery(x=> x.CvType != nameof(CVType.Invoicing) &&
@@ -185,7 +170,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             cv.DcpDate = dcpDate;
             cv.DcrDate = null;
 
-            var connectedInvoices = await GetConnectedInvoicesAsync(cv.CheckVoucherHeaderId, string.Empty, cancellationToken);
+            var connectedInvoices = await GetConnectedInvoicesAsync(cv.CheckVoucherHeaderId, cancellationToken);
             foreach (var invoice in connectedInvoices)
             {
                 invoice.DcpDate = dcpDate;
@@ -243,7 +228,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             cv.DcrDate = dcrDate;
 
-            var connectedInvoices = await GetConnectedInvoicesAsync(cv.CheckVoucherHeaderId, string.Empty, cancellationToken);
+            var connectedInvoices = await GetConnectedInvoicesAsync(cv.CheckVoucherHeaderId, cancellationToken);
             foreach (var invoice in connectedInvoices)
             {
                 invoice.DcrDate = dcrDate;
@@ -263,11 +248,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private async Task<List<FilprideCheckVoucherHeader>> GetConnectedInvoicesAsync(
             int paymentCvId,
-            string company,
             CancellationToken cancellationToken)
         {
             return await _dbContext.FilprideCheckVoucherHeaders
-                .Where(invoice => 
+                .Where(invoice =>
                                   invoice.PostedBy != null &&
                                   _dbContext.FilprideMultipleCheckVoucherPayments
                                       .Any(payment => payment.CheckVoucherHeaderPaymentId == paymentCvId &&

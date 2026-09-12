@@ -1,8 +1,8 @@
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
 using IBS.Models.Enums;
-using IBS.Models.Filpride;
 using IBS.Models.Filpride.Books;
+using IBS.Models.Filpride;
 using IBS.Utility.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -11,9 +11,9 @@ namespace IBS.Services
 {
     public interface IMonthlyClosureService
     {
-        Task CloseAsync(DateOnly monthDate, string company, string user, CancellationToken cancellationToken = default);
+        Task CloseAsync(DateOnly monthDate, string user, CancellationToken cancellationToken = default);
 
-        Task OpenAsync(DateOnly monthDate, string company, string user, CancellationToken cancellationToken = default);
+        Task OpenAsync(DateOnly monthDate, string user, CancellationToken cancellationToken = default);
     }
 
     public class MonthlyClosureService : IMonthlyClosureService
@@ -33,7 +33,7 @@ namespace IBS.Services
             _unitOfWork = unitOfWork;
         }
 
-        public async Task CloseAsync(DateOnly monthDate, string company, string user, CancellationToken cancellationToken = default)
+        public async Task CloseAsync(DateOnly monthDate, string user, CancellationToken cancellationToken = default)
         {
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
             try
@@ -46,7 +46,7 @@ namespace IBS.Services
                 }
 
                 var hasUnliftedDrs = await _dbContext.FilprideDeliveryReceipts
-                    .AnyAsync(x => 
+                    .AnyAsync(x =>
                                    x.Date.Month == monthDate.Month &&
                                    x.Date.Year == monthDate.Year &&
                                    x.VoidedBy == null &&
@@ -59,9 +59,9 @@ namespace IBS.Services
                                                         $"Closing for this month cannot proceed.");
                 }
 
-                //await AutoReversalForCvWithoutDcrDate(monthDate, company, cancellationToken);
-                await ComputeNibit(monthDate, company, cancellationToken);
-                await RecordGlPeriodBalance(monthDate, company, cancellationToken);
+                //await AutoReversalForCvWithoutDcrDate(monthDate, cancellationToken);
+                await ComputeNibit(monthDate, cancellationToken);
+                await RecordGlPeriodBalance(monthDate, cancellationToken);
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -75,7 +75,7 @@ namespace IBS.Services
             }
         }
 
-        private async Task AutoReversalForCvWithoutDcrDate(DateOnly periodMonth, string company, CancellationToken cancellationToken)
+        private async Task AutoReversalForCvWithoutDcrDate(DateOnly periodMonth, CancellationToken cancellationToken)
         {
             try
             {
@@ -83,7 +83,7 @@ namespace IBS.Services
 
                 var disbursementsWithoutDcrDate = await _dbContext.FilprideCheckVoucherHeaders
                     .Where(cv =>
-                        
+
                         cv.Date.Month == periodMonth.Month &&
                         cv.Date.Year == periodMonth.Year &&
                         cv.CvType != nameof(CVType.Invoicing) &&
@@ -163,7 +163,7 @@ namespace IBS.Services
             }
         }
 
-        private async Task ComputeNibit(DateOnly periodMonth, string company, CancellationToken cancellationToken)
+        private async Task ComputeNibit(DateOnly periodMonth, CancellationToken cancellationToken)
         {
             try
             {
@@ -264,13 +264,13 @@ namespace IBS.Services
             }
         }
 
-        private async Task RecordGlPeriodBalance(DateOnly periodMonth, string company, CancellationToken cancellationToken)
+        private async Task RecordGlPeriodBalance(DateOnly periodMonth, CancellationToken cancellationToken)
         {
             try
             {
                 var periodEnd = periodMonth.AddMonths(1).AddDays(-1);
 
-                // Get all accounts from COA for this company
+                // Get all accounts from COA for the period
                 var allAccounts = await _dbContext.FilprideChartOfAccounts
                     .IgnoreQueryFilters()
                     .OrderBy(x => x.AccountNumber)
@@ -286,7 +286,7 @@ namespace IBS.Services
                     .IgnoreQueryFilters()
                     .Include(x => x.Account)
                     .Where(x =>
-                        
+
                         x.Date.Month == periodMonth.Month &&
                         x.Date.Year == periodMonth.Year)
                     .ToListAsync(cancellationToken);
@@ -443,19 +443,19 @@ namespace IBS.Services
                 await _dbContext.SaveChangesAsync(cancellationToken);
 
                 _logger.LogInformation(
-                    "Recorded GL balances for period {PeriodMonth} and company {Company}: {AccountCount} accounts ({ActiveCount} with transactions), {SubAccountCount} sub-accounts.",
-                    periodMonth.ToString("yyyy-MM-dd"), company, glBalances.Count, glGroupedByAccount.Count, subAccountBalances.Count);
+                    "Recorded GL balances for period {PeriodMonth}: {AccountCount} accounts ({ActiveCount} with transactions), {SubAccountCount} sub-accounts.",
+                    periodMonth.ToString("yyyy-MM-dd"), glBalances.Count, glGroupedByAccount.Count, subAccountBalances.Count);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex,
-                    "An error occurred while recording the GL balance for period {PeriodMonth} and company {Company}.",
-                    periodMonth.ToString("yyyy-MM-dd"), company);
+                    "An error occurred while recording the GL balance for period {PeriodMonth}.",
+                    periodMonth.ToString("yyyy-MM-dd"));
                 throw;
             }
         }
 
-        public async Task OpenAsync(DateOnly monthDate, string company, string user, CancellationToken cancellationToken = default)
+        public async Task OpenAsync(DateOnly monthDate, string user, CancellationToken cancellationToken = default)
         {
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 

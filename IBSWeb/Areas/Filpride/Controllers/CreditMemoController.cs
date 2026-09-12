@@ -2,26 +2,25 @@ using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Enums;
-using IBS.Models.Filpride;
 using IBS.Models.Filpride.AccountsReceivable;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.ViewModels;
-using IBS.Services.Attributes;
+using IBS.Models.Filpride;
+using IBS.Models;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [CompanyAuthorize(nameof(Filpride))]
+    [Authorize]
     public class CreditMemoController : Controller
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -44,19 +43,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             return User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value
                    ?? User.Identity?.Name!;
-        }
-
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return null;
-            }
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
         }
 
         private static (int? SupplierId, string? SupplierName) ResolveLockedPeriodSupplier(FilprideSalesInvoice salesInvoice)
@@ -141,7 +127,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
+
                 var filterTypeClaim = await GetCurrentFilterType();
 
                 var creditMemos = _unitOfWork.FilprideCreditMemo
@@ -219,7 +205,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task IncludeSelectLists(CreditMemoViewModel viewModel, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
             viewModel.SalesInvoices = (await _unitOfWork.FilprideSalesInvoice
                     .GetAllAsync(si => si.PostedBy != null, cancellationToken))
@@ -277,13 +262,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 Remarks = viewModel.Remarks,
                 Description = viewModel.Description,
             };
-
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             var existingSalesInvoice = await _unitOfWork.FilprideSalesInvoice
                         .GetAsync(invoice => invoice.SalesInvoiceId == model.SalesInvoiceId, cancellationToken);
@@ -360,7 +338,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (model.Source == "Sales Invoice")
                 {
                     model.ServiceInvoiceId = null;
-                    model.CreditMemoNo = await _unitOfWork.FilprideCreditMemo.GenerateCodeAsync(companyClaims, existingSalesInvoice!.Type, cancellationToken);
+                    model.CreditMemoNo = await _unitOfWork.FilprideCreditMemo.GenerateCodeAsync(existingSalesInvoice!.Type, cancellationToken);
                     model.Type = existingSalesInvoice.Type;
                     model.CreditAmount = DecimalRoundingHelper.ComputeAmountFromUnitPrice(model.Quantity ?? 0m, -(model.AdjustedPrice ?? 0m));
                 }
@@ -368,7 +346,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     model.SalesInvoiceId = null;
 
-                    model.CreditMemoNo = await _unitOfWork.FilprideCreditMemo.GenerateCodeAsync(companyClaims, existingSv!.Type, cancellationToken);
+                    model.CreditMemoNo = await _unitOfWork.FilprideCreditMemo.GenerateCodeAsync(existingSv!.Type, cancellationToken);
                     model.Type = existingSv.Type;
                     model.CreditAmount = -model.Amount ?? 0;
                 }
@@ -601,13 +579,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var creditMemo = await _unitOfWork.FilprideCreditMemo.GetAsync(c => c.CreditMemoId == id, cancellationToken);
 
             if (creditMemo == null)
-            {
-                return NotFound();
-            }
-
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
             {
                 return NotFound();
             }
@@ -856,7 +827,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
 
                 var creditMemos = await _unitOfWork.FilprideCreditMemo
                     .GetAllAsync(cm => true, cancellationToken);

@@ -1,22 +1,14 @@
-﻿@using System.Globalization
+@using System.Globalization
 @using Humanizer
 @using IBS.Models
 @using IBS.Models.Enums
 @using IBS.Utility.Constants
 @using Microsoft.AspNetCore.Identity
 @model FilprideCollectionReceipt
-@inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 
 @{
     ViewData["Title"] = "Collection Receipt for Multiple Invoice - Preview";
-
-    var selectedCompany = string.Empty;
-
-    if (SignInManager.IsSignedIn(User))
-    {
-        selectedCompany = User.Claims.FirstOrDefault(c => c.Type == "Company")?.Value;
-    }
 
     var customerType = Model.SalesInvoice?.CustomerOrderSlip?.CustomerType ?? Model.Customer!.CustomerType;
     var customerName = Model.SalesInvoice?.CustomerOrderSlip?.CustomerName ?? Model.Customer!.CustomerName;
@@ -370,37 +362,31 @@
 {
     <div class="text-center w-100 compact-section" style="margin-top:10px;">
         <em><strong>"THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX"</strong></em><br/><br/>
-        @if (selectedCompany == "Filpride")
-        {
-            <p style="font-size: 11px;">
-                <span>Acknowledgement Certificate No:</span>
-                <span style="display: inline-block; width:150px;"> @CS.ACCN </span>
-                <span>&nbsp;&nbsp;Date Issued:</span>
-                <span style="display: inline-block; width:50px;"> @CS.DateIssued </span><br/>
-                Series: CR0000000001 - CR9999999999
-                Date and Time Created:&nbsp;@DateTimeHelper.GetCurrentPhilippineTimeFormatted(Model.CreatedDate)
-            </p>
-        }
+        <p style="font-size: 11px;">
+            <span>Acknowledgement Certificate No:</span>
+            <span style="display: inline-block; width:150px;"> @CS.ACCN </span>
+            <span>&nbsp;&nbsp;Date Issued:</span>
+            <span style="display: inline-block; width:50px;"> @CS.DateIssued </span><br/>
+            Series: CR0000000001 - CR9999999999
+            Date and Time Created:&nbsp;@DateTimeHelper.GetCurrentPhilippineTimeFormatted(Model.CreatedDate)
+        </p>
     </div>
 
     <br />
 
-    if (selectedCompany == "Filpride")
-    {
-        <div class="text-start w-100 footer compact-section" style="margin-top:30px;">
-            <p style="line-height: 1; font-size: 11px;">
-                <em>
-                    <strong>Software Name :</strong> @CS.AAS
-                    <br/>
-                    <strong>Version :</strong> @CS.Version
-                    <br/>
-                    <strong>Printed By :</strong> @UserManager.GetUserName(User)!.ToUpper()
-                    <br/>
-                    <strong>Date & Time Printed :</strong> @DateTimeHelper.GetCurrentPhilippineTimeFormatted()
-                </em>
-            </p>
-        </div>
-    }
+    <div class="text-start w-100 footer compact-section" style="margin-top:30px;">
+        <p style="line-height: 1; font-size: 11px;">
+            <em>
+                <strong>Software Name :</strong> @CS.AAS
+                <br/>
+                <strong>Version :</strong> @CS.Version
+                <br/>
+                <strong>Printed By :</strong> @UserManager.GetUserName(User)!.ToUpper()
+                <br/>
+                <strong>Date & Time Printed :</strong> @DateTimeHelper.GetCurrentPhilippineTimeFormatted()
+            </em>
+        </p>
+    </div>
 
     @if (!Model.IsPrinted)
     {

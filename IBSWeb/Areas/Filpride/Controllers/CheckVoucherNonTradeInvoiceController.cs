@@ -1,30 +1,29 @@
+using System.Linq.Dynamic.Core;
+using System.Security.Claims;
+using IBS.DTOs;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsPayable;
 using IBS.Models.Filpride.Books;
+using IBS.Models.Filpride.MasterFile;
 using IBS.Models.Filpride.ViewModels;
+using IBS.Models.MasterFile;
+using IBS.Models;
 using IBS.Services;
-using IBS.Services.Attributes;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using System.Linq.Dynamic.Core;
-using System.Security.Claims;
-using IBS.DTOs;
-using IBS.Models.Filpride.MasterFile;
-using IBS.Models.MasterFile;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.EntityFrameworkCore;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [CompanyAuthorize(nameof(Filpride))]
+    [Authorize]
     public class CheckVoucherNonTradeInvoiceController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;
@@ -60,19 +59,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             return User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value
                    ?? User.Identity?.Name!;
-        }
-
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            ApplicationUser? user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return null;
-            }
-
-            IList<Claim> claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
         }
 
         private async Task UpdateFilterTypeClaim(string filterType)
@@ -126,12 +112,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                string? companyClaims = await GetCompanyClaimAsync();
+
                 string? filterTypeClaim = await GetCurrentFilterType();
 
                 IQueryable<FilprideCheckVoucherHeader> checkVoucher = _unitOfWork.FilprideCheckVoucher
                     .GetAllQuery()
-                    .Where(cvh => 
+                    .Where(cvh =>
                                   cvh.CvType == nameof(CVType.Invoicing) &&
                                   !cvh.IsPayroll);
 
@@ -252,26 +238,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 _userManager.GetUserName(User));
 
             var viewModel = new CheckVoucherNonTradeInvoicingViewModel();
-            string? companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                _logger.LogWarning("CheckVoucherNonTradeInvoice/Create GET aborted because company claim is missing for user {UserName}.",
-                    _userManager.GetUserName(User));
-                return BadRequest();
-            }
 
             List<SelectListItem> coaSelectList = await _unitOfWork
                 .GetChartOfAccountListAsyncByAccountTitle(cancellationToken);
 
-            _logger.LogInformation("CheckVoucherNonTradeInvoice/Create GET loaded {CoaCount} chart of account items for company {Company}.",
-                coaSelectList.Count, companyClaims);
+            _logger.LogInformation("CheckVoucherNonTradeInvoice/Create GET loaded {CoaCount} chart of account items.",
+                coaSelectList.Count);
 
             List<SelectListItem> supplierSelectList = await _unitOfWork
-                .GetFilprideNonTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                .GetFilprideNonTradeSupplierListAsyncById(cancellationToken);
 
-            _logger.LogInformation("CheckVoucherNonTradeInvoice/Create GET loaded {SupplierCount} supplier items for company {Company}.",
-                supplierSelectList.Count, companyClaims);
+            _logger.LogInformation("CheckVoucherNonTradeInvoice/Create GET loaded {SupplierCount} supplier items.",
+                supplierSelectList.Count);
 
             DateTime minDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
 
@@ -279,8 +257,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             viewModel.Suppliers = supplierSelectList;
             viewModel.MinDate = minDate;
 
-            _logger.LogInformation("CheckVoucherNonTradeInvoice/Create GET completed for company {Company}. MinDate: {MinDate}.",
-                companyClaims, minDate);
+            _logger.LogInformation("CheckVoucherNonTradeInvoice/Create GET completed. MinDate: {MinDate}.", minDate);
 
             return View(viewModel);
         }
@@ -290,17 +267,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CheckVoucherNonTradeInvoicingViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
         {
-            string? companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (!ModelState.IsValid)
             {
                 viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByAccountTitle(cancellationToken);
-                viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(cancellationToken);
                 viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
                 TempData["error"] = "The information provided was invalid.";
                 return View(viewModel);
@@ -326,7 +297,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 FilprideCheckVoucherHeader checkVoucherHeader = new()
                 {
-                    CheckVoucherHeaderNo = await _unitOfWork.FilprideCheckVoucher.GenerateCodeMultipleInvoiceAsync(companyClaims, viewModel.Type!, cancellationToken),
+                    CheckVoucherHeaderNo = await _unitOfWork.FilprideCheckVoucher.GenerateCodeMultipleInvoiceAsync(viewModel.Type!, cancellationToken),
                     Date = viewModel.TransactionDate,
                     Payee = viewModel.SupplierName,
                     Address = viewModel.SupplierAddress!,
@@ -694,7 +665,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByAccountTitle(cancellationToken);
 
-                viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(cancellationToken);
 
                 await transaction.RollbackAsync(cancellationToken);
                 TempData["error"] = ex.Message;
@@ -755,12 +726,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                string? companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
 
                 FilprideCheckVoucherHeader? existingModel = await _unitOfWork.FilprideCheckVoucher
                     .GetAsync(cv => cv.CheckVoucherHeaderId == id, cancellationToken);
@@ -782,7 +747,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ToListAsync(cancellationToken);
 
                 existingModel.Suppliers =
-                    await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                    await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(cancellationToken);
                 existingModel.COA = await _unitOfWork.GetChartOfAccountListAsyncByAccountTitle(cancellationToken);
 
                 CheckVoucherNonTradeInvoicingViewModel viewModel = new()
@@ -855,16 +820,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(CheckVoucherNonTradeInvoicingViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
         {
-            string? companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (!ModelState.IsValid)
             {
-                viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(cancellationToken);
                 viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByAccountTitle(cancellationToken);
                 viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
                 TempData["warning"] = "The information provided was invalid.";
@@ -1277,7 +1236,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
 
                 viewModel.Suppliers = await _unitOfWork.GetChartOfAccountListAsyncByAccountTitle(cancellationToken);
-                viewModel.ChartOfAccounts = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                viewModel.ChartOfAccounts = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(cancellationToken);
 
                 await transaction.RollbackAsync(cancellationToken);
                 TempData["error"] = ex.Message;
@@ -1289,7 +1248,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> Print(int? id, int? supplierId, int? employeeId, CancellationToken cancellationToken)
         {
-            string? companyClaims = await GetCompanyClaimAsync();
 
             if (id == null)
             {
@@ -1584,10 +1542,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return Json(null);
             }
 
-            string? companyClaims = await GetCompanyClaimAsync();
-
             FilprideSupplier? supplier = await _unitOfWork.FilprideSupplier
-                .GetAsync(s => s.SupplierId == supplierId && companyClaims == nameof(Filpride));
+                .GetAsync(s => s.SupplierId == supplierId);
 
             if (supplier == null)
             {
@@ -1627,9 +1583,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> GetBankAccountById(int bankId)
         {
-            string? companyClaims = await GetCompanyClaimAsync();
+
             FilprideBankAccount? bankAccount = await _unitOfWork.FilprideBankAccount
-                .GetAsync(b => b.BankAccountId == bankId && companyClaims == nameof(Filpride));
+                .GetAsync(b => b.BankAccountId == bankId);
 
             if (bankAccount == null)
             {
@@ -1678,12 +1634,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> GetEmployees()
         {
-            string? companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             IEnumerable<FilprideSupplier> employees = await _unitOfWork.FilprideSupplier
                 .GetAllAsync(s => s.IsActive && s.Category == "Employee");
@@ -1699,12 +1649,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> GetEmployeeById(int employeeId)
         {
-            string? companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             FilprideSupplier? employee = await _unitOfWork.FilprideSupplier
                 .GetAsync(e => e.SupplierId == employeeId && e.Category == "Employee");
@@ -1725,9 +1669,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> GetCustomers()
         {
-            string? companyClaims = await GetCompanyClaimAsync();
+
             IEnumerable<FilprideCustomer> employees = await _unitOfWork.FilprideCustomer
-                .GetAllAsync(c => companyClaims == nameof(Filpride));
+                .GetAllAsync();
 
             return Json(employees.OrderBy(c => c.CustomerCode).Select(c => new
             {
@@ -1759,9 +1703,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> GetSuppliers()
         {
-            string? companyClaims = await GetCompanyClaimAsync();
+
             IEnumerable<FilprideSupplier> suppliers = await _unitOfWork.FilprideSupplier
-                .GetAllAsync(s => companyClaims == nameof(Filpride) && s.Category != "Employee");
+                .GetAllAsync(s => s.Category != "Employee");
 
             return Json(suppliers.OrderBy(c => c.SupplierCode).Select(c => new
             {
@@ -1793,15 +1737,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> GetNonTradeSupplierSelectList(CancellationToken cancellationToken = default)
         {
-            string? companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             List<SelectListItem> selectList = await _unitOfWork
-                .GetFilprideNonTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                .GetFilprideNonTradeSupplierListAsyncById(cancellationToken);
 
             return Json(selectList);
         }

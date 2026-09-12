@@ -1,17 +1,17 @@
+using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.MasterFile;
+using IBS.Models;
 using IBS.Services;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
-using System.Linq.Dynamic.Core;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -41,19 +41,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             return User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value
                    ?? User.Identity?.Name!;
-        }
-
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return null;
-            }
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
         }
 
         public async Task<IActionResult> Index(string? view, bool showHidden = false, CancellationToken cancellationToken = default)
@@ -113,8 +100,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await _unitOfWork.FilprideChartOfAccount.AddAsync(newAccount, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
-                var companyClaim = await GetCompanyClaimAsync();
-                await _cacheService.RemoveAsync($"coa:{companyClaim}", cancellationToken);
+
+                await _cacheService.RemoveAsync("coa", cancellationToken);
 
                 #region --Audit Trail Recording
 
@@ -164,8 +151,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingAccount.EditedBy = GetUserFullName();
                 existingAccount.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 await _unitOfWork.SaveAsync(cancellationToken);
-                var companyClaim = await GetCompanyClaimAsync();
-                await _cacheService.RemoveAsync($"coa:{companyClaim}", cancellationToken);
+
+                await _cacheService.RemoveAsync("coa", cancellationToken);
 
                 #region --Audit Trail Recording
 
@@ -208,7 +195,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingAccount.EditedBy = GetUserFullName();
                 existingAccount.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 await _unitOfWork.SaveAsync(cancellationToken);
-                await _cacheService.RemoveAsync($"coa:{await GetCompanyClaimAsync()}", cancellationToken);
+                await _cacheService.RemoveAsync("coa", cancellationToken);
 
                 var action = existingAccount.IsHidden ? "Hidden" : "Unhidden";
 

@@ -1,31 +1,34 @@
+using System.Linq.Dynamic.Core;
+using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsPayable;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.Integrated;
 using IBS.Models.Filpride.ViewModels;
-using IBS.Services.Attributes;
+using IBS.Models;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
+using IBS.Utility;
 using IBSWeb.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using OfficeOpenXml;
-using System.Linq.Dynamic.Core;
-using System.Security.Claims;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [CompanyAuthorize(nameof(Filpride))]
+    [Authorize]
     public class DeliveryReceiptController : Controller
     {
+        private readonly BrandingOptions _brandingOptions;
+
         private readonly IUnitOfWork _unitOfWork;
 
         private readonly UserManager<ApplicationUser> _userManager;
@@ -45,8 +48,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
             ApplicationDbContext dbContext,
             IWebHostEnvironment webHostEnvironment,
             IHubContext<NotificationHub> hubContext,
-            ILogger<DeliveryReceiptController> logger)
+            ILogger<DeliveryReceiptController> logger,
+            IOptions<BrandingOptions> brandingOptions)
         {
+            _brandingOptions = brandingOptions.Value;
             _unitOfWork = unitOfWork;
             _userManager = userManager;
             _dbContext = dbContext;
@@ -59,19 +64,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             return User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value
                    ?? User.Identity?.Name!;
-        }
-
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return null;
-            }
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
         }
 
         private async Task UpdateFilterTypeClaim(string filterType)
@@ -117,12 +109,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private async Task PopulateDeliveryReceiptViewModelAsync(
             DeliveryReceiptViewModel viewModel,
-            string companyClaims,
             CancellationToken cancellationToken)
         {
-            viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken);
+            viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
             viewModel.CustomerOrderSlips = await _unitOfWork.FilprideCustomerOrderSlip.GetCosListNotDeliveredAsync(cancellationToken);
-            viewModel.Haulers = await _unitOfWork.GetFilprideHaulerListAsyncById(companyClaims, cancellationToken);
+            viewModel.Haulers = await _unitOfWork.GetFilprideHaulerListAsyncById(cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.DeliveryReceipt, cancellationToken);
         }
 
@@ -413,7 +404,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
+
                 var filterTypeClaim = await GetCurrentFilterType();
 
                 var drList = _unitOfWork.FilprideDeliveryReceipt
@@ -547,12 +538,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
             ViewBag.FilterType = await GetCurrentFilterType();
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             var isDrLock = await _dbContext.AppSettings
                 .Where(s => s.SettingKey == AppSettingKey.LockTheCreationOfDr)
@@ -561,8 +546,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             DeliveryReceiptViewModel viewModel = new()
             {
-                Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken),
-                Haulers = await _unitOfWork.GetFilprideHaulerListAsyncById(companyClaims, cancellationToken),
+                Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken),
+                Haulers = await _unitOfWork.GetFilprideHaulerListAsyncById(cancellationToken),
                 IsTheCreationLockForTheMonth = isDrLock,
                 MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.DeliveryReceipt, cancellationToken)
             };
@@ -575,14 +560,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(DeliveryReceiptViewModel viewModel, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
-            await PopulateDeliveryReceiptViewModelAsync(viewModel, companyClaims, cancellationToken);
+            await PopulateDeliveryReceiptViewModelAsync(viewModel, cancellationToken);
 
             var normalizedDetails = NormalizeDetails(viewModel);
             if (!normalizedDetails.Any())
@@ -668,13 +647,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
             try
             {
                 var minDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.DeliveryReceipt, cancellationToken);
@@ -713,7 +685,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     DeliveryReceiptId = existingRecord.DeliveryReceiptId,
                     Date = existingRecord.Date,
                     CustomerId = existingRecord.Customer!.CustomerId,
-                    Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(companyClaims, cancellationToken),
+                    Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken),
                     CustomerAddress = existingRecord.CustomerAddress,
                     CustomerTin = existingRecord.CustomerTin,
                     CustomerOrderSlipId = existingRecord.CustomerOrderSlipId,
@@ -732,7 +704,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     ECC = existingRecord.ECC,
                     DeliveryOption = existingRecord.CustomerOrderSlip.DeliveryOption,
                     HaulerId = existingRecord.HaulerId,
-                    Haulers = await _unitOfWork.GetFilprideHaulerListAsyncById(companyClaims, cancellationToken),
+                    Haulers = await _unitOfWork.GetFilprideHaulerListAsyncById(cancellationToken),
                     Driver = existingRecord.Driver!,
                     PlateNo = existingRecord.PlateNo!,
                     ATLId = existingRecord.AuthorityToLoadId,
@@ -790,14 +762,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(DeliveryReceiptViewModel viewModel, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
-            await PopulateDeliveryReceiptViewModelAsync(viewModel, companyClaims, cancellationToken);
+            await PopulateDeliveryReceiptViewModelAsync(viewModel, cancellationToken);
 
             var normalizedDetails = NormalizeDetails(viewModel);
             if (!normalizedDetails.Any())
@@ -898,8 +864,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     return BadRequest();
                 }
-
-                var companyClaims = await GetCompanyClaimAsync();
 
                 #region --Audit Trail Recording
 
@@ -1056,7 +1020,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> GetCustomerOrderSlipList(int customerId, int? deliveryReceiptId, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
+
             var orderSlips = (await _unitOfWork.FilprideCustomerOrderSlip
                     .GetAllAsync(cos => (!cos.IsDelivered &&
                                          cos.Status == nameof(CosStatus.Completed)
@@ -1446,7 +1410,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             // 3. Add document properties for identification
             package.Workbook.Properties.Author = "Integrated Business System";
-            package.Workbook.Properties.Company = "Filpride";
+            package.Workbook.Properties.Company = _brandingOptions.CompanyName;
             package.Workbook.Properties.Comments = $"Official DR - Generated: {DateTimeHelper.GetCurrentPhilippineTime():yyyy-MM-dd HH:mm:ss}";
 
             // 4. Mark as final (shows read-only warning in Excel)
@@ -1455,7 +1419,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var stream = new MemoryStream();
             await package.SaveAsAsync(stream);
             var content = stream.ToArray();
-            var companyClaims = await GetCompanyClaimAsync();
 
             #region --Audit Trail Recording
 
@@ -1588,24 +1551,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> GetHaulers(CancellationToken cancellationToken = default)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
-            return Json(await _unitOfWork.GetFilprideHaulerListAsyncById(companyClaims, cancellationToken));
+            return Json(await _unitOfWork.GetFilprideHaulerListAsyncById(cancellationToken));
         }
 
         public async Task<IActionResult> GetDeliveryReceiptDetails(int id, CancellationToken cancellationToken = default)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             var dr = await _dbContext.FilprideDeliveryReceipts
                 .AsNoTracking()
@@ -1698,16 +1649,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest("Month and year are required.");
                 }
 
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
-
                 var drs = await _unitOfWork.FilprideDeliveryReceipt
                     .GetAllAsync(x =>
-                            
+
                             x.VoidedBy == null &&
                             x.CanceledDate == null &&
                             x.DeliveredDate.HasValue &&

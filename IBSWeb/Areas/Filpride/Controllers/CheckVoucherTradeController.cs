@@ -1,28 +1,27 @@
+using System.Linq.Dynamic.Core;
+using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsPayable;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.Integrated;
 using IBS.Models.Filpride.ViewModels;
+using IBS.Models;
 using IBS.Services;
-using IBS.Services.Attributes;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
-using System.Linq.Dynamic.Core;
-using System.Security.Claims;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [CompanyAuthorize(nameof(Filpride))]
+    [Authorize]
     public class CheckVoucherTradeController : Controller
     {
         private readonly ApplicationDbContext _dbContext;
@@ -116,7 +115,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private async Task<List<FilprideCheckVoucherHeader>> GetAdvanceHeadersAsync(
             IEnumerable<string> referenceNumbers,
-            string company,
             int? supplierId,
             CancellationToken cancellationToken)
         {
@@ -149,7 +147,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private async Task ApplyAdvanceAmountToReferencesAsync(
             string? advancesReference,
-            string company,
             decimal appliedAdvanceAmount,
             CancellationToken cancellationToken)
         {
@@ -159,7 +156,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
 
             var references = ParseAdvanceReferenceNumbers(advancesReference);
-            var advanceHeaders = await GetAdvanceHeadersAsync(references, company, null, cancellationToken);
+            var advanceHeaders = await GetAdvanceHeadersAsync(references, null, cancellationToken);
 
             if (advanceHeaders.Count != references.Count)
             {
@@ -193,7 +190,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private async Task RevertAdvanceAmountFromReferencesAsync(
             string? advancesReference,
-            string company,
             decimal appliedAdvanceAmount,
             CancellationToken cancellationToken)
         {
@@ -203,7 +199,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
 
             var references = ParseAdvanceReferenceNumbers(advancesReference);
-            var advanceHeaders = await GetAdvanceHeadersAsync(references, company, null, cancellationToken);
+            var advanceHeaders = await GetAdvanceHeadersAsync(references, null, cancellationToken);
 
             if (advanceHeaders.Count != references.Count)
             {
@@ -285,19 +281,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 deliveryReceipt.Hauler?.WithholdingTaxPercent ?? 0m);
         }
 
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return null;
-            }
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
-        }
-
         private string GenerateFileNameToSave(string incomingFileName)
         {
             var fileName = Path.GetFileNameWithoutExtension(incomingFileName);
@@ -332,7 +315,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
 
                 var checkVoucherHeaders = _unitOfWork.FilprideCheckVoucher
                     .GetAllQuery(cv => cv.Category == "Trade");
@@ -403,17 +385,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             CheckVoucherTradeViewModel model = new()
             {
-                Suppliers = await _unitOfWork.GetFilprideTradeSupplierListAsyncById(companyClaims, cancellationToken),
-                BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken),
+                Suppliers = await _unitOfWork.GetFilprideTradeSupplierListAsyncById(cancellationToken),
+                BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken),
                 COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken),
                 MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken)
             };
@@ -426,15 +402,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CheckVoucherTradeViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
-            viewModel.Suppliers = await _unitOfWork.GetFilprideTradeSupplierListAsyncById(companyClaims, cancellationToken);
-            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+            viewModel.Suppliers = await _unitOfWork.GetFilprideTradeSupplierListAsyncById(cancellationToken);
+            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
             viewModel.PONo = (await _unitOfWork.FilpridePurchaseOrder
                     .GetAllAsync(
                         po => po.SupplierId == viewModel.SupplierId &&
@@ -474,7 +444,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         viewModel.COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken);
 
                         viewModel.Suppliers = (await _unitOfWork.FilprideSupplier
-                                .GetAllAsync(supp => companyClaims == nameof(Filpride) && supp.Category == "Trade", cancellationToken))
+                                .GetAllAsync(supp => supp.Category == "Trade", cancellationToken))
                             .Select(sup => new SelectListItem
                             {
                                 Value = sup.SupplierId.ToString(),
@@ -532,7 +502,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (!string.IsNullOrWhiteSpace(viewModel.AdvancesCVNo) && appliedAdvanceAmount > 0)
                 {
                     var advanceReferences = ParseAdvanceReferenceNumbers(viewModel.AdvancesCVNo);
-                    var advanceHeaders = await GetAdvanceHeadersAsync(advanceReferences, companyClaims, viewModel.SupplierId, cancellationToken);
+                    var advanceHeaders = await GetAdvanceHeadersAsync(advanceReferences, viewModel.SupplierId, cancellationToken);
 
                     if (advanceHeaders.Count != advanceReferences.Count)
                     {
@@ -557,7 +527,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region --Saving the default entries
 
-                var generateCvNo = await _unitOfWork.FilprideCheckVoucher.GenerateCodeAsync(companyClaims, viewModel.Type!, cancellationToken);
+                var generateCvNo = await _unitOfWork.FilprideCheckVoucher.GenerateCodeAsync(viewModel.Type!, cancellationToken);
                 var cashInBank = GetAccountAmount(viewModel.AccountNumber, _cashInBankAccountNo,viewModel.Debit,viewModel.Credit, isDebit: false);
 
                 #region -- Get Supplier
@@ -884,7 +854,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> GetPOs(int supplierId)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
             var purchaseOrders = await _dbContext.FilpridePurchaseOrders
                 .Include(x => x.ReceivingReports)
@@ -909,7 +878,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> GetRRs(string[] poNumber, int? cvId, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
             var query = _dbContext.FilprideReceivingReports
                 .Where(rr => !rr.IsPaid
@@ -983,7 +951,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> GetSupplierDetails(int? supplierId)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
             if (supplierId == null)
             {
@@ -991,7 +958,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
 
             var supplier = await _unitOfWork.FilprideSupplier
-                .GetAsync(s => s.SupplierId == supplierId && companyClaims == nameof(Filpride));
+                .GetAsync(s => s.SupplierId == supplierId);
 
             if (supplier == null)
             {
@@ -1023,12 +990,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
 
                 var existingHeaderModel = await _unitOfWork.FilprideCheckVoucher
                     .GetAsync(cvh => cvh.CheckVoucherHeaderId == id, cancellationToken);
@@ -1063,8 +1024,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     OldCVNo = existingHeaderModel.OldCvNo,
                     AdvancesCVNo = existingHeaderModel.Reference,
                     AppliedAdvanceAmount = await GetAppliedAdvanceAmountAsync(existingHeaderModel.CheckVoucherHeaderId, cancellationToken),
-                    Suppliers = await _unitOfWork.GetFilprideTradeSupplierListAsyncById(companyClaims,
-                        cancellationToken),
+                    Suppliers = await _unitOfWork.GetFilprideTradeSupplierListAsyncById(cancellationToken),
                     COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken),
                     MinDate = minDate
                 };
@@ -1118,7 +1078,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToList();
 
-                model.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+                model.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
                 return View(model);
             }
@@ -1136,12 +1096,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(CheckVoucherTradeViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             viewModel.PONo = (await _unitOfWork.FilpridePurchaseOrder
                     .GetAllAsync(p => !p.IsSubPo, cancellationToken))
@@ -1152,8 +1106,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     Text = s.PurchaseOrderNo
                 })
                 .ToList();
-            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
-            viewModel.Suppliers = await _unitOfWork.GetFilprideTradeSupplierListAsyncById(companyClaims, cancellationToken);
+            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
+            viewModel.Suppliers = await _unitOfWork.GetFilprideTradeSupplierListAsyncById(cancellationToken);
             viewModel.COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
 
@@ -1214,7 +1168,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (!string.IsNullOrWhiteSpace(viewModel.AdvancesCVNo) && appliedAdvanceAmount > 0)
                 {
                     var advanceReferences = ParseAdvanceReferenceNumbers(viewModel.AdvancesCVNo);
-                    var advanceHeaders = await GetAdvanceHeadersAsync(advanceReferences, companyClaims, viewModel.SupplierId, cancellationToken);
+                    var advanceHeaders = await GetAdvanceHeadersAsync(advanceReferences, viewModel.SupplierId, cancellationToken);
 
                     if (advanceHeaders.Count != advanceReferences.Count)
                     {
@@ -1582,14 +1536,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
-            var companyClaims = await GetCompanyClaimAsync();
-
             var details = await _dbContext.FilprideCheckVoucherDetails
                 .Where(cvd => cvd.CheckVoucherHeaderId == header.CheckVoucherHeaderId)
                 .ToListAsync(cancellationToken);
 
             var getSupplier = await _unitOfWork.FilprideSupplier
-                .GetAsync(s => s.SupplierId == supplierId && companyClaims == nameof(Filpride), cancellationToken);
+                .GetAsync(s => s.SupplierId == supplierId, cancellationToken);
 
             if (header.CvType == nameof(CVType.Supplier))
             {
@@ -1775,7 +1727,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #region Add amount paid for the advances if applicable
 
                 var appliedAdvanceAmount = GetAppliedAdvanceAmount(modelDetails);
-                await ApplyAdvanceAmountToReferencesAsync(modelHeader.Reference, string.Empty, appliedAdvanceAmount, cancellationToken);
+                await ApplyAdvanceAmountToReferencesAsync(modelHeader.Reference, appliedAdvanceAmount, cancellationToken);
 
                 #endregion Add amount paid for the advances if applicable
 
@@ -1945,7 +1897,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #region -- Revert the amount paid of advances
 
                 var appliedAdvanceAmount = await GetAppliedAdvanceAmountAsync(model.CheckVoucherHeaderId, cancellationToken);
-                await RevertAdvanceAmountFromReferencesAsync(model.Reference, string.Empty, appliedAdvanceAmount, cancellationToken);
+                await RevertAdvanceAmountFromReferencesAsync(model.Reference, appliedAdvanceAmount, cancellationToken);
 
                 #endregion -- Revert the amount paid of advances
 
@@ -2036,7 +1988,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #region -- Revert the amount paid of advances
 
                 var appliedAdvanceAmount = await GetAppliedAdvanceAmountAsync(cvHeader.CheckVoucherHeaderId, cancellationToken);
-                await RevertAdvanceAmountFromReferencesAsync(cvHeader.Reference, string.Empty, appliedAdvanceAmount, cancellationToken);
+                await RevertAdvanceAmountFromReferencesAsync(cvHeader.Reference, appliedAdvanceAmount, cancellationToken);
 
                 #endregion -- Revert the amount paid of advances
 
@@ -2603,17 +2555,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> CreateCommissionPayment(CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             CommissionPaymentViewModel model = new()
             {
-                Suppliers = await _unitOfWork.GetFilprideCommissioneeListAsyncById(companyClaims, cancellationToken),
-                BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken),
+                Suppliers = await _unitOfWork.GetFilprideCommissioneeListAsyncById(cancellationToken),
+                BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken),
                 COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken),
                 MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken)
             };
@@ -2626,15 +2572,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateCommissionPayment(CommissionPaymentViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
-            viewModel.Suppliers = await _unitOfWork.GetFilprideCommissioneeListAsyncById(companyClaims, cancellationToken);
-            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+            viewModel.Suppliers = await _unitOfWork.GetFilprideCommissioneeListAsyncById(cancellationToken);
+            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
             viewModel.COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
 
@@ -2686,7 +2626,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #region --Saving the default entries
 
                 var generateCvNo = await _unitOfWork.FilprideCheckVoucher
-                    .GenerateCodeAsync(companyClaims, viewModel.Type!, cancellationToken);
+                    .GenerateCodeAsync(viewModel.Type!, cancellationToken);
                 var cashInBank = GetAccountAmount(viewModel.AccountNumber, _cashInBankAccountNo, viewModel.Debit, viewModel.Credit, isDebit: false);
 
                 #region -- Get Supplier
@@ -2973,17 +2913,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> CreateHaulerPayment(CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             HaulerPaymentViewModel model = new()
             {
-                Suppliers = await _unitOfWork.GetFilprideHaulerListAsyncById(companyClaims, cancellationToken),
-                BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken),
+                Suppliers = await _unitOfWork.GetFilprideHaulerListAsyncById(cancellationToken),
+                BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken),
                 COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken),
                 MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken)
             };
@@ -2996,15 +2930,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateHaulerPayment(HaulerPaymentViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
-            viewModel.Suppliers = await _unitOfWork.GetFilprideHaulerListAsyncById(companyClaims, cancellationToken);
-            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+            viewModel.Suppliers = await _unitOfWork.GetFilprideHaulerListAsyncById(cancellationToken);
+            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
             viewModel.COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
 
@@ -3055,7 +2983,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #region --Saving the default entries
 
                 var generateCvNo = await _unitOfWork.FilprideCheckVoucher
-                    .GenerateCodeAsync(companyClaims, viewModel.Type!, cancellationToken);
+                    .GenerateCodeAsync(viewModel.Type!, cancellationToken);
                 var cashInBank = GetAccountAmount(viewModel.AccountNumber, _cashInBankAccountNo, viewModel.Debit, viewModel.Credit, isDebit: false);
 
                 #region -- Get Supplier
@@ -3339,11 +3267,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> GetCommissioneeDRs(int? commissioneeId, int? cvId, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
             var query = _dbContext.FilprideDeliveryReceipts
-                .Where(dr => companyClaims != null
-                             && commissioneeId == dr.CommissioneeId
+                .Where(dr => commissioneeId == dr.CommissioneeId
                              && !dr.IsCommissionPaid
                              && dr.PostedBy != null);
 
@@ -3422,7 +3348,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> GetHaulerDRs(int? haulerId, int? cvId, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
             var query = _dbContext.FilprideDeliveryReceipts
                 .Where(dr => true
@@ -3513,12 +3438,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
 
                 var existingHeaderModel = await _unitOfWork.FilprideCheckVoucher
                     .GetAsync(cvh => cvh.CheckVoucherHeaderId == id, cancellationToken);
@@ -3549,8 +3468,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     Particulars = existingHeaderModel.Particulars!,
                     DRs = [],
                     Suppliers =
-                        await _unitOfWork.GetFilprideCommissioneeListAsyncById(companyClaims, cancellationToken),
-                    BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken),
+                        await _unitOfWork.GetFilprideCommissioneeListAsyncById(cancellationToken),
+                    BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken),
                     COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken),
                     OldCVNo = existingHeaderModel.OldCvNo,
                     SiNo = existingHeaderModel.SINo?.FirstOrDefault(),
@@ -3607,15 +3526,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditCommissionPayment(CommissionPaymentViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
-            viewModel.Suppliers = await _unitOfWork.GetFilprideCommissioneeListAsyncById(companyClaims, cancellationToken);
-            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+            viewModel.Suppliers = await _unitOfWork.GetFilprideCommissioneeListAsyncById(cancellationToken);
+            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
             viewModel.COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
 
@@ -3968,12 +3881,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
 
                 var existingHeaderModel = await _unitOfWork.FilprideCheckVoucher
                     .GetAsync(cvh => cvh.CheckVoucherHeaderId == id, cancellationToken);
@@ -4004,8 +3911,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     CheckDate = existingHeaderModel.CheckDate ?? DateOnly.MinValue,
                     Particulars = existingHeaderModel.Particulars!,
                     DRs = [],
-                    Suppliers = await _unitOfWork.GetFilprideHaulerListAsyncById(companyClaims, cancellationToken),
-                    BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken),
+                    Suppliers = await _unitOfWork.GetFilprideHaulerListAsyncById(cancellationToken),
+                    BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken),
                     COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken),
                     OldCVNo = existingHeaderModel.OldCvNo,
                     SiNo = existingHeaderModel.SINo?.FirstOrDefault(),
@@ -4062,15 +3969,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditHaulerPayment(HaulerPaymentViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
-            viewModel.Suppliers = await _unitOfWork.GetFilprideHaulerListAsyncById(companyClaims, cancellationToken);
-            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken);
+            viewModel.Suppliers = await _unitOfWork.GetFilprideHaulerListAsyncById(cancellationToken);
+            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
             viewModel.COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
 
@@ -4415,7 +4316,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             decimal advanceAmount = 0;
             var advanceCvNos = new List<string>();
 
-            var companyClaims = await GetCompanyClaimAsync();
             var processedSupplierIds = new HashSet<int>();
 
             foreach (var poNumber in poNumbers)
@@ -4455,7 +4355,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private async Task<(string CVNo, decimal Amount)> CalculateAdvanceAmount(int supplierId, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
+
             var advancesVouchers = await _dbContext.FilprideCheckVoucherDetails
                 .Include(cv => cv.CheckVoucherHeader)
                 .Where(cv =>
@@ -4517,7 +4417,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
 
                 var checkVoucherHeaders = await _unitOfWork.FilprideCheckVoucher
                     .GetAllAsync(cv => cv.Type == nameof(DocumentType.Documented) && cv.CvType != nameof(CVType.Payment), cancellationToken);
@@ -4629,13 +4528,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (!month.HasValue || !year.HasValue)
                 {
                     return BadRequest("Month and year are required.");
-                }
-
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
                 }
 
                 var cvs = await _dbContext.FilprideCheckVoucherHeaders

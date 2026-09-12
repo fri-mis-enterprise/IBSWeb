@@ -1,12 +1,12 @@
 using System.Security.Claims;
 using IBS.DataAccess.Data;
-using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.ViewModels;
+using IBS.Models;
 using IBS.Services;
-using IBS.Services.Attributes;
 using IBS.Utility.Helpers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [CompanyAuthorize(nameof(Filpride))]
+    [Authorize]
     public class PostedPeriodController : Controller
     {
         private readonly ApplicationDbContext _dbContext;
@@ -135,9 +135,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await _dbContext.FilprideAuditTrails.AddAsync(auditTrailBook, cancellationToken);
 
-
                 await _dbContext.SaveChangesAsync(cancellationToken);
-                await _cacheService.RemoveAsync($"coa:{string.Empty}", cancellationToken);
+                await _cacheService.RemoveAsync("coa", cancellationToken);
 
                 TempData["SuccessMessage"] = $"Successfully posted {postedPeriods.Count} module(s) for period {request.Month}/{request.Year}.";
                 return RedirectToAction(nameof(Index));
@@ -191,7 +190,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 await _dbContext.FilprideAuditTrails.AddAsync(auditTrailBook, cancellationToken);
                 _dbContext.PostedPeriods.RemoveRange(postedPeriods);
                 await _dbContext.SaveChangesAsync(cancellationToken);
-                await _cacheService.RemoveAsync($"coa:{string.Empty}", cancellationToken);
+                await _cacheService.RemoveAsync("coa", cancellationToken);
 
                 TempData["SuccessMessage"] = $"Successfully unposted {postedPeriods.Count} period(s).";
             }

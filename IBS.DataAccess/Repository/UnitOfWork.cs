@@ -1,16 +1,16 @@
+using System.ComponentModel;
 using IBS.DataAccess.Data;
-using IBS.DataAccess.Repository.Bienes;
 using IBS.DataAccess.Repository.Bienes.IRepository;
-using IBS.DataAccess.Repository.Filpride;
+using IBS.DataAccess.Repository.Bienes;
 using IBS.DataAccess.Repository.Filpride.IRepository;
+using IBS.DataAccess.Repository.Filpride;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.DataAccess.Repository.MasterFile;
 using IBS.DataAccess.Repository.MasterFile.IRepository;
+using IBS.DataAccess.Repository.MasterFile;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.MasterFile;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using System.ComponentModel;
 using IProductRepository = IBS.DataAccess.Repository.MasterFile.IRepository.IProductRepository;
 using ProductRepository = IBS.DataAccess.Repository.MasterFile.ProductRepository;
 
@@ -213,7 +213,7 @@ namespace IBS.DataAccess.Repository
 
         #region--Filpride
 
-        public async Task<List<SelectListItem>> GetFilprideCustomerListAsyncById(string company, CancellationToken cancellationToken = default)
+        public async Task<List<SelectListItem>> GetFilprideCustomerListAsyncById(CancellationToken cancellationToken = default)
         {
             return await _db.FilprideCustomers
                 .OrderBy(c => c.CustomerName)
@@ -226,7 +226,7 @@ namespace IBS.DataAccess.Repository
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<List<SelectListItem>> GetFilprideSupplierListAsyncById(string company, CancellationToken cancellationToken = default)
+        public async Task<List<SelectListItem>> GetFilprideSupplierListAsyncById(CancellationToken cancellationToken = default)
         {
             return await _db.FilprideSuppliers
                 .OrderBy(s => s.SupplierCode)
@@ -239,7 +239,7 @@ namespace IBS.DataAccess.Repository
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<List<SelectListItem>> GetFilprideEmployeeSupplierListAsyncById(string company, CancellationToken cancellationToken = default)
+        public async Task<List<SelectListItem>> GetFilprideEmployeeSupplierListAsyncById(CancellationToken cancellationToken = default)
         {
             return await _db.FilprideSuppliers
                 .Where(s => s.IsActive && s.Category == "Employee")
@@ -255,7 +255,7 @@ namespace IBS.DataAccess.Repository
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<List<SelectListItem>> GetFilprideTradeSupplierListAsyncById(string company, CancellationToken cancellationToken = default)
+        public async Task<List<SelectListItem>> GetFilprideTradeSupplierListAsyncById(CancellationToken cancellationToken = default)
         {
             return await _db.FilprideSuppliers
                 .OrderBy(s => s.SupplierCode)
@@ -268,7 +268,7 @@ namespace IBS.DataAccess.Repository
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<List<SelectListItem>> GetFilprideNonTradeSupplierListAsyncById(string company, CancellationToken cancellationToken = default)
+        public async Task<List<SelectListItem>> GetFilprideNonTradeSupplierListAsyncById(CancellationToken cancellationToken = default)
         {
             return await _db.FilprideSuppliers
                 .OrderBy(s => s.SupplierName)
@@ -281,7 +281,7 @@ namespace IBS.DataAccess.Repository
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<List<SelectListItem>> GetFilprideCommissioneeListAsyncById(string company, CancellationToken cancellationToken = default)
+        public async Task<List<SelectListItem>> GetFilprideCommissioneeListAsyncById(CancellationToken cancellationToken = default)
         {
             return await _db.FilprideSuppliers
                 .OrderBy(s => s.SupplierCode)
@@ -294,7 +294,7 @@ namespace IBS.DataAccess.Repository
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<List<SelectListItem>> GetFilprideHaulerListAsyncById(string company, CancellationToken cancellationToken = default)
+        public async Task<List<SelectListItem>> GetFilprideHaulerListAsyncById(CancellationToken cancellationToken = default)
         {
             return await _db.FilprideSuppliers
                 .OrderBy(s => s.SupplierCode)
@@ -307,7 +307,7 @@ namespace IBS.DataAccess.Repository
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<List<SelectListItem>> GetFilprideBankAccountListById(string company, CancellationToken cancellationToken = default)
+        public async Task<List<SelectListItem>> GetFilprideBankAccountListById(CancellationToken cancellationToken = default)
         {
             return await _db.FilprideBankAccounts
                 .OrderBy(b => b.AccountNo)

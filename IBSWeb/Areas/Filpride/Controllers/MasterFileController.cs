@@ -1,22 +1,26 @@
-using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
-using IBS.Models.Filpride.Books;
-using IBS.Models.Filpride.MasterFile;
-using IBS.Services.Attributes;
-using IBS.Utility.Helpers;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using OfficeOpenXml;
-using OfficeOpenXml.Style;
 using System.Drawing;
 using System.Security.Claims;
+using IBS.DataAccess.Repository.IRepository;
+using IBS.Models.Filpride.Books;
+using IBS.Models.Filpride.MasterFile;
+using IBS.Models;
+using IBS.Utility.Helpers;
+using IBS.Utility;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using OfficeOpenXml.Style;
+using OfficeOpenXml;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [CompanyAuthorize(nameof(Filpride))]
+    [Authorize]
     public class MasterFileController : Controller
     {
+        private readonly BrandingOptions _brandingOptions;
+
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<MasterFileController> _logger;
@@ -24,8 +28,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         public MasterFileController(
             UserManager<ApplicationUser> userManager,
             IUnitOfWork unitOfWork,
-            ILogger<MasterFileController> logger)
+            ILogger<MasterFileController> logger,
+            IOptions<BrandingOptions> brandingOptions)
         {
+            _brandingOptions = brandingOptions.Value;
             _userManager = userManager;
             _unitOfWork = unitOfWork;
             _logger = logger;
@@ -39,15 +45,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                    ?? User.Identity?.Name!;
         }
 
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null) return null;
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
-        }
-
         #endregion
 
         #region -- Main Excel Generation Method --
@@ -58,21 +55,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
             try
             {
                 var extractedBy = GetUserFullName();
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest("Company claim not found");
-                }
 
                 // Generate Excel based on master file type
                 var result = masterFileType.ToLower() switch
                 {
-                    "customer" => await GenerateCustomerExcel(extractedBy, companyClaims, cancellationToken),
-                    "supplier" => await GenerateSupplierExcel(extractedBy, companyClaims, cancellationToken),
-                    "bankaccount" => await GenerateBankAccountExcel(extractedBy, companyClaims, cancellationToken),
-                    "service" => await GenerateServiceExcel(extractedBy, companyClaims, cancellationToken),
-                    "chartofaccount" => await GenerateChartOfAccountMasterFileExcel(extractedBy, companyClaims, cancellationToken),
+                    "customer" => await GenerateCustomerExcel(extractedBy, cancellationToken),
+                    "supplier" => await GenerateSupplierExcel(extractedBy, cancellationToken),
+                    "bankaccount" => await GenerateBankAccountExcel(extractedBy, cancellationToken),
+                    "service" => await GenerateServiceExcel(extractedBy, cancellationToken),
+                    "chartofaccount" => await GenerateChartOfAccountMasterFileExcel(extractedBy, cancellationToken),
                     _ => throw new ArgumentException($"Invalid master file type: {masterFileType}")
                 };
 
@@ -117,7 +108,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private async Task<(MemoryStream? stream, string fileName)> GenerateCustomerExcel(
             string extractedBy,
-            string company,
             CancellationToken cancellationToken)
         {
             // Fetch customers
@@ -130,7 +120,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return (null, string.Empty);
             }
 
-            // Fetch all customer IDs for this company
+            // Fetch all customer IDs
             var customerIds = customers.Select(c => c.CustomerId).ToList();
 
             // Fetch branches separately
@@ -189,9 +179,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 customers,
                 "Customer",
                 "CUSTOMER MASTER FILE",
-                extractedBy,
-                company,
-                customerColumns,
+                extractedBy, customerColumns,
                 customerWidths,
                 2
             );
@@ -218,9 +206,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     branches.Cast<object>().ToList(),
                     "Branches",
                     "CUSTOMER BRANCHES",
-                    extractedBy,
-                    company,
-                    branchColumns,
+                    extractedBy, branchColumns,
                     branchWidths,
                     2
                 );
@@ -241,7 +227,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private async Task<(MemoryStream? stream, string fileName)> GenerateSupplierExcel(
                    string extractedBy,
-                   string company,
                    CancellationToken cancellationToken)
         {
             var suppliers = (await _unitOfWork.FilprideSupplier
@@ -279,9 +264,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 suppliers,
                 "Suppliers",
                 "Supplier_MasterFile",
-                extractedBy,
-                company,
-                columns,
+                extractedBy, columns,
                 customWidths,
                 2,
                 cancellationToken
@@ -292,7 +275,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         #region -- Bank Account Master File --
         private async Task<(MemoryStream? stream, string fileName)> GenerateBankAccountExcel(
             string extractedBy,
-            string company,
             CancellationToken cancellationToken)
         {
             var bankAccounts = (await _unitOfWork.FilprideBankAccount.GetAllAsync(
@@ -322,9 +304,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 bankAccounts,
                 "Bank Accounts",
                 "BankAccount_MasterFile",
-                extractedBy,
-                company,
-                columns,
+                extractedBy, columns,
                 customWidths,
                 2,
                 cancellationToken
@@ -336,7 +316,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         #region -- Service Master File --
         private async Task<(MemoryStream? stream, string fileName)> GenerateServiceExcel(
             string extractedBy,
-            string company,
             CancellationToken cancellationToken)
         {
             var services = (await _unitOfWork.FilprideService.GetAllAsync(
@@ -364,9 +343,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 services,
                 "Services",
                 "Service_MasterFile",
-                extractedBy,
-                company,
-                columns,
+                extractedBy, columns,
                 customWidths,
                 2,
                 cancellationToken
@@ -379,7 +356,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private async Task<(MemoryStream? stream, string fileName)> GenerateChartOfAccountMasterFileExcel(
             string extractedBy,
-            string company,
             CancellationToken cancellationToken)
         {
             var chartOfAccounts = (await _unitOfWork.FilprideChartOfAccount
@@ -418,9 +394,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 chartOfAccounts,
                 "Chart Of Account",
                 "ChartOfAccount_MasterFile",
-                extractedBy,
-                company,
-                columns,
+                extractedBy, columns,
                 customWidths,
                 3,
                 cancellationToken
@@ -437,7 +411,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             string worksheetName,
             string reportTitle,
             string extractedBy,
-            string company,
             List<ColumnDefinition> columns,
             Dictionary<string, double>? customColumnWidths,
             int freezeAtColumn) where T : class
@@ -456,7 +429,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             worksheet.Cells["A2"].Value = "Generated By: ";
             worksheet.Cells["B2"].Value = extractedBy;
             worksheet.Cells["A3"].Value = "Company: ";
-            worksheet.Cells["B3"].Value = company;
+            worksheet.Cells["B3"].Value = _brandingOptions.CompanyName;
             worksheet.Cells["A4"].Value = "Date and Time Generated: ";
             worksheet.Cells["B4"].Value = DateTimeHelper.GetCurrentPhilippineTime();
             worksheet.Cells["B4"].Style.Numberformat.Format = "mm/dd/yyyy hh:mm:ss AM/PM";
@@ -543,7 +516,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             string reportTitle,
             string fileNamePrefix,
             string extractedBy,
-            string company,
             List<ColumnDefinition> columns,
             Dictionary<string, double>? customColumnWidths,
             int freezeAtColumn,
@@ -556,9 +528,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 data,
                 reportTitle.Replace(" ", ""),
                 reportTitle.ToUpper(),
-                extractedBy,
-                company,
-                columns,
+                extractedBy, columns,
                 customColumnWidths,
                 freezeAtColumn
             );

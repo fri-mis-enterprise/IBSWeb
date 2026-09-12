@@ -1,4 +1,4 @@
-﻿@using System.Globalization
+@using System.Globalization
 @using Humanizer
 @using IBS.Models
 @using IBS.Models.Enums
@@ -6,21 +6,15 @@
 @using IBS.Utility.Helpers
 @using Microsoft.AspNetCore.Identity
 @model CheckVoucherVM
-@inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 
 @{
     ViewData["Title"] = "Check Voucher Trade - Preview";
-    
-    int supplierId = Model.Supplier?.SupplierId ?? 0;
-    
-    var selectedCompany = string.Empty;
 
-    if (SignInManager.IsSignedIn(User))
-    {
-        selectedCompany = User.Claims.FirstOrDefault(c => c.Type == "Company")?.Value;
-    }
-    
+    int supplierId = Model.Supplier?.SupplierId ?? 0;
+
+
+
     var displayParticulars = !string.IsNullOrWhiteSpace(Model.Header?.Reference)
         ? $"{Model.Header?.Particulars} Advances#{Model.Header?.Reference}"
         : $"{Model.Header?.Particulars}";
@@ -32,17 +26,17 @@
             size: A4;
             margin: 0.5cm;
         }
-        
+
         body {
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
         }
-        
+
         /* Prevent page breaks within critical sections */
         table { page-break-inside: avoid; }
         tr { page-break-inside: avoid; }
         .table-responsive { page-break-inside: avoid; }
-        
+
         /* Text overflow handling */
         .text-clamp-2 {
             display: -webkit-box;
@@ -52,7 +46,7 @@
             line-height: 1.2;
             max-height: 2.4em;
         }
-        
+
         .text-clamp-3 {
             display: -webkit-box;
             -webkit-line-clamp: 3;
@@ -61,7 +55,7 @@
             line-height: 1.2;
             max-height: 3.6em;
         }
-        
+
         /* Force word breaks for long strings */
         .break-word {
             word-wrap: break-word;
@@ -69,28 +63,28 @@
             overflow-wrap: break-word;
             hyphens: auto;
         }
-        
+
         /* Reduce spacing for compact layout */
         .compact-section {
             margin-top: 10px !important;
         }
-        
+
         /* Hide buttons during print */
         .buttons, .row.pt-2 {
             display: none !important;
         }
-        
+
         /* Prevent orphaned headings */
         h2, h3, h4, h5, h6, thead {
             page-break-after: avoid;
         }
-        
+
         /* Small font for long content */
         .small-if-long {
             font-size: 11px;
         }
     }
-    
+
     /* General styles for screen and print */
     .text-clamp-2 {
         display: -webkit-box;
@@ -99,7 +93,7 @@
         overflow: hidden;
         line-height: 1.2;
     }
-    
+
     .text-clamp-3 {
         display: -webkit-box;
         -webkit-line-clamp: 3;
@@ -107,7 +101,7 @@
         overflow: hidden;
         line-height: 1.2;
     }
-    
+
     .break-word {
         word-wrap: break-word;
         word-break: break-word;
@@ -363,36 +357,30 @@
 {
     <div class="text-center w-100 compact-section" style="margin-top:10px;">
         <em><strong>"THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX"</strong></em><br/><br/>
-        @if (selectedCompany == "Filpride")
-        {
-            <p style="font-size: 11px;">
-                <span>Acknowledgement Certificate No:</span>
-                <span style="display: inline-block; width:150px;"> @CS.ACCN </span>
-                <span>&nbsp;&nbsp;Date Issued:</span>
-                <span style="display: inline-block; width:50px;"> @CS.DateIssued </span><br/>
-                Series: CV0000000001 - CV9999999999
-                Date and Time Created:&nbsp; @DateTimeHelper.GetCurrentPhilippineTimeFormatted(Model.Header.CreatedDate)
-            </p>
-        }
+        <p style="font-size: 11px;">
+            <span>Acknowledgement Certificate No:</span>
+            <span style="display: inline-block; width:150px;"> @CS.ACCN </span>
+            <span>&nbsp;&nbsp;Date Issued:</span>
+            <span style="display: inline-block; width:50px;"> @CS.DateIssued </span><br/>
+            Series: CV0000000001 - CV9999999999
+            Date and Time Created:&nbsp; @DateTimeHelper.GetCurrentPhilippineTimeFormatted(Model.Header.CreatedDate)
+        </p>
     </div>
     <br />
 
-    if (selectedCompany == "Filpride")
-    {
-        <div class="text-start w-100 footer compact-section" style="margin-top:30px;">
-            <p style="line-height: 1; font-size: 11px;">
-                <em>
-                    <strong>Software Name :</strong> @CS.AAS
-                    <br/>
-                    <strong>Version :</strong> @CS.Version
-                    <br/>
-                    <strong>Printed By :</strong> @UserManager.GetUserName(User)!.ToUpper()
-                    <br/>
-                    <strong>Date & Time Printed :</strong> @DateTimeHelper.GetCurrentPhilippineTimeFormatted()
-                </em>
-            </p>
-        </div>
-    }
+    <div class="text-start w-100 footer compact-section" style="margin-top:30px;">
+        <p style="line-height: 1; font-size: 11px;">
+            <em>
+                <strong>Software Name :</strong> @CS.AAS
+                <br/>
+                <strong>Version :</strong> @CS.Version
+                <br/>
+                <strong>Printed By :</strong> @UserManager.GetUserName(User)!.ToUpper()
+                <br/>
+                <strong>Date & Time Printed :</strong> @DateTimeHelper.GetCurrentPhilippineTimeFormatted()
+            </em>
+        </p>
+    </div>
 
     @if (!Model.Header.IsPrinted)
     {
@@ -516,13 +504,13 @@
             }
         </script>
     }
-    
+
     <script>
         function controllerThenPrint(id, supplierId) {
             var url = `@Url.Action("Printed", "CheckVoucherTrade", new { area = "Filpride" })?id=${id}&supplierId=${supplierId}`;
             window.location.href = url;
         }
     </script>
-    
+
     <script src="~/js/disable-dev-tools-in-print.js" asp-append-version="true"></script>
 }

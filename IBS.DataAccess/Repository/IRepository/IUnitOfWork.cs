@@ -43,21 +43,21 @@ namespace IBS.DataAccess.Repository.IRepository
         ILockedPeriodAdjustmentRepository LockedPeriodAdjustment { get; }
         IDepartmentAccessRepository DepartmentAccess { get; }
 
-        Task<List<SelectListItem>> GetFilprideCustomerListAsyncById(string company, CancellationToken cancellationToken = default);
+        Task<List<SelectListItem>> GetFilprideCustomerListAsyncById(CancellationToken cancellationToken = default);
 
-        Task<List<SelectListItem>> GetFilprideSupplierListAsyncById(string company, CancellationToken cancellationToken = default);
+        Task<List<SelectListItem>> GetFilprideSupplierListAsyncById(CancellationToken cancellationToken = default);
 
-        Task<List<SelectListItem>> GetFilprideEmployeeSupplierListAsyncById(string company, CancellationToken cancellationToken = default);
+        Task<List<SelectListItem>> GetFilprideEmployeeSupplierListAsyncById(CancellationToken cancellationToken = default);
 
-        Task<List<SelectListItem>> GetFilprideTradeSupplierListAsyncById(string company, CancellationToken cancellationToken = default);
+        Task<List<SelectListItem>> GetFilprideTradeSupplierListAsyncById(CancellationToken cancellationToken = default);
 
-        Task<List<SelectListItem>> GetFilprideNonTradeSupplierListAsyncById(string company, CancellationToken cancellationToken = default);
+        Task<List<SelectListItem>> GetFilprideNonTradeSupplierListAsyncById(CancellationToken cancellationToken = default);
 
-        Task<List<SelectListItem>> GetFilprideCommissioneeListAsyncById(string company, CancellationToken cancellationToken = default);
+        Task<List<SelectListItem>> GetFilprideCommissioneeListAsyncById(CancellationToken cancellationToken = default);
 
-        Task<List<SelectListItem>> GetFilprideHaulerListAsyncById(string company, CancellationToken cancellationToken = default);
+        Task<List<SelectListItem>> GetFilprideHaulerListAsyncById(CancellationToken cancellationToken = default);
 
-        Task<List<SelectListItem>> GetFilprideBankAccountListById(string company, CancellationToken cancellationToken = default);
+        Task<List<SelectListItem>> GetFilprideBankAccountListById(CancellationToken cancellationToken = default);
 
         Task<List<SelectListItem>> GetDistinctFilpridePickupPointListById(CancellationToken cancellationToken = default);
 

@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Filpride.IRepository;
 using IBS.Models.Enums;
@@ -5,7 +6,6 @@ using IBS.Models.Filpride.AccountsPayable;
 using IBS.Models.Filpride.Books;
 using IBS.Utility.Helpers;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Expressions;
 
 namespace IBS.DataAccess.Repository.Filpride
 {
@@ -18,17 +18,17 @@ namespace IBS.DataAccess.Repository.Filpride
             _db = db;
         }
 
-        public async Task<string> GenerateCodeAsync(string company, string type, CancellationToken cancellationToken = default)
+        public async Task<string> GenerateCodeAsync(string type, CancellationToken cancellationToken = default)
         {
             return type switch
             {
-                nameof(DocumentType.Documented) => await GenerateCodeForDocumented(company, cancellationToken),
-                nameof(DocumentType.Undocumented) => await GenerateCodeForUnDocumented(company, cancellationToken),
+                nameof(DocumentType.Documented) => await GenerateCodeForDocumented(cancellationToken),
+                nameof(DocumentType.Undocumented) => await GenerateCodeForUnDocumented(cancellationToken),
                 _ => throw new ArgumentException("Invalid type")
             };
         }
 
-        private async Task<string> GenerateCodeForDocumented(string company, CancellationToken cancellationToken = default)
+        private async Task<string> GenerateCodeForDocumented(CancellationToken cancellationToken = default)
         {
             var lastCv = await _db
                 .FilprideCheckVoucherHeaders
@@ -52,7 +52,7 @@ namespace IBS.DataAccess.Repository.Filpride
             return lastSeries.Substring(0, 2) + incrementedNumber.ToString("D10");
         }
 
-        private async Task<string> GenerateCodeForUnDocumented(string company, CancellationToken cancellationToken = default)
+        private async Task<string> GenerateCodeForUnDocumented(CancellationToken cancellationToken = default)
         {
             var lastCv = await _db
                 .FilprideCheckVoucherHeaders
@@ -152,17 +152,17 @@ namespace IBS.DataAccess.Repository.Filpride
             return query;
         }
 
-        public async Task<string> GenerateCodeMultipleInvoiceAsync(string company, string type, CancellationToken cancellationToken = default)
+        public async Task<string> GenerateCodeMultipleInvoiceAsync(string type, CancellationToken cancellationToken = default)
         {
             return type switch
             {
-                nameof(DocumentType.Documented) => await GenerateCodeMultipleInvoiceForDocumented(company, cancellationToken),
-                nameof(DocumentType.Undocumented) => await GenerateCodeMultipleInvoiceForUnDocumented(company, cancellationToken),
+                nameof(DocumentType.Documented) => await GenerateCodeMultipleInvoiceForDocumented(cancellationToken),
+                nameof(DocumentType.Undocumented) => await GenerateCodeMultipleInvoiceForUnDocumented(cancellationToken),
                 _ => throw new ArgumentException("Invalid type")
             };
         }
 
-        private async Task<string> GenerateCodeMultipleInvoiceForDocumented(string company, CancellationToken cancellationToken = default)
+        private async Task<string> GenerateCodeMultipleInvoiceForDocumented(CancellationToken cancellationToken = default)
         {
             var lastCv = await _db
                 .FilprideCheckVoucherHeaders
@@ -186,7 +186,7 @@ namespace IBS.DataAccess.Repository.Filpride
             return lastSeries.Substring(0, 3) + incrementedNumber.ToString("D9");
         }
 
-        private async Task<string> GenerateCodeMultipleInvoiceForUnDocumented(string company, CancellationToken cancellationToken = default)
+        private async Task<string> GenerateCodeMultipleInvoiceForUnDocumented(CancellationToken cancellationToken = default)
         {
             var lastCv = await _db
                 .FilprideCheckVoucherHeaders
@@ -210,17 +210,17 @@ namespace IBS.DataAccess.Repository.Filpride
             return lastSeries.Substring(0, 4) + incrementedNumber.ToString("D8");
         }
 
-        public async Task<string> GenerateCodeMultiplePaymentAsync(string company, string type, CancellationToken cancellationToken = default)
+        public async Task<string> GenerateCodeMultiplePaymentAsync(string type, CancellationToken cancellationToken = default)
         {
             return type switch
             {
-                nameof(DocumentType.Documented) => await GenerateCodeMultiplePaymentForDocumented(company, cancellationToken),
-                nameof(DocumentType.Undocumented) => await GenerateCodeMultiplePaymentForUnDocumented(company, cancellationToken),
+                nameof(DocumentType.Documented) => await GenerateCodeMultiplePaymentForDocumented(cancellationToken),
+                nameof(DocumentType.Undocumented) => await GenerateCodeMultiplePaymentForUnDocumented(cancellationToken),
                 _ => throw new ArgumentException("Invalid type")
             };
         }
 
-        private async Task<string> GenerateCodeMultiplePaymentForDocumented(string company, CancellationToken cancellationToken = default)
+        private async Task<string> GenerateCodeMultiplePaymentForDocumented(CancellationToken cancellationToken = default)
         {
             var lastCv = await _db
                 .FilprideCheckVoucherHeaders
@@ -244,7 +244,7 @@ namespace IBS.DataAccess.Repository.Filpride
             return lastSeries.Substring(0, 3) + incrementedNumber.ToString("D9");
         }
 
-        private async Task<string> GenerateCodeMultiplePaymentForUnDocumented(string company, CancellationToken cancellationToken = default)
+        private async Task<string> GenerateCodeMultiplePaymentForUnDocumented(CancellationToken cancellationToken = default)
         {
             var lastCv = await _db
                 .FilprideCheckVoucherHeaders

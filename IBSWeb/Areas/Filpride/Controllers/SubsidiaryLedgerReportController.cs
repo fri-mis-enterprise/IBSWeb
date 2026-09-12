@@ -1,27 +1,31 @@
 using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.ViewModels;
-using IBS.Services.Attributes;
+using IBS.Models;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
+using IBS.Utility;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using OfficeOpenXml;
+using Microsoft.Extensions.Options;
 using OfficeOpenXml.Style;
+using OfficeOpenXml;
 using Color = System.Drawing.Color;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [CompanyAuthorize(nameof(Filpride))]
+    [Authorize]
     public class SubsidiaryLedgerReportController: Controller
     {
+        private readonly BrandingOptions _brandingOptions;
+
         private readonly ApplicationDbContext _dbContext;
 
         private readonly UserManager<ApplicationUser> _userManager;
@@ -66,8 +70,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         public SubsidiaryLedgerReportController(ApplicationDbContext dbContext,
             UserManager<ApplicationUser> userManager,
             IUnitOfWork unitOfWork,
-            ILogger<SubsidiaryLedgerReportController> logger)
+            ILogger<SubsidiaryLedgerReportController> logger,
+            IOptions<BrandingOptions> brandingOptions)
         {
+            _brandingOptions = brandingOptions.Value;
             _dbContext = dbContext;
             _userManager = userManager;
             _unitOfWork = unitOfWork;
@@ -80,18 +86,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                    ?? User.Identity?.Name!;
         }
 
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return null;
-            }
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
-        }
         private static string NormalizeStatusFilter(string? statusFilter) => statusFilter switch
         {
             "All" => "All",
@@ -138,12 +132,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 monthDate = monthDate.AddMonths(1).AddDays(-1);
                 var extractedBy = GetUserFullName();
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
 
                 var receivingReportsGroupBySupplier = await _dbContext.FilprideReceivingReports
                     .Where(x => x.Status == nameof(Status.Posted) &&
@@ -198,7 +186,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 worksheet.Cells["B2"].Value = "As of " + monthDate.ToString("MMM yyyy");
                 worksheet.Cells["B3"].Value = $"{extractedBy}";
-                worksheet.Cells["B4"].Value = $"{companyClaims}";
+                worksheet.Cells["B4"].Value = _brandingOptions.CompanyName;
                 worksheet.Cells["B5"].Value = $"{DateTimeHelper.GetCurrentPhilippineTime()}";
 
                 int row = 7;
@@ -448,7 +436,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         #endregion
 
-
         [HttpGet]
         public IActionResult TradeCommissioneeReport()
         {
@@ -469,12 +456,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 monthDate = monthDate.AddMonths(1).AddDays(-1);
                 var extractedBy = GetUserFullName();
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
 
                 var deliveryReceiptsGroupBySupplier = await _dbContext.FilprideDeliveryReceipts
                     .Where(x => (x.Status == nameof(DRStatus.ForInvoicing) ||
@@ -533,7 +514,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 worksheet.Cells["B2"].Value = "As of " + monthDate.ToString("MMM yyyy");
                 worksheet.Cells["B3"].Value = $"{extractedBy}";
-                worksheet.Cells["B4"].Value = $"{companyClaims}";
+                worksheet.Cells["B4"].Value = _brandingOptions.CompanyName;
                 worksheet.Cells["B5"].Value = $"{DateTimeHelper.GetCurrentPhilippineTime()}";
 
                 int row = 7;
@@ -831,12 +812,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 monthDate = monthDate.AddMonths(1).AddDays(-1);
                 var extractedBy = GetUserFullName();
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
 
                 var deliveryReceiptsGroupBySupplier = await _dbContext.FilprideDeliveryReceipts
                     .Where(x => (x.Status == nameof(DRStatus.ForInvoicing) ||
@@ -894,7 +869,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 worksheet.Cells["B2"].Value = "As of " + monthDate.ToString("MMM yyyy");
                 worksheet.Cells["B3"].Value = $"{extractedBy}";
-                worksheet.Cells["B4"].Value = $"{companyClaims}";
+                worksheet.Cells["B4"].Value = _brandingOptions.CompanyName;
                 worksheet.Cells["B5"].Value = $"{DateTimeHelper.GetCurrentPhilippineTime()}";
 
                 int row = 7;
@@ -1189,16 +1164,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 var dateFrom = model.DateFrom;
                 var dateTo = model.DateTo;
-                var companyClaims = await GetCompanyClaimAsync();
 
                 if (dateFrom > dateTo)
                 {
                     throw new ArgumentException("Date From must not be greater than Date To!");
-                }
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
                 }
 
                 var selectedAccountNo = model.AccountNo

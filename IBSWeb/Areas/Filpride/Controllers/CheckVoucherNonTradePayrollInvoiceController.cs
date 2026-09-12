@@ -1,26 +1,25 @@
+using System.Linq.Dynamic.Core;
+using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsPayable;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.MasterFile;
 using IBS.Models.Filpride.ViewModels;
+using IBS.Models;
 using IBS.Services;
-using IBS.Services.Attributes;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Dynamic.Core;
-using System.Security.Claims;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [CompanyAuthorize(nameof(Filpride))]
+    [Authorize]
     public class CheckVoucherNonTradePayrollInvoiceController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;
@@ -56,19 +55,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             return User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value
                    ?? User.Identity?.Name!;
-        }
-
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return null;
-            }
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
         }
 
         private async Task UpdateFilterTypeClaim(string filterType)
@@ -122,7 +108,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
+
                 var filterTypeClaim = await GetCurrentFilterType();
 
                 var checkVoucherDetails = _dbContext.FilprideCheckVoucherDetails
@@ -223,15 +209,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
             var viewModel = new CheckVoucherNonTradeInvoicingViewModel();
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
-            viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(companyClaims, cancellationToken);
+            viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
 
             return View(viewModel);
@@ -242,17 +222,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CheckVoucherNonTradeInvoicingViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (!ModelState.IsValid)
             {
                 viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
-                viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(cancellationToken);
                 viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
                 TempData["warning"] = "The information provided was invalid.";
                 return View(viewModel);
@@ -314,7 +288,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 FilprideCheckVoucherHeader checkVoucherHeader = new()
                 {
-                    CheckVoucherHeaderNo = await _unitOfWork.FilprideCheckVoucher.GenerateCodeMultipleInvoiceAsync(companyClaims, viewModel.Type!, cancellationToken),
+                    CheckVoucherHeaderNo = await _unitOfWork.FilprideCheckVoucher.GenerateCodeMultipleInvoiceAsync(viewModel.Type!, cancellationToken),
                     Date = viewModel.TransactionDate,
                     Payee = payee.SupplierName,
                     Address = payee.SupplierAddress,
@@ -396,7 +370,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
 
                 viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
-                viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(cancellationToken);
 
                 await transaction.RollbackAsync(cancellationToken);
                 TempData["error"] = ex.Message;
@@ -436,15 +410,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .OrderBy(s => s.CheckVoucherDetailId)
                     .ToListAsync(cancellationToken);
 
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
-
                 var coa = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
-                var suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                var suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(cancellationToken);
 
                 // Convert existing details to PayrollAccountingEntries format
                 var payrollAccountingEntries = existingDetailsModel.Select(detail => new PayrollAccountingEntryViewModel
@@ -487,17 +454,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(CheckVoucherNonTradeInvoicingViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             if (!ModelState.IsValid)
             {
                 viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
-                viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(cancellationToken);
                 viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
                 TempData["warning"] = "The information provided was invalid.";
                 return View(viewModel);
@@ -659,7 +620,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
 
                 viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
-                viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(companyClaims, cancellationToken);
+                viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(cancellationToken);
 
                 await transaction.RollbackAsync(cancellationToken);
                 TempData["error"] = ex.Message;
@@ -890,7 +851,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> Print(int? id, int? supplierId, int? employeeId, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
             if (id == null)
             {
@@ -933,14 +893,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> GetNonTradeSupplierSelectList(CancellationToken cancellationToken = default)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
-            var selectList = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(companyClaims, cancellationToken);
+            var selectList = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(cancellationToken);
             return Json(selectList);
         }
 

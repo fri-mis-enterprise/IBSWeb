@@ -1,13 +1,13 @@
 using System.Linq.Expressions;
+using IBS.DTOs;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Filpride.IRepository;
-using IBS.DTOs;
 using IBS.Models.Enums;
-using IBS.Models.Filpride;
 using IBS.Models.Filpride.AccountsReceivable;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.Integrated;
 using IBS.Models.Filpride.MasterFile;
+using IBS.Models.Filpride;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.EntityFrameworkCore;
@@ -23,17 +23,17 @@ namespace IBS.DataAccess.Repository.Filpride
             _db = db;
         }
 
-        public async Task<string> GenerateCodeAsync(string company, string type, CancellationToken cancellationToken = default)
+        public async Task<string> GenerateCodeAsync(string type, CancellationToken cancellationToken = default)
         {
             return type switch
             {
-                nameof(DocumentType.Documented) => await GenerateCodeForDocumented(company, cancellationToken),
-                nameof(DocumentType.Undocumented) => await GenerateCodeForUnDocumented(company, cancellationToken),
+                nameof(DocumentType.Documented) => await GenerateCodeForDocumented(cancellationToken),
+                nameof(DocumentType.Undocumented) => await GenerateCodeForUnDocumented(cancellationToken),
                 _ => throw new ArgumentException("Invalid type")
             };
         }
 
-        private async Task<string> GenerateCodeForDocumented(string company, CancellationToken cancellationToken = default)
+        private async Task<string> GenerateCodeForDocumented(CancellationToken cancellationToken = default)
         {
             var lastCr = await _db
                 .FilprideCollectionReceipts
@@ -57,7 +57,7 @@ namespace IBS.DataAccess.Repository.Filpride
             return lastSeries.Substring(0, 2) + incrementedNumber.ToString("D10");
         }
 
-        private async Task<string> GenerateCodeForUnDocumented(string company, CancellationToken cancellationToken = default)
+        private async Task<string> GenerateCodeForUnDocumented(CancellationToken cancellationToken = default)
         {
             var lastCr = await _db
                 .FilprideCollectionReceipts
@@ -81,7 +81,7 @@ namespace IBS.DataAccess.Repository.Filpride
             return lastSeries.Substring(0, 3) + incrementedNumber.ToString("D9");
         }
 
-        public async Task<List<FilprideOffsettings>> GetOffsettings(string source, string reference, string company, CancellationToken cancellationToken = default)
+        public async Task<List<FilprideOffsettings>> GetOffsettings(string source, string reference, CancellationToken cancellationToken = default)
         {
             var result = await _db
                 .FilprideOffsettings

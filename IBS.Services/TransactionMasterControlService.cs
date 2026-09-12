@@ -1,10 +1,10 @@
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsReceivable;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.ViewModels;
+using IBS.Models;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.EntityFrameworkCore;
@@ -14,10 +14,10 @@ namespace IBS.Services
 {
     public interface ITransactionMasterControlService
     {
-        Task<(string Type, string ReferenceNo)?> FindTransactionAsync(string referenceNo, string? company, CancellationToken cancellationToken);
-        Task<TransactionMasterControlViewModel?> GetTransactionDetailsAsync(string referenceNo, string type, string? company, CancellationToken cancellationToken);
-        Task UpdateTransactionAsync(TransactionMasterControlViewModel model, string? company, string userFullName, CancellationToken cancellationToken);
-        Task<ReJournalBatchResult> ReJournalAllAsync(int month, int year, string company, string userFullName, string transactionType, CancellationToken cancellationToken);
+        Task<(string Type, string ReferenceNo)?> FindTransactionAsync(string referenceNo, CancellationToken cancellationToken);
+        Task<TransactionMasterControlViewModel?> GetTransactionDetailsAsync(string referenceNo, string type, CancellationToken cancellationToken);
+        Task UpdateTransactionAsync(TransactionMasterControlViewModel model, string userFullName, CancellationToken cancellationToken);
+        Task<ReJournalBatchResult> ReJournalAllAsync(int month, int year, string userFullName, string transactionType, CancellationToken cancellationToken);
     }
 
     public sealed class ReJournalBatchResult
@@ -66,7 +66,7 @@ namespace IBS.Services
             ReJournalTypeJv
         ];
 
-        public async Task<(string Type, string ReferenceNo)?> FindTransactionAsync(string referenceNo, string? company, CancellationToken cancellationToken)
+        public async Task<(string Type, string ReferenceNo)?> FindTransactionAsync(string referenceNo, CancellationToken cancellationToken)
         {
             referenceNo = referenceNo.Trim();
 
@@ -98,7 +98,7 @@ namespace IBS.Services
             return null;
         }
 
-        public async Task<TransactionMasterControlViewModel?> GetTransactionDetailsAsync(string referenceNo, string type, string? company, CancellationToken cancellationToken)
+        public async Task<TransactionMasterControlViewModel?> GetTransactionDetailsAsync(string referenceNo, string type, CancellationToken cancellationToken)
         {
             TransactionMasterControlViewModel model = new() { ReferenceNo = referenceNo, TransactionType = type };
 
@@ -194,13 +194,8 @@ namespace IBS.Services
             return model;
         }
 
-        public async Task UpdateTransactionAsync(TransactionMasterControlViewModel model, string? company, string userFullName, CancellationToken cancellationToken)
+        public async Task UpdateTransactionAsync(TransactionMasterControlViewModel model, string userFullName, CancellationToken cancellationToken)
         {
-            if (string.IsNullOrEmpty(company))
-            {
-                throw new InvalidOperationException("Company claim is missing for the current user.");
-            }
-
             await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             try
@@ -225,7 +220,7 @@ namespace IBS.Services
                     header.CheckDate = model.CheckDate;
                     StampEdited(header, userFullName);
 
-                    await UpdateGeneralLedgerBooksAsync(model.ReferenceNo, finalParticulars, company, cancellationToken);
+                    await UpdateGeneralLedgerBooksAsync(model.ReferenceNo, finalParticulars, cancellationToken);
 
                     if (header.CvType == nameof(CVType.Invoicing))
                     {
@@ -264,7 +259,7 @@ namespace IBS.Services
                             paymentHeader.Particulars = newPaymentParticulars;
                             StampEdited(paymentHeader, userFullName);
 
-                            await UpdateGeneralLedgerBooksAsync(paymentHeader.CheckVoucherHeaderNo!, newPaymentParticulars, company, cancellationToken);
+                            await UpdateGeneralLedgerBooksAsync(paymentHeader.CheckVoucherHeaderNo!, newPaymentParticulars, cancellationToken);
                         }
                     }
                 }
@@ -280,7 +275,7 @@ namespace IBS.Services
                     header.Particulars = model.Particulars;
                     StampEdited(header, userFullName);
 
-                    await UpdateGeneralLedgerBooksAsync(model.ReferenceNo, model.Particulars, company, cancellationToken);
+                    await UpdateGeneralLedgerBooksAsync(model.ReferenceNo, model.Particulars, cancellationToken);
                 }
                 else if (model.TransactionType == "SI")
                 {
@@ -349,7 +344,7 @@ namespace IBS.Services
             header.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
         }
 
-        public async Task<ReJournalBatchResult> ReJournalAllAsync(int month, int year, string company, string userFullName, string transactionType, CancellationToken cancellationToken)
+        public async Task<ReJournalBatchResult> ReJournalAllAsync(int month, int year, string userFullName, string transactionType, CancellationToken cancellationToken)
         {
             transactionType = string.IsNullOrWhiteSpace(transactionType)
                 ? ReJournalTypeAll
@@ -366,47 +361,47 @@ namespace IBS.Services
             {
                 var purchaseCount = transactionType.Equals(ReJournalTypeAll, StringComparison.OrdinalIgnoreCase) ||
                                     transactionType.Equals(ReJournalTypePurchase, StringComparison.OrdinalIgnoreCase)
-                    ? await ReJournalPurchaseAsync(month, year, company, cancellationToken)
+                    ? await ReJournalPurchaseAsync(month, year, cancellationToken)
                     : 0;
 
                 var salesCount = transactionType.Equals(ReJournalTypeAll, StringComparison.OrdinalIgnoreCase) ||
                                  transactionType.Equals(ReJournalTypeSales, StringComparison.OrdinalIgnoreCase)
-                    ? await ReJournalSalesAsync(month, year, company, cancellationToken)
+                    ? await ReJournalSalesAsync(month, year, cancellationToken)
                     : 0;
 
                 var serviceCount = transactionType.Equals(ReJournalTypeAll, StringComparison.OrdinalIgnoreCase) ||
                                    transactionType.Equals(ReJournalTypeService, StringComparison.OrdinalIgnoreCase)
-                    ? await ReJournalServiceAsync(month, year, company, userFullName, cancellationToken)
+                    ? await ReJournalServiceAsync(month, year, userFullName, cancellationToken)
                     : 0;
 
                 var collectionCount = transactionType.Equals(ReJournalTypeAll, StringComparison.OrdinalIgnoreCase) ||
                                       transactionType.Equals(ReJournalTypeCollection, StringComparison.OrdinalIgnoreCase)
-                    ? await ReJournalCollectionAsync(month, year, company, cancellationToken)
+                    ? await ReJournalCollectionAsync(month, year, cancellationToken)
                     : 0;
 
                 var provisionalReceiptCount = transactionType.Equals(ReJournalTypeAll, StringComparison.OrdinalIgnoreCase) ||
                                               transactionType.Equals(ReJournalTypeProvisionalReceipt, StringComparison.OrdinalIgnoreCase)
-                    ? await ReJournalProvisionalReceiptAsync(month, year, company, cancellationToken)
+                    ? await ReJournalProvisionalReceiptAsync(month, year, cancellationToken)
                     : 0;
 
                 var debitMemoCount = transactionType.Equals(ReJournalTypeAll, StringComparison.OrdinalIgnoreCase) ||
                                      transactionType.Equals(ReJournalTypeDebitMemo, StringComparison.OrdinalIgnoreCase)
-                    ? await ReJournalDebitMemoAsync(month, year, company, cancellationToken)
+                    ? await ReJournalDebitMemoAsync(month, year, cancellationToken)
                     : 0;
 
                 var creditMemoCount = transactionType.Equals(ReJournalTypeAll, StringComparison.OrdinalIgnoreCase) ||
                                       transactionType.Equals(ReJournalTypeCreditMemo, StringComparison.OrdinalIgnoreCase)
-                    ? await ReJournalCreditMemoAsync(month, year, company, cancellationToken)
+                    ? await ReJournalCreditMemoAsync(month, year, cancellationToken)
                     : 0;
 
                 var paymentCount = transactionType.Equals(ReJournalTypeAll, StringComparison.OrdinalIgnoreCase) ||
                                    transactionType.Equals(ReJournalTypePayment, StringComparison.OrdinalIgnoreCase)
-                    ? await ReJournalPaymentAsync(month, year, company, cancellationToken)
+                    ? await ReJournalPaymentAsync(month, year, cancellationToken)
                     : 0;
 
                 var jvCount = transactionType.Equals(ReJournalTypeAll, StringComparison.OrdinalIgnoreCase) ||
                               transactionType.Equals(ReJournalTypeJv, StringComparison.OrdinalIgnoreCase)
-                    ? await ReJournalJvAsync(month, year, company, cancellationToken)
+                    ? await ReJournalJvAsync(month, year, cancellationToken)
                     : 0;
 
                 await transaction.CommitAsync(cancellationToken);
@@ -431,11 +426,11 @@ namespace IBS.Services
             }
         }
 
-        private async Task<int> ReJournalPurchaseAsync(int month, int year, string company, CancellationToken cancellationToken)
+        private async Task<int> ReJournalPurchaseAsync(int month, int year, CancellationToken cancellationToken)
         {
             var receivingReports = await unitOfWork.FilprideReceivingReport
                 .GetAllAsync(x =>
-                    
+
                     x.Status == nameof(Status.Posted) &&
                     x.Date.Month == month &&
                     x.Date.Year == year,
@@ -483,11 +478,11 @@ namespace IBS.Services
             return records.Count;
         }
 
-        private async Task<int> ReJournalSalesAsync(int month, int year, string company, CancellationToken cancellationToken)
+        private async Task<int> ReJournalSalesAsync(int month, int year, CancellationToken cancellationToken)
         {
             var drs = await unitOfWork.FilprideDeliveryReceipt
                 .GetAllAsync(x =>
-                        
+
                         x.VoidedBy == null &&
                         x.CanceledDate == null &&
                         x.DeliveredDate.HasValue &&
@@ -537,11 +532,11 @@ namespace IBS.Services
             return records.Count;
         }
 
-        private async Task<int> ReJournalServiceAsync(int month, int year, string company, string userFullName, CancellationToken cancellationToken)
+        private async Task<int> ReJournalServiceAsync(int month, int year, string userFullName, CancellationToken cancellationToken)
         {
             var serviceInvoices = await unitOfWork.FilprideServiceInvoice
                 .GetAllAsync(x =>
-                        
+
                         x.Status == nameof(Status.Posted) &&
                         x.Period.Month == month &&
                         x.Period.Year == year,
@@ -573,7 +568,7 @@ namespace IBS.Services
 
             foreach (var service in records.Where(x => x.ServiceName == "TRANSACTION FEE"))
             {
-                await RevertTheReversalOfDrEntriesAsync(service.DeliveryReceiptId, company, cancellationToken);
+                await RevertTheReversalOfDrEntriesAsync(service.DeliveryReceiptId, cancellationToken);
             }
 
             foreach (var service in records)
@@ -582,19 +577,19 @@ namespace IBS.Services
 
                 if (service.ServiceName == "TRANSACTION FEE")
                 {
-                    await ReverseDrEntriesAsync(service.DeliveryReceiptId, company, userFullName, cancellationToken);
+                    await ReverseDrEntriesAsync(service.DeliveryReceiptId, userFullName, cancellationToken);
                 }
             }
 
             return records.Count;
         }
 
-        private async Task<int> ReJournalPaymentAsync(int month, int year, string company, CancellationToken cancellationToken)
+        private async Task<int> ReJournalPaymentAsync(int month, int year, CancellationToken cancellationToken)
         {
             var cvs = await dbContext.FilprideCheckVoucherHeaders
                 .Include(x => x.Details)
                 .Where(x =>
-                    
+
                     x.PostedBy != null &&
                     x.Date.Month == month &&
                     x.Date.Year == year)
@@ -630,10 +625,10 @@ namespace IBS.Services
             return cvs.Count;
         }
 
-        private async Task<int> ReJournalCollectionAsync(int month, int year, string company, CancellationToken cancellationToken)
+        private async Task<int> ReJournalCollectionAsync(int month, int year, CancellationToken cancellationToken)
         {
             var records = (await unitOfWork.FilprideCollectionReceipt.GetAllAsync(x =>
-                    
+
                     x.PostedBy != null &&
                     x.Status != nameof(CollectionReceiptStatus.Voided) &&
                     x.Status != nameof(CollectionReceiptStatus.Canceled) &&
@@ -674,17 +669,17 @@ namespace IBS.Services
                 if (collectionReceipt.DepositedDate != null && collectionReceipt.ClearedDate != null)
                 {
                     await unitOfWork.FilprideCollectionReceipt.ApplyClearingDateAsync(collectionReceipt, cancellationToken);
-                    await ReApplyCollectionCostOfMoneyAsync(collectionReceipt, company, cancellationToken);
+                    await ReApplyCollectionCostOfMoneyAsync(collectionReceipt, cancellationToken);
                 }
             }
 
             return records.Count;
         }
 
-        private async Task<int> ReJournalProvisionalReceiptAsync(int month, int year, string company, CancellationToken cancellationToken)
+        private async Task<int> ReJournalProvisionalReceiptAsync(int month, int year, CancellationToken cancellationToken)
         {
             var records = (await unitOfWork.ProvisionalReceipt.GetAllAsync(x =>
-                    
+
                     x.PostedBy != null &&
                     x.Status != nameof(CollectionReceiptStatus.Voided) &&
                     x.Status != nameof(CollectionReceiptStatus.Canceled) &&
@@ -732,7 +727,6 @@ namespace IBS.Services
 
         private async Task ReApplyCollectionCostOfMoneyAsync(
             FilprideCollectionReceipt collectionReceipt,
-            string company,
             CancellationToken cancellationToken)
         {
             if (collectionReceipt.DepositedDate == null)
@@ -782,10 +776,10 @@ namespace IBS.Services
             }
         }
 
-        private async Task<int> ReJournalDebitMemoAsync(int month, int year, string company, CancellationToken cancellationToken)
+        private async Task<int> ReJournalDebitMemoAsync(int month, int year, CancellationToken cancellationToken)
         {
             var records = (await unitOfWork.FilprideDebitMemo.GetAllAsync(x =>
-                    
+
                     x.PostedBy != null &&
                     x.Status == nameof(Status.Posted) &&
                     x.TransactionDate.Month == month &&
@@ -826,10 +820,10 @@ namespace IBS.Services
             return records.Count;
         }
 
-        private async Task<int> ReJournalCreditMemoAsync(int month, int year, string company, CancellationToken cancellationToken)
+        private async Task<int> ReJournalCreditMemoAsync(int month, int year, CancellationToken cancellationToken)
         {
             var records = (await unitOfWork.FilprideCreditMemo.GetAllAsync(x =>
-                    
+
                     x.PostedBy != null &&
                     x.Status == nameof(Status.Posted) &&
                     x.TransactionDate.Month == month &&
@@ -870,12 +864,12 @@ namespace IBS.Services
             return records.Count;
         }
 
-        private async Task<int> ReJournalJvAsync(int month, int year, string company, CancellationToken cancellationToken)
+        private async Task<int> ReJournalJvAsync(int month, int year, CancellationToken cancellationToken)
         {
             var jvs = await dbContext.FilprideJournalVoucherHeaders
                 .Include(x => x.Details)
                 .Where(x =>
-                    
+
                     x.PostedBy != null &&
                     x.Date.Month == month &&
                     x.Date.Year == year)
@@ -909,7 +903,7 @@ namespace IBS.Services
             return jvs.Count;
         }
 
-        private async Task RevertTheReversalOfDrEntriesAsync(int? deliveryReceiptId, string company, CancellationToken cancellationToken)
+        private async Task RevertTheReversalOfDrEntriesAsync(int? deliveryReceiptId, CancellationToken cancellationToken)
         {
             if (!deliveryReceiptId.HasValue)
             {
@@ -936,7 +930,7 @@ namespace IBS.Services
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        private async Task ReverseDrEntriesAsync(int? deliveryReceiptId, string company, string userFullName, CancellationToken cancellationToken)
+        private async Task ReverseDrEntriesAsync(int? deliveryReceiptId, string userFullName, CancellationToken cancellationToken)
         {
             if (!deliveryReceiptId.HasValue)
             {
@@ -991,7 +985,7 @@ namespace IBS.Services
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        private async Task UpdateGeneralLedgerBooksAsync(string referenceNo, string particulars, string company, CancellationToken cancellationToken)
+        private async Task UpdateGeneralLedgerBooksAsync(string referenceNo, string particulars, CancellationToken cancellationToken)
         {
             await dbContext.FilprideGeneralLedgerBooks
                 .Where(x => x.Reference == referenceNo)

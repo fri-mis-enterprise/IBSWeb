@@ -4,7 +4,6 @@ using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
 using IBS.Models.Filpride.ViewModels;
 using IBS.Services;
-using IBS.Services.Attributes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area("Filpride")]
-    [CompanyAuthorize("Filpride")]
+    [Authorize]
     [Authorize(Roles = "Admin")]
     public class CollectionCategoryController : Controller
     {

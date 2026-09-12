@@ -1,13 +1,12 @@
 using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
-using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsReceivable;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.ViewModels;
+using IBS.Models;
 using IBS.Services;
-using IBS.Services.Attributes;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -17,7 +16,7 @@ using Microsoft.EntityFrameworkCore;
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [CompanyAuthorize(nameof(Filpride))]
+    [Authorize]
     public class ProvisionalReceiptController : Controller
     {
         private readonly ProvisionalReceiptTaggingService _tagging;
@@ -50,19 +49,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             return User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value
                    ?? User.Identity?.Name!;
-        }
-
-        private async Task<string?> GetCompanyClaimAsync()
-        {
-            var user = await _userManager.GetUserAsync(User);
-
-            if (user == null)
-            {
-                return null;
-            }
-
-            var claims = await _userManager.GetClaimsAsync(user);
-            return claims.FirstOrDefault(c => c.Type == "Company")?.Value;
         }
 
         private async Task PopulateFormDependenciesAsync(ProvisionalReceiptViewModel viewModel, CancellationToken cancellationToken)
@@ -178,14 +164,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         public async Task<IActionResult> GetBanks(CancellationToken cancellationToken = default)
         {
-            var companyClaims = await GetCompanyClaimAsync();
 
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
-            return Json(await _unitOfWork.GetFilprideBankAccountListById(companyClaims, cancellationToken));
+            return Json(await _unitOfWork.GetFilprideBankAccountListById(cancellationToken));
         }
 
         [HttpGet]
@@ -223,12 +203,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-                var companyClaims = await GetCompanyClaimAsync();
-
-                if (companyClaims == null)
-                {
-                    return BadRequest();
-                }
 
                 var query = _unitOfWork.ProvisionalReceipt
                     .GetAllQuery(pr => true);
@@ -347,12 +321,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             var viewModel = new PRCreateViewModel
             {
@@ -369,12 +337,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(PRCreateViewModel viewModel, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken);
             var taggingError = await _tagging.ValidateAsync(viewModel, null, cancellationToken);
@@ -401,7 +363,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var model = new FilprideProvisionalReceipt
                 {
                     SeriesNumber = await _unitOfWork.ProvisionalReceipt
-                        .GenerateSeriesNumberAsync(companyClaims, viewModel.Type, cancellationToken),
+                        .GenerateSeriesNumberAsync(viewModel.Type, cancellationToken),
                     CreatedBy = userFullName,
                     CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
                     Status = nameof(CollectionReceiptStatus.Pending),
@@ -441,13 +403,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
-
             var model = await _unitOfWork.ProvisionalReceipt
                 .GetAsync(pr => pr.Id == id, cancellationToken);
 
@@ -474,12 +429,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(PREditViewModel viewModel, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken);
             var model = await _unitOfWork.ProvisionalReceipt
@@ -544,12 +493,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [Authorize(Policy = nameof(ProvisionalReceipt.ProvisionalReceiptPreview))]
         public async Task<IActionResult> Print(int id, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             var model = await _unitOfWork.ProvisionalReceipt
                 .GetAsync(pr => pr.Id == id, cancellationToken);
@@ -565,12 +508,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [Authorize(Policy = nameof(ProvisionalReceipt.ProvisionalReceiptPreview))]
         public async Task<IActionResult> Printed(int id, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             var model = await _unitOfWork.ProvisionalReceipt
                 .GetAsync(pr => pr.Id == id, cancellationToken);
@@ -612,12 +549,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [Authorize(Policy = nameof(ProvisionalReceipt.ProvisionalReceiptPost))]
         public async Task<IActionResult> Post(int id, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             var model = await _dbContext.FilprideProvisionalReceipts
                 .AsNoTracking()
@@ -692,12 +623,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Void(int id, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             var model = await _unitOfWork.ProvisionalReceipt
                 .GetAsync(pr => pr.Id == id, cancellationToken);
@@ -749,12 +674,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancel(int id, string? cancellationRemarks, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             var model = await _unitOfWork.ProvisionalReceipt
                 .GetAsync(pr => pr.Id == id, cancellationToken);
@@ -800,12 +719,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> Deposit(int id, int bankId, DateOnly depositDate, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             var bank = await _unitOfWork.FilprideBankAccount.GetAsync(b => b.BankAccountId == bankId, cancellationToken);
             var model = await _unitOfWork.ProvisionalReceipt
@@ -856,12 +769,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> Return(int id, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             var model = await _unitOfWork.ProvisionalReceipt
                 .GetAsync(pr => pr.Id == id, cancellationToken);
@@ -909,12 +816,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> Redeposit(int id, int bankId, DateOnly redepositDate, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             var bank = await _unitOfWork.FilprideBankAccount
                 .GetAsync(b => b.BankAccountId == bankId, cancellationToken);
@@ -966,12 +867,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> ApplyClearingDate(int id, DateOnly clearingDate, CancellationToken cancellationToken)
         {
-            var companyClaims = await GetCompanyClaimAsync();
-
-            if (companyClaims == null)
-            {
-                return BadRequest();
-            }
 
             var model = await _unitOfWork.ProvisionalReceipt
                 .GetAsync(pr => pr.Id == id, cancellationToken);

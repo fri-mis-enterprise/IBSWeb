@@ -3,18 +3,12 @@
 @using Microsoft.Extensions.Options
 @using Microsoft.AspNetCore.Identity
 @inject IOptions<BrandingOptions> BrandingOptions
-@inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 
 @{
     var branding = BrandingOptions.Value;
     var isLoginPage = Context.Request.Path.Value?.StartsWith("/Identity/Account/Login", StringComparison.OrdinalIgnoreCase) == true;
-    var selectedCompany = string.Empty;
 
-    if (SignInManager.IsSignedIn(User))
-    {
-        selectedCompany = User.Claims.FirstOrDefault(c => c.Type == "Company")?.Value ?? string.Empty;
-    }
     var userName = UserManager.GetUserName(User);
 
     var assembly = typeof(Program).Assembly;
@@ -63,7 +57,7 @@
         }
     </style>
 </head>
-<body class="@(isLoginPage ? "login-layout" : "mnav-enabled")" data-selected-company="@selectedCompany">
+<body class="@(isLoginPage ? "login-layout" : "mnav-enabled")">
     @if (!isLoginPage)
     {
         <partial name="_Navbar" />

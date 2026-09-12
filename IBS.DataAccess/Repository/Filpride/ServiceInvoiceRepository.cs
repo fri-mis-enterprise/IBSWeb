@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Filpride.IRepository;
 using IBS.Models.Enums;
@@ -6,7 +7,6 @@ using IBS.Models.Filpride.Books;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Expressions;
 
 namespace IBS.DataAccess.Repository.Filpride
 {
@@ -19,17 +19,17 @@ namespace IBS.DataAccess.Repository.Filpride
             _db = db;
         }
 
-        public async Task<string> GenerateCodeAsync(string company, string type, CancellationToken cancellationToken = default)
+        public async Task<string> GenerateCodeAsync(string type, CancellationToken cancellationToken = default)
         {
             return type switch
             {
-                nameof(DocumentType.Documented) => await GenerateCodeForDocumented(company, cancellationToken),
-                nameof(DocumentType.Undocumented) => await GenerateCodeForUnDocumented(company, cancellationToken),
+                nameof(DocumentType.Documented) => await GenerateCodeForDocumented(cancellationToken),
+                nameof(DocumentType.Undocumented) => await GenerateCodeForUnDocumented(cancellationToken),
                 _ => throw new ArgumentException("Invalid type")
             };
         }
 
-        private async Task<string> GenerateCodeForDocumented(string company, CancellationToken cancellationToken)
+        private async Task<string> GenerateCodeForDocumented(CancellationToken cancellationToken)
         {
             var lastSv = await _db
                 .FilprideServiceInvoices
@@ -37,7 +37,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .OrderByDescending(x => x.ServiceInvoiceNo!.Length)
                 .ThenByDescending(x => x.ServiceInvoiceNo)
                 .FirstOrDefaultAsync(x =>
-                    
+
                     x.Type == nameof(DocumentType.Documented),
                     cancellationToken);
 
@@ -53,7 +53,7 @@ namespace IBS.DataAccess.Repository.Filpride
             return lastSeries.Substring(0, 2) + incrementedNumber.ToString("D10");
         }
 
-        private async Task<string> GenerateCodeForUnDocumented(string company, CancellationToken cancellationToken)
+        private async Task<string> GenerateCodeForUnDocumented(CancellationToken cancellationToken)
         {
             var lastSv = await _db
                 .FilprideServiceInvoices
@@ -61,7 +61,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .OrderByDescending(x => x.ServiceInvoiceNo!.Length)
                 .ThenByDescending(x => x.ServiceInvoiceNo)
                 .FirstOrDefaultAsync(x =>
-                        
+
                         x.Type == nameof(DocumentType.Undocumented),
                     cancellationToken);
 
