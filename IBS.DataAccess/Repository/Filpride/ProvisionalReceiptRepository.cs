@@ -31,7 +31,8 @@ namespace IBS.DataAccess.Repository.Filpride
             };
         }
 
-        public async Task PostAsync(int receiptId, string postedBy, CancellationToken cancellationToken = default)
+        public async Task PostAsync(int receiptId, string postedBy, SubAccountInfoDto? subAccountInfo,
+            CancellationToken cancellationToken = default)
         {
             await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
             try
@@ -78,7 +79,6 @@ namespace IBS.DataAccess.Repository.Filpride
                     throw new InvalidOperationException("The category must use a valid credit account with no child accounts.");
                 }
 
-                var subAccount = await ResolveCategorySubAccountAsync(receipt, category, cancellationToken);
                 var accountTitles = await GetListOfAccountTitleDto(cancellationToken);
                 var cashInBank = accountTitles.SingleOrDefault(a => a.AccountNumber == "101010100")
                                  ?? throw new InvalidOperationException("Account title '101010100' not found.");
@@ -130,9 +130,9 @@ namespace IBS.DataAccess.Repository.Filpride
                     Credit = fullTotal,
                     CreatedBy = postedBy,
                     CreatedDate = postedDateAndTime,
-                    SubAccountType = subAccount.Type,
-                    SubAccountId = subAccount.Id,
-                    SubAccountName = subAccount.Name,
+                    SubAccountType = subAccountInfo?.Type,
+                    SubAccountId = subAccountInfo?.Id,
+                    SubAccountName = subAccountInfo?.Name,
                     ModuleType = nameof(ModuleType.Collection)
                 });
 
@@ -194,57 +194,6 @@ namespace IBS.DataAccess.Repository.Filpride
                        .ToListAsync(cancellationToken);
             return receipts.SingleOrDefault()
                    ?? throw new KeyNotFoundException("Provisional receipt id not found.");
-        }
-
-        private async Task<(SubAccountType? Type, int? Id, string? Name)> ResolveCategorySubAccountAsync(
-            FilprideProvisionalReceipt receipt,
-            FilprideCollectionCategory category,
-            CancellationToken cancellationToken)
-        {
-            if (receipt.TagType is null)
-            {
-                if (receipt.TaggedCompanyId != null || receipt.TaggedSupplierId != null || receipt.TaggedBankAccountId != null ||
-                    category.TaggingRequirement == CollectionTaggingRequirement.Required)
-                {
-                    throw new InvalidOperationException("The receipt does not have the required valid category tag.");
-                }
-
-                return (null, null, null);
-            }
-
-            if (!Enum.IsDefined(receipt.TagType.Value) || !category.Allows(receipt.TagType.Value) ||
-                category.TaggingRequirement == CollectionTaggingRequirement.None)
-            {
-                throw new InvalidOperationException("The receipt master-file tag is not allowed by its category.");
-            }
-
-            switch (receipt.TagType.Value)
-            {
-                case CollectionTagType.Company when receipt.TaggedCompanyId is > 0 &&
-                                                     receipt.TaggedSupplierId == null && receipt.TaggedBankAccountId == null:
-                    var company = await _db.Companies.AsNoTracking()
-                        .SingleOrDefaultAsync(c => c.CompanyId == receipt.TaggedCompanyId, cancellationToken)
-                        ?? throw new InvalidOperationException("The tagged company could not be found.");
-                    return (SubAccountType.Company, company.CompanyId, $"{company.CompanyCode} - {company.CompanyName}");
-
-                case CollectionTagType.Employee when receipt.TaggedSupplierId is > 0 &&
-                                                      receipt.TaggedCompanyId == null && receipt.TaggedBankAccountId == null:
-                    var employee = await _db.FilprideSuppliers.AsNoTracking()
-                        .SingleOrDefaultAsync(s => s.SupplierId == receipt.TaggedSupplierId && s.Category == "Employee", cancellationToken)
-                        ?? throw new InvalidOperationException("The tagged employee could not be found.");
-                    return (SubAccountType.Supplier, employee.SupplierId, employee.SupplierName);
-
-                case CollectionTagType.BankAccount when receipt.TaggedBankAccountId is > 0 &&
-                                                         receipt.TaggedCompanyId == null && receipt.TaggedSupplierId == null:
-                    var bankAccount = await _db.FilprideBankAccounts.AsNoTracking()
-                        .SingleOrDefaultAsync(b => b.BankAccountId == receipt.TaggedBankAccountId, cancellationToken)
-                        ?? throw new InvalidOperationException("The tagged bank account could not be found.");
-                    return (SubAccountType.BankAccount, bankAccount.BankAccountId,
-                        $"{bankAccount.Bank} - {bankAccount.AccountNo} - {bankAccount.AccountName}");
-
-                default:
-                    throw new InvalidOperationException("The receipt does not have a valid master-file tag.");
-            }
         }
 
         private async Task<string> GenerateCodeForDocumented(string company, CancellationToken cancellationToken = default)

@@ -25,6 +25,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         private readonly ApplicationDbContext _dbContext;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ISubAccountResolver _subAccountResolver;
         private readonly ILogger<ProvisionalReceiptController> _logger;
 
         public ProvisionalReceiptController(
@@ -33,6 +34,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             IAuthorizationService authorization,
             UserManager<ApplicationUser> userManager,
             IUnitOfWork unitOfWork,
+            ISubAccountResolver subAccountResolver,
             ILogger<ProvisionalReceiptController> logger)
         {
             _dbContext = dbContext;
@@ -40,6 +42,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             _authorization = authorization;
             _userManager = userManager;
             _unitOfWork = unitOfWork;
+            _subAccountResolver = subAccountResolver;
             _logger = logger;
         }
 
@@ -646,7 +649,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                await _unitOfWork.ProvisionalReceipt.PostAsync(id, GetUserFullName(), cancellationToken);
+                var subAccountInfo = model.TagType switch
+                {
+                    CollectionTagType.Company when model.TaggedCompanyId is > 0 =>
+                        await _subAccountResolver.ResolveAsync(SubAccountType.Company, model.TaggedCompanyId.Value, cancellationToken),
+                    CollectionTagType.Employee when model.TaggedSupplierId is > 0 =>
+                        await _subAccountResolver.ResolveAsync(SubAccountType.Employee, model.TaggedSupplierId.Value, cancellationToken),
+                    CollectionTagType.BankAccount when model.TaggedBankAccountId is > 0 =>
+                        await _subAccountResolver.ResolveAsync(SubAccountType.BankAccount, model.TaggedBankAccountId.Value, cancellationToken),
+                    _ => null
+                };
+
+                await _unitOfWork.ProvisionalReceipt.PostAsync(id, GetUserFullName(), subAccountInfo, cancellationToken);
                 TempData["success"] = "Provisional receipt has been posted.";
                 return RedirectToAction(nameof(Print), new { id });
             }
