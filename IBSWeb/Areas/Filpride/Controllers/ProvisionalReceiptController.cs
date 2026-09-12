@@ -139,6 +139,34 @@ namespace IBSWeb.Areas.Filpride.Controllers
             model.BatchNumber = viewModel.BatchNumber;
         }
 
+        private static string? ValidateAmounts(ProvisionalReceiptViewModel viewModel)
+        {
+            const decimal maximumAmount = 99_999_999_999_999.9999m;
+            var amounts = new[]
+            {
+                viewModel.CashAmount,
+                viewModel.CheckAmount,
+                viewModel.ManagersCheckAmount,
+                viewModel.EWT,
+                viewModel.WVAT
+            };
+            if (amounts.Any(amount => amount < 0))
+            {
+                return "Receipt amounts cannot be negative.";
+            }
+            if (amounts.Any(amount => amount > maximumAmount || decimal.Round(amount, 4) != amount))
+            {
+                return "Receipt amounts must fit the supported range and use no more than four decimal places.";
+            }
+
+            var total = amounts.Sum();
+            if (total <= 0)
+            {
+                return "Please input at least one form of payment.";
+            }
+            return total > maximumAmount ? "The receipt total exceeds the supported range." : null;
+        }
+
         public async Task<IActionResult> Index(CancellationToken cancellationToken)
         {
             ViewBag.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.ProvisionalReceipt, cancellationToken);
@@ -351,6 +379,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 ModelState.AddModelError(string.Empty, taggingError);
             }
+            var amountError = ValidateAmounts(viewModel);
+            if (amountError != null)
+            {
+                ModelState.AddModelError(string.Empty, amountError);
+            }
 
             if (!ModelState.IsValid)
             {
@@ -358,16 +391,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 TempData["warning"] = "The submitted information is invalid.";
                 return View(viewModel);
             }
-
-            var total = viewModel.CashAmount + viewModel.CheckAmount + viewModel.ManagersCheckAmount + viewModel.EWT + viewModel.WVAT;
-
-            if (total <= 0)
-            {
-                await PopulateFormDependenciesAsync(viewModel, cancellationToken);
-                TempData["warning"] = "Please input at least one form of payment.";
-                return View(viewModel);
-            }
-
 
             try
             {
@@ -476,6 +499,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 ModelState.AddModelError(string.Empty, taggingError);
             }
+            var amountError = ValidateAmounts(viewModel);
+            if (amountError != null)
+            {
+                ModelState.AddModelError(string.Empty, amountError);
+            }
 
             if (!ModelState.IsValid)
             {
@@ -483,16 +511,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 TempData["warning"] = "The submitted information is invalid.";
                 return View(viewModel);
             }
-
-            var total = viewModel.CashAmount + viewModel.CheckAmount + viewModel.ManagersCheckAmount + viewModel.EWT + viewModel.WVAT;
-
-            if (total <= 0)
-            {
-                await PopulateFormDependenciesAsync(viewModel, cancellationToken);
-                TempData["warning"] = "Please input at least one form of payment.";
-                return View(viewModel);
-            }
-
 
             try
             {
@@ -598,8 +616,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return BadRequest();
             }
 
-            var model = await _unitOfWork.ProvisionalReceipt
-                .GetAsync(pr => pr.Id == id, cancellationToken);
+            var model = await _dbContext.FilprideProvisionalReceipts
+                .AsNoTracking()
+                .SingleOrDefaultAsync(pr => pr.Id == id, cancellationToken);
 
             if (model == null)
             {
@@ -619,41 +638,39 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            var dateToday = DateTimeHelper.GetCurrentPhilippineTime();
-            var lastDayOfThisMonth = DateTimeHelper.GetLastDayOfMonth();
-
-            if (model.CheckDate.HasValue && model.CheckDate.Value > lastDayOfThisMonth)
+            if (await _unitOfWork.IsPeriodPostedAsync(Module.ProvisionalReceipt, model.TransactionDate, cancellationToken))
             {
-                TempData["error"] = "Future-dated checks cannot be posted.";
+                TempData["error"] = $"Cannot post this record because the period {model.TransactionDate:MMM yyyy} is already closed.";
                 return RedirectToAction(nameof(Index));
             }
 
-            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-
             try
             {
-                model.PostedBy = GetUserFullName();
-                model.PostedDate = dateToday;
-                model.Status = nameof(CollectionReceiptStatus.Posted);
-
-                var auditTrail = new FilprideAuditTrail(model.PostedBy,
-                    $"Posted provisional receipt# {model.SeriesNumber}", "Provisional Receipt");
-                await _dbContext.FilprideAuditTrails.AddAsync(auditTrail, cancellationToken);
-
-                await _dbContext.SaveChangesAsync(cancellationToken);
-                await transaction.CommitAsync(cancellationToken);
+                await _unitOfWork.ProvisionalReceipt.PostAsync(id, GetUserFullName(), cancellationToken);
                 TempData["success"] = "Provisional receipt has been posted.";
+                return RedirectToAction(nameof(Print), new { id });
+            }
+            catch (InvalidOperationException ex)
+            {
+                var latest = await _dbContext.FilprideProvisionalReceipts.AsNoTracking()
+                    .SingleOrDefaultAsync(pr => pr.Id == id, cancellationToken);
+                if (latest?.PostedBy != null || latest?.Status == nameof(CollectionReceiptStatus.Posted))
+                {
+                    TempData["info"] = "Provisional receipt has already been posted.";
+                    return RedirectToAction(nameof(Print), new { id });
+                }
+
+                TempData["error"] = ex.Message;
             }
             catch (Exception ex)
             {
-                await transaction.RollbackAsync(cancellationToken);
                 TempData["error"] = ex.Message;
                 _logger.LogError(ex, "Failed to post provisional receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Posted by: {UserName}",
                     ex.Message, ex.StackTrace, GetUserFullName());
                 return RedirectToAction(nameof(Index));
             }
 
-            return RedirectToAction(nameof(Print), new { id });
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]
@@ -992,13 +1009,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [Authorize(Policy = nameof(ProvisionalReceipt.ProvisionalReceiptUnpost))]
         public async Task<IActionResult> Unpost(int id, CancellationToken cancellationToken)
         {
-            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-
             try
             {
-                var provisionalReceipt = await _unitOfWork.ProvisionalReceipt
-                                                          .GetAsync(x => x.Id == id, cancellationToken)
-                                                      ?? throw new NullReferenceException("Provisional receipt id not found.");
+                var provisionalReceipt = await _dbContext.FilprideProvisionalReceipts.AsNoTracking()
+                    .SingleOrDefaultAsync(x => x.Id == id, cancellationToken)
+                    ?? throw new KeyNotFoundException("Provisional receipt id not found.");
 
                 if (provisionalReceipt.PostedDate == null)
                 {
@@ -1011,19 +1026,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return RedirectToAction(nameof(Print), new { id });
                 }
 
-                provisionalReceipt.PostedBy = null;
-                provisionalReceipt.PostedDate = null;
-                provisionalReceipt.Status = nameof(CollectionReceiptStatus.Pending);
-
-                #region --Audit Trail Recording
-
-                FilprideAuditTrail auditTrailBook = new(GetUserFullName(), $"Unposted provisional receipt# {provisionalReceipt.SeriesNumber}", "Provisional Receipt");
-                await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
-
-                #endregion --Audit Trail Recording
-
-                await _dbContext.SaveChangesAsync(cancellationToken);
-                await transaction.CommitAsync(cancellationToken);
+                await _unitOfWork.ProvisionalReceipt.UnpostAsync(id, GetUserFullName(), cancellationToken);
                 TempData["success"] = "Provisional receipt has been Unposted.";
 
                 return RedirectToAction(nameof(Print), new { id });
@@ -1032,7 +1035,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 _logger.LogError(ex, "Failed to unpost provisional receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Unposted by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
-                await transaction.RollbackAsync(cancellationToken);
                 TempData["error"] = ex.Message;
                 return RedirectToAction(nameof(Index));
             }

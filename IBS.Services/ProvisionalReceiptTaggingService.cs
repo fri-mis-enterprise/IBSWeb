@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using IBS.DataAccess.Data;
+using IBS.DataAccess.Repository.IRepository;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsReceivable;
 using IBS.Models.Filpride.Books;
@@ -14,10 +15,12 @@ namespace IBS.Services
     public class ProvisionalReceiptTaggingService
     {
         private readonly ApplicationDbContext _db;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public ProvisionalReceiptTaggingService(ApplicationDbContext db)
+        public ProvisionalReceiptTaggingService(ApplicationDbContext db, IUnitOfWork unitOfWork)
         {
             _db = db;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<List<FilprideCollectionCategory>> GetCategoriesAsync(int? retainedId, CancellationToken ct)
@@ -181,9 +184,19 @@ namespace IBS.Services
                     .SingleOrDefaultAsync(c => c.Id == form.Id, ct)
                     ?? throw new ValidationException("Collection category not found.");
             }
+            var creditAccount = await _unitOfWork.FilprideChartOfAccount
+                .GetAsyncIgnoreQueryFilters(account => account.AccountId == form.CreditAccountId, ct);
+            if (creditAccount == null || creditAccount.HasChildren ||
+                string.IsNullOrWhiteSpace(creditAccount.AccountNumber) ||
+                string.IsNullOrWhiteSpace(creditAccount.AccountName) ||
+                (creditAccount.IsHidden && category.CreditAccountId != creditAccount.AccountId))
+            {
+                throw new ValidationException("Select a valid credit account with no child accounts.");
+            }
             var used = await _db.FilprideProvisionalReceipts.AnyAsync(p => p.CollectionCategoryId == category.Id, ct);
             if (used && (category.Name != form.Name || category.TaggingRequirement != form.TaggingRequirement ||
-                         category.AllowCompany != form.AllowCompany || category.AllowEmployee != form.AllowEmployee || category.AllowBankAccount != form.AllowBankAccount))
+                         category.AllowCompany != form.AllowCompany || category.AllowEmployee != form.AllowEmployee ||
+                         category.AllowBankAccount != form.AllowBankAccount || category.CreditAccountId != form.CreditAccountId))
             {
                 throw new ValidationException("This category is already used. Only its active status can be changed.");
             }
@@ -192,6 +205,7 @@ namespace IBS.Services
                 throw new ValidationException("A collection category with this name already exists.");
             }
             category.Name = form.Name;
+            category.CreditAccountId = form.CreditAccountId;
             category.TaggingRequirement = form.TaggingRequirement;
             category.AllowCompany = form.AllowCompany;
             category.AllowEmployee = form.AllowEmployee;
@@ -210,7 +224,7 @@ namespace IBS.Services
                 category.EditedDate = now;
             }
             _db.FilprideAuditTrails.Add(new FilprideAuditTrail(user,
-                $"{(form.Id == 0 ? "Created" : "Updated")} collection category {category.Name}; tagging {category.TaggingRequirement}; " +
+                $"{(form.Id == 0 ? "Created" : "Updated")} collection category {category.Name}; credit account {creditAccount.AccountNumber} - {creditAccount.AccountName}; tagging {category.TaggingRequirement}; " +
                 $"company {category.AllowCompany}, employee {category.AllowEmployee}, bank {category.AllowBankAccount}; active {category.IsActive}", "Collection Category"));
             await _db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);

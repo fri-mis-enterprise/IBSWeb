@@ -4448,6 +4448,10 @@ namespace IBS.DataAccess.Migrations
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_date");
 
+                    b.Property<int>("CreditAccountId")
+                        .HasColumnType("integer")
+                        .HasColumnName("credit_account_id");
+
                     b.Property<string>("EditedBy")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
@@ -4473,6 +4477,9 @@ namespace IBS.DataAccess.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_filpride_collection_categories");
+
+                    b.HasIndex("CreditAccountId")
+                        .HasDatabaseName("ix_filpride_collection_categories_credit_account_id");
 
                     b.HasIndex("Name")
                         .IsUnique()
@@ -6222,6 +6229,18 @@ namespace IBS.DataAccess.Migrations
                         .HasConstraintName("fk_filpride_chart_of_accounts_filpride_chart_of_accounts_paren");
 
                     b.Navigation("ParentAccount");
+                });
+
+            modelBuilder.Entity("IBS.Models.Filpride.MasterFile.FilprideCollectionCategory", b =>
+                {
+                    b.HasOne("IBS.Models.Filpride.MasterFile.FilprideChartOfAccount", "CreditAccount")
+                        .WithMany()
+                        .HasForeignKey("CreditAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_filpride_collection_categories_filpride_chart_of_accounts_c");
+
+                    b.Navigation("CreditAccount");
                 });
 
             modelBuilder.Entity("IBS.Models.Filpride.MasterFile.FilprideCustomer", b =>

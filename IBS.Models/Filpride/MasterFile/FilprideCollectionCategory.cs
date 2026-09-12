@@ -9,6 +9,8 @@ namespace IBS.Models.Filpride.MasterFile
         public int Id { get; set; }
         [Required, StringLength(100)]
         public string Name { get; set; } = string.Empty;
+        public int CreditAccountId { get; set; }
+        public FilprideChartOfAccount CreditAccount { get; set; } = null!;
         public CollectionTaggingRequirement TaggingRequirement { get; set; }
         public bool AllowCompany { get; set; }
         public bool AllowEmployee { get; set; }

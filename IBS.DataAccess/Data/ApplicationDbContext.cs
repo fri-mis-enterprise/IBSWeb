@@ -476,6 +476,10 @@ namespace IBS.DataAccess.Data
             builder.Entity<FilprideCollectionCategory>(category =>
             {
                 category.HasIndex(c => c.Name).IsUnique();
+                category.HasOne(c => c.CreditAccount)
+                    .WithMany()
+                    .HasForeignKey(c => c.CreditAccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<FilprideProvisionalReceipt>(pr =>

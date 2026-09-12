@@ -23,6 +23,7 @@
                     <thead class="bg-light">
                         <tr>
                             <th>Name</th>
+                            <th>Credit Account</th>
                             <th>Tagging</th>
                             <th>Allowed Types</th>
                             <th>Status</th>
@@ -38,6 +39,7 @@
                         if (category.AllowBankAccount) types.Add("Bank Account");
                         <tr>
                             <td>@category.Name</td>
+                            <td>@category.CreditAccount.AccountNumber - @category.CreditAccount.AccountName</td>
                             <td>@category.TaggingRequirement</td>
                             <td>@(types.Count == 0 ? "None" : string.Join(", ", types))</td>
                             <td>@(category.IsActive ? "Active" : "Inactive")</td>
@@ -60,7 +62,7 @@
         $(function () {
             $('#paginatedTable').DataTable({
                 order: [[0, 'asc']],
-                columnDefs: [{ orderable: false, searchable: false, targets: 4 }],
+                columnDefs: [{ orderable: false, searchable: false, targets: 5 }],
                 language: { emptyTable: 'No collection categories available.' }
             });
         });
