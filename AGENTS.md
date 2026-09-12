@@ -43,6 +43,29 @@ Place changes in the project that already owns the behavior instead of collapsin
 * Do not add generic repository wrappers over EF Core.
 * Prefer concrete, readable flows over clever generic helpers.
 
+## Design Principles: SOLID, KISS, and DRY
+
+Apply these principles to new and changed code within the requested scope. Use them to improve correctness and maintainability, without expanding the task into unrelated refactoring.
+
+### SOLID
+
+* **Single Responsibility:** Give each class or module one cohesive responsibility and one main reason to change. Separate request handling, business rules, persistence, and external integrations using the existing project boundaries.
+* **Open/Closed:** Use an existing extension point when adding a supported variation. Introduce a new one only when a concrete requirement justifies it; a small direct edit is appropriate when no reusable variation exists.
+* **Liskov Substitution:** Implementations must honor their interface or base-class contracts, including accepted inputs, results, exceptions, and side effects. Do not require caller-specific type checks or leave required operations unsupported; prefer composition when inheritance cannot preserve the contract.
+* **Interface Segregation:** Keep new or changed interfaces focused on the operations their consumers need. Avoid forcing consumers to depend on unrelated methods, while preserving existing contracts outside the task's scope.
+* **Dependency Inversion:** Keep business policy independent of concrete storage and external integration details through appropriate service or repository contracts. Use the existing dependency injection setup to supply implementations; do not resolve dependencies through a service locator or add interfaces to simple helpers without a concrete need.
+
+### KISS (Keep It Simple)
+
+* Choose the simplest design that satisfies the current requirement and preserves accounting, security, and operational behavior. Favor readable control flow over fewer lines or clever indirection.
+* Add a helper, abstraction, configuration option, or design pattern only when it reduces current complexity or supports a required variation. Do not build for hypothetical future requirements.
+
+### DRY (Don't Repeat Yourself)
+
+* Keep each business rule, calculation, and policy in one authoritative implementation within its owning layer. Look for existing logic before adding another implementation, especially across create/edit, reports, and exports.
+* Extract shared behavior when callers represent the same rule and should change together. Similar-looking code alone is insufficient reason to combine distinct company rules or workflows; keep them separate when they can evolve independently.
+* Prefer a small, clearly named method or existing service over a generic framework. Preserve necessary validation at trust boundaries, and do not edit generated code or historical migrations merely to remove repetition.
+
 ## Coding Style
 
 * Read the applicable `.editorconfig` rules before editing a file. `.editorconfig` is the source of truth for formatting, naming, and C# style; it takes precedence over style guidance in this file or surrounding code.
