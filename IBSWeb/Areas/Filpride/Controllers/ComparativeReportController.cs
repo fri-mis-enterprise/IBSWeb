@@ -57,6 +57,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Index(DateOnly monthDate, string category, CancellationToken cancellationToken)
         {
 
