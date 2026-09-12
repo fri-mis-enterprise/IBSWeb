@@ -184,12 +184,10 @@ namespace IBS.Services
                     .SingleOrDefaultAsync(c => c.Id == form.Id, ct)
                     ?? throw new ValidationException("Collection category not found.");
             }
-            var creditAccount = await _unitOfWork.FilprideChartOfAccount
-                .GetAsyncIgnoreQueryFilters(account => account.AccountId == form.CreditAccountId, ct);
-            if (creditAccount == null || creditAccount.HasChildren ||
-                string.IsNullOrWhiteSpace(creditAccount.AccountNumber) ||
-                string.IsNullOrWhiteSpace(creditAccount.AccountName) ||
-                (creditAccount.IsHidden && category.CreditAccountId != creditAccount.AccountId))
+            var creditAccount = (await _unitOfWork.GetChartOfAccountListAsyncById(ct))
+                .SingleOrDefault(account => account.Value == form.CreditAccountId.ToString());
+            var isRetainedAccount = form.Id != 0 && category.CreditAccountId == form.CreditAccountId;
+            if (creditAccount == null && !isRetainedAccount)
             {
                 throw new ValidationException("Select a valid credit account with no child accounts.");
             }
@@ -224,7 +222,7 @@ namespace IBS.Services
                 category.EditedDate = now;
             }
             _db.FilprideAuditTrails.Add(new FilprideAuditTrail(user,
-                $"{(form.Id == 0 ? "Created" : "Updated")} collection category {category.Name}; credit account {creditAccount.AccountNumber} - {creditAccount.AccountName}; tagging {category.TaggingRequirement}; " +
+                $"{(form.Id == 0 ? "Created" : "Updated")} collection category {category.Name}; credit account {creditAccount?.Text ?? form.CreditAccountId.ToString()}; tagging {category.TaggingRequirement}; " +
                 $"company {category.AllowCompany}, employee {category.AllowEmployee}, bank {category.AllowBankAccount}; active {category.IsActive}", "Collection Category"));
             await _db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);

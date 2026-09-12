@@ -7,7 +7,6 @@ using IBS.Services;
 using IBS.Services.Attributes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace IBSWeb.Areas.Filpride.Controllers
@@ -114,31 +113,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private async Task PopulateCreditAccountsAsync(CollectionCategoryViewModel form, CancellationToken cancellationToken)
         {
-            var creditAccounts = await _unitOfWork.GetChartOfAccountListAsyncById(cancellationToken);
-            if (form.Id != 0 && form.CreditAccountId > 0 &&
-                creditAccounts.All(account => account.Value != form.CreditAccountId.ToString()))
-            {
-                var savedAccountId = await _db.FilprideCollectionCategories
-                    .AsNoTracking()
-                    .Where(category => category.Id == form.Id)
-                    .Select(category => (int?)category.CreditAccountId)
-                    .SingleOrDefaultAsync(cancellationToken);
-                if (savedAccountId == form.CreditAccountId)
-                {
-                    var savedAccount = await _unitOfWork.FilprideChartOfAccount
-                        .GetAsyncIgnoreQueryFilters(account => account.AccountId == savedAccountId, cancellationToken);
-                    if (savedAccount is { HasChildren: false })
-                    {
-                        creditAccounts.Add(new SelectListItem
-                        {
-                            Value = savedAccount.AccountId.ToString(),
-                            Text = savedAccount.AccountNumber + " " + savedAccount.AccountName
-                        });
-                    }
-                }
-            }
-
-            form.CreditAccounts = creditAccounts;
+            form.CreditAccounts = await _unitOfWork.GetChartOfAccountListAsyncById(cancellationToken);
         }
     }
 }
