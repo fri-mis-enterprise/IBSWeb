@@ -14,7 +14,7 @@ namespace IBS.Models.Filpride.MasterFile
 
         [Display(Name = "Account Number")]
         [StringLength(20)]
-        public string? AccountNumber { get; set; }
+        public string AccountNumber { get; set; } = null!;
 
         [Display(Name = "Account Name")]
         [StringLength(200)]
