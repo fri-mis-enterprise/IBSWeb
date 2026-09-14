@@ -172,7 +172,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var viewModel = new ServiceInvoiceViewModel
             {
                 Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken),
-                Services = await _unitOfWork.GetFilprideServiceListById(cancellationToken)
+                Services = await _unitOfWork.GetFilprideServiceListById(cancellationToken),
+                MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.ServiceInvoice, cancellationToken)
             };
 
             return View(viewModel);
@@ -186,6 +187,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
             viewModel.Services = await _unitOfWork.GetFilprideServiceListById(cancellationToken);
+
+            viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.ServiceInvoice, cancellationToken);
+            if (viewModel.Period < DateOnly.FromDateTime(viewModel.MinDate))
+            {
+                ModelState.AddModelError(nameof(viewModel.Period), $"The selected period cannot be before {viewModel.MinDate:MMM yyyy}.");
+            }
 
             if (!ModelState.IsValid)
             {
@@ -318,6 +325,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return RedirectToAction(nameof(Print), new { id });
             }
 
+            if (await _unitOfWork.IsPeriodPostedAsync(Module.ServiceInvoice, model.Period, cancellationToken))
+            {
+                TempData["error"] = $"Cannot post this record because the period {model.Period:MMM yyyy} is already closed.";
+                return RedirectToAction(nameof(Index));
+            }
+
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             try
@@ -365,6 +378,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
             if (model == null)
             {
                 return NotFound();
+            }
+
+            if (await _unitOfWork.IsPeriodPostedAsync(Module.ServiceInvoice, model.Period, cancellationToken))
+            {
+                return Json(new { success = false, message = $"Cannot cancel this record because the period {model.Period:MMM yyyy} is already closed." });
             }
 
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
@@ -495,6 +513,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
+            if (await _unitOfWork.IsPeriodPostedAsync(Module.ServiceInvoice, existingModel.Period, cancellationToken))
+            {
+                TempData["error"] = $"Cannot edit this record because the period {existingModel.Period:MMM yyyy} is already closed.";
+                return RedirectToAction(nameof(Index));
+            }
+
             var viewModel = new ServiceInvoiceViewModel
             {
                 ServiceInvoiceId = existingModel.ServiceInvoiceId,
@@ -507,6 +531,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 Period = existingModel.Period,
                 Total = existingModel.Total,
                 DeliveryReceiptId = existingModel.DeliveryReceiptId,
+                MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.ServiceInvoice, cancellationToken),
             };
 
             return View(viewModel);
@@ -525,8 +550,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
+            if (await _unitOfWork.IsPeriodPostedAsync(Module.ServiceInvoice, existingModel.Period, cancellationToken))
+            {
+                TempData["error"] = $"Cannot edit this record because the period {existingModel.Period:MMM yyyy} is already closed.";
+                return RedirectToAction(nameof(Index));
+            }
+
             viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
             viewModel.Services = await _unitOfWork.GetFilprideServiceListById(cancellationToken);
+
+            viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.ServiceInvoice, cancellationToken);
+            if (viewModel.Period < DateOnly.FromDateTime(viewModel.MinDate))
+            {
+                ModelState.AddModelError(nameof(viewModel.Period), $"The selected period cannot be before {viewModel.MinDate:MMM yyyy}.");
+            }
 
             if (!ModelState.IsValid)
             {

@@ -24,6 +24,8 @@ namespace IBS.Models.Filpride.ViewModels
 
         public DateOnly Period { get; set; }
 
+        public DateTime MinDate { get; set; }
+
         public decimal Total { get; set; }
 
         public decimal Discount { get; set; }
