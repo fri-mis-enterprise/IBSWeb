@@ -158,14 +158,21 @@ namespace IBS.DataAccess.Repository.Filpride
                              ?? throw new ArgumentException("Account title '101020300' not found.");
             var vatOutputTitle = accountTitlesDto.Find(c => c.AccountNumber == "201030100")
                                  ?? throw new ArgumentException("Account title '201030100' not found.");
-            var servicesTitle = accountTitlesDto.Find(c => c.AccountNumber == model.Service!.CurrentAndPreviousNo!)
+            var currentServiceAccount = accountTitlesDto.Find(c => c.AccountNumber == model.Service!.CurrentAndPreviousNo!)
                                 ?? throw new ArgumentException($"Account title '{model.Service!.CurrentAndPreviousNo}' not found.");
-            var particulars = $"{model.ServiceName} for the period of {model.Period:MMM, yyyy}";
+            var unearnedServiceAccount = accountTitlesDto.Find(c => c.AccountNumber == model.Service!.UnearnedNo!)
+                                        ?? throw new ArgumentException($"Account title '{model.Service!.UnearnedNo}' not found.");
+
+            var period = model.Period;
+            var today = DateTimeHelper.GetCurrentPhilippineTime();
+            var lastDayOfTheMonth = DateTimeHelper.GetLastDayOfMonth();
+            var isCurrent = period <= lastDayOfTheMonth;
+            var particulars = $"{model.ServiceName} for the period of {model.Period:MMM yyyy}";
 
             ledgers.Add(
                 new FilprideGeneralLedgerBook
                 {
-                    Date = model.Period.AddMonths(1).AddDays(-1),
+                    Date = isCurrent ? period : DateOnly.FromDateTime(today),
                     Reference = model.ServiceInvoiceNo,
                     Description = particulars,
                     AccountId = arTradeTitle.AccountId,
@@ -174,7 +181,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     Debit = model.Total - (withHoldingTaxAmount + withHoldingVatAmount),
                     Credit = 0,
                     CreatedBy = model.PostedBy!,
-                    CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
+                    CreatedDate = today,
                     SubAccountType = SubAccountType.Customer,
                     SubAccountId = model.CustomerId,
                     SubAccountName = model.CustomerName,
@@ -186,7 +193,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 ledgers.Add(
                     new FilprideGeneralLedgerBook
                     {
-                        Date = model.Period.AddMonths(1).AddDays(-1),
+                        Date = isCurrent ? period : DateOnly.FromDateTime(today),
                         Reference = model.ServiceInvoiceNo,
                         Description = particulars,
                         AccountId = arTradeCwt.AccountId,
@@ -195,7 +202,7 @@ namespace IBS.DataAccess.Repository.Filpride
                         Debit = withHoldingTaxAmount,
                         Credit = 0,
                         CreatedBy = model.PostedBy!,
-                        CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
+                        CreatedDate = today,
                         ModuleType = nameof(ModuleType.Sales)
                     }
                 );
@@ -205,7 +212,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 ledgers.Add(
                     new FilprideGeneralLedgerBook
                     {
-                        Date = model.Period.AddMonths(1).AddDays(-1),
+                        Date = isCurrent ? period : DateOnly.FromDateTime(today),
                         Reference = model.ServiceInvoiceNo,
                         Description = particulars,
                         AccountId = arTradeCwv.AccountId,
@@ -214,7 +221,7 @@ namespace IBS.DataAccess.Repository.Filpride
                         Debit = withHoldingVatAmount,
                         Credit = 0,
                         CreatedBy = model.PostedBy!,
-                        CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
+                        CreatedDate = today,
                         ModuleType = nameof(ModuleType.Sales)
                     }
                 );
@@ -223,16 +230,16 @@ namespace IBS.DataAccess.Repository.Filpride
             ledgers.Add(
                 new FilprideGeneralLedgerBook
                 {
-                    Date = model.Period.AddMonths(1).AddDays(-1),
+                    Date = isCurrent ? period : DateOnly.FromDateTime(today),
                     Reference = model.ServiceInvoiceNo,
                     Description = particulars,
-                    AccountId = servicesTitle.AccountId,
-                    AccountNo = servicesTitle.AccountNumber,
-                    AccountTitle = servicesTitle.AccountName,
+                    AccountId = isCurrent ? currentServiceAccount.AccountId : unearnedServiceAccount.AccountId,
+                    AccountNo = isCurrent ? currentServiceAccount.AccountNumber : unearnedServiceAccount.AccountNumber,
+                    AccountTitle = isCurrent ? currentServiceAccount.AccountName : unearnedServiceAccount.AccountName,
                     Debit = 0,
                     Credit = netOfVatAmount,
                     CreatedBy = model.PostedBy!,
-                    CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
+                    CreatedDate = today,
                     ModuleType = nameof(ModuleType.Sales)
                 }
             );
@@ -242,7 +249,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 ledgers.Add(
                     new FilprideGeneralLedgerBook
                     {
-                        Date = model.Period.AddMonths(1).AddDays(-1),
+                        Date = isCurrent ? period : DateOnly.FromDateTime(today),
                         Reference = model.ServiceInvoiceNo,
                         Description = particulars,
                         AccountId = vatOutputTitle.AccountId,
@@ -251,7 +258,44 @@ namespace IBS.DataAccess.Repository.Filpride
                         Debit = 0,
                         Credit = vatAmount,
                         CreatedBy = model.PostedBy!,
-                        CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
+                        CreatedDate = today,
+                        ModuleType = nameof(ModuleType.Sales)
+                    }
+                );
+            }
+
+            if (!isCurrent)
+            {
+                ledgers.Add(
+                    new FilprideGeneralLedgerBook
+                    {
+                        Date = period,
+                        Reference = model.ServiceInvoiceNo,
+                        Description = particulars,
+                        AccountId = unearnedServiceAccount.AccountId,
+                        AccountNo = unearnedServiceAccount.AccountNumber,
+                        AccountTitle = unearnedServiceAccount.AccountName,
+                        Debit = netOfVatAmount,
+                        Credit = 0,
+                        CreatedBy = model.PostedBy!,
+                        CreatedDate = today,
+                        ModuleType = nameof(ModuleType.Sales)
+                    }
+                );
+
+                ledgers.Add(
+                    new FilprideGeneralLedgerBook
+                    {
+                        Date = period,
+                        Reference = model.ServiceInvoiceNo,
+                        Description = particulars,
+                        AccountId = currentServiceAccount.AccountId,
+                        AccountNo = currentServiceAccount.AccountNumber,
+                        AccountTitle = currentServiceAccount.AccountName,
+                        Debit = 0,
+                        Credit = netOfVatAmount,
+                        CreatedBy = model.PostedBy!,
+                        CreatedDate = today,
                         ModuleType = nameof(ModuleType.Sales)
                     }
                 );
