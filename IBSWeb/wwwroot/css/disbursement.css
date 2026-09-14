@@ -1,0 +1,58 @@
+.disbursement-filter-group .select2-container {
+    align-self: stretch;
+    min-width: 280px;
+    margin-left: -1px;
+}
+
+.disbursement-filter-group .select2-container .select2-selection--single {
+    height: 100%;
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--bs-primary);
+    border-radius: 0 0.375rem 0.375rem 0;
+}
+
+.disbursement-filter-group .select2-container .select2-selection__rendered {
+    line-height: 1.5;
+}
+
+.disbursement-filter-group .select2-container .select2-selection--single .select2-selection__rendered:not(.select2-selection__placeholder) {
+    color: #212529 !important;
+}
+
+.disbursement-filter-group .select2-container .select2-selection__arrow {
+    height: 100%;
+}
+
+.disbursement-filter-group .select2-container.bank-account-selected .select2-selection--single,
+.disbursement-filter-group .select2-container.bank-account-selected .select2-selection--single[aria-expanded="true"] {
+    color: #212529;
+    background-color: #fff;
+    border-color: #173f43;
+}
+
+.disbursement-filter-group.has-bank-account-selection .select2-container .select2-selection--single {
+    color: #212529 !important;
+    background-color: #fff !important;
+    border-color: #173f43 !important;
+}
+
+.disbursement-filter-group.has-bank-account-selection .select2-container .select2-selection__rendered,
+.disbursement-filter-group.has-bank-account-selection .select2-container .select2-selection__clear {
+    color: #212529 !important;
+}
+
+.disbursement-filter-group .select2-container.bank-account-selected .select2-selection__rendered,
+.disbursement-filter-group .select2-container.bank-account-selected .select2-selection__clear {
+    color: #fff !important;
+}
+
+.disbursement-filter-group .select2-container.bank-account-selected .select2-selection__arrow b {
+    border-color: #fff transparent transparent transparent;
+}
+
+.disbursement-bank-account-dropdown.select2-container--classic .select2-results__option--highlighted[aria-selected] {
+    color: #fff;
+    background-color: #173f43 !important;
+}

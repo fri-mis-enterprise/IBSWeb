@@ -43,9 +43,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                    ?? User.Identity?.Name!;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index(CancellationToken cancellationToken)
         {
-            return View();
+            FilprideCheckVoucherHeader model = new()
+            {
+                BankAccounts = await _unitOfWork.GetFilprideBankAccountListByAccountNumber(cancellationToken)
+            };
+            return View(model);
         }
 
         [HttpPost]
@@ -77,6 +81,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         s.CheckVoucherHeaderId.ToString().Contains(searchValue) ||
                         s.Reference!.ToLower().Contains(searchValue) == true ||
                         s.CheckNo!.ToLower().Contains(searchValue) == true ||
+                        s.BankAccountNumber!.ToLower().Contains(searchValue) == true ||
                         (hasDate && s.Date == date) ||
                         (hasDcpDate && s.DcpDate == dcpDate) == true ||
                         (hasDcrDate && s.DcrDate == dcrDate) == true
@@ -101,6 +106,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 disbursements = searchValue == "not-null"
                                     ? disbursements.Where(s => s.DcrDate != null)
                                     : disbursements.Where(s => s.DcrDate == null);
+                                break;
+
+                            case "bankAccountNumber":
+                                disbursements = disbursements.Where(s => s.BankAccountNumber == column.Search.Value);
                                 break;
                         }
                     }

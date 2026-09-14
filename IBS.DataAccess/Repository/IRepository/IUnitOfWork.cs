@@ -62,6 +62,7 @@ namespace IBS.DataAccess.Repository.IRepository
 
         Task<List<SelectListItem>> GetFilprideServiceListById(CancellationToken cancellationToken = default);
 
+        Task<List<SelectListItem>> GetFilprideBankAccountListByAccountNumber(CancellationToken cancellationToken = default);
         #endregion
 
         #region AAS

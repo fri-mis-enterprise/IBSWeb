@@ -420,5 +420,17 @@ namespace IBS.DataAccess.Repository
                 })
                 .ToListAsync(cancellationToken);
         }
+        public async Task<List<SelectListItem>> GetFilprideBankAccountListByAccountNumber(CancellationToken cancellationToken = default)
+        {
+            return await _db.FilprideBankAccounts
+                .OrderBy(b => b.AccountNo)
+                .Where(ba => ba.IsActive)
+                .Select(ba => new SelectListItem
+                {
+                    Value = ba.AccountNo.ToString(),
+                    Text = ba.Bank + " " + ba.AccountNo + " " + ba.AccountName
+                })
+                .ToListAsync(cancellationToken);
+        }
     }
 }
