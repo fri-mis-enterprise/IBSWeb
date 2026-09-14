@@ -426,6 +426,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #endregion
 
+                var accountBalances = generalLedgers
+                    .GroupBy(gl => gl.AccountNo)
+                    .ToLookup(group => group.Key, group => group.Sum(gl =>
+                        gl.Account.NormalBalance == nameof(NormalBalance.Debit)
+                            ? gl.Debit - gl.Credit
+                            : gl.Credit - gl.Debit));
+
                 decimal totalRevenue = 0;
                 foreach (var account in chartOfAccounts
                              .Where(a => a.IsMain)
@@ -433,45 +440,70 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     decimal grandTotal = 0;
 
-                    worksheet.Cells[row, 1].Value = account.AccountName;
-                    row++;
+                    bool mainHeadingWritten = false;
 
                     foreach (var levelTwo in account.Children.OrderBy(l => l.AccountNumber))
                     {
                         decimal subTotal = 0;
-                        worksheet.Cells[row, 2].Value = levelTwo.AccountName;
-                        row++;
+                        bool levelTwoHeadingWritten = false;
 
                         foreach (var levelThree in levelTwo.Children.OrderBy(l => l.AccountNumber))
                         {
-                            worksheet.Cells[row, 3].Value = levelThree.AccountName;
-                            row++;
+                            bool levelThreeHeadingWritten = false;
 
                             foreach (var levelFour in levelThree.Children.OrderBy(l => l.AccountNumber))
                             {
+                                decimal levelFourBalance = accountBalances[levelFour.AccountNumber].Sum();
+                                var visibleLevelFiveAccounts = levelFour.Children
+                                    .Where(l => accountBalances[l.AccountNumber].Sum() != 0)
+                                    .OrderBy(l => l.AccountNumber)
+                                    .ToList();
+
+                                if (levelFourBalance == 0 && visibleLevelFiveAccounts.Count == 0)
+                                {
+                                    continue;
+                                }
+
+                                if (!mainHeadingWritten)
+                                {
+                                    worksheet.Cells[row, 1].Value = account.AccountName;
+                                    row++;
+                                    mainHeadingWritten = true;
+                                }
+
+                                if (!levelTwoHeadingWritten)
+                                {
+                                    worksheet.Cells[row, 2].Value = levelTwo.AccountName;
+                                    row++;
+                                    levelTwoHeadingWritten = true;
+                                }
+
+                                if (!levelThreeHeadingWritten)
+                                {
+                                    worksheet.Cells[row, 3].Value = levelThree.AccountName;
+                                    row++;
+                                    levelThreeHeadingWritten = true;
+                                }
+
                                 worksheet.Cells[row, 4].Value = levelFour.AccountName;
-                                var levelFourBalance = generalLedgers
-                                    .Where(gl => gl.AccountNo == levelFour.AccountNumber)
-                                    .Sum(gl => gl.Account.NormalBalance == nameof(NormalBalance.Debit)
-                                        ? gl.Debit - gl.Credit
-                                        : gl.Credit - gl.Debit);
                                 worksheet.Cells[row, 6].Value = levelFourBalance != 0 ? levelFourBalance : null;
                                 subTotal += levelFourBalance;
                                 row++;
 
-                                foreach (var levelFive in levelFour.Children.OrderBy(l => l.AccountNumber))
+                                foreach (var levelFive in visibleLevelFiveAccounts)
                                 {
                                     worksheet.Cells[row, 5].Value = levelFive.AccountName;
-                                    var levelFiveBalance = generalLedgers
-                                        .Where(gl => gl.AccountNo == levelFive.AccountNumber)
-                                        .Sum(gl => gl.Account.NormalBalance == nameof(NormalBalance.Debit)
-                                            ? gl.Debit - gl.Credit
-                                            : gl.Credit - gl.Debit);
-                                    worksheet.Cells[row, 6].Value = levelFiveBalance != 0 ? levelFiveBalance : null;
+                                    decimal levelFiveBalance = accountBalances[levelFive.AccountNumber].Sum();
+                                    worksheet.Cells[row, 6].Value = levelFiveBalance;
                                     subTotal += levelFiveBalance;
                                     row++;
                                 }
                             }
+                        }
+
+                        if (!levelTwoHeadingWritten)
+                        {
+                            continue;
                         }
 
                         worksheet.Cells[row, 2].Value = $"TOTAL {levelTwo.AccountName.ToUpper()}";
@@ -520,7 +552,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 worksheet.Cells[row + 1, 1].Value = "NIBIT";
-                worksheet.Cells[row + 1, 6].Value = nibitForThePeriod.NetIncome;
+                worksheet.Cells[row + 1, 6].Value = nibitForThePeriod.NetIncome != 0 ? nibitForThePeriod.NetIncome : null;
                 worksheet.Cells[row + 1, 1].Style.Font.Bold = true;
                 worksheet.Cells[row + 1, 6].Style.Font.Bold = true;
                 worksheet.Cells[row + 1, 6].Style.Border.Top.Style = ExcelBorderStyle.Thin;
