@@ -1665,7 +1665,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
 
             IEnumerable<FilprideSupplier> suppliers = await _unitOfWork.FilprideSupplier
-                .GetAllAsync(s => s.Category != "Employee");
+                .GetAllAsync(s => s.IsActive && (s.Category == "Non-Trade" || s.Category == "Employee"));
 
             return Json(suppliers.OrderBy(c => c.SupplierCode).Select(c => new
             {
