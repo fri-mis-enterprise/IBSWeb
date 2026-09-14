@@ -416,7 +416,16 @@
         // Event handler for removing a row
         function handleRowRemoval(row) {
             row.remove();
+            reindexAccountingRows();
             recalculateAllRows();
+        }
+
+        function reindexAccountingRows() {
+            document.querySelectorAll('#accountTable tbody tr').forEach((row, index) => {
+                row.querySelectorAll('[name]').forEach(field => {
+                    field.name = field.name.replace(/AccountingEntries\[\d+\]/, `AccountingEntries[${index}]`);
+                });
+            });
         }
 
         // Add Row button click handler
@@ -471,6 +480,7 @@
             // Add the new row and initialize
             tableBody.insertAdjacentHTML("beforeend", newRowHTML);
             const newRow = tableBody.lastElementChild;
+            reindexAccountingRows();
 
             // Reinitialize Select2 for all js-select2 dropdowns
             $('.js-select2').select2({
@@ -640,6 +650,7 @@
             $('#edit-check-voucher-form').on('submit', function(e) {
                 e.preventDefault();
                 if (validateTotals()) {
+                    reindexAccountingRows();
                     this.submit();
                 }
             });
