@@ -36,21 +36,13 @@ class MasterFileSelector {
                 triggerAccounts: ['101020500 AR-Non Trade Receivable',
                     '101060900 Security Deposit',
                     '101060100 Advances to Suppliers',
+                    '101020400 Advances to Employees',
                     '202010300 LTL - Rediscounting Payable',
                     '202010200 LTL - Non - Trade Payable',
                     '202010100 LTL - Trade Payable'],
                 placeholder: 'Select a supplier',
                 formatOption: (item) => `${item.accountNumber} - ${item.accountName}`,
                 inputName: 'SupplierMasterFileId'
-            },
-            EMPLOYEE: {
-                id: 'employee',
-                title: 'Employee',
-                url: urls.getEmployees,
-                triggerAccount: '101020400 Advances to Employees',
-                placeholder: 'Select a employee',
-                formatOption: (item) => `${item.accountNumber} - ${item.accountName}`,
-                inputName: 'EmployeeMasterFileId'
             },
         };
 
@@ -149,7 +141,6 @@ class MasterFileSelector {
                                     <option value="COMPANY">Company</option>
                                     <option value="CUSTOMER">Customer</option>
                                     <option value="SUPPLIER">Supplier</option>
-                                    <option value="EMPLOYEE">Employee</option>
                                 </select>
                             </div>
                         </div>

@@ -585,7 +585,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     CollectionTagType.Company when model.TaggedCompanyId is > 0 =>
                         await _subAccountResolver.ResolveAsync(SubAccountType.Company, model.TaggedCompanyId.Value, cancellationToken),
                     CollectionTagType.Employee when model.TaggedSupplierId is > 0 =>
-                        await _subAccountResolver.ResolveAsync(SubAccountType.Employee, model.TaggedSupplierId.Value, cancellationToken),
+                        await _subAccountResolver.ResolveAsync(SubAccountType.Supplier, model.TaggedSupplierId.Value, cancellationToken),
                     CollectionTagType.BankAccount when model.TaggedBankAccountId is > 0 =>
                         await _subAccountResolver.ResolveAsync(SubAccountType.BankAccount, model.TaggedBankAccountId.Value, cancellationToken),
                     _ => null

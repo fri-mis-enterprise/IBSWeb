@@ -132,8 +132,7 @@ namespace IBS.Models.Enums
         Customer = 1,
         Supplier = 2,
         BankAccount = 3,
-        Company = 4,
-        Employee = 5
+        Company = 4
     }
 
     public enum DmCmStatus

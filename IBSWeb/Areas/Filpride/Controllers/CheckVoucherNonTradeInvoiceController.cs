@@ -357,8 +357,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         accountEntry.CustomerMasterFileId,
                         accountEntry.SupplierMasterFileId,
                         accountEntry.BankMasterFileId,
-                        accountEntry.CompanyMasterFileId,
-                        accountEntry.EmployeeMasterFileId
+                        accountEntry.CompanyMasterFileId
                     );
 
                     string? subAccountName = null;
@@ -798,9 +797,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         SupplierMasterFileId = details.SubAccountType == SubAccountType.Supplier
                             ? details.SubAccountId
                             : null,
-                        EmployeeMasterFileId = details.SubAccountType == SubAccountType.Employee
-                            ? details.SubAccountId
-                            : null,
                     });
                 }
 
@@ -914,8 +910,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         accountEntry.CustomerMasterFileId,
                         accountEntry.SupplierMasterFileId,
                         accountEntry.BankMasterFileId,
-                        accountEntry.CompanyMasterFileId,
-                        accountEntry.EmployeeMasterFileId
+                        accountEntry.CompanyMasterFileId
                     );
 
                     string? subAccountName = null;
@@ -1246,7 +1241,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [Authorize(Policy = nameof(CheckVoucherNonTradeInvoice.CheckVoucherNonTradeInvoicePreview))]
         [HttpGet]
-        public async Task<IActionResult> Print(int? id, int? supplierId, int? employeeId, CancellationToken cancellationToken)
+        public async Task<IActionResult> Print(int? id, int? supplierId, CancellationToken cancellationToken)
         {
 
             if (id == null)
@@ -1632,41 +1627,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetEmployees()
-        {
-
-            IEnumerable<FilprideSupplier> employees = await _unitOfWork.FilprideSupplier
-                .GetAllAsync(s => s.IsActive && s.Category == "Employee");
-
-            return Json(employees.OrderBy(e => e.EmployeeNumber).ThenBy(e => e.SupplierName).Select(e => new
-            {
-                id = e.SupplierId,
-                accountName = e.SupplierName,
-                accountNumber = e.EmployeeNumber
-            }));
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> GetEmployeeById(int employeeId)
-        {
-
-            FilprideSupplier? employee = await _unitOfWork.FilprideSupplier
-                .GetAsync(e => e.SupplierId == employeeId && e.Category == "Employee");
-
-            if (employee == null)
-            {
-                return NotFound();
-            }
-
-            return Json(new
-            {
-                id = employee.SupplierId,
-                accountName = employee.SupplierName,
-                accountNumber = employee.EmployeeNumber
-            });
-        }
-
-        [HttpGet]
         public async Task<IActionResult> GetCustomers()
         {
 
@@ -1705,7 +1665,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
 
             IEnumerable<FilprideSupplier> suppliers = await _unitOfWork.FilprideSupplier
-                .GetAllAsync(s => s.Category != "Employee");
+                .GetAllAsync(s => s.IsActive && (s.Category == "Non-Trade" || s.Category == "Employee"));
 
             return Json(suppliers.OrderBy(c => c.SupplierCode).Select(c => new
             {

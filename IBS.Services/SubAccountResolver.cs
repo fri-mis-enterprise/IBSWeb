@@ -78,18 +78,6 @@ namespace IBS.Services
                         .FirstOrDefaultAsync(cancellationToken);
                     return company;
 
-                case SubAccountType.Employee:
-                    var employee = await _context.FilprideSuppliers
-                        .Where(e => e.SupplierId == subAccountId && e.Category ==  "Employee")
-                        .Select(e => new SubAccountInfoDto
-                        {
-                            Type = SubAccountType.Supplier,
-                            Id = e.SupplierId,
-                            Name = e.SupplierName
-                        })
-                        .FirstOrDefaultAsync(cancellationToken);
-                    return employee;
-
                 default:
                     return null;
             }
