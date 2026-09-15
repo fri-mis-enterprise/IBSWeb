@@ -6,6 +6,7 @@ using IBS.Models.Enums;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.MasterFile;
 using IBS.Models;
+using IBS.Services;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -17,6 +18,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
     [Area(nameof(Filpride))]
     public class CustomerController : Controller
     {
+        private const long MaximumBirDocumentSize = 20 * 1024 * 1024;
         private readonly IUnitOfWork _unitOfWork;
 
         private readonly ILogger<CustomerController> _logger;
@@ -25,12 +27,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private readonly ApplicationDbContext _dbContext;
 
-        public CustomerController(IUnitOfWork unitOfWork, ILogger<CustomerController> logger, UserManager<ApplicationUser> userManager, ApplicationDbContext dbContext)
+        private readonly ICloudStorageService _cloudStorageService;
+
+        public CustomerController(
+            IUnitOfWork unitOfWork,
+            ILogger<CustomerController> logger,
+            UserManager<ApplicationUser> userManager,
+            ApplicationDbContext dbContext,
+            ICloudStorageService cloudStorageService)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
             _userManager = userManager;
             _dbContext = dbContext;
+            _cloudStorageService = cloudStorageService;
         }
 
         private string GetUserFullName()
@@ -55,29 +65,27 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
-
-            var model = new FilprideCustomer()
-            {
-
-                PaymentTerms = await _unitOfWork.FilprideTerms
-                    .GetFilprideTermsListAsyncByCode(cancellationToken),
-                Commissionees = await _unitOfWork.GetFilprideCommissioneeListAsyncById(cancellationToken),
-            };
+            var model = new FilprideCustomer();
+            await PopulateCustomerFormListsAsync(model, cancellationToken);
             return View(model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(FilprideCustomer model, CancellationToken cancellationToken)
+        public async Task<IActionResult> Create(
+            FilprideCustomer model,
+            IFormFile? birDocument,
+            CancellationToken cancellationToken)
         {
+            ValidateBirDocument(birDocument);
             if (!ModelState.IsValid)
             {
                 ModelState.AddModelError("", "Make sure to fill all the required details.");
+                await PopulateCustomerFormListsAsync(model, cancellationToken);
                 return View(model);
             }
 
-            model.PaymentTerms = await _unitOfWork.FilprideTerms
-                .GetFilprideTermsListAsyncByCode(cancellationToken);
+            await PopulateCustomerFormListsAsync(model, cancellationToken);
 
             var isTinExist = await _unitOfWork.FilprideCustomer.IsTinNoExistAsync(model.CustomerTin, cancellationToken);
 
@@ -88,9 +96,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
 
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            model.BirDocumentFileName = null;
+            model.BirDocumentFilePath = null;
 
             try
             {
+                if (birDocument != null)
+                {
+                    await UploadBirDocumentAsync(model, birDocument);
+                }
+
                 model.CustomerCode = await _unitOfWork.FilprideCustomer.GenerateCodeAsync(model.CustomerType, cancellationToken);
                 model.CreatedBy = GetUserFullName();
                 await _unitOfWork.FilprideCustomer.AddAsync(model, cancellationToken);
@@ -112,6 +127,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 _logger.LogError(ex, "Failed to create customer master file. Created by: {UserName}", _userManager.GetUserName(User));
                 await transaction.RollbackAsync(cancellationToken);
+                await DeleteBirDocumentAsync(model.BirDocumentFileName);
                 TempData["error"] = ex.Message;
                 return View(model);
             }
@@ -129,9 +145,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             if (customer != null)
             {
-                customer.PaymentTerms = await _unitOfWork.FilprideTerms
-                    .GetFilprideTermsListAsyncByCode(cancellationToken);
-                customer.Commissionees = await _unitOfWork.GetFilprideCommissioneeListAsyncById(cancellationToken);
+                await PopulateCustomerFormListsAsync(customer, cancellationToken);
                 return View(customer);
             }
 
@@ -140,20 +154,40 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(FilprideCustomer model, CancellationToken cancellationToken)
+        public async Task<IActionResult> Edit(
+            FilprideCustomer model,
+            IFormFile? birDocument,
+            CancellationToken cancellationToken)
         {
+            ValidateBirDocument(birDocument);
             if (!ModelState.IsValid)
             {
+                await RestoreBirDocumentMetadataAsync(model, cancellationToken);
+                await PopulateCustomerFormListsAsync(model, cancellationToken);
                 return View(model);
             }
 
-            model.PaymentTerms = await _unitOfWork.FilprideTerms
-                .GetFilprideTermsListAsyncByCode(cancellationToken);
+            var existingCustomer = await _unitOfWork.FilprideCustomer
+                .GetAsync(c => c.CustomerId == model.CustomerId, cancellationToken);
+            if (existingCustomer == null)
+            {
+                return NotFound();
+            }
+
+            await PopulateCustomerFormListsAsync(model, cancellationToken);
+            model.BirDocumentFileName = existingCustomer.BirDocumentFileName;
+            model.BirDocumentFilePath = existingCustomer.BirDocumentFilePath;
+            string? previousBirDocumentFileName = existingCustomer.BirDocumentFileName;
 
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             try
             {
+                if (birDocument != null)
+                {
+                    await UploadBirDocumentAsync(model, birDocument);
+                }
+
                 model.EditedBy = GetUserFullName();
                 await _unitOfWork.FilprideCustomer.UpdateAsync(model, cancellationToken);
 
@@ -166,15 +200,93 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #endregion --Audit Trail Recording
 
                 await transaction.CommitAsync(cancellationToken);
+                if (birDocument != null)
+                {
+                    if (!await DeleteBirDocumentAsync(previousBirDocumentFileName))
+                    {
+                        TempData["warning"] = "Customer updated, but the previous BIR document could not be removed.";
+                    }
+                }
                 TempData["success"] = "Customer updated successfully";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
                 await transaction.RollbackAsync(cancellationToken);
+                if (birDocument != null)
+                {
+                    await DeleteBirDocumentAsync(model.BirDocumentFileName);
+                }
                 _logger.LogError(ex, "Failed to edit customer master file. Created by: {UserName}", _userManager.GetUserName(User));
                 TempData["error"] = $"Error: '{ex.Message}'";
                 return View(model);
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DownloadBirDocument(int id, CancellationToken cancellationToken)
+        {
+            var customer = await _unitOfWork.FilprideCustomer
+                .GetAsync(c => c.CustomerId == id, cancellationToken);
+            if (customer == null || string.IsNullOrWhiteSpace(customer.BirDocumentFileName))
+            {
+                return NotFound();
+            }
+
+            return Redirect(await _cloudStorageService.GetSignedUrlAsync(customer.BirDocumentFileName));
+        }
+
+        private async Task PopulateCustomerFormListsAsync(FilprideCustomer model, CancellationToken cancellationToken)
+        {
+            model.PaymentTerms = await _unitOfWork.FilprideTerms
+                .GetFilprideTermsListAsyncByCode(cancellationToken);
+            model.Commissionees = await _unitOfWork.GetFilprideCommissioneeListAsyncById(cancellationToken);
+        }
+
+        private void ValidateBirDocument(IFormFile? birDocument)
+        {
+            if (birDocument != null && (birDocument.Length == 0 || birDocument.Length > MaximumBirDocumentSize))
+            {
+                ModelState.AddModelError(nameof(birDocument), "Files must be non-empty and no larger than 20 MB.");
+            }
+        }
+
+        private async Task UploadBirDocumentAsync(FilprideCustomer model, IFormFile birDocument)
+        {
+            model.BirDocumentFileName = $"customer-bir-{Guid.NewGuid():N}";
+            model.BirDocumentFilePath = await _cloudStorageService.UploadFileAsync(birDocument, model.BirDocumentFileName);
+        }
+
+        private async Task RestoreBirDocumentMetadataAsync(FilprideCustomer model, CancellationToken cancellationToken)
+        {
+            if (model.CustomerId <= 0)
+            {
+                return;
+            }
+
+            var existingCustomer = await _unitOfWork.FilprideCustomer
+                .GetAsync(c => c.CustomerId == model.CustomerId, cancellationToken);
+
+            model.BirDocumentFileName = existingCustomer?.BirDocumentFileName;
+            model.BirDocumentFilePath = existingCustomer?.BirDocumentFilePath;
+        }
+
+        private async Task<bool> DeleteBirDocumentAsync(string? fileName)
+        {
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                return true;
+            }
+
+            try
+            {
+                await _cloudStorageService.DeleteFileAsync(fileName);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete BIR document.");
+                return false;
             }
         }
 

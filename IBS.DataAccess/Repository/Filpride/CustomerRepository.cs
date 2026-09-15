@@ -82,6 +82,8 @@ namespace IBS.DataAccess.Repository.Filpride
             existingCustomer.CommissioneeId = model.CommissioneeId;
             existingCustomer.CwtPercent = model.CwtPercent;
             existingCustomer.CwVatPercent = model.CwVatPercent;
+            existingCustomer.BirDocumentFileName = model.BirDocumentFileName;
+            existingCustomer.BirDocumentFilePath = model.BirDocumentFilePath;
 
             if (_db.ChangeTracker.HasChanges())
             {
