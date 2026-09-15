@@ -350,7 +350,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return RedirectToAction(nameof(ProfitAndLossReport));
                 }
 
-                if (!monthToDateGeneralLedgers.Any())
+                if (!generalLedgers.Any())
                 {
                     TempData["info"] = "No Record Found";
                     return RedirectToAction(nameof(ProfitAndLossReport));

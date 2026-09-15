@@ -45,6 +45,8 @@ namespace IBS.Services
                     throw new InvalidOperationException($"{monthDate:MMMM yyyy} is not locked.");
                 }
 
+                await ValidateClosureSequenceAsync(monthDate, cancellationToken);
+
                 var hasUnliftedDrs = await _dbContext.FilprideDeliveryReceipts
                     .AnyAsync(x =>
                                    x.Date.Month == monthDate.Month &&
@@ -72,6 +74,44 @@ namespace IBS.Services
                 _logger.LogError(ex, ex.Message);
                 await transaction.RollbackAsync(cancellationToken);
                 throw;
+            }
+        }
+
+        private async Task ValidateClosureSequenceAsync(DateOnly monthDate, CancellationToken cancellationToken)
+        {
+            var closedMonths = await _dbContext.FilprideGlPeriodBalances
+                .Where(b =>
+                    b.FiscalYear == monthDate.Year &&
+                    b.IsClosed)
+                .Select(b => b.FiscalPeriod)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            if (closedMonths.Contains(monthDate.Month))
+            {
+                throw new InvalidOperationException($"{monthDate:MMMM yyyy} is already closed.");
+            }
+
+            var firstLaterClosedMonth = closedMonths
+                .Where(month => month > monthDate.Month)
+                .OrderBy(month => month)
+                .FirstOrDefault();
+
+            if (firstLaterClosedMonth != 0)
+            {
+                var laterClosedPeriod = new DateOnly(monthDate.Year, firstLaterClosedMonth, 1);
+                throw new InvalidOperationException(
+                    $"{laterClosedPeriod:MMMM yyyy} is already closed. Reopen {monthDate:MMMM yyyy} and later periods before closing {monthDate:MMMM yyyy}.");
+            }
+
+            var firstUnclosedMonth = Enumerable.Range(1, monthDate.Month - 1)
+                .FirstOrDefault(month => !closedMonths.Contains(month));
+
+            if (firstUnclosedMonth != 0)
+            {
+                var unclosedPeriod = new DateOnly(monthDate.Year, firstUnclosedMonth, 1);
+                throw new InvalidOperationException(
+                    $"Close {unclosedPeriod:MMMM yyyy} before closing {monthDate:MMMM yyyy}.");
             }
         }
 
@@ -187,12 +227,8 @@ namespace IBS.Services
                         gl.Date.Year == periodMonth.Year)
                     .ToListAsync(cancellationToken);
 
-                if (!generalLedgers.Any())
-                {
-                    return;
-                }
-
-                if (!_unitOfWork.FilprideCheckVoucher.IsJournalEntriesBalanced(generalLedgers))
+                if (generalLedgers.Any() &&
+                    !_unitOfWork.FilprideCheckVoucher.IsJournalEntriesBalanced(generalLedgers))
                 {
                     throw new InvalidOperationException($"GL balance mismatch. " +
                                                         $"Debit:{generalLedgers.Sum(g => g.Debit):N2}, " +
@@ -243,6 +279,9 @@ namespace IBS.Services
                 };
 
                 var beginning = await _dbContext.FilprideMonthlyNibits
+                    .Where(m =>
+                        m.Year < periodMonth.Year ||
+                        (m.Year == periodMonth.Year && m.Month < periodMonth.Month))
                     .OrderByDescending(m => m.Year)
                     .ThenByDescending(m => m.Month)
                     .FirstOrDefaultAsync(cancellationToken);
