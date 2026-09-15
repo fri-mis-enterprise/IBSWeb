@@ -50,7 +50,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private string GenerateFileNameToSave(string incomingFileName)
         {
-            return $"customer-bir-{Path.GetFileNameWithoutExtension(incomingFileName)}-{DateTimeHelper.GetCurrentPhilippineTime():yyyyMMddHHmmss}{Path.GetExtension(incomingFileName)}";
+            var fileName = Path.GetFileNameWithoutExtension(incomingFileName);
+            var extension = Path.GetExtension(incomingFileName);
+            return $"{fileName}-{DateTimeHelper.GetCurrentPhilippineTime():yyyyMMddHHmmss}{extension}";
         }
 
         public async Task<IActionResult> Index(string? view, CancellationToken cancellationToken)
@@ -69,8 +71,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [HttpGet]
         public async Task<IActionResult> Create(CancellationToken cancellationToken)
         {
-            var model = new FilprideCustomer();
-            await PopulateCustomerFormListsAsync(model, cancellationToken);
+            var model = new FilprideCustomer
+            {
+                PaymentTerms = await _unitOfWork.FilprideTerms.GetFilprideTermsListAsyncByCode(cancellationToken),
+                Commissionees = await _unitOfWork.GetFilprideCommissioneeListAsyncById(cancellationToken)
+            };
             return View(model);
         }
 
@@ -81,14 +86,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
             IFormFile? birDocument,
             CancellationToken cancellationToken)
         {
+            model.PaymentTerms = await _unitOfWork.FilprideTerms.GetFilprideTermsListAsyncByCode(cancellationToken);
+            model.Commissionees = await _unitOfWork.GetFilprideCommissioneeListAsyncById(cancellationToken);
+
             if (!ModelState.IsValid)
             {
                 ModelState.AddModelError("", "Make sure to fill all the required details.");
-                await PopulateCustomerFormListsAsync(model, cancellationToken);
                 return View(model);
             }
 
-            await PopulateCustomerFormListsAsync(model, cancellationToken);
+            model.PaymentTerms = await _unitOfWork.FilprideTerms.GetFilprideTermsListAsyncByCode(cancellationToken);
+            model.Commissionees = await _unitOfWork.GetFilprideCommissioneeListAsyncById(cancellationToken);
 
             var isTinExist = await _unitOfWork.FilprideCustomer.IsTinNoExistAsync(model.CustomerTin, cancellationToken);
 
@@ -131,7 +139,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 _logger.LogError(ex, "Failed to create customer master file. Created by: {UserName}", _userManager.GetUserName(User));
                 await transaction.RollbackAsync(cancellationToken);
-                await PopulateCustomerFormListsAsync(model, cancellationToken);
                 TempData["error"] = ex.Message;
                 return View(model);
             }
@@ -149,7 +156,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             if (customer != null)
             {
-                await PopulateCustomerFormListsAsync(customer, cancellationToken);
+                customer.PaymentTerms = await _unitOfWork.FilprideTerms.GetFilprideTermsListAsyncByCode(cancellationToken);
+                customer.Commissionees = await _unitOfWork.GetFilprideCommissioneeListAsyncById(cancellationToken);
                 return View(customer);
             }
 
@@ -163,9 +171,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
             IFormFile? birDocument,
             CancellationToken cancellationToken)
         {
+            model.PaymentTerms = await _unitOfWork.FilprideTerms.GetFilprideTermsListAsyncByCode(cancellationToken);
+            model.Commissionees = await _unitOfWork.GetFilprideCommissioneeListAsyncById(cancellationToken);
+
             if (!ModelState.IsValid)
             {
-                await PopulateCustomerFormListsAsync(model, cancellationToken);
                 return View(model);
             }
 
@@ -176,7 +186,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
-            await PopulateCustomerFormListsAsync(model, cancellationToken);
             model.BirDocumentFileName = existingCustomer.BirDocumentFileName;
             model.BirDocumentFilePath = existingCustomer.BirDocumentFilePath;
 
@@ -209,7 +218,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 await transaction.RollbackAsync(cancellationToken);
                 _logger.LogError(ex, "Failed to edit customer master file. Created by: {UserName}", _userManager.GetUserName(User));
-                await PopulateCustomerFormListsAsync(model, cancellationToken);
                 TempData["error"] = $"Error: '{ex.Message}'";
                 return View(model);
             }
@@ -226,13 +234,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
 
             return Redirect(await _cloudStorageService.GetSignedUrlAsync(customer.BirDocumentFileName));
-        }
-
-        private async Task PopulateCustomerFormListsAsync(FilprideCustomer model, CancellationToken cancellationToken)
-        {
-            model.PaymentTerms = await _unitOfWork.FilprideTerms
-                .GetFilprideTermsListAsyncByCode(cancellationToken);
-            model.Commissionees = await _unitOfWork.GetFilprideCommissioneeListAsyncById(cancellationToken);
         }
 
         [HttpPost]
