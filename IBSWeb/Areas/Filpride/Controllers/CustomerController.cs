@@ -128,6 +128,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 _logger.LogError(ex, "Failed to create customer master file. Created by: {UserName}", _userManager.GetUserName(User));
                 await transaction.RollbackAsync(cancellationToken);
                 await DeleteBirDocumentAsync(model.BirDocumentFileName);
+                await PopulateCustomerFormListsAsync(model, cancellationToken);
                 TempData["error"] = ex.Message;
                 return View(model);
             }
@@ -218,6 +219,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     await DeleteBirDocumentAsync(model.BirDocumentFileName);
                 }
                 _logger.LogError(ex, "Failed to edit customer master file. Created by: {UserName}", _userManager.GetUserName(User));
+                await RestoreBirDocumentMetadataAsync(model, cancellationToken);
+                await PopulateCustomerFormListsAsync(model, cancellationToken);
                 TempData["error"] = $"Error: '{ex.Message}'";
                 return View(model);
             }
