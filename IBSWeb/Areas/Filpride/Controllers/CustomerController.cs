@@ -48,13 +48,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                    ?? User.Identity?.Name!;
         }
 
-        private string GenerateFileNameToSave(string incomingFileName)
-        {
-            var fileName = Path.GetFileNameWithoutExtension(incomingFileName);
-            var extension = Path.GetExtension(incomingFileName);
-            return $"{fileName}-{DateTimeHelper.GetCurrentPhilippineTime():yyyyMMddHHmmss}{extension}";
-        }
-
         public async Task<IActionResult> Index(string? view, CancellationToken cancellationToken)
         {
             IEnumerable<FilprideCustomer> customer = await _unitOfWork.FilprideCustomer
@@ -114,7 +107,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 if (birDocument != null && birDocument.Length > 0)
                 {
-                    model.BirDocumentFileName = GenerateFileNameToSave(birDocument.FileName);
+                    model.BirDocumentFileName = $"{Path.GetFileNameWithoutExtension(birDocument.FileName)}-{DateTimeHelper.GetCurrentPhilippineTime():yyyyMMddHHmmss}{Path.GetExtension(birDocument.FileName)}";
                     model.BirDocumentFilePath = await _cloudStorageService.UploadFileAsync(birDocument, model.BirDocumentFileName);
                 }
 
@@ -195,7 +188,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 if (birDocument != null && birDocument.Length > 0)
                 {
-                    model.BirDocumentFileName = GenerateFileNameToSave(birDocument.FileName);
+                    model.BirDocumentFileName = $"{Path.GetFileNameWithoutExtension(birDocument.FileName)}-{DateTimeHelper.GetCurrentPhilippineTime():yyyyMMddHHmmss}{Path.GetExtension(birDocument.FileName)}";
                     model.BirDocumentFilePath = await _cloudStorageService.UploadFileAsync(birDocument, model.BirDocumentFileName);
                 }
 
