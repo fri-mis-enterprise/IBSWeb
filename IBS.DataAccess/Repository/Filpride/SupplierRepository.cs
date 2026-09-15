@@ -99,11 +99,13 @@ namespace IBS.DataAccess.Repository.Filpride
 
             if (model.ProofOfRegistrationFilePath != null && existingSupplier.ProofOfRegistrationFilePath != model.ProofOfRegistrationFilePath)
             {
+                existingSupplier.ProofOfRegistrationFileName = model.ProofOfRegistrationFileName;
                 existingSupplier.ProofOfRegistrationFilePath = model.ProofOfRegistrationFilePath;
             }
 
             if (model.ProofOfExemptionFilePath != null && existingSupplier.ProofOfExemptionFilePath != model.ProofOfExemptionFilePath)
             {
+                existingSupplier.ProofOfExemptionFileName = model.ProofOfExemptionFileName;
                 existingSupplier.ProofOfExemptionFilePath = model.ProofOfExemptionFilePath;
             }
 

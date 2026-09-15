@@ -267,6 +267,30 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(supplier);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> DownloadProofOfRegistration(int id, CancellationToken cancellationToken)
+        {
+            var supplier = await _unitOfWork.FilprideSupplier.GetAsync(c => c.SupplierId == id, cancellationToken);
+            if (supplier == null || string.IsNullOrWhiteSpace(supplier.ProofOfRegistrationFileName))
+            {
+                return NotFound();
+            }
+
+            return Redirect(await _cloudStorageService.GetSignedUrlAsync(supplier.ProofOfRegistrationFileName));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DownloadProofOfExemption(int id, CancellationToken cancellationToken)
+        {
+            var supplier = await _unitOfWork.FilprideSupplier.GetAsync(c => c.SupplierId == id, cancellationToken);
+            if (supplier == null || string.IsNullOrWhiteSpace(supplier.ProofOfExemptionFileName))
+            {
+                return NotFound();
+            }
+
+            return Redirect(await _cloudStorageService.GetSignedUrlAsync(supplier.ProofOfExemptionFileName));
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(FilprideSupplier model, IFormFile? registration, IFormFile? document, CancellationToken cancellationToken)
@@ -279,18 +303,42 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return View(model);
             }
 
+            var existingSupplier = await _unitOfWork.FilprideSupplier
+                .GetAsync(s => s.SupplierId == model.SupplierId, cancellationToken);
+            if (existingSupplier == null)
+            {
+                return NotFound();
+            }
+
+            model.ProofOfRegistrationFileName = existingSupplier.ProofOfRegistrationFileName;
+            model.ProofOfRegistrationFilePath = existingSupplier.ProofOfRegistrationFilePath;
+            model.ProofOfExemptionFileName = existingSupplier.ProofOfExemptionFileName;
+            model.ProofOfExemptionFilePath = existingSupplier.ProofOfExemptionFilePath;
+
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             try
             {
+                var filesToDelete = new List<string>();
+                var deletionFailed = false;
                 if (registration != null && registration.Length > 0)
                 {
+                    if (!string.IsNullOrWhiteSpace(existingSupplier.ProofOfRegistrationFileName))
+                    {
+                        filesToDelete.Add(existingSupplier.ProofOfRegistrationFileName);
+                    }
+
                     model.ProofOfRegistrationFileName = GenerateFileNameToSave(registration.FileName);
                     model.ProofOfRegistrationFilePath = await _cloudStorageService.UploadFileAsync(registration, model.ProofOfRegistrationFileName!);
                 }
 
                 if (document != null && document.Length > 0)
                 {
+                    if (!string.IsNullOrWhiteSpace(existingSupplier.ProofOfExemptionFileName))
+                    {
+                        filesToDelete.Add(existingSupplier.ProofOfExemptionFileName);
+                    }
+
                     model.ProofOfExemptionFileName = GenerateFileNameToSave(document.FileName);
                     model.ProofOfExemptionFilePath = await _cloudStorageService.UploadFileAsync(document, model.ProofOfExemptionFileName!);
                 }
@@ -308,7 +356,25 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #endregion -- Audit Trail Recording --
 
                 await transaction.CommitAsync(cancellationToken);
-                TempData["success"] = "Supplier updated successfully";
+
+                foreach (var fileName in filesToDelete)
+                {
+                    try
+                    {
+                        await _cloudStorageService.DeleteFileAsync(fileName);
+                    }
+                    catch (Exception deletionException)
+                    {
+                        deletionFailed = true;
+                        _logger.LogError(deletionException, "Failed to delete the previous supplier document: {FileName}", fileName);
+                        TempData["error"] = "Supplier updated, but a previous document could not be deleted.";
+                    }
+                }
+
+                if (!deletionFailed)
+                {
+                    TempData["success"] = "Supplier updated successfully";
+                }
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
