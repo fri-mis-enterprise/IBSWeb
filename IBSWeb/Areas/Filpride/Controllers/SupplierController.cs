@@ -54,6 +54,31 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return $"{fileName}-{DateTimeHelper.GetCurrentPhilippineTime():yyyyMMddHHmmss}{extension}";
         }
 
+        private static string? GetCloudFileName(string? fileName, string? filePath)
+        {
+            if (!string.IsNullOrWhiteSpace(fileName))
+            {
+                return fileName;
+            }
+
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                return null;
+            }
+            // For old documents that has different format
+            if (Uri.TryCreate(filePath, UriKind.Absolute, out var uri))
+            {
+                var path = uri.AbsolutePath;
+                var objectPath = path.Contains("/o/", StringComparison.Ordinal)
+                    ? path[(path.IndexOf("/o/", StringComparison.Ordinal) + 3)..]
+                    : path.Trim('/');
+
+                return Uri.UnescapeDataString(objectPath);
+            }
+
+            return Uri.UnescapeDataString(filePath.Split('?')[0].Split('/').LastOrDefault() ?? string.Empty);
+        }
+
         private async Task PopulateSupplierFormListsAsync(FilprideSupplier model, CancellationToken cancellationToken)
         {
             model.DefaultExpenses = await _dbContext.FilprideChartOfAccounts
@@ -267,6 +292,36 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return View(supplier);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> DownloadProofOfRegistration(int id, CancellationToken cancellationToken)
+        {
+            var supplier = await _unitOfWork.FilprideSupplier.GetAsync(c => c.SupplierId == id, cancellationToken);
+            var fileName = supplier == null
+                ? null
+                : GetCloudFileName(supplier.ProofOfRegistrationFileName, supplier.ProofOfRegistrationFilePath);
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                return NotFound();
+            }
+
+            return Redirect(await _cloudStorageService.GetSignedUrlAsync(fileName));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DownloadProofOfExemption(int id, CancellationToken cancellationToken)
+        {
+            var supplier = await _unitOfWork.FilprideSupplier.GetAsync(c => c.SupplierId == id, cancellationToken);
+            var fileName = supplier == null
+                ? null
+                : GetCloudFileName(supplier.ProofOfExemptionFileName, supplier.ProofOfExemptionFilePath);
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                return NotFound();
+            }
+
+            return Redirect(await _cloudStorageService.GetSignedUrlAsync(fileName));
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(FilprideSupplier model, IFormFile? registration, IFormFile? document, CancellationToken cancellationToken)
@@ -279,18 +334,42 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return View(model);
             }
 
+            var existingSupplier = await _unitOfWork.FilprideSupplier
+                .GetAsync(s => s.SupplierId == model.SupplierId, cancellationToken);
+            if (existingSupplier == null)
+            {
+                return NotFound();
+            }
+
+            model.ProofOfRegistrationFileName = existingSupplier.ProofOfRegistrationFileName;
+            model.ProofOfRegistrationFilePath = existingSupplier.ProofOfRegistrationFilePath;
+            model.ProofOfExemptionFileName = existingSupplier.ProofOfExemptionFileName;
+            model.ProofOfExemptionFilePath = existingSupplier.ProofOfExemptionFilePath;
+
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             try
             {
                 if (registration != null && registration.Length > 0)
                 {
+                    var existingFileName = GetCloudFileName(existingSupplier.ProofOfRegistrationFileName, existingSupplier.ProofOfRegistrationFilePath);
+                    if (!string.IsNullOrWhiteSpace(existingFileName))
+                    {
+                        await _cloudStorageService.DeleteFileAsync(existingFileName);
+                    }
+
                     model.ProofOfRegistrationFileName = GenerateFileNameToSave(registration.FileName);
                     model.ProofOfRegistrationFilePath = await _cloudStorageService.UploadFileAsync(registration, model.ProofOfRegistrationFileName!);
                 }
 
                 if (document != null && document.Length > 0)
                 {
+                    var existingFileName = GetCloudFileName(existingSupplier.ProofOfExemptionFileName, existingSupplier.ProofOfExemptionFilePath);
+                    if (!string.IsNullOrWhiteSpace(existingFileName))
+                    {
+                        await _cloudStorageService.DeleteFileAsync(existingFileName);
+                    }
+
                     model.ProofOfExemptionFileName = GenerateFileNameToSave(document.FileName);
                     model.ProofOfExemptionFilePath = await _cloudStorageService.UploadFileAsync(document, model.ProofOfExemptionFileName!);
                 }

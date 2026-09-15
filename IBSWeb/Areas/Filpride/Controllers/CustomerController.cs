@@ -195,6 +195,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 if (birDocument != null && birDocument.Length > 0)
                 {
+                    if (!string.IsNullOrWhiteSpace(existingCustomer.BirDocumentFileName))
+                    {
+                        await _cloudStorageService.DeleteFileAsync(existingCustomer.BirDocumentFileName);
+                    }
+
                     model.BirDocumentFileName = GetBirDocumentFileName(birDocument.FileName);
                     model.BirDocumentFilePath = await _cloudStorageService.UploadFileAsync(birDocument, model.BirDocumentFileName);
                 }
