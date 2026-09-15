@@ -54,31 +54,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return $"{fileName}-{DateTimeHelper.GetCurrentPhilippineTime():yyyyMMddHHmmss}{extension}";
         }
 
-        private static string? GetCloudFileName(string? fileName, string? filePath)
-        {
-            if (!string.IsNullOrWhiteSpace(fileName))
-            {
-                return fileName;
-            }
-
-            if (string.IsNullOrWhiteSpace(filePath))
-            {
-                return null;
-            }
-            // For old documents that has different format
-            if (Uri.TryCreate(filePath, UriKind.Absolute, out var uri))
-            {
-                var path = uri.AbsolutePath;
-                var objectPath = path.Contains("/o/", StringComparison.Ordinal)
-                    ? path[(path.IndexOf("/o/", StringComparison.Ordinal) + 3)..]
-                    : path.Trim('/');
-
-                return Uri.UnescapeDataString(objectPath);
-            }
-
-            return Uri.UnescapeDataString(filePath.Split('?')[0].Split('/').LastOrDefault() ?? string.Empty);
-        }
-
         private async Task PopulateSupplierFormListsAsync(FilprideSupplier model, CancellationToken cancellationToken)
         {
             model.DefaultExpenses = await _dbContext.FilprideChartOfAccounts
@@ -296,30 +271,24 @@ namespace IBSWeb.Areas.Filpride.Controllers
         public async Task<IActionResult> DownloadProofOfRegistration(int id, CancellationToken cancellationToken)
         {
             var supplier = await _unitOfWork.FilprideSupplier.GetAsync(c => c.SupplierId == id, cancellationToken);
-            var fileName = supplier == null
-                ? null
-                : GetCloudFileName(supplier.ProofOfRegistrationFileName, supplier.ProofOfRegistrationFilePath);
-            if (string.IsNullOrWhiteSpace(fileName))
+            if (supplier == null || string.IsNullOrWhiteSpace(supplier.ProofOfRegistrationFileName))
             {
                 return NotFound();
             }
 
-            return Redirect(await _cloudStorageService.GetSignedUrlAsync(fileName));
+            return Redirect(await _cloudStorageService.GetSignedUrlAsync(supplier.ProofOfRegistrationFileName));
         }
 
         [HttpGet]
         public async Task<IActionResult> DownloadProofOfExemption(int id, CancellationToken cancellationToken)
         {
             var supplier = await _unitOfWork.FilprideSupplier.GetAsync(c => c.SupplierId == id, cancellationToken);
-            var fileName = supplier == null
-                ? null
-                : GetCloudFileName(supplier.ProofOfExemptionFileName, supplier.ProofOfExemptionFilePath);
-            if (string.IsNullOrWhiteSpace(fileName))
+            if (supplier == null || string.IsNullOrWhiteSpace(supplier.ProofOfExemptionFileName))
             {
                 return NotFound();
             }
 
-            return Redirect(await _cloudStorageService.GetSignedUrlAsync(fileName));
+            return Redirect(await _cloudStorageService.GetSignedUrlAsync(supplier.ProofOfExemptionFileName));
         }
 
         [HttpPost]
@@ -354,10 +323,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var deletionFailed = false;
                 if (registration != null && registration.Length > 0)
                 {
-                    var existingFileName = GetCloudFileName(existingSupplier.ProofOfRegistrationFileName, existingSupplier.ProofOfRegistrationFilePath);
-                    if (!string.IsNullOrWhiteSpace(existingFileName))
+                    if (!string.IsNullOrWhiteSpace(existingSupplier.ProofOfRegistrationFileName))
                     {
-                        filesToDelete.Add(existingFileName);
+                        filesToDelete.Add(existingSupplier.ProofOfRegistrationFileName);
                     }
 
                     model.ProofOfRegistrationFileName = GenerateFileNameToSave(registration.FileName);
@@ -366,10 +334,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 if (document != null && document.Length > 0)
                 {
-                    var existingFileName = GetCloudFileName(existingSupplier.ProofOfExemptionFileName, existingSupplier.ProofOfExemptionFilePath);
-                    if (!string.IsNullOrWhiteSpace(existingFileName))
+                    if (!string.IsNullOrWhiteSpace(existingSupplier.ProofOfExemptionFileName))
                     {
-                        filesToDelete.Add(existingFileName);
+                        filesToDelete.Add(existingSupplier.ProofOfExemptionFileName);
                     }
 
                     model.ProofOfExemptionFileName = GenerateFileNameToSave(document.FileName);
