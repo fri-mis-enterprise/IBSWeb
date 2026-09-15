@@ -193,13 +193,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
+                string? previousBirDocumentFileName = null;
+                var deletionFailed = false;
                 if (birDocument != null && birDocument.Length > 0)
                 {
-                    if (!string.IsNullOrWhiteSpace(existingCustomer.BirDocumentFileName))
-                    {
-                        await _cloudStorageService.DeleteFileAsync(existingCustomer.BirDocumentFileName);
-                    }
-
+                    previousBirDocumentFileName = existingCustomer.BirDocumentFileName;
                     model.BirDocumentFileName = GetBirDocumentFileName(birDocument.FileName);
                     model.BirDocumentFilePath = await _cloudStorageService.UploadFileAsync(birDocument, model.BirDocumentFileName);
                 }
@@ -216,7 +214,25 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #endregion --Audit Trail Recording
 
                 await transaction.CommitAsync(cancellationToken);
-                TempData["success"] = "Customer updated successfully";
+
+                if (!string.IsNullOrWhiteSpace(previousBirDocumentFileName))
+                {
+                    try
+                    {
+                        await _cloudStorageService.DeleteFileAsync(previousBirDocumentFileName);
+                    }
+                    catch (Exception deletionException)
+                    {
+                        deletionFailed = true;
+                        _logger.LogError(deletionException, "Failed to delete the previous customer BIR document: {FileName}", previousBirDocumentFileName);
+                        TempData["error"] = "Customer updated, but the previous BIR document could not be deleted.";
+                    }
+                }
+
+                if (!deletionFailed)
+                {
+                    TempData["success"] = "Customer updated successfully";
+                }
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)

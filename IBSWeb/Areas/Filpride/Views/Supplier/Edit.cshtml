@@ -179,6 +179,8 @@
                 else
                 {
                     <a asp-action="DownloadProofOfExemption" asp-route-id="@Model.SupplierId" target="_blank" rel="noopener">Show Document</a>
+                    <label class="form-label d-block mt-2">Upload replacement proof of exemption</label>
+                    <input class="form-control form-control-sm" name="document" type="file">
                 }
             </div>
             @if (Model.ProofOfRegistrationFilePath == null)
@@ -192,6 +194,8 @@
             else
             {
                 <a asp-action="DownloadProofOfRegistration" asp-route-id="@Model.SupplierId" target="_blank" rel="noopener">Show Document</a>
+                <label class="form-label d-block mt-2">Upload replacement proof of BIR registration</label>
+                <input class="form-control form-control-sm" name="registration" type="file">
             }
 
             <div class="form-check pb-2">

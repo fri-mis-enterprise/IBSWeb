@@ -350,12 +350,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
+                var filesToDelete = new List<string>();
+                var deletionFailed = false;
                 if (registration != null && registration.Length > 0)
                 {
                     var existingFileName = GetCloudFileName(existingSupplier.ProofOfRegistrationFileName, existingSupplier.ProofOfRegistrationFilePath);
                     if (!string.IsNullOrWhiteSpace(existingFileName))
                     {
-                        await _cloudStorageService.DeleteFileAsync(existingFileName);
+                        filesToDelete.Add(existingFileName);
                     }
 
                     model.ProofOfRegistrationFileName = GenerateFileNameToSave(registration.FileName);
@@ -367,7 +369,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var existingFileName = GetCloudFileName(existingSupplier.ProofOfExemptionFileName, existingSupplier.ProofOfExemptionFilePath);
                     if (!string.IsNullOrWhiteSpace(existingFileName))
                     {
-                        await _cloudStorageService.DeleteFileAsync(existingFileName);
+                        filesToDelete.Add(existingFileName);
                     }
 
                     model.ProofOfExemptionFileName = GenerateFileNameToSave(document.FileName);
@@ -387,7 +389,25 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #endregion -- Audit Trail Recording --
 
                 await transaction.CommitAsync(cancellationToken);
-                TempData["success"] = "Supplier updated successfully";
+
+                foreach (var fileName in filesToDelete)
+                {
+                    try
+                    {
+                        await _cloudStorageService.DeleteFileAsync(fileName);
+                    }
+                    catch (Exception deletionException)
+                    {
+                        deletionFailed = true;
+                        _logger.LogError(deletionException, "Failed to delete the previous supplier document: {FileName}", fileName);
+                        TempData["error"] = "Supplier updated, but a previous document could not be deleted.";
+                    }
+                }
+
+                if (!deletionFailed)
+                {
+                    TempData["success"] = "Supplier updated successfully";
+                }
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
