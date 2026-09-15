@@ -315,15 +315,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 var firstDayOfMonth = new DateOnly(monthDate.Year, monthDate.Month, 1);
                 var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
+                var firstDayOfYear = new DateOnly(monthDate.Year, 1, 1);
 
                 var generalLedgers = await _dbContext.FilprideGeneralLedgerBooks
                     .IgnoreQueryFilters()
                     .Include(gl => gl.Account) // Level 4
                     .Where(gl =>
-                        gl.Date >= firstDayOfMonth &&
-                        gl.Date <= lastDayOfMonth &&
-                        true)
+                        gl.Date >= firstDayOfYear &&
+                        gl.Date <= lastDayOfMonth)
                     .ToListAsync(cancellationToken);
+
+                var monthToDateGeneralLedgers = generalLedgers
+                    .Where(gl => gl.Date >= firstDayOfMonth)
+                    .ToList();
 
                 var chartOfAccounts = await _dbContext.FilprideChartOfAccounts
                     .IgnoreQueryFilters()
@@ -332,9 +336,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .OrderBy(coa => coa.AccountNumber)
                     .ToListAsync(cancellationToken);
 
-                var nibitForThePeriod = await _dbContext.FilprideMonthlyNibits
-                    .FirstOrDefaultAsync(m => m.Year == monthDate.Year &&
-                                              m.Month == monthDate.Month, cancellationToken);
+                var nibitsForYearToDate = await _dbContext.FilprideMonthlyNibits
+                    .Where(m => m.Year == monthDate.Year &&
+                                m.Month <= monthDate.Month)
+                    .ToListAsync(cancellationToken);
+
+                var nibitForThePeriod = nibitsForYearToDate
+                    .FirstOrDefault(m => m.Month == monthDate.Month);
 
                 if (nibitForThePeriod == null)
                 {
@@ -342,7 +350,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return RedirectToAction(nameof(ProfitAndLossReport));
                 }
 
-                if (!generalLedgers.Any())
+                if (!monthToDateGeneralLedgers.Any())
                 {
                     TempData["info"] = "No Record Found";
                     return RedirectToAction(nameof(ProfitAndLossReport));
@@ -356,7 +364,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region == Column Header ==
 
-                using (var range = worksheet.Cells[row, 1, row, 6])
+                using (var range = worksheet.Cells[row, 1, row, 7])
                 {
                     range.Merge = true;
                     range.Value = _brandingOptions.LegalName;
@@ -377,13 +385,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 worksheet.Row(row).Height = 80;
 
-                using (var range = worksheet.Cells[row, 1, row, 6])
+                using (var range = worksheet.Cells[row, 1, row, 7])
                 {
                     range.Merge = true;
                 }
                 row++;
 
-                using (var range = worksheet.Cells[row, 1, row, 6])
+                using (var range = worksheet.Cells[row, 1, row, 7])
                 {
                     range.Merge = true;
                     range.Value = "PNL REPORT";
@@ -392,7 +400,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 row++;
 
-                using (var range = worksheet.Cells[row, 1, row, 6])
+                using (var range = worksheet.Cells[row, 1, row, 7])
                 {
                     range.Merge = true;
                     range.Value = "As of " + monthDate.ToString("MMM yyyy");
@@ -400,7 +408,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 row++;
 
-                using (var range = worksheet.Cells[row, 1, row, 6])
+                using (var range = worksheet.Cells[row, 1, row, 7])
                 {
                     range.Merge = true;
                     range.Value = $"Date and Time Generated: {DateTimeHelper.GetCurrentPhilippineTime()}";
@@ -408,7 +416,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 row++;
 
-                using (var range = worksheet.Cells[row, 1, row, 6])
+                using (var range = worksheet.Cells[row, 1, row, 7])
                 {
                     range.Merge = true;
                     range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
@@ -419,32 +427,44 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 3].Value = "L3";
                 worksheet.Cells[row, 4].Value = "L4";
                 worksheet.Cells[row, 5].Value = "L5";
+                worksheet.Cells[row, 6].Value = "MONTH TO DATE";
+                worksheet.Cells[row, 7].Value = "YEAR TO DATE";
 
-                worksheet.Cells[row, 1, row, 5].Style.Font.Bold = true;
+                worksheet.Cells[row, 1, row, 7].Style.Font.Bold = true;
 
                 row++;
 
                 #endregion
 
-                var accountBalances = generalLedgers
+                var monthToDateAccountBalances = monthToDateGeneralLedgers
                     .GroupBy(gl => gl.AccountNo)
                     .ToLookup(group => group.Key, group => group.Sum(gl =>
                         gl.Account.NormalBalance == nameof(NormalBalance.Debit)
                             ? gl.Debit - gl.Credit
                             : gl.Credit - gl.Debit));
 
-                decimal totalRevenue = 0;
+                var yearToDateAccountBalances = generalLedgers
+                    .GroupBy(gl => gl.AccountNo)
+                    .ToLookup(group => group.Key, group => group.Sum(gl =>
+                        gl.Account.NormalBalance == nameof(NormalBalance.Debit)
+                            ? gl.Debit - gl.Credit
+                            : gl.Credit - gl.Debit));
+
+                decimal totalRevenueMonthToDate = 0;
+                decimal totalRevenueYearToDate = 0;
                 foreach (var account in chartOfAccounts
                              .Where(a => a.IsMain)
                              .OrderBy(a => a.AccountNumber))
                 {
-                    decimal grandTotal = 0;
+                    decimal grandTotalMonthToDate = 0;
+                    decimal grandTotalYearToDate = 0;
 
                     bool mainHeadingWritten = false;
 
                     foreach (var levelTwo in account.Children.OrderBy(l => l.AccountNumber))
                     {
-                        decimal subTotal = 0;
+                        decimal subTotalMonthToDate = 0;
+                        decimal subTotalYearToDate = 0;
                         bool levelTwoHeadingWritten = false;
 
                         foreach (var levelThree in levelTwo.Children.OrderBy(l => l.AccountNumber))
@@ -453,13 +473,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                             foreach (var levelFour in levelThree.Children.OrderBy(l => l.AccountNumber))
                             {
-                                decimal levelFourBalance = accountBalances[levelFour.AccountNumber].Sum();
+                                decimal levelFourMonthToDateBalance = monthToDateAccountBalances[levelFour.AccountNumber].Sum();
+                                decimal levelFourYearToDateBalance = yearToDateAccountBalances[levelFour.AccountNumber].Sum();
                                 var visibleLevelFiveAccounts = levelFour.Children
-                                    .Where(l => accountBalances[l.AccountNumber].Sum() != 0)
+                                    .Where(l => monthToDateAccountBalances[l.AccountNumber].Sum() != 0 ||
+                                                yearToDateAccountBalances[l.AccountNumber].Sum() != 0)
                                     .OrderBy(l => l.AccountNumber)
                                     .ToList();
 
-                                if (levelFourBalance == 0 && visibleLevelFiveAccounts.Count == 0)
+                                if (levelFourMonthToDateBalance == 0 &&
+                                    levelFourYearToDateBalance == 0 &&
+                                    visibleLevelFiveAccounts.Count == 0)
                                 {
                                     continue;
                                 }
@@ -486,16 +510,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 }
 
                                 worksheet.Cells[row, 4].Value = levelFour.AccountName;
-                                worksheet.Cells[row, 6].Value = levelFourBalance != 0 ? levelFourBalance : null;
-                                subTotal += levelFourBalance;
+                                worksheet.Cells[row, 6].Value = levelFourMonthToDateBalance != 0 ? levelFourMonthToDateBalance : null;
+                                worksheet.Cells[row, 7].Value = levelFourYearToDateBalance != 0 ? levelFourYearToDateBalance : null;
+                                subTotalMonthToDate += levelFourMonthToDateBalance;
+                                subTotalYearToDate += levelFourYearToDateBalance;
                                 row++;
 
                                 foreach (var levelFive in visibleLevelFiveAccounts)
                                 {
                                     worksheet.Cells[row, 5].Value = levelFive.AccountName;
-                                    decimal levelFiveBalance = accountBalances[levelFive.AccountNumber].Sum();
-                                    worksheet.Cells[row, 6].Value = levelFiveBalance;
-                                    subTotal += levelFiveBalance;
+                                    decimal levelFiveMonthToDateBalance = monthToDateAccountBalances[levelFive.AccountNumber].Sum();
+                                    decimal levelFiveYearToDateBalance = yearToDateAccountBalances[levelFive.AccountNumber].Sum();
+                                    worksheet.Cells[row, 6].Value = levelFiveMonthToDateBalance != 0 ? levelFiveMonthToDateBalance : null;
+                                    worksheet.Cells[row, 7].Value = levelFiveYearToDateBalance != 0 ? levelFiveYearToDateBalance : null;
+                                    subTotalMonthToDate += levelFiveMonthToDateBalance;
+                                    subTotalYearToDate += levelFiveYearToDateBalance;
                                     row++;
                                 }
                             }
@@ -508,44 +537,51 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                         worksheet.Cells[row, 2].Value = $"TOTAL {levelTwo.AccountName.ToUpper()}";
                         worksheet.Cells[row, 2].Style.Font.Bold = true;
-                        worksheet.Cells[row, 6].Value = subTotal != 0 ? subTotal : null;
-                        worksheet.Cells[row, 6].Style.Font.Bold = true;
-                        worksheet.Cells[row, 6].Style.Border.Top.Style = ExcelBorderStyle.Thin;
-                        worksheet.Cells[row, 6].Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                        worksheet.Cells[row, 6].Value = subTotalMonthToDate != 0 ? subTotalMonthToDate : null;
+                        worksheet.Cells[row, 7].Value = subTotalYearToDate != 0 ? subTotalYearToDate : null;
+                        worksheet.Cells[row, 6, row, 7].Style.Font.Bold = true;
+                        worksheet.Cells[row, 6, row, 7].Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                        worksheet.Cells[row, 6, row, 7].Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
                         if (levelTwo.AccountName == "Other Expense")
                         {
-                            grandTotal -= subTotal;
+                            grandTotalMonthToDate -= subTotalMonthToDate;
+                            grandTotalYearToDate -= subTotalYearToDate;
                         }
                         else
                         {
-                            grandTotal += subTotal;
+                            grandTotalMonthToDate += subTotalMonthToDate;
+                            grandTotalYearToDate += subTotalYearToDate;
                         }
                         row++;
                     }
 
                     worksheet.Cells[row, 1].Value = $"TOTAL {account.AccountName.ToUpper()}";
                     worksheet.Cells[row, 1].Style.Font.Bold = true;
-                    worksheet.Cells[row, 6].Value = grandTotal != 0 ? grandTotal : null;
-                    worksheet.Cells[row, 6].Style.Font.Bold = true;
-                    worksheet.Cells[row, 6].Style.Border.Top.Style = ExcelBorderStyle.Thin;
-                    worksheet.Cells[row, 6].Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                    worksheet.Cells[row, 6].Value = grandTotalMonthToDate != 0 ? grandTotalMonthToDate : null;
+                    worksheet.Cells[row, 7].Value = grandTotalYearToDate != 0 ? grandTotalYearToDate : null;
+                    worksheet.Cells[row, 6, row, 7].Style.Font.Bold = true;
+                    worksheet.Cells[row, 6, row, 7].Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                    worksheet.Cells[row, 6, row, 7].Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
                     row++;
 
                     if (account.AccountName.Contains("Revenue"))
                     {
-                        totalRevenue = grandTotal;
+                        totalRevenueMonthToDate = grandTotalMonthToDate;
+                        totalRevenueYearToDate = grandTotalYearToDate;
                     }
 
                     if (account.AccountName.Contains("Cost of Goods Sold"))
                     {
-                        var totalGrossMargin = totalRevenue - grandTotal;
+                        var totalGrossMarginMonthToDate = totalRevenueMonthToDate - grandTotalMonthToDate;
+                        var totalGrossMarginYearToDate = totalRevenueYearToDate - grandTotalYearToDate;
 
                         worksheet.Cells[row, 1].Value = "TOTAL GROSS MARGIN";
                         worksheet.Cells[row, 1].Style.Font.Bold = true;
-                        worksheet.Cells[row, 6].Value = totalGrossMargin != 0 ? totalGrossMargin : null;
-                        worksheet.Cells[row, 6].Style.Font.Bold = true;
-                        worksheet.Cells[row, 6].Style.Border.Top.Style = ExcelBorderStyle.Thin;
-                        worksheet.Cells[row, 6].Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                        worksheet.Cells[row, 6].Value = totalGrossMarginMonthToDate != 0 ? totalGrossMarginMonthToDate : null;
+                        worksheet.Cells[row, 7].Value = totalGrossMarginYearToDate != 0 ? totalGrossMarginYearToDate : null;
+                        worksheet.Cells[row, 6, row, 7].Style.Font.Bold = true;
+                        worksheet.Cells[row, 6, row, 7].Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                        worksheet.Cells[row, 6, row, 7].Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
                         row++;
                     }
 
@@ -553,12 +589,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 worksheet.Cells[row + 1, 1].Value = "NIBIT";
                 worksheet.Cells[row + 1, 6].Value = nibitForThePeriod.NetIncome != 0 ? nibitForThePeriod.NetIncome : null;
+                var nibitYearToDate = nibitsForYearToDate.Sum(n => n.NetIncome);
+                worksheet.Cells[row + 1, 7].Value = nibitYearToDate != 0 ? nibitYearToDate : null;
                 worksheet.Cells[row + 1, 1].Style.Font.Bold = true;
-                worksheet.Cells[row + 1, 6].Style.Font.Bold = true;
-                worksheet.Cells[row + 1, 6].Style.Border.Top.Style = ExcelBorderStyle.Thin;
-                worksheet.Cells[row + 1, 6].Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                worksheet.Cells[row + 1, 6, row + 1, 7].Style.Font.Bold = true;
+                worksheet.Cells[row + 1, 6, row + 1, 7].Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                worksheet.Cells[row + 1, 6, row + 1, 7].Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
 
-                worksheet.Cells["F"].Style.Numberformat.Format = currencyFormat;
+                worksheet.Cells["F:G"].Style.Numberformat.Format = currencyFormat;
 
                 worksheet.Cells.AutoFitColumns();
                 for (int i = 1; i <= 4; i++)
