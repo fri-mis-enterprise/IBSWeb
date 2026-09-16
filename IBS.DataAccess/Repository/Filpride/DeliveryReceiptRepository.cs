@@ -41,7 +41,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .OrderByDescending(x => x.DeliveryReceiptNo.Length)
                 .ThenByDescending(x => x.DeliveryReceiptNo)
                 .FirstOrDefaultAsync(x =>
-                    
+
                     x.Type == nameof(DocumentType.Documented) &&
                     !x.DeliveryReceiptNo.Contains("BEG"),
                     cancellationToken);
@@ -66,7 +66,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .OrderByDescending(x => x.DeliveryReceiptNo.Length)
                 .ThenByDescending(x => x.DeliveryReceiptNo)
                 .FirstOrDefaultAsync(x =>
-                        
+
                         x.Type == nameof(DocumentType.Undocumented) &&
                         !x.DeliveryReceiptNo.Contains("BEG"),
                     cancellationToken);
@@ -440,7 +440,7 @@ namespace IBS.DataAccess.Repository.Filpride
                         Credit = 0,
                         CreatedBy = deliveryReceipt.PostedBy!,
                         CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
-                        SubAccountType = SubAccountType.Customer,
+                        SubAccountType = customerOrderSlip.Terms != SD.Terms_Cod ? SubAccountType.Customer : null,
                         SubAccountId = customerOrderSlip.Terms != SD.Terms_Cod ? deliveryReceipt.CustomerId : null,
                         SubAccountName = customerOrderSlip.Terms != SD.Terms_Cod ? customerOrderSlip.CustomerName : null,
                         ModuleType = nameof(ModuleType.Sales)
