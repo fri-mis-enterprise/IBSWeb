@@ -21,7 +21,7 @@
         </div>
     </div>
     <div class="card-body p-4">
-        <form method="post" class="row">
+        <form method="post" class="row" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <input asp-for="CustomerId" hidden/>
             <div class="border p-3">
@@ -176,6 +176,15 @@
                     <label class="form-check-label">
                         <input class="form-check-input" asp-for="RequiresPriceAdjustment" /> @Html.DisplayNameFor(model => model.RequiresPriceAdjustment)
                     </label>
+                </div>
+                <div class="form-group py-2 col-12">
+                    <label class="form-label">Upload BIR Documents</label>
+                    @if (!string.IsNullOrWhiteSpace(Model.BirDocumentFileName))
+                    {
+                        <a asp-action="DownloadBirDocument" asp-route-id="@Model.CustomerId" target="_blank" rel="noopener">Show Document</a>
+                    }
+                    <input class="form-control form-control-sm" name="birDocument" type="file">
+                    @Html.ValidationMessage("birDocument", new { @class = "text-danger" })
                 </div>
                 <div class="row pt-2">
                     <div class="col-6 col-md-3">

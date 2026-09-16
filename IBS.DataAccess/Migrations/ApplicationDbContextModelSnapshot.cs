@@ -4184,6 +4184,16 @@ namespace IBS.DataAccess.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("CustomerId"));
 
+                    b.Property<string>("BirDocumentFileName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("bir_document_file_name");
+
+                    b.Property<string>("BirDocumentFilePath")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("bir_document_file_path");
+
                     b.Property<string>("BusinessStyle")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
