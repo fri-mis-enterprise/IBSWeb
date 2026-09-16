@@ -27,6 +27,7 @@
                     <input type="hidden" asp-for="CVId"/>
                     <input type="hidden" asp-for="AdvancesCVNo"/>
                     <input type="hidden" asp-for="AppliedAdvanceAmount"/>
+                    <partial name="_CheckVoucherDocumentation" for="Documentation" />
                     <div class="form-group mb-3">
                         <label asp-for="SupplierId" class="control-label"></label><span class="required">*</span>
                         <select asp-for="SupplierId" asp-items="@Model.Suppliers" class="form-select js-select2 GetPOList supplier" style="width:100%">

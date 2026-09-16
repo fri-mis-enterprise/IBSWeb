@@ -34,6 +34,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private readonly ICacheService _cacheService;
 
+        private readonly CheckVoucherDocumentationService _documentationService;
+
         private const string FilterTypeClaimType = "CheckVoucherNonTradePayrollInvoice.FilterType";
 
         public CheckVoucherNonTradePayrollInvoiceController(IUnitOfWork unitOfWork,
@@ -41,7 +43,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             ApplicationDbContext dbContext,
             ICloudStorageService cloudStorageService,
             ILogger<CheckVoucherNonTradeInvoiceController> logger,
-            ICacheService cacheService)
+            ICacheService cacheService,
+            CheckVoucherDocumentationService documentationService)
         {
             _unitOfWork = unitOfWork;
             _userManager = userManager;
@@ -49,6 +52,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             _cloudStorageService = cloudStorageService;
             _logger = logger;
             _cacheService = cacheService;
+            _documentationService = documentationService;
         }
 
         private string GetUserFullName()
@@ -213,6 +217,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
             viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
+            await _documentationService.PrepareAsync(viewModel.Documentation, viewModel.Type, null, cancellationToken);
 
             return View(viewModel);
         }
@@ -222,11 +227,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CheckVoucherNonTradeInvoicingViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
         {
+            string? documentationError = await _documentationService.ValidateAndNormalizeAsync(
+                viewModel.Type,
+                viewModel.Documentation,
+                null,
+                cancellationToken);
+            if (documentationError != null)
+            {
+                ModelState.AddModelError(string.Empty, documentationError);
+            }
 
             if (!ModelState.IsValid)
             {
                 viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
                 viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(cancellationToken);
+                await _documentationService.PrepareAsync(viewModel.Documentation, viewModel.Type, null, cancellationToken);
                 viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
                 TempData["warning"] = "The information provided was invalid.";
                 return View(viewModel);
@@ -309,6 +324,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     Status = nameof(CheckVoucherInvoiceStatus.ForPosting)
                 };
 
+                CheckVoucherDocumentationService.Apply(checkVoucherHeader, viewModel.Documentation);
+
                 await _unitOfWork.FilprideCheckVoucher.AddAsync(checkVoucherHeader, cancellationToken);
 
                 #endregion -- Saving the default entries --
@@ -371,6 +388,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
                 viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(cancellationToken);
+                await _documentationService.PrepareAsync(viewModel.Documentation, viewModel.Type, null, cancellationToken);
 
                 await transaction.RollbackAsync(cancellationToken);
                 TempData["error"] = ex.Message;
@@ -437,7 +455,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     Suppliers = suppliers,
                     MinDate = minDate,
                     SupplierId = existingHeaderModel.SupplierId,
+                    Type = existingHeaderModel.Type,
+                    Documentation = CheckVoucherDocumentationService.FromHeader(existingHeaderModel)
                 };
+
+                await _documentationService.PrepareAsync(
+                    model.Documentation,
+                    existingHeaderModel.Type,
+                    existingHeaderModel.DocumentedByCompanyName,
+                    cancellationToken);
 
                 return View(model);
             }
@@ -454,12 +480,42 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(CheckVoucherNonTradeInvoicingViewModel viewModel, IFormFile? file, CancellationToken cancellationToken)
         {
+            var existingDocumentation = await _dbContext.FilprideCheckVoucherHeaders
+                .AsNoTracking()
+                .Where(header => header.CheckVoucherHeaderId == viewModel.CVId)
+                .Select(header => new
+                {
+                    header.Type,
+                    header.DocumentedByCompanyName
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (existingDocumentation == null)
+            {
+                return NotFound();
+            }
+
+            viewModel.Type = existingDocumentation.Type;
+            string? documentationError = await _documentationService.ValidateAndNormalizeAsync(
+                existingDocumentation.Type,
+                viewModel.Documentation,
+                existingDocumentation.DocumentedByCompanyName,
+                cancellationToken);
+            if (documentationError != null)
+            {
+                ModelState.AddModelError(string.Empty, documentationError);
+            }
 
             if (!ModelState.IsValid)
             {
                 viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
                 viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(cancellationToken);
                 viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
+                await _documentationService.PrepareAsync(
+                    viewModel.Documentation,
+                    existingDocumentation.Type,
+                    existingDocumentation.DocumentedByCompanyName,
+                    cancellationToken);
                 TempData["warning"] = "The information provided was invalid.";
                 return View(viewModel);
             }
@@ -539,6 +595,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingHeaderModel.Payee = payee.SupplierName;
                 existingHeaderModel.Address = payee.SupplierAddress;
                 existingHeaderModel.Tin = payee.SupplierTin;
+                CheckVoucherDocumentationService.Apply(existingHeaderModel, viewModel.Documentation);
 
                 #endregion -- Update existing header --
 
@@ -621,6 +678,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
                 viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(cancellationToken);
+                await _documentationService.PrepareAsync(
+                    viewModel.Documentation,
+                    existingDocumentation.Type,
+                    existingDocumentation.DocumentedByCompanyName,
+                    cancellationToken);
 
                 await transaction.RollbackAsync(cancellationToken);
                 TempData["error"] = ex.Message;

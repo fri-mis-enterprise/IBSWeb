@@ -1,0 +1,22 @@
+@model CheckVoucherDocumentationViewModel
+
+<div class="check-voucher-documentation" data-document-type="@Model.DocumentType">
+    <div class="form-group mb-3 documented-by-other-company-group">
+        <label asp-for="IsDocumentedByOtherCompany" class="control-label"></label><span class="required">*</span>
+        <select asp-for="IsDocumentedByOtherCompany" class="form-select js-select2 documented-by-other-company" style="width:100%">
+            <option value="">Select an answer</option>
+            <option value="True">Yes</option>
+            <option value="False">No</option>
+        </select>
+        <span asp-validation-for="IsDocumentedByOtherCompany" class="text-danger"></span>
+    </div>
+    <div class="form-group mb-3 documenting-company-group">
+        <label asp-for="DocumentedByCompanyName" class="control-label"></label><span class="required">*</span>
+        <select asp-for="DocumentedByCompanyName" asp-items="Model.Companies" class="form-select js-select2 documenting-company" style="width:100%">
+            <option value="">Select company</option>
+        </select>
+        <span asp-validation-for="DocumentedByCompanyName" class="text-danger"></span>
+    </div>
+</div>
+
+<script src="~/js/checkVoucherDocumentation.js" asp-append-version="true"></script>

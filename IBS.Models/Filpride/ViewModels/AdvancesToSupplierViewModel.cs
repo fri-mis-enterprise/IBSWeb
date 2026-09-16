@@ -10,6 +10,8 @@ namespace IBS.Models.Filpride.ViewModels
 
         public string? DocumentType { get; set; }
 
+        public CheckVoucherDocumentationViewModel Documentation { get; set; } = new();
+
         [Display(Name = "Transaction Date")]
         public DateOnly TransactionDate { get; set; }
 

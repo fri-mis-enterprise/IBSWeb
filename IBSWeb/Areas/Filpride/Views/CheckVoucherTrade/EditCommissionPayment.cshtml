@@ -25,6 +25,7 @@
                 <div class="col-12 col-md-4">
                     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                     <input type="hidden" asp-for="CvId"/>
+                    <partial name="_CheckVoucherDocumentation" for="Documentation" />
                     <div class="form-group mb-3">
                         <label asp-for="SupplierId" class="control-label"></label><span class="required">*</span>
                         <select asp-for="SupplierId" asp-items="@Model.Suppliers" class="form-select js-select2 GetDRList supplier" style="width:100%">
