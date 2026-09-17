@@ -73,8 +73,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     salesInvoices = salesInvoices
                         .Where(s =>
                             s.SalesInvoiceNo!.ToLower().Contains(searchValue) ||
-                            s.Customer!.CustomerName.ToLower().Contains(searchValue) ||
-                            s.Customer.CustomerTerms.ToLower().Contains(searchValue) ||
+                            (s.CustomerOrderSlip != null
+                                ? s.CustomerOrderSlip.CustomerName
+                                : s.Customer!.CustomerName).ToLower().Contains(searchValue) ||
+                            s.Terms.ToLower().Contains(searchValue) ||
                             s.Product!.ProductName.ToLower().Contains(searchValue) ||
                             (hasTransactionDate && s.TransactionDate == transactionDate) ||
                             s.Amount.ToString().Contains(searchValue) ||
@@ -97,8 +99,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var columnName = parameters.Columns[orderColumn.Column].Name;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
-                    salesInvoices = salesInvoices
-                        .OrderBy($"{columnName} {sortDirection}");
+                    salesInvoices = columnName switch
+                    {
+                        "customerName" => sortDirection == "ascending"
+                            ? salesInvoices.OrderBy(si => si.CustomerOrderSlip != null
+                                ? si.CustomerOrderSlip.CustomerName
+                                : si.Customer!.CustomerName)
+                            : salesInvoices.OrderByDescending(si => si.CustomerOrderSlip != null
+                                ? si.CustomerOrderSlip.CustomerName
+                                : si.Customer!.CustomerName),
+                        "productName" => sortDirection == "ascending"
+                            ? salesInvoices.OrderBy(si => si.Product!.ProductName)
+                            : salesInvoices.OrderByDescending(si => si.Product!.ProductName),
+                        _ => salesInvoices.OrderBy($"{columnName} {sortDirection}")
+                    };
                 }
 
                 var totalFilteredRecords = await salesInvoices.CountAsync(cancellationToken);
@@ -112,7 +126,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         si.SalesInvoiceNo,
                         DeliveryReceiptNo = si.DeliveryReceipt != null ? si.DeliveryReceipt.DeliveryReceiptNo : "",
                         si.TransactionDate,
-                        si.Customer!.CustomerName,
+                        CustomerName = si.CustomerOrderSlip != null ? si.CustomerOrderSlip.CustomerName : si.Customer!.CustomerName,
                         si.Terms,
                         si.Product!.ProductName,
                         si.CreatedBy,
@@ -760,7 +774,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     salesInvoices = salesInvoices
                         .Where(s =>
                             s.SalesInvoiceNo!.ToLower().Contains(searchValue) ||
-                            s.Customer!.CustomerName.ToLower().Contains(searchValue) ||
+                            (s.CustomerOrderSlip != null
+                                ? s.CustomerOrderSlip.CustomerName
+                                : s.Customer!.CustomerName).ToLower().Contains(searchValue) ||
                             s.Terms.ToLower().Contains(searchValue) ||
                             s.TransactionDate.ToString(SD.Date_Format).ToLower().Contains(searchValue) ||
                             s.Amount.ToString().Contains(searchValue) ||
@@ -777,10 +793,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var columnName = parameters.Columns[orderColumn.Column].Name;
                     var sortDirection = orderColumn.Dir.ToLower() == "asc" ? "ascending" : "descending";
 
-                    salesInvoices = salesInvoices
-                        .AsQueryable()
-                        .OrderBy($"{columnName} {sortDirection}")
-                        .ToList();
+                    salesInvoices = columnName == "customerName"
+                        ? sortDirection == "ascending"
+                            ? salesInvoices.OrderBy(si => si.CustomerOrderSlip != null
+                                ? si.CustomerOrderSlip.CustomerName
+                                : si.Customer!.CustomerName).ToList()
+                            : salesInvoices.OrderByDescending(si => si.CustomerOrderSlip != null
+                                ? si.CustomerOrderSlip.CustomerName
+                                : si.Customer!.CustomerName).ToList()
+                        : salesInvoices
+                            .AsQueryable()
+                            .OrderBy($"{columnName} {sortDirection}")
+                            .ToList();
                 }
 
                 var totalRecords = salesInvoices.Count();
@@ -806,7 +830,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     {
                         x.SalesInvoiceId,
                         x.SalesInvoiceNo,
-                        customerName = x.Customer!.CustomerName,
+                        customerName = x.CustomerOrderSlip != null
+                            ? x.CustomerOrderSlip.CustomerName
+                            : x.Customer!.CustomerName,
                         x.TransactionDate,
                         x.Terms,
                         x.Amount,
