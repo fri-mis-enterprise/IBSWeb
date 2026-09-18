@@ -81,7 +81,7 @@
                         error: function() {
                             Swal.fire('Error', 'Something went wrong.', 'error');
                         }
-                    }); 
+                    });
                 }
             })
         }
@@ -128,7 +128,7 @@
                         error: function() {
                             Swal.fire('Error', 'Something went wrong.', 'error');
                         }
-                    });    
+                    });
                 }
             })
         }
@@ -137,7 +137,7 @@
         $(document).ready(function() {
             let filterValue = localStorage.getItem('filterDate') || "";
             $('#inputDate').val(filterValue);
-            
+
             let table = $('#paginatedTable').DataTable({
                 "processing": true, // Enable processing indicator
                 "serverSide": true, // Enable server-side processing
@@ -171,12 +171,12 @@
                 },
                 "drawCallback": function(settings) {
                     $('#paginatedTable').removeClass('table-loading');
-                    
+
                     // Initialize all tooltips
                     $('[data-bs-toggle="tooltip"]').tooltip();
                 },
                 "columns": [
-                    { 
+                    {
                         "data": "salesInvoiceNo",
                         "name": "salesInvoiceNo"
                     },
@@ -196,17 +196,17 @@
                             });
                         }
                     },
-                    { 
+                    {
                         "data": "customerName",
-                        "name": "customer.customerName"
+                        "name": "customerName"
                     },
-                    { 
+                    {
                         "data": "terms",
                         "name": "terms"
                     },
-                    { 
+                    {
                         "data": "productName",
-                        "name": "product.productName",
+                        "name": "productName",
                     },
                     {
                         "data": "amount",
@@ -216,7 +216,7 @@
                             return `<span class="d-block fw-medium">${amount}</span>`;
                         }
                     },
-                    { 
+                    {
                         "data": "createdBy",
                         "name": "createBy"
                     },
@@ -244,9 +244,9 @@
                         "orderable": false,
                         "render": function (data, type, row) {
                             return `<div class="dropdown actions-dropdown" style="${row.voidedBy !== null || row.canceledBy !== null ? 'display:none;' : ''}">
-                                                <button class="btn btn-light btn-sm dropdown-toggle w-100" 
-                                                        type="button" 
-                                                        data-bs-toggle="dropdown" 
+                                                <button class="btn btn-light btn-sm dropdown-toggle w-100"
+                                                        type="button"
+                                                        data-bs-toggle="dropdown"
                                                         aria-expanded="false">
                                                     <i class="bi bi-three-dots"></i>
                                                 </button>
