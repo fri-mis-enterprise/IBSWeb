@@ -1638,6 +1638,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             viewModel.MinDate = await _unitOfWork
                 .GetMinimumPeriodBasedOnThePostedPeriods(Module.JournalVoucher, cancellationToken);
 
+            viewModel.AccruedAccounts = await GetAccruedAccountsAsync(cancellationToken);
+
             if (!ModelState.IsValid)
             {
                 TempData["warning"] = "The information you submitted is not valid!";
@@ -1689,6 +1691,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                        ?? throw new NullReferenceException($"Account number {acctNo.AccountNo} not found");
 
                     var isAccrualAccount = accountTitle.AccountName.Contains("Accrued");
+
+                    if (isAccrualAccount.Equals(false))
+                    {
+                        throw new ArgumentException("The selected Accrual Account is empty");
+                    }
 
                     jvDetails.Add(
                         new FilprideJournalVoucherDetail
@@ -1838,6 +1845,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             viewModel.MinDate = await _unitOfWork
                 .GetMinimumPeriodBasedOnThePostedPeriods(Module.JournalVoucher, cancellationToken);
 
+            viewModel.AccruedAccounts = await GetAccruedAccountsAsync(cancellationToken);
+
             if (!ModelState.IsValid)
             {
                 TempData["warning"] = "The information provided was invalid.";
@@ -1894,6 +1903,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                        ?? throw new NullReferenceException($"Account number {acctNo.AccountNo} not found");
 
                     var isAccrualAccount = accountTitle.AccountName.Contains("Accrued");
+
+                    if (isAccrualAccount.Equals(false))
+                    {
+                        throw new ArgumentException("The selected Accrual Account is empty");
+                    }
 
                     jvDetails.Add(
                         new FilprideJournalVoucherDetail
