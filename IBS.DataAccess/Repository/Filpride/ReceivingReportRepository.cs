@@ -423,6 +423,11 @@ namespace IBS.DataAccess.Repository.Filpride
                 throw new ArgumentException("Debit and Credit is not equal, check your entries.");
             }
 
+            ledgers.SetCounterparty(
+                CounterpartyType.Supplier,
+                model.PurchaseOrder.SupplierId,
+                model.PurchaseOrder.SupplierName);
+
             await _db.AddRangeAsync(ledgers, cancellationToken);
 
             #endregion --General Ledger Recording
@@ -729,6 +734,11 @@ namespace IBS.DataAccess.Repository.Filpride
             {
                 throw new ArgumentException("Debit and Credit is not equal, check your entries.");
             }
+
+            ledgers.SetCounterparty(
+                CounterpartyType.Supplier,
+                model.PurchaseOrder.SupplierId,
+                model.PurchaseOrder.SupplierName);
 
             await _db.AddRangeAsync(ledgers, cancellationToken);
 
