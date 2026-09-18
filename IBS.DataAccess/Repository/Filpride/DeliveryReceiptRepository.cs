@@ -392,8 +392,6 @@ namespace IBS.DataAccess.Repository.Filpride
                         ? (decimal)customerOrderSlip.Freight!
                         : 0m;
 
-                    var salesEntryStart = ledgers.Count;
-
                     if (arTradeCwtAmount > 0)
                     {
                         ledgers.Add(new FilprideGeneralLedgerBook
@@ -527,15 +525,6 @@ namespace IBS.DataAccess.Repository.Filpride
                         CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
                         ModuleType = nameof(ModuleType.Sales)
                     });
-
-                    ledgers
-                        .Skip(salesEntryStart)
-                        .SetCounterparty(
-                            CounterpartyType.Customer,
-                            customerOrderSlip.CustomerId,
-                            customerOrderSlip.CustomerName);
-
-                    var haulingEntryStart = ledgers.Count;
 
                     if (lineFreightGrossAmount > 0)
                     {
@@ -677,17 +666,6 @@ namespace IBS.DataAccess.Repository.Filpride
                         }
                     }
 
-                    if (deliveryReceipt.HaulerId.HasValue)
-                    {
-                        ledgers
-                            .Skip(haulingEntryStart)
-                            .SetCounterparty(
-                                CounterpartyType.Supplier,
-                                deliveryReceipt.HaulerId,
-                                deliveryReceipt.HaulerName);
-                    }
-
-                    var commissionEntryStart = ledgers.Count;
                     var commissionGrossAmount = DecimalRoundingHelper.ComputeAmountFromUnitPrice(detail.Quantity, customerOrderSlip.CommissionRate);
                     if (commissionGrossAmount > 0 && customerOrderSlip.CommissioneeId.HasValue && customerOrderSlip.Commissionee != null)
                     {
@@ -754,16 +732,12 @@ namespace IBS.DataAccess.Repository.Filpride
                         }
                     }
 
-                    if (customerOrderSlip.CommissioneeId.HasValue)
-                    {
-                        ledgers
-                            .Skip(commissionEntryStart)
-                            .SetCounterparty(
-                                CounterpartyType.Supplier,
-                                customerOrderSlip.CommissioneeId,
-                                customerOrderSlip.CommissioneeName);
-                    }
                 }
+
+                ledgers.SetCounterparty(
+                    CounterpartyType.Customer,
+                    deliveryReceipt.CustomerId,
+                    deliveryReceipt.CustomerOrderSlip!.CustomerName);
 
                 if (!IsJournalEntriesBalanced(ledgers))
                 {
@@ -1360,13 +1334,10 @@ namespace IBS.DataAccess.Repository.Filpride
                     throw new ArgumentException("Debit and Credit is not equal, check your entries.");
                 }
 
-                if (deliveryReceipt.CommissioneeId.HasValue)
-                {
-                    ledgers.SetCounterparty(
-                        CounterpartyType.Supplier,
-                        deliveryReceipt.CommissioneeId,
-                        deliveryReceipt.CustomerOrderSlip.CommissioneeName);
-                }
+                ledgers.SetCounterparty(
+                    CounterpartyType.Customer,
+                    deliveryReceipt.CustomerId,
+                    deliveryReceipt.CustomerOrderSlip.CustomerName);
 
                 await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
                 await unitOfWork.LockedPeriodAdjustment.AddIfPeriodPostedAsync(new LockedPeriodAdjustmentRequestDto
@@ -1518,13 +1489,10 @@ namespace IBS.DataAccess.Repository.Filpride
                     throw new ArgumentException("Debit and Credit is not equal, check your entries.");
                 }
 
-                if (deliveryReceipt.HaulerId.HasValue)
-                {
-                    ledgers.SetCounterparty(
-                        CounterpartyType.Supplier,
-                        deliveryReceipt.HaulerId,
-                        deliveryReceipt.HaulerName);
-                }
+                ledgers.SetCounterparty(
+                    CounterpartyType.Customer,
+                    deliveryReceipt.CustomerId,
+                    deliveryReceipt.CustomerOrderSlip.CustomerName);
 
                 await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
                 await unitOfWork.LockedPeriodAdjustment.AddIfPeriodPostedAsync(new LockedPeriodAdjustmentRequestDto

@@ -708,9 +708,9 @@ namespace IBS.DataAccess.Repository.Filpride
             }
 
             ledgers.SetCounterparty(
-                CounterpartyType.Supplier,
-                deliveryReceipt.CommissioneeId,
-                deliveryReceipt.CustomerOrderSlip.CommissioneeName);
+                CounterpartyType.Customer,
+                deliveryReceipt.CustomerId,
+                deliveryReceipt.CustomerOrderSlip.CustomerName);
 
             await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
             await _db.SaveChangesAsync(cancellationToken);

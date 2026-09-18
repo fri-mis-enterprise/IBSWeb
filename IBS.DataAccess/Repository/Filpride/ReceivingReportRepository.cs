@@ -39,7 +39,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .OrderByDescending(x => x.ReceivingReportNo!.Length)
                 .ThenByDescending(x => x.ReceivingReportNo)
                 .FirstOrDefaultAsync(x =>
-                    
+
                     x.Type == nameof(DocumentType.Documented) &&
                     !x.ReceivingReportNo!.Contains("RRBEG"),
                     cancellationToken);
@@ -64,7 +64,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .OrderByDescending(x => x.ReceivingReportNo!.Length)
                 .ThenByDescending(x => x.ReceivingReportNo)
                 .FirstOrDefaultAsync(x =>
-                        
+
                         x.Type == nameof(DocumentType.Undocumented) &&
                         !x.ReceivingReportNo!.Contains("RRBEG"),
                     cancellationToken);
@@ -690,8 +690,14 @@ namespace IBS.DataAccess.Repository.Filpride
                 });
             }
 
+            ledgers.SetCounterparty(
+                CounterpartyType.Supplier,
+                model.PurchaseOrder.SupplierId,
+                model.PurchaseOrder.SupplierName);
+
             if (model.DeliveryReceipt?.DeliveredDate != null)
             {
+                var salesLedgers = new List<FilprideGeneralLedgerBook>();
                 var deliveredDate = model.DeliveryReceipt.DeliveredDate.Value;
                 var isDeliveredPeriodPosted = await unitOfWork
                     .IsPeriodPostedAsync(Module.DeliveryReceipt, deliveredDate, cancellationToken);
@@ -699,7 +705,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     ? firstDayOfMonth
                     : deliveredDate;
 
-                ledgers.Add(new FilprideGeneralLedgerBook
+                salesLedgers.Add(new FilprideGeneralLedgerBook
                 {
                     Date = cogsPostingDate,
                     Reference = model.DeliveryReceipt.DeliveryReceiptNo,
@@ -714,7 +720,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     ModuleType = nameof(ModuleType.Sales)
                 });
 
-                ledgers.Add(new FilprideGeneralLedgerBook
+                salesLedgers.Add(new FilprideGeneralLedgerBook
                 {
                     Date = cogsPostingDate,
                     Reference = model.DeliveryReceipt.DeliveryReceiptNo,
@@ -728,17 +734,19 @@ namespace IBS.DataAccess.Repository.Filpride
                     CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
                     ModuleType = nameof(ModuleType.Sales)
                 });
+
+                salesLedgers.SetCounterparty(
+                    CounterpartyType.Customer,
+                    model.DeliveryReceipt.CustomerId,
+                    model.DeliveryReceipt.CustomerOrderSlip!.CustomerName);
+
+                ledgers.AddRange(salesLedgers);
             }
 
             if (!IsJournalEntriesBalanced(ledgers))
             {
                 throw new ArgumentException("Debit and Credit is not equal, check your entries.");
             }
-
-            ledgers.SetCounterparty(
-                CounterpartyType.Supplier,
-                model.PurchaseOrder.SupplierId,
-                model.PurchaseOrder.SupplierName);
 
             await _db.AddRangeAsync(ledgers, cancellationToken);
 
