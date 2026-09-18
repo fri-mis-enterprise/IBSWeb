@@ -93,6 +93,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             return await _dbContext.FilprideChartOfAccounts
                 .Where(coa => coa.AccountName.Contains("Accrued") && !coa.HasChildren)
+                .OrderBy(x => x.AccountNumber)
                 .Select(coa => new SelectListItem
                 {
                     Value = coa.AccountNumber,
@@ -1692,11 +1693,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     var isAccrualAccount = accountTitle.AccountName.Contains("Accrued");
 
-                    if (isAccrualAccount.Equals(false))
-                    {
-                        throw new ArgumentException("The selected Accrual Account is empty");
-                    }
-
                     jvDetails.Add(
                         new FilprideJournalVoucherDetail
                         {
@@ -1903,11 +1899,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                        ?? throw new NullReferenceException($"Account number {acctNo.AccountNo} not found");
 
                     var isAccrualAccount = accountTitle.AccountName.Contains("Accrued");
-
-                    if (isAccrualAccount.Equals(false))
-                    {
-                        throw new ArgumentException("The selected Accrual Account is empty");
-                    }
 
                     jvDetails.Add(
                         new FilprideJournalVoucherDetail
