@@ -63,6 +63,7 @@
                     <div class="form-group mb-3">
                         <label class="control-label">Accrued Account</label><span class="required">*</span>
                         <select asp-for="SelectedAccruedAccount" asp-items="@Model.AccruedAccounts" class="form-select js-select2 selectedAccruedAccount" style="width:100%" required>
+                            <option></option>
                         </select>
                         <span asp-validation-for="SelectedAccruedAccount" class="text-danger"></span>
                     </div>
@@ -311,13 +312,6 @@
             });
         }
 
-        $(document).ready(function (){
-            $('#SelectedAccruedAccount').select2({
-                allowClear: false,
-                width: 'resolve',
-                theme: 'classic'
-            });
-        });
         $(document).on("change", ".selectedAccruedAccount", function () {
             const selectedCreditOption = $("select[name='SelectedAccruedAccount'] option:selected");
             let creditAccountNo = selectedCreditOption.val();
