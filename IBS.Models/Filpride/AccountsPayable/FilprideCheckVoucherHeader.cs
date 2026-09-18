@@ -141,6 +141,11 @@ namespace IBS.Models.Filpride.AccountsPayable
         [StringLength(13)]
         public string? Type { get; set; }
 
+        public bool? IsDocumentedByOtherCompany { get; set; }
+
+        [StringLength(50)]
+        public string? DocumentedByCompanyName { get; set; }
+
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = false)]
         [Column(TypeName = "numeric(18,4)")]
         public decimal InvoiceAmount { get; set; }

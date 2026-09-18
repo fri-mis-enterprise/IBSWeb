@@ -42,6 +42,7 @@
                     <span asp-validation-for="SupplierId" class="text-danger"></span>
                 </div>
                 <input asp-for="CVId" type="hidden" />
+                <partial name="_CheckVoucherDocumentation" for="Documentation" />
                 <div class="form-floating mb-3">
                     <input asp-for="SupplierAddress" type="text" class="form-control" placeholder="Optional" readonly />
                     <label asp-for="SupplierAddress" class="control-label ms-2"></label>

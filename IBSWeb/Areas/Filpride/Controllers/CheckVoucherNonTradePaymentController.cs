@@ -34,12 +34,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private readonly ISubAccountResolver _subAccountResolver;
 
+        private readonly CheckVoucherDocumentationService _documentationService;
+
         public CheckVoucherNonTradePaymentController(IUnitOfWork unitOfWork,
             UserManager<ApplicationUser> userManager,
             ApplicationDbContext dbContext,
             ICloudStorageService cloudStorageService,
             ILogger<CheckVoucherNonTradePaymentController> logger,
-            ISubAccountResolver subAccountResolver)
+            ISubAccountResolver subAccountResolver,
+            CheckVoucherDocumentationService documentationService)
         {
             _unitOfWork = unitOfWork;
             _userManager = userManager;
@@ -47,6 +50,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             _cloudStorageService = cloudStorageService;
             _logger = logger;
             _subAccountResolver = subAccountResolver;
+            _documentationService = documentationService;
         }
 
         private string GetUserFullName()
@@ -75,6 +79,69 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     Value = s.SupplierId.ToString(),
                     Text = $"{s.SupplierCode} {s.SupplierName} ({s.Category})"
+                })
+                .ToList();
+        }
+
+        private async Task PopulatePaymentViewModelAsync(
+            CheckVoucherNonTradePaymentViewModel viewModel,
+            CancellationToken cancellationToken)
+        {
+            viewModel.ChartOfAccounts = await _unitOfWork.GetChartOfAccountListAsyncByNo(cancellationToken);
+            viewModel.Banks = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
+            viewModel.Suppliers = await _unitOfWork.GetFilprideNonTradeSupplierListAsyncById(cancellationToken);
+            viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
+            viewModel.CheckVouchers = viewModel.MultipleSupplierId.HasValue
+                ? await GetAvailablePaymentCheckVouchersAsync(
+                    viewModel.MultipleSupplierId.Value,
+                    viewModel.CvId == 0 ? null : viewModel.CvId,
+                    cancellationToken)
+                : [];
+        }
+
+        private async Task<List<SelectListItem>> GetAvailablePaymentCheckVouchersAsync(
+            int supplierId,
+            int? paymentId,
+            CancellationToken cancellationToken)
+        {
+            var availableCVs = await _dbContext.FilprideCheckVoucherDetails
+                .Where(cvd => cvd.SubAccountId == supplierId &&
+                              cvd.CheckVoucherHeader!.PostedBy != null &&
+                              cvd.CheckVoucherHeader.CvType == nameof(CVType.Invoicing) &&
+                              cvd.Amount > cvd.AmountPaid)
+                .Select(cvd => new
+                {
+                    Id = cvd.CheckVoucherHeaderId,
+                    CVNumber = cvd.CheckVoucherHeader!.CheckVoucherHeaderNo
+                })
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            if (paymentId.HasValue)
+            {
+                var existingPaymentCVs = await _dbContext.FilprideMultipleCheckVoucherPayments
+                    .Where(payment => payment.CheckVoucherHeaderPaymentId == paymentId.Value)
+                    .Select(payment => new
+                    {
+                        Id = payment.CheckVoucherHeaderInvoiceId,
+                        CVNumber = payment.CheckVoucherHeaderInvoice!.CheckVoucherHeaderNo
+                    })
+                    .ToListAsync(cancellationToken);
+
+                foreach (var cv in existingPaymentCVs)
+                {
+                    if (availableCVs.All(availableCV => availableCV.Id != cv.Id))
+                    {
+                        availableCVs.Add(cv);
+                    }
+                }
+            }
+
+            return availableCVs
+                .Select(cv => new SelectListItem
+                {
+                    Value = cv.Id.ToString(),
+                    Text = cv.CVNumber
                 })
                 .ToList();
         }
@@ -771,6 +838,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .OrderBy(cv => cv.CheckVoucherHeaderId)
                     .ToList();
 
+                var documentationClassifications = invoicingVoucher
+                    .Select(invoice => new
+                    {
+                        invoice.Type,
+                        invoice.IsDocumentedByOtherCompany,
+                        invoice.DocumentedByCompanyName
+                    })
+                    .Distinct()
+                    .ToList();
+
+                if (documentationClassifications.Count != 1)
+                {
+                    ModelState.AddModelError(
+                        nameof(viewModel.MultipleCvId),
+                        "Selected invoice vouchers must have the same document type and documenting-company classification.");
+                    TempData["warning"] = "The selected invoice vouchers have different documentation classifications.";
+                    await PopulatePaymentViewModelAsync(viewModel, cancellationToken);
+                    return View(viewModel);
+                }
+
+                var documentationClassification = documentationClassifications[0];
+
                 foreach (var invoice in invoicingVoucher)
                 {
                     var cv = viewModel.PaymentDetails.FirstOrDefault(c => c.CVId == invoice.CheckVoucherHeaderId);
@@ -844,6 +933,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingHeaderModel.SupplierName = supplier.SupplierName;
                 existingHeaderModel.BankAccountName = bank.AccountName;
                 existingHeaderModel.BankAccountNumber = bank.AccountNo;
+                existingHeaderModel.Type = documentationClassification.Type;
+                existingHeaderModel.IsDocumentedByOtherCompany = documentationClassification.IsDocumentedByOtherCompany;
+                existingHeaderModel.DocumentedByCompanyName = documentationClassification.DocumentedByCompanyName;
 
                 await _unitOfWork.SaveAsync(cancellationToken);
 
@@ -1128,7 +1220,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
             viewModel.Banks = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
-
             return View(viewModel);
         }
 
@@ -1223,6 +1314,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .OrderBy(cv => cv.CheckVoucherHeaderId)
                     .ToList();
 
+                var documentationClassifications = invoicingVoucher
+                    .Select(invoice => new
+                    {
+                        invoice.Type,
+                        invoice.IsDocumentedByOtherCompany,
+                        invoice.DocumentedByCompanyName
+                    })
+                    .Distinct()
+                    .ToList();
+
+                if (documentationClassifications.Count != 1)
+                {
+                    ModelState.AddModelError(
+                        nameof(viewModel.MultipleCvId),
+                        "Selected invoice vouchers must have the same document type and documenting-company classification.");
+                    TempData["warning"] = "The selected invoice vouchers have different documentation classifications.";
+                    await PopulatePaymentViewModelAsync(viewModel, cancellationToken);
+                    return View(viewModel);
+                }
+
+                var documentationClassification = documentationClassifications[0];
+
                 foreach (var invoice in invoicingVoucher)
                 {
                     var cv = viewModel.PaymentDetails.FirstOrDefault(c => c.CVId == invoice.CheckVoucherHeaderId);
@@ -1280,7 +1393,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 FilprideCheckVoucherHeader checkVoucherHeader = new()
                 {
-                    CheckVoucherHeaderNo = await _unitOfWork.FilprideCheckVoucher.GenerateCodeMultiplePaymentAsync(invoicingVoucher.Select(i => i.Type).FirstOrDefault() ?? throw new InvalidOperationException(), cancellationToken),
+                    CheckVoucherHeaderNo = await _unitOfWork.FilprideCheckVoucher.GenerateCodeMultiplePaymentAsync(documentationClassification.Type ?? throw new InvalidOperationException(), cancellationToken),
                     Date = viewModel.TransactionDate,
                     PONo = invoicingVoucher.Select(i => i.PONo).FirstOrDefault(),
                     SINo = invoicingVoucher.Select(i => i.SINo).FirstOrDefault(),
@@ -1298,13 +1411,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     CheckNo = viewModel.CheckNo,
                     CheckDate = viewModel.CheckDate,
                     CheckAmount = viewModel.Total,
-                    Type = invoicingVoucher.Select(i => i.Type).First(),
+                    Type = documentationClassification.Type,
                     OldCvNo = viewModel.OldCVNo,
                     SupplierName = supplier.SupplierName,
                     BankAccountName = bank.AccountName,
                     BankAccountNumber = bank.AccountNo,
                     TaxType = string.Empty,
                     VatType = string.Empty,
+                    IsDocumentedByOtherCompany = documentationClassification.IsDocumentedByOtherCompany,
+                    DocumentedByCompanyName = documentationClassification.DocumentedByCompanyName,
                 };
 
                 await _unitOfWork.FilprideCheckVoucher.AddAsync(checkVoucherHeader, cancellationToken);
@@ -1486,61 +1601,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             try
             {
-
-                var availableCVs = await _dbContext.FilprideCheckVoucherDetails
-                    .Include(cvd => cvd.CheckVoucherHeader)
-                    .Where(cvd => cvd.SubAccountId == supplierId &&
-                                cvd.CheckVoucherHeader!.PostedBy != null &&
-                                cvd.CheckVoucherHeader.CvType == nameof(CVType.Invoicing) &&
-
-                                cvd.Amount > cvd.AmountPaid)  // Only show if this supplier's portion is unpaid
-                    .Select(cvd => new
-                    {
-                        Id = cvd.CheckVoucherHeaderId,
-                        CVNumber = cvd.CheckVoucherHeader!.CheckVoucherHeaderNo,
-                        RemainingBalance = cvd.Amount - cvd.AmountPaid
-                    })
-                    .Distinct()
-                    .Where(cv => cv.RemainingBalance > 0)  // Only CVs with remaining balance
-                    .Select(cv => new
-                    {
-                        cv.Id,
-                        cv.CVNumber
-                    })
-                    .Distinct()
-                    .ToListAsync(cancellationToken);
-
-                if (paymentId != null)
-                {
-                    var existingPaymentCVs = await _dbContext.FilprideMultipleCheckVoucherPayments
-                        .Where(m => m.CheckVoucherHeaderPaymentId == paymentId)
-                        .Include(m => m.CheckVoucherHeaderInvoice)
-                        .Select(m => new
-                        {
-                            Id = m.CheckVoucherHeaderInvoiceId,
-                            CVNumber = m.CheckVoucherHeaderInvoice!.CheckVoucherHeaderNo
-                        })
-                        .ToListAsync(cancellationToken);
-
-                    foreach (var cv in existingPaymentCVs)
-                    {
-                        if (!availableCVs.Any(a => a.Id == cv.Id))
-                        {
-                            availableCVs.Add(new
-                            {
-                                Id = cv.Id,
-                                CVNumber = cv.CVNumber
-                            });
-                        }
-                    }
-                }
+                var availableCVs = await GetAvailablePaymentCheckVouchersAsync(
+                    supplierId,
+                    paymentId,
+                    cancellationToken);
 
                 if (!availableCVs.Any())
                 {
                     return Json(null);
                 }
 
-                return Json(availableCVs);
+                return Json(availableCVs.Select(cv => new
+                {
+                    Id = int.Parse(cv.Value!),
+                    CVNumber = cv.Text
+                }));
             }
             catch (Exception ex)
             {
@@ -1700,6 +1775,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             viewModel.Banks = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
+            await _documentationService.PrepareAsync(viewModel.Documentation, viewModel.DocumentType, null, cancellationToken);
 
             return View(viewModel);
         }
@@ -1709,6 +1785,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateAdvancesToEmployee(AdvancesToEmployeeViewModel viewModel, CancellationToken cancellationToken)
         {
+            string? documentationError = await _documentationService.ValidateAndNormalizeAsync(
+                viewModel.DocumentType,
+                viewModel.Documentation,
+                null,
+                cancellationToken);
+            if (documentationError != null)
+            {
+                ModelState.AddModelError(string.Empty, documentationError);
+            }
+            await _documentationService.PrepareAsync(viewModel.Documentation, viewModel.DocumentType, null, cancellationToken);
 
             if (!ModelState.IsValid)
             {
@@ -1781,6 +1867,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     TaxType = string.Empty,
                     VatType = string.Empty
                 };
+
+                CheckVoucherDocumentationService.Apply(checkVoucherHeader, viewModel.Documentation);
 
                 await _unitOfWork.FilprideCheckVoucher.AddAsync(checkVoucherHeader, cancellationToken);
 
@@ -1858,6 +1946,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 viewModel.Suppliers = await _unitOfWork.GetFilprideEmployeeSupplierListAsyncById(cancellationToken);
 
                 viewModel.Banks = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
+                await _documentationService.PrepareAsync(viewModel.Documentation, viewModel.DocumentType, null, cancellationToken);
 
                 return View(viewModel);
             }
@@ -1909,8 +1998,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     CheckNo = existingHeaderModel.CheckNo!,
                     CheckDate = existingHeaderModel.CheckDate ?? default,
                     Particulars = existingHeaderModel.Particulars!,
+                    DocumentType = existingHeaderModel.Type,
+                    Documentation = CheckVoucherDocumentationService.FromHeader(existingHeaderModel),
                     MinDate = minDate
                 };
+
+                await _documentationService.PrepareAsync(
+                    model.Documentation,
+                    existingHeaderModel.Type,
+                    existingHeaderModel.DocumentedByCompanyName,
+                    cancellationToken);
 
                 return View(model);
             }
@@ -1928,6 +2025,29 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditAdvancesToEmployee(AdvancesToEmployeeViewModel viewModel, CancellationToken cancellationToken)
         {
+            var existingHeaderModel = await _unitOfWork.FilprideCheckVoucher
+                .GetAsync(cv => cv.CheckVoucherHeaderId == viewModel.CvId, cancellationToken);
+
+            if (existingHeaderModel == null)
+            {
+                return NotFound();
+            }
+
+            viewModel.DocumentType = existingHeaderModel.Type;
+            string? documentationError = await _documentationService.ValidateAndNormalizeAsync(
+                existingHeaderModel.Type,
+                viewModel.Documentation,
+                existingHeaderModel.DocumentedByCompanyName,
+                cancellationToken);
+            if (documentationError != null)
+            {
+                ModelState.AddModelError(string.Empty, documentationError);
+            }
+            await _documentationService.PrepareAsync(
+                viewModel.Documentation,
+                existingHeaderModel.Type,
+                existingHeaderModel.DocumentedByCompanyName,
+                cancellationToken);
 
             if (!ModelState.IsValid)
             {
@@ -1942,14 +2062,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var existingHeaderModel = await _unitOfWork.FilprideCheckVoucher
-                    .GetAsync(cv => cv.CheckVoucherHeaderId == viewModel.CvId, cancellationToken);
-
-                if (existingHeaderModel == null)
-                {
-                    return NotFound();
-                }
-
                 var supplier = await _unitOfWork.FilprideSupplier
                     .GetAsync(s => s.SupplierId == viewModel.SupplierId && s.Category == "Employee",
                         cancellationToken);
@@ -1997,6 +2109,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingHeaderModel.SupplierName = supplier.SupplierName;
                 existingHeaderModel.BankAccountName = bank.AccountName;
                 existingHeaderModel.BankAccountNumber = bank.AccountNo;
+                CheckVoucherDocumentationService.Apply(existingHeaderModel, viewModel.Documentation);
 
                 await _unitOfWork.SaveAsync(cancellationToken);
 
@@ -2112,6 +2225,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             viewModel.Banks = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
+            await _documentationService.PrepareAsync(viewModel.Documentation, viewModel.DocumentType, null, cancellationToken);
 
             return View(viewModel);
         }
@@ -2121,6 +2235,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateAdvancesToSupplier(AdvancesToSupplierViewModel viewModel, CancellationToken cancellationToken)
         {
+            string? documentationError = await _documentationService.ValidateAndNormalizeAsync(
+                viewModel.DocumentType,
+                viewModel.Documentation,
+                null,
+                cancellationToken);
+            if (documentationError != null)
+            {
+                ModelState.AddModelError(string.Empty, documentationError);
+            }
+            await _documentationService.PrepareAsync(viewModel.Documentation, viewModel.DocumentType, null, cancellationToken);
 
             if (!ModelState.IsValid)
             {
@@ -2204,6 +2328,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     TaxType = supplier.TaxType,
                     VatType = supplier.VatType,
                 };
+
+                CheckVoucherDocumentationService.Apply(checkVoucherHeader, viewModel.Documentation);
 
                 await _unitOfWork.FilprideCheckVoucher.AddAsync(checkVoucherHeader, cancellationToken);
 
@@ -2309,6 +2435,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 viewModel.Suppliers = await GetSupplierAdvanceSupplierListAsync(cancellationToken);
 
                 viewModel.Banks = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
+                await _documentationService.PrepareAsync(viewModel.Documentation, viewModel.DocumentType, null, cancellationToken);
 
                 return View(viewModel);
             }
@@ -2360,8 +2487,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     CheckNo = existingHeaderModel.CheckNo!,
                     CheckDate = existingHeaderModel.CheckDate ?? default,
                     Particulars = existingHeaderModel.Particulars!,
+                    DocumentType = existingHeaderModel.Type,
+                    Documentation = CheckVoucherDocumentationService.FromHeader(existingHeaderModel),
                     MinDate = minDate
                 };
+
+                await _documentationService.PrepareAsync(
+                    model.Documentation,
+                    existingHeaderModel.Type,
+                    existingHeaderModel.DocumentedByCompanyName,
+                    cancellationToken);
 
                 return View(model);
             }
@@ -2379,6 +2514,29 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditAdvancesToSupplier(AdvancesToSupplierViewModel viewModel, CancellationToken cancellationToken)
         {
+            var existingHeaderModel = await _unitOfWork.FilprideCheckVoucher
+                .GetAsync(cv => cv.CheckVoucherHeaderId == viewModel.CvId, cancellationToken);
+
+            if (existingHeaderModel == null)
+            {
+                return NotFound();
+            }
+
+            viewModel.DocumentType = existingHeaderModel.Type;
+            string? documentationError = await _documentationService.ValidateAndNormalizeAsync(
+                existingHeaderModel.Type,
+                viewModel.Documentation,
+                existingHeaderModel.DocumentedByCompanyName,
+                cancellationToken);
+            if (documentationError != null)
+            {
+                ModelState.AddModelError(string.Empty, documentationError);
+            }
+            await _documentationService.PrepareAsync(
+                viewModel.Documentation,
+                existingHeaderModel.Type,
+                existingHeaderModel.DocumentedByCompanyName,
+                cancellationToken);
 
             if (!ModelState.IsValid)
             {
@@ -2393,14 +2551,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var existingHeaderModel = await _unitOfWork.FilprideCheckVoucher
-                    .GetAsync(cv => cv.CheckVoucherHeaderId == viewModel.CvId, cancellationToken);
-
-                if (existingHeaderModel == null)
-                {
-                    return NotFound();
-                }
-
                 #region Update Record
 
                 #region Header
@@ -2458,6 +2608,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingHeaderModel.SupplierName = supplier.SupplierName;
                 existingHeaderModel.BankAccountName = bank.AccountName;
                 existingHeaderModel.BankAccountNumber = bank.AccountNo;
+                CheckVoucherDocumentationService.Apply(existingHeaderModel, viewModel.Documentation);
 
                 await _unitOfWork.SaveAsync(cancellationToken);
 

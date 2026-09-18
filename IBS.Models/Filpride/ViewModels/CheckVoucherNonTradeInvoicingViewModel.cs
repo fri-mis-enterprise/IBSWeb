@@ -56,6 +56,8 @@ namespace IBS.Models.Filpride.ViewModels
 
         public string? Type { get; set; }
 
+        public CheckVoucherDocumentationViewModel Documentation { get; set; } = new();
+
         public int?[]? MultipleSupplierId { get; set; }
 
         public string?[]? SupplierNames { get; set; }
