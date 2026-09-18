@@ -215,7 +215,7 @@
                                                readonly />
                                     </td>
                                     <td>
-                                        @if(entry.AccountNo != "201020300"){
+                                        @if(!entry.AccountTitle.Contains("Accrued")){
                                         <button type="button"
                                                 class="btn btn-danger btn-sm"
                                                 onclick="removeRow(this)">Remove</button>

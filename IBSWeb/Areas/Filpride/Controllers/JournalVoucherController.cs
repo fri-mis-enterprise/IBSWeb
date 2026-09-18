@@ -89,6 +89,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
             return claims.FirstOrDefault(c => c.Type == FilterTypeClaimType)?.Value;
         }
 
+        private async Task<List<SelectListItem>> GetAccruedAccountsAsync(CancellationToken cancellationToken)
+        {
+            return await _dbContext.FilprideChartOfAccounts
+                .Where(coa => coa.AccountName.Contains("Accrued") && !coa.HasChildren)
+                .Select(coa => new SelectListItem
+                {
+                    Value = coa.AccountNumber,
+                    Text = $"{coa.AccountNumber} - {coa.AccountName}"
+                })
+                .ToListAsync(cancellationToken);
+        }
+
         private async Task<string?> GetSupplierEmployeeNumberAsync(int supplierId, CancellationToken cancellationToken)
         {
             return await _dbContext.FilprideSuppliers
@@ -1599,14 +1611,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             viewModel.MinDate = await _unitOfWork
                 .GetMinimumPeriodBasedOnThePostedPeriods(Module.JournalVoucher, cancellationToken);
 
-            viewModel.AccruedAccounts = await _dbContext.FilprideChartOfAccounts
-                .Where(coa => coa.AccountName.Contains("Accrued") && !coa.HasChildren)
-                .Select(coa => new SelectListItem
-                {
-                    Value = coa.AccountNumber,
-                    Text = $"{coa.AccountNumber} - {coa.AccountName}"
-                })
-                .ToListAsync(cancellationToken);
+            viewModel.AccruedAccounts = await GetAccruedAccountsAsync(cancellationToken);
 
             return View(viewModel);
         }
@@ -1683,7 +1688,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                            .GetAsync(coa => coa.AccountNumber == acctNo.AccountNo, cancellationToken)
                                        ?? throw new NullReferenceException($"Account number {acctNo.AccountNo} not found");
 
-                    var isAccrualAccount = accountTitle.AccountName.Contains("AP - Accrued Expenses");
+                    var isAccrualAccount = accountTitle.AccountName.Contains("Accrued");
 
                     jvDetails.Add(
                         new FilprideJournalVoucherDetail
@@ -1778,15 +1783,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .ToListAsync(cancellationToken),
                     MinDate = minDate,
                     AutoReverseNextMonth = existingHeaderModel.AutoReverseNextMonth,
-                    SelectedAccruedAccount = existingDetailsModel.Where(x => x.AccountName.Contains("Accrued")).Select(x => x.AccountNo).FirstOrDefault() ?? "",
-                    AccruedAccounts = await _dbContext.FilprideChartOfAccounts
-                        .Where(coa => coa.AccountName.Contains("Accrued") && !coa.HasChildren)
-                        .Select(coa => new SelectListItem
-                        {
-                            Value = coa.AccountNumber,
-                            Text = $"{coa.AccountNumber} - {coa.AccountName}"
-                        })
-                        .ToListAsync(cancellationToken)
+                    SelectedAccruedAccount = existingDetailsModel
+                                                 .Where(x => x.AccountName.Contains("Accrued"))
+                                                 .Select(x => x.AccountNo)
+                                                 .FirstOrDefault()
+                                             ?? (await GetAccruedAccountsAsync(cancellationToken)).FirstOrDefault()?.Value
+                                             ?? "",
+                    AccruedAccounts = await GetAccruedAccountsAsync(cancellationToken)
                 };
 
                 foreach (var detail in existingDetailsModel)
@@ -1890,7 +1893,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                            .GetAsync(coa => coa.AccountNumber == acctNo.AccountNo, cancellationToken)
                                        ?? throw new NullReferenceException($"Account number {acctNo.AccountNo} not found");
 
-                    var isAccrualAccount = accountTitle.AccountName.Contains("AP - Accrued Expenses");
+                    var isAccrualAccount = accountTitle.AccountName.Contains("Accrued");
 
                     jvDetails.Add(
                         new FilprideJournalVoucherDetail
