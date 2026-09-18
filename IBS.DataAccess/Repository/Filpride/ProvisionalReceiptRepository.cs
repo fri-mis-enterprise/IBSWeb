@@ -139,6 +139,17 @@ namespace IBS.DataAccess.Repository.Filpride
                 receipt.PostedBy = postedBy;
                 receipt.PostedDate = postedDateAndTime;
                 receipt.Status = nameof(CollectionReceiptStatus.Posted);
+                ledgers.SetCounterparty(
+                    subAccountInfo?.Type switch
+                    {
+                        SubAccountType.Customer => CounterpartyType.Customer,
+                        SubAccountType.Supplier => CounterpartyType.Supplier,
+                        SubAccountType.BankAccount => CounterpartyType.BankAccount,
+                        SubAccountType.Company => CounterpartyType.Company,
+                        _ => null
+                    },
+                    subAccountInfo?.Id,
+                    subAccountInfo?.Name ?? receipt.PayerName);
                 _db.FilprideGeneralLedgerBooks.AddRange(ledgers);
                 _db.FilprideAuditTrails.Add(new FilprideAuditTrail(postedBy,
                     $"Posted provisional receipt# {receipt.SeriesNumber}", "Provisional Receipt"));
@@ -293,6 +304,23 @@ namespace IBS.DataAccess.Repository.Filpride
                     ModuleType = nameof(ModuleType.Collection)
                 }
             );
+
+            ledgers.SetCounterparty(
+                provisionalReceipt.TagType switch
+                {
+                    CollectionTagType.Company => CounterpartyType.Company,
+                    CollectionTagType.Employee => CounterpartyType.Supplier,
+                    CollectionTagType.BankAccount => CounterpartyType.BankAccount,
+                    _ => null
+                },
+                provisionalReceipt.TagType switch
+                {
+                    CollectionTagType.Company => provisionalReceipt.TaggedCompanyId,
+                    CollectionTagType.Employee => provisionalReceipt.TaggedSupplierId,
+                    CollectionTagType.BankAccount => provisionalReceipt.TaggedBankAccountId,
+                    _ => null
+                },
+                provisionalReceipt.PayerName);
 
             await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
             await _db.SaveChangesAsync(cancellationToken);

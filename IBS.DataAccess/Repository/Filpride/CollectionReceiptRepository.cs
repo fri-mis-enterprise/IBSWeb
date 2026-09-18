@@ -229,6 +229,11 @@ namespace IBS.DataAccess.Repository.Filpride
                 );
             }
 
+            ledgers.SetCounterparty(
+                CounterpartyType.Customer,
+                collectionReceipt.CustomerId,
+                customerName);
+
             await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
 
             await _db.SaveChangesAsync(cancellationToken);
@@ -311,6 +316,11 @@ namespace IBS.DataAccess.Repository.Filpride
                     ModuleType = nameof(ModuleType.Collection)
                 }
             );
+
+            ledgers.SetCounterparty(
+                CounterpartyType.Customer,
+                collectionReceipt.CustomerId,
+                customerName);
 
             await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
             await _db.SaveChangesAsync(cancellationToken);
@@ -697,6 +707,11 @@ namespace IBS.DataAccess.Repository.Filpride
                 throw new ArgumentException("Debit and Credit is not equal, check your entries.");
             }
 
+            ledgers.SetCounterparty(
+                CounterpartyType.Customer,
+                deliveryReceipt.CustomerId,
+                deliveryReceipt.CustomerOrderSlip.CustomerName);
+
             await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
             await _db.SaveChangesAsync(cancellationToken);
         }
@@ -845,6 +860,11 @@ namespace IBS.DataAccess.Repository.Filpride
                 );
             }
 
+            ledgers.SetCounterparty(
+                CounterpartyType.Customer,
+                collectionReceipt.CustomerId,
+                customerName);
+
             await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
 
         }
@@ -925,6 +945,11 @@ namespace IBS.DataAccess.Repository.Filpride
                     ModuleType = nameof(ModuleType.Collection)
                 }
             );
+
+            ledgers.SetCounterparty(
+                CounterpartyType.Customer,
+                collectionReceipt.CustomerId,
+                customerName);
 
             await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
         }

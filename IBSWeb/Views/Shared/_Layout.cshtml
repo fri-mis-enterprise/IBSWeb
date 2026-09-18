@@ -105,11 +105,15 @@
     });
 
     $(document).ready(function () {
-        // Check if the user is logged in
         if ($('#hfUsername').length && $('#hfUsername').val() !== "") {
-            // Function to fetch and update notification count
-            function updateNotificationCount() {
-                $.ajax({
+            let notificationCountRequest = null;
+
+            window.updateNotificationCount = function () {
+                if (notificationCountRequest !== null) {
+                    return;
+                }
+
+                notificationCountRequest = $.ajax({
                     url: '@Url.Action("GetNotificationCount", "Notification", new { area = "User" })',
                     type: 'GET',
                     headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -118,15 +122,20 @@
                     },
                     error: function () {
                         console.error("Error fetching notification count");
+                    },
+                    complete: function () {
+                        notificationCountRequest = null;
                     }
                 });
-            }
+            };
 
-            // Initial load
-            updateNotificationCount();
+            window.updateNotificationCount();
 
-            // Optional: Poll every 30 seconds to update count
-            setInterval(updateNotificationCount, 30000); // 30,000 ms = 30 seconds
+            document.addEventListener('visibilitychange', function () {
+                if (document.visibilityState === 'visible') {
+                    window.updateNotificationCount();
+                }
+            });
         }
     });
     </script>

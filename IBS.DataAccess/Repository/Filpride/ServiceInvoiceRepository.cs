@@ -301,6 +301,11 @@ namespace IBS.DataAccess.Repository.Filpride
                 );
             }
 
+            ledgers.SetCounterparty(
+                CounterpartyType.Customer,
+                model.CustomerId,
+                model.CustomerName);
+
             if (!IsJournalEntriesBalanced(ledgers))
             {
                 throw new ArgumentException("Debit and Credit is not equal, check your entries.");

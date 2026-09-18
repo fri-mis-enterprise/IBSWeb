@@ -1938,6 +1938,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             var existingHeaderModel = await _dbContext.FilprideJournalVoucherHeaders
                 .Include(x => x.Details)
+                .Include(x => x.CheckVoucherHeader)
                 .FirstOrDefaultAsync(x => x.JournalVoucherHeaderId == id, cancellationToken)
                 ?? throw new InvalidOperationException($"Journal voucher header {id} not found.");
 
@@ -1972,6 +1973,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         ModuleType = nameof(ModuleType.Journal)
                     }
                 );
+            }
+
+            if (existingHeaderModel.CheckVoucherHeader?.SupplierId != null)
+            {
+                ledgers.SetCounterparty(
+                    CounterpartyType.Supplier,
+                    existingHeaderModel.CheckVoucherHeader.SupplierId,
+                    existingHeaderModel.CheckVoucherHeader.SupplierName
+                        ?? existingHeaderModel.CheckVoucherHeader.Payee);
             }
 
             if (!_unitOfWork.FilprideJournalVoucher.IsJournalEntriesBalanced(ledgers))
