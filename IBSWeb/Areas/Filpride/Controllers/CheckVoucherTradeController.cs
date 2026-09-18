@@ -2993,6 +2993,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
             viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
             viewModel.COA = await GetTradeAccountingEntryOptionsAsync(cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CheckVoucher, cancellationToken);
+            string? documentationError = await _documentationService.ValidateAndNormalizeAsync(
+                viewModel.Type,
+                viewModel.Documentation,
+                null,
+                cancellationToken);
+            if (documentationError != null)
+            {
+                ModelState.AddModelError(string.Empty, documentationError);
+            }
+            await _documentationService.PrepareAsync(viewModel.Documentation, viewModel.Type, null, cancellationToken);
 
             if (!ModelState.IsValid)
             {
