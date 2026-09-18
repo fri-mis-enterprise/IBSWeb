@@ -580,11 +580,11 @@
                     $("#totalDebit").text(formatNumber(data.totalDebit));
                     $("#totalCredit").text(formatNumber(data.totalCredit));
 
-                    for (let i = 0; i < data.accountNo.length; i++) {
+                    for (let i = 0; i < data.details.length; i++) {
                         let row = $("<tr></tr>");
-                        row.append("<td style='width:60%; padding-left:20px;'>" + data.accountNo[i] + " " + data.accountName[i] + "</td>");
-                        row.append("<td class='text-end' style='width:7%;'>" + formatNumber(data.debit[i]) + "</td>");
-                        row.append("<td class='text-end' style='width:7%;'>" + formatNumber(data.credit[i]) + "</td>");
+                        row.append("<td style='width:60%; padding-left:20px;'>" + data.details[i].accountNo + " " + data.details[i].accountName + "</td>");
+                        row.append("<td class='text-end' style='width:7%;'>" + formatNumber(data.details[i].debit) + "</td>");
+                        row.append("<td class='text-end' style='width:7%;'>" + formatNumber(data.details[i].credit) + "</td>");
                         tableBody.append(row);
                     }
                 },
