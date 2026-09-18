@@ -27,11 +27,6 @@ namespace IBS.DataAccess.Migrations
                 table: "filpride_general_ledger_books",
                 type: "integer",
                 nullable: true);
-
-            migrationBuilder.CreateIndex(
-                name: "ix_filpride_general_ledger_books_counterparty_type_counterpart",
-                table: "filpride_general_ledger_books",
-                columns: new[] { "counterparty_type", "counterparty_id" });
         }
 
         /// <inheritdoc />

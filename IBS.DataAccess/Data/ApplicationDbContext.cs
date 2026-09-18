@@ -690,8 +690,6 @@ namespace IBS.DataAccess.Data
                     .WithMany()
                     .HasForeignKey(gl => gl.AccountId)
                     .OnDelete(DeleteBehavior.Restrict);
-
-                gl.HasIndex(gl => new { gl.CounterpartyType, gl.CounterpartyId });
             });
 
             #endregion
