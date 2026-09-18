@@ -48,7 +48,6 @@ namespace IBS.Models.Filpride.ViewModels
         [Required]
         [StringLength(50)]
         [Display(Name = "Check #")]
-        [RegularExpression(@"^(?:\d{7,}|)$", ErrorMessage = "Invalid format. Please enter CV number minimum 7 digits.")]
         public string CheckNo { get; set; } = null!;
 
         [Required]
