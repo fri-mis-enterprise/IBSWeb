@@ -37,6 +37,8 @@ namespace IBS.Models.Filpride.ViewModels
         public string SelectedPrepaidAccount { get; set; } = string.Empty;
 
         public List<SelectListItem>? PrepaidExpenseAccounts { get; set; }
+
+        public string Particulars { get; set; } = null!;
     }
 
     public class JvEditAmortizationDetailViewModel
