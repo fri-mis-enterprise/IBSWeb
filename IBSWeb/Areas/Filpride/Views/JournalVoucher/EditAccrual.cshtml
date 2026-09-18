@@ -55,10 +55,16 @@
                         <label asp-for="Reason" class="control-label">Reason<span class="required">*</span></label>
                         <span asp-validation-for="Reason" class="text-danger"></span>
                     </div>
-                    <div class="form-check">
+                    <div class="form-check mb-3">
                         <label class="form-check-label fw-bold text-danger">
                             <input class="form-check-input" asp-for="AutoReverseNextMonth"/> Automatically reverse this entry next month
                         </label>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="control-label">Accrued Account</label><span class="required">*</span>
+                        <select asp-for="SelectedAccruedAccount" asp-items="@Model.AccruedAccounts" class="form-select js-select2 selectedAccruedAccount" style="width:100%" required>
+                        </select>
+                        <span asp-validation-for="SelectedAccruedAccount" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="col-12 col-md-8 tradeList">
@@ -180,9 +186,16 @@
                             {
                                 <tr>
                                     <td>
-                                        <input type="hidden" name="Details[@(rowIndex)].AccountNo" value="@entry.AccountNo"/>
-                                        <input type="text"   name="Details[@(rowIndex)].AccountTitle" value="@entry.AccountNo @entry.AccountTitle"
-                                               style="border:none" class="w-100" readonly />
+                                        <input type="hidden"
+                                               name="Details[@(rowIndex)].AccountNo"
+                                               value="@entry.AccountNo"
+                                               class="@(entry.AccountTitle.Contains("Accrued") ? "accruedAccountNumber" : "")" />
+                                        <input type="text"
+                                               name="Details[@(rowIndex)].AccountTitle"
+                                               value="@entry.AccountNo @entry.AccountTitle"
+                                               style="border:none"
+                                               class="w-100 @(entry.AccountTitle.Contains("Accrued") ? "accruedAccountTitle" : "")"
+                                               readonly />
                                     </td>
                                     <td>
                                         <input name="Details[@(rowIndex)].Debit"
@@ -191,14 +204,14 @@
                                                style="border:none"
                                                class="w-100 money editable-amount"
                                                oninput='updateTotalDebitAndCredit()'
-                                               @(entry.AccountNo == "201020300" ? "readonly" : "") />
+                                               @(entry.AccountTitle.Contains("Accrued") ? "readonly" : "") />
                                     </td>
                                     <td>
                                         <input name="Details[@(rowIndex)].Credit"
                                                id="credit_@entry.AccountNo"
                                                value="@entry.Credit.ToString("N4")"
                                                style="border:none"
-                                               class="w-100 money @(entry.AccountNo == "201020300" ? "credit editable-amount" : "")"
+                                               class="w-100 money @(entry.AccountTitle.Contains("Accrued") ? "credit editable-amount" : "")"
                                                readonly />
                                     </td>
                                     <td>
@@ -298,6 +311,20 @@
             });
         }
 
+        $(document).ready(function (){
+            $('#SelectedAccruedAccount').select2({
+                allowClear: false,
+                width: 'resolve',
+                theme: 'classic'
+            });
+        });
+        $(document).on("change", ".selectedAccruedAccount", function () {
+            const selectedCreditOption = $("select[name='SelectedAccruedAccount'] option:selected");
+            let creditAccountNo = selectedCreditOption.val();
+            let creditAccountTitle = selectedCreditOption.text();
+            $('.accruedAccountNumber').val(creditAccountNo);
+            $('.accruedAccountTitle').val(creditAccountTitle);
+        });
 
         function cvDetails(cvId, triggerType) {
 
@@ -337,10 +364,6 @@
                     $("#totalCredit").text(formatNumberToFour(data.totalCredit));
 
                     if(triggerType === "change"){
-                        const ACCRUAL_ACCOUNT_NO = "201020300";
-                        const ACCRUAL_ACCOUNT_NAME = "AP - Accrued Expenses";
-                        const ACCRUAL_ACCOUNT_TITLE = `${ACCRUAL_ACCOUNT_NO} ${ACCRUAL_ACCOUNT_NAME}`;
-
                         let rowIndex = 0;
                         let totalDebitSum = 0;
 
@@ -395,17 +418,20 @@
                         }
 
                         const creditTotal = formatNumberToFour(totalDebitSum);
+                        const selectedCreditOption = $("select[name='SelectedAccruedAccount'] option:selected");
+                        let creditAccountNo = selectedCreditOption.val();
+                        let creditAccountTitle = selectedCreditOption.text();
 
                         accountingEntriesBody.append(`
                         <tr>
                             <td>
-                                <input type='hidden' name='Details[${rowIndex}].AccountNo' value='${ACCRUAL_ACCOUNT_NO}'/>
-                                <input type='text'   name='Details[${rowIndex}].AccountTitle' value='${ACCRUAL_ACCOUNT_TITLE}'
-                                       style='border:none' class='w-100' readonly />
+                                <input type='hidden' name='Details[${rowIndex}].AccountNo' value='${creditAccountNo}' class="accruedAccountNumber"/>
+                                <input type='text'   name='Details[${rowIndex}].AccountTitle' value='${creditAccountTitle}'
+                                       style='border:none' class='w-100 accruedAccountTitle' readonly />
                             </td>
                             <td>
                                 <input name='Details[${rowIndex}].Debit'
-                                       id='debit_${ACCRUAL_ACCOUNT_NO}'
+                                       id='debit_${creditAccountNo}'
                                        value='0.0000'
                                        style='border:none'
                                        class='w-100 money'
@@ -413,7 +439,7 @@
                             </td>
                             <td>
                                 <input name='Details[${rowIndex}].Credit'
-                                       id='credit_${ACCRUAL_ACCOUNT_NO}'
+                                       id='credit_${creditAccountNo}'
                                        value='${creditTotal}'
                                        style='border:none'
                                        class='w-100 money credit editable-amount'

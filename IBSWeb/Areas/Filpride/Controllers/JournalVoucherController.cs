@@ -1599,6 +1599,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
             viewModel.MinDate = await _unitOfWork
                 .GetMinimumPeriodBasedOnThePostedPeriods(Module.JournalVoucher, cancellationToken);
 
+            viewModel.AccruedAccounts = await _dbContext.FilprideChartOfAccounts
+                .Where(coa => coa.AccountName.Contains("Accrued") && !coa.HasChildren)
+                .Select(coa => new SelectListItem
+                {
+                    Value = coa.AccountNumber,
+                    Text = $"{coa.AccountNumber} - {coa.AccountName}"
+                })
+                .ToListAsync(cancellationToken);
+
             return View(viewModel);
         }
 
@@ -1768,7 +1777,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         })
                         .ToListAsync(cancellationToken),
                     MinDate = minDate,
-                    AutoReverseNextMonth = existingHeaderModel.AutoReverseNextMonth
+                    AutoReverseNextMonth = existingHeaderModel.AutoReverseNextMonth,
+                    SelectedAccruedAccount = existingDetailsModel.Where(x => x.AccountName.Contains("Accrued")).Select(x => x.AccountNo).FirstOrDefault() ?? "",
+                    AccruedAccounts = await _dbContext.FilprideChartOfAccounts
+                        .Where(coa => coa.AccountName.Contains("Accrued") && !coa.HasChildren)
+                        .Select(coa => new SelectListItem
+                        {
+                            Value = coa.AccountNumber,
+                            Text = $"{coa.AccountNumber} - {coa.AccountName}"
+                        })
+                        .ToListAsync(cancellationToken)
                 };
 
                 foreach (var detail in existingDetailsModel)
