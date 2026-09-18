@@ -731,7 +731,13 @@ namespace IBS.DataAccess.Repository.Filpride
                             });
                         }
                     }
+
                 }
+
+                ledgers.SetCounterparty(
+                    CounterpartyType.Customer,
+                    deliveryReceipt.CustomerId,
+                    deliveryReceipt.CustomerOrderSlip!.CustomerName);
 
                 if (!IsJournalEntriesBalanced(ledgers))
                 {
@@ -848,6 +854,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
                 foreach (var purchaseOrderGroup in purchaseOrderGroups)
                 {
+                    var supplierEntryStart = ledgers.Count;
                     var productCode = purchaseOrderGroup.PurchaseOrder.Product!.ProductCode;
                     var productCostGrossAmount = DecimalRoundingHelper.ComputeAmountFromUnitPrice(
                         purchaseOrderGroup.Quantity,
@@ -984,6 +991,13 @@ namespace IBS.DataAccess.Repository.Filpride
                     });
 
                     #endregion
+
+                    ledgers
+                        .Skip(supplierEntryStart)
+                        .SetCounterparty(
+                            CounterpartyType.Supplier,
+                            purchaseOrderGroup.PurchaseOrder.SupplierId,
+                            purchaseOrderGroup.PurchaseOrder.SupplierName);
                 }
 
                 if (!IsJournalEntriesBalanced(ledgers))
@@ -1187,6 +1201,11 @@ namespace IBS.DataAccess.Repository.Filpride
                     throw new ArgumentException("Debit and Credit is not equal, check your entries.");
                 }
 
+                ledgers.SetCounterparty(
+                    CounterpartyType.Customer,
+                    customerOrderSlip.CustomerId,
+                    customerOrderSlip.CustomerName);
+
                 await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
                 await unitOfWork.LockedPeriodAdjustment.AddIfPeriodPostedAsync(new LockedPeriodAdjustmentRequestDto
                 {
@@ -1314,6 +1333,11 @@ namespace IBS.DataAccess.Repository.Filpride
                 {
                     throw new ArgumentException("Debit and Credit is not equal, check your entries.");
                 }
+
+                ledgers.SetCounterparty(
+                    CounterpartyType.Customer,
+                    deliveryReceipt.CustomerId,
+                    deliveryReceipt.CustomerOrderSlip.CustomerName);
 
                 await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
                 await unitOfWork.LockedPeriodAdjustment.AddIfPeriodPostedAsync(new LockedPeriodAdjustmentRequestDto
@@ -1464,6 +1488,11 @@ namespace IBS.DataAccess.Repository.Filpride
                 {
                     throw new ArgumentException("Debit and Credit is not equal, check your entries.");
                 }
+
+                ledgers.SetCounterparty(
+                    CounterpartyType.Customer,
+                    deliveryReceipt.CustomerId,
+                    deliveryReceipt.CustomerOrderSlip.CustomerName);
 
                 await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
                 await unitOfWork.LockedPeriodAdjustment.AddIfPeriodPostedAsync(new LockedPeriodAdjustmentRequestDto

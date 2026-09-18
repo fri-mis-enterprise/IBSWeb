@@ -210,6 +210,11 @@ namespace IBS.DataAccess.Repository.Filpride
                     throw new ArgumentException("Debit and Credit is not equal, check your entries.");
                 }
 
+                ledgers.SetCounterparty(
+                    CounterpartyType.Customer,
+                    customerOrderSlip.CustomerId,
+                    customerOrderSlip.CustomerName);
+
                 await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
             }
 
@@ -333,6 +338,11 @@ namespace IBS.DataAccess.Repository.Filpride
                 {
                     throw new ArgumentException("Debit and Credit is not equal, check your entries.");
                 }
+
+                ledgers.SetCounterparty(
+                    CounterpartyType.Customer,
+                    serviceInvoice.CustomerId,
+                    serviceInvoice.CustomerName);
 
                 await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
             }

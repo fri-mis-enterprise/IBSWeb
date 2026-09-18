@@ -977,6 +977,9 @@ namespace IBS.Services
                     SubAccountType = originalEntry.SubAccountType,
                     SubAccountId = originalEntry.SubAccountId,
                     SubAccountName = originalEntry.SubAccountName,
+                    CounterpartyType = originalEntry.CounterpartyType,
+                    CounterpartyId = originalEntry.CounterpartyId,
+                    CounterpartyName = originalEntry.CounterpartyName,
                     ModuleType = originalEntry.ModuleType,
                 });
             }

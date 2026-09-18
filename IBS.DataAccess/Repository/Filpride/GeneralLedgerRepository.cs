@@ -45,6 +45,9 @@ namespace IBS.DataAccess.Repository.Filpride
                 SubAccountId = gl.SubAccountId,
                 SubAccountName = gl.SubAccountName,
                 SubAccountType = gl.SubAccountType,
+                CounterpartyType = gl.CounterpartyType,
+                CounterpartyId = gl.CounterpartyId,
+                CounterpartyName = gl.CounterpartyName,
             }).ToList();
 
             await _db.FilprideGeneralLedgerBooks.AddRangeAsync(reversingEntries, cancellationToken);

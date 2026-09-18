@@ -192,6 +192,14 @@ namespace IBS.Services
                         }
                     }
 
+                    if (cv.SupplierId.HasValue)
+                    {
+                        ledgers.SetCounterparty(
+                            CounterpartyType.Supplier,
+                            cv.SupplierId,
+                            cv.SupplierName ?? cv.Payee);
+                    }
+
                     await _dbContext.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
                     await _dbContext.SaveChangesAsync(cancellationToken);
                 }
