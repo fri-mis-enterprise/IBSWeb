@@ -400,8 +400,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
             if (model != null)
             {
                 var chartOfAccount = _unitOfWork.FilprideChartOfAccount
-                    .GetAllQuery(x => x.AccountNumber != null &&
-                                      x.AccountNumber.StartsWith("55") &&
+                    .GetAllQuery(x =>
+                        (x.AccountNumber.StartsWith("55") ||
+                         x.AccountNumber.StartsWith("65")) &&
                                       !x.HasChildren)
                     .Select(x => new
                     {
