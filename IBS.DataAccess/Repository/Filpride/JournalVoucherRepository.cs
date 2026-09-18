@@ -147,6 +147,27 @@ namespace IBS.DataAccess.Repository.Filpride
                 );
             }
 
+            if (header.CVId.HasValue)
+            {
+                var counterparty = await _db.FilprideCheckVoucherHeaders
+                    .AsNoTracking()
+                    .Where(cv => cv.CheckVoucherHeaderId == header.CVId.Value)
+                    .Select(cv => new
+                    {
+                        cv.SupplierId,
+                        Name = cv.SupplierName ?? cv.Payee
+                    })
+                    .SingleOrDefaultAsync(cancellationToken);
+
+                if (counterparty?.SupplierId != null)
+                {
+                    ledgers.SetCounterparty(
+                        CounterpartyType.Supplier,
+                        counterparty.SupplierId,
+                        counterparty.Name);
+                }
+            }
+
             if (!IsJournalEntriesBalanced(ledgers))
             {
                 throw new ArgumentException("Debit and Credit is not equal, check your entries.");

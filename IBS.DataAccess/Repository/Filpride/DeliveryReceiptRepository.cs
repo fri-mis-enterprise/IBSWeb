@@ -272,7 +272,6 @@ namespace IBS.DataAccess.Repository.Filpride
                 var ledgers = new List<FilprideGeneralLedgerBook>();
                 var unitOfWork = new UnitOfWork(_db);
                 var accountTitlesDto = await GetListOfAccountTitleDto(cancellationToken);
-                var cashInBankTitle = accountTitlesDto.Find(c => c.AccountNumber == "101010100") ?? throw new ArgumentException("Account title '101010100' not found.");
                 var arTradeTitle = accountTitlesDto.Find(c => c.AccountNumber == "101020100") ?? throw new ArgumentException("Account title '101020100' not found.");
                 var vatOutputTitle = accountTitlesDto.Find(c => c.AccountNumber == "201030100") ?? throw new ArgumentException("Account title '201030100' not found.");
                 var vatInputTitle = accountTitlesDto.Find(c => c.AccountNumber == "101060200") ?? throw new ArgumentException("Account title '101060200' not found.");
@@ -433,16 +432,16 @@ namespace IBS.DataAccess.Repository.Filpride
                         Date = (DateOnly)deliveryReceipt.DeliveredDate!,
                         Reference = deliveryReceipt.DeliveryReceiptNo,
                         Description = description,
-                        AccountId = customerOrderSlip.Terms == SD.Terms_Cod ? cashInBankTitle.AccountId : arTradeTitle.AccountId,
-                        AccountNo = customerOrderSlip.Terms == SD.Terms_Cod ? cashInBankTitle.AccountNumber : arTradeTitle.AccountNumber,
-                        AccountTitle = customerOrderSlip.Terms == SD.Terms_Cod ? cashInBankTitle.AccountName : arTradeTitle.AccountName,
+                        AccountId = arTradeTitle.AccountId,
+                        AccountNo = arTradeTitle.AccountNumber,
+                        AccountTitle = arTradeTitle.AccountName,
                         Debit = netOfEwtAmount,
                         Credit = 0,
                         CreatedBy = deliveryReceipt.PostedBy!,
                         CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
-                        SubAccountType = customerOrderSlip.Terms != SD.Terms_Cod ? SubAccountType.Customer : null,
-                        SubAccountId = customerOrderSlip.Terms != SD.Terms_Cod ? deliveryReceipt.CustomerId : null,
-                        SubAccountName = customerOrderSlip.Terms != SD.Terms_Cod ? customerOrderSlip.CustomerName : null,
+                        SubAccountType = SubAccountType.Customer,
+                        SubAccountId = deliveryReceipt.CustomerId,
+                        SubAccountName = customerOrderSlip.CustomerName,
                         ModuleType = nameof(ModuleType.Sales)
                     });
 
@@ -731,7 +730,13 @@ namespace IBS.DataAccess.Repository.Filpride
                             });
                         }
                     }
+
                 }
+
+                ledgers.SetCounterparty(
+                    CounterpartyType.Customer,
+                    deliveryReceipt.CustomerId,
+                    deliveryReceipt.CustomerOrderSlip!.CustomerName);
 
                 if (!IsJournalEntriesBalanced(ledgers))
                 {
@@ -848,6 +853,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
                 foreach (var purchaseOrderGroup in purchaseOrderGroups)
                 {
+                    var supplierEntryStart = ledgers.Count;
                     var productCode = purchaseOrderGroup.PurchaseOrder.Product!.ProductCode;
                     var productCostGrossAmount = DecimalRoundingHelper.ComputeAmountFromUnitPrice(
                         purchaseOrderGroup.Quantity,
@@ -984,6 +990,13 @@ namespace IBS.DataAccess.Repository.Filpride
                     });
 
                     #endregion
+
+                    ledgers
+                        .Skip(supplierEntryStart)
+                        .SetCounterparty(
+                            CounterpartyType.Supplier,
+                            purchaseOrderGroup.PurchaseOrder.SupplierId,
+                            purchaseOrderGroup.PurchaseOrder.SupplierName);
                 }
 
                 if (!IsJournalEntriesBalanced(ledgers))
@@ -1187,6 +1200,11 @@ namespace IBS.DataAccess.Repository.Filpride
                     throw new ArgumentException("Debit and Credit is not equal, check your entries.");
                 }
 
+                ledgers.SetCounterparty(
+                    CounterpartyType.Customer,
+                    customerOrderSlip.CustomerId,
+                    customerOrderSlip.CustomerName);
+
                 await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
                 await unitOfWork.LockedPeriodAdjustment.AddIfPeriodPostedAsync(new LockedPeriodAdjustmentRequestDto
                 {
@@ -1314,6 +1332,11 @@ namespace IBS.DataAccess.Repository.Filpride
                 {
                     throw new ArgumentException("Debit and Credit is not equal, check your entries.");
                 }
+
+                ledgers.SetCounterparty(
+                    CounterpartyType.Customer,
+                    deliveryReceipt.CustomerId,
+                    deliveryReceipt.CustomerOrderSlip.CustomerName);
 
                 await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
                 await unitOfWork.LockedPeriodAdjustment.AddIfPeriodPostedAsync(new LockedPeriodAdjustmentRequestDto
@@ -1464,6 +1487,11 @@ namespace IBS.DataAccess.Repository.Filpride
                 {
                     throw new ArgumentException("Debit and Credit is not equal, check your entries.");
                 }
+
+                ledgers.SetCounterparty(
+                    CounterpartyType.Customer,
+                    deliveryReceipt.CustomerId,
+                    deliveryReceipt.CustomerOrderSlip.CustomerName);
 
                 await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
                 await unitOfWork.LockedPeriodAdjustment.AddIfPeriodPostedAsync(new LockedPeriodAdjustmentRequestDto

@@ -301,6 +301,14 @@ namespace IBS.DataAccess.Repository.Filpride
                     );
             }
 
+            if (header.SupplierId.HasValue)
+            {
+                ledgers.SetCounterparty(
+                    CounterpartyType.Supplier,
+                    header.SupplierId,
+                    header.SupplierName ?? header.Payee);
+            }
+
             if (!IsJournalEntriesBalanced(ledgers))
             {
                 throw new ArgumentException("Debit and Credit is not equal, check your entries.");

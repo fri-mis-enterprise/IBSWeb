@@ -68,5 +68,16 @@ namespace IBS.Models.Filpride.Books
         public string? SubAccountName { get; set; }
 
         #endregion
+
+        #region Counterparty Properties
+
+        public CounterpartyType? CounterpartyType { get; set; }
+
+        public int? CounterpartyId { get; set; }
+
+        [Column(TypeName = "varchar(200)")]
+        public string? CounterpartyName { get; set; }
+
+        #endregion
     }
 }
