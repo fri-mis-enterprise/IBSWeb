@@ -56,10 +56,17 @@
                         <label asp-for="Reason" class="control-label">Reason<span class="required">*</span></label>
                         <span asp-validation-for="Reason" class="text-danger"></span>
                     </div>
-                    <div class="form-check">
+                    <div class="form-check mb-3">
                         <label class="form-check-label fw-bold text-danger">
                             <input class="form-check-input" asp-for="AutoReverseNextMonth" checked/> Automatically reverse this entry next month
                         </label>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="control-label">Accrued Account</label><span class="required">*</span>
+                        <select asp-for="SelectedAccruedAccount" asp-items="@Model.AccruedAccounts" class="form-select js-select2 selectedAccruedAccount" style="width:100%" required>
+                            <option></option>
+                        </select>
+                        <span asp-validation-for="SelectedAccruedAccount" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="col-12 col-md-8 tradeList">
@@ -260,6 +267,14 @@
             });
         }
 
+        $(document).on("change", ".selectedAccruedAccount", function () {
+            const selectedCreditOption = $("select[name='SelectedAccruedAccount'] option:selected");
+            let creditAccountNo = selectedCreditOption.val();
+            let creditAccountTitle = selectedCreditOption.text();
+            $('.accruedAccountNumber').val(creditAccountNo);
+            $('.accruedAccountTitle').val(creditAccountTitle);
+        });
+
         function cvDetails(cvId) {
 
             if (!cvId) {
@@ -294,10 +309,6 @@
                     $("#checkNo").text(data.checkNo);
                     $("#totalDebit").text(formatNumberToFour(data.totalDebit));
                     $("#totalCredit").text(formatNumberToFour(data.totalCredit));
-
-                    const ACCRUAL_ACCOUNT_NO = "201020300";
-                    const ACCRUAL_ACCOUNT_NAME = "AP - Accrued Expenses";
-                    const ACCRUAL_ACCOUNT_TITLE = `${ACCRUAL_ACCOUNT_NO} ${ACCRUAL_ACCOUNT_NAME}`;
 
                     let rowIndex = 0;
                     let totalDebitSum = 0;
@@ -353,17 +364,20 @@
                     }
 
                     const creditTotal = formatNumberToFour(totalDebitSum);
+                    const selectedCreditOption = $("select[name='SelectedAccruedAccount'] option:selected");
+                    let creditAccountNo = selectedCreditOption.val();
+                    let creditAccountTitle = selectedCreditOption.text();
 
                     accountingEntriesBody.append(`
                         <tr>
                             <td>
-                                <input type='hidden' name='Details[${rowIndex}].AccountNo' value='${ACCRUAL_ACCOUNT_NO}'/>
-                                <input type='text'   name='Details[${rowIndex}].AccountTitle' value='${ACCRUAL_ACCOUNT_TITLE}'
-                                       style='border:none' class='w-100' readonly />
+                                <input type='hidden' name='Details[${rowIndex}].AccountNo' value='${creditAccountNo}' class="accruedAccountNumber"/>
+                                <input type='text'   name='Details[${rowIndex}].AccountTitle' value='${creditAccountTitle}'
+                                       style='border:none' class='w-100 accruedAccountTitle' readonly />
                             </td>
                             <td>
                                 <input name='Details[${rowIndex}].Debit'
-                                       id='debit_${ACCRUAL_ACCOUNT_NO}'
+                                       id='debit_${creditAccountNo}'
                                        value='0.0000'
                                        style='border:none'
                                        class='w-100 money'
@@ -371,7 +385,7 @@
                             </td>
                             <td>
                                 <input name='Details[${rowIndex}].Credit'
-                                       id='credit_${ACCRUAL_ACCOUNT_NO}'
+                                       id='credit_${creditAccountNo}'
                                        value='${creditTotal}'
                                        style='border:none'
                                        class='w-100 money credit editable-amount'

@@ -28,6 +28,11 @@ namespace IBS.Models.Filpride.ViewModels
         public List<JvEditAccrualDetailViewModel> Details { get; set; } = [];
 
         public bool AutoReverseNextMonth { get; set; }
+
+        [Required]
+        public string SelectedAccruedAccount { get; set; } = string.Empty;
+
+        public List<SelectListItem>? AccruedAccounts { get; set; }
     }
 
     public class JvEditAccrualDetailViewModel
