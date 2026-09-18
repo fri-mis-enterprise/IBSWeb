@@ -1,5 +1,6 @@
 ﻿var connection = new signalR.HubConnectionBuilder()
     .withUrl("/notificationHub")
+    .withAutomaticReconnect()
     .configureLogging(signalR.LogLevel.None) // Suppress SignalR logs
     .build();
 
@@ -15,6 +16,10 @@ connection.on("OnConnected", function () {
     OnConnected();
 });
 
+connection.onreconnected(function () {
+    refreshNotificationCount();
+});
+
 function OnConnected() {
     var username = $('#hfUsername').val();
     if (username !== "") {
@@ -25,7 +30,15 @@ function OnConnected() {
     }
 }
 
+function refreshNotificationCount() {
+    if (typeof window.updateNotificationCount === 'function') {
+        window.updateNotificationCount();
+    }
+}
+
 connection.on("ReceivedNotification", function (message) {
+    refreshNotificationCount();
+
     Swal.fire({
         title: 'New Notification',
         text: message,
