@@ -272,6 +272,12 @@ namespace IBS.DataAccess.Repository.Filpride
             IEnumerable<FilprideCheckVoucherDetail> details,
             CancellationToken cancellationToken = default)
         {
+            if (await ShouldSkipGeneralLedgerEntriesAsync(header, cancellationToken))
+            {
+                await _db.SaveChangesAsync(cancellationToken);
+                return;
+            }
+
             #region --General Ledger Book Recording(CV)--
 
             var accountTitlesDto = await GetListOfAccountTitleDto(cancellationToken);
@@ -318,6 +324,26 @@ namespace IBS.DataAccess.Repository.Filpride
             await _db.SaveChangesAsync(cancellationToken);
 
             #endregion --General Ledger Book Recording(CV)--
+        }
+
+        private async Task<bool> ShouldSkipGeneralLedgerEntriesAsync(
+            FilprideCheckVoucherHeader header,
+            CancellationToken cancellationToken)
+        {
+            var supplierName = header.Supplier?.SupplierName;
+
+            if (supplierName == null && header.SupplierId.HasValue)
+            {
+                supplierName = await _db.FilprideSuppliers
+                    .AsNoTracking()
+                    .Where(supplier => supplier.SupplierId == header.SupplierId.Value)
+                    .Select(supplier => supplier.SupplierName)
+                    .FirstOrDefaultAsync(cancellationToken);
+            }
+
+            supplierName ??= header.SupplierName ?? header.Payee;
+
+            return supplierName?.StartsWith("MNVP", StringComparison.OrdinalIgnoreCase) == true;
         }
     }
 }
