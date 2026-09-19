@@ -15,7 +15,7 @@ class MasterFileSelector {
                 id: 'company',
                 title: 'Company',
                 url: urls.getCompanies,
-                triggerAccounts: ['101020600 AR-Exchange Check', '101020510 AR-NT Filpride Group'],
+                triggerAccounts: ['101020600 AR-Exchange Check', '101020700 AR NT - Rediscounting'],
                 placeholder: 'Select a company',
                 formatOption: (item) => `${item.accountNumber} - ${item.accountName}`,
                 inputName: 'CompanyMasterFileId'
