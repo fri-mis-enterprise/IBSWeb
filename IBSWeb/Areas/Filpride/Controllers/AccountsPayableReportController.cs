@@ -68,9 +68,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private readonly BrandingOptions _brandingOptions;
 
-        private readonly ILogger<GeneralLedgerReportController> _logger;
+        private readonly ILogger<AccountsPayableReportController> _logger;
 
-        public AccountsPayableReportController(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager, IUnitOfWork unitOfWork, IWebHostEnvironment webHostEnvironment, ILogger<GeneralLedgerReportController> logger,
+        public AccountsPayableReportController(
+            ApplicationDbContext dbContext,
+            UserManager<ApplicationUser> userManager,
+            IUnitOfWork unitOfWork,
+            IWebHostEnvironment webHostEnvironment,
+            ILogger<AccountsPayableReportController> logger,
             IOptions<BrandingOptions> brandingOptions)
         {
             _dbContext = dbContext;
@@ -422,7 +427,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Include(coa => coa.ParentAccount)
                         .ThenInclude(a => a!.ParentAccount)
                         .ThenInclude(a => a!.ParentAccount)
-                    .ToDictionaryAsync(c => c.AccountNumber!, cancellationToken);
+                    .ToDictionaryAsync(c => c.AccountNumber, cancellationToken);
 
                 foreach (var cd in clearedDisbursementReport)
                 {
@@ -441,7 +446,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         continue;
                     }
 
-                    var levelOneAccount = coa?.ParentAccount?.ParentAccount?.ParentAccount;
+                    var levelOneAccount = coa.ParentAccount?.ParentAccount?.ParentAccount;
 
                     worksheet.Cells[row, 1].Value = $"{levelOneAccount?.AccountNumber} " +
                                                     $"{levelOneAccount?.AccountName}";
@@ -518,8 +523,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var nonTradeInvoiceReport =
                     await _dbContext.FilprideCheckVoucherDetails
                         .AsNoTracking()
-                        .Where(cvd => true
-                                      && cvd.CheckVoucherHeader!.CvType == nameof(CVType.Invoicing)
+                        .Where(cvd => cvd.CheckVoucherHeader!.CvType == nameof(CVType.Invoicing)
                                       && cvd.CheckVoucherHeader.Date >= dateFrom &&
                                       cvd.CheckVoucherHeader.Date <= dateTo
                                       && (statusFilter == "ValidOnly"
@@ -541,8 +545,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Where(x =>
                         x.PostedBy != null &&
                         x.Reference != null &&
-                        nonTradeNos.Contains(x.Reference) &&
-                        true)
+                        nonTradeNos.Contains(x.Reference))
                     .Select(x => new
                     {
                         x.Reference,
@@ -2860,7 +2863,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var totalCommissionAmount = 0m;
                 var totalNetMarginPerLiter = 0m;
                 var totalNetMarginAmount = 0m;
-                var repoCalculator = _unitOfWork.FilpridePurchaseOrder;
+                var forTheAccountRows = new List<int>();
+                var forTheAccountVolume = 0m;
+                var forTheAccountCostAmount = 0m;
+                var forTheAccountNetPurchases = 0m;
+                var forTheAccountSalesAmount = 0m;
+                var forTheAccountNetSales = 0m;
+                var forTheAccountGmAmount = 0m;
+                var forTheAccountFcAmount = 0m;
+                var forTheAccountFcNet = 0m;
+                var forTheAccountCommissionAmount = 0m;
+                var forTheAccountNetMarginAmount = 0m;
 
                 #endregion -- Initialize "total" Variables for operations --
 
@@ -3140,6 +3153,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     totalCommissionAmount += commissionAmount;
                     totalNetMarginPerLiter += netMarginPerLiter;
                     totalNetMarginAmount += netMarginAmount;
+
+                    if (supplierNames.Contains("FOR THE ACCOUNT", StringComparison.OrdinalIgnoreCase))
+                    {
+                        forTheAccountRows.Add(row);
+                        forTheAccountVolume += volume;
+                        forTheAccountCostAmount += costAmount;
+                        forTheAccountNetPurchases += netPurchases;
+                        forTheAccountSalesAmount += salesAmount;
+                        forTheAccountNetSales += netSales;
+                        forTheAccountGmAmount += gmAmount;
+                        forTheAccountFcAmount += freightChargeAmount;
+                        forTheAccountFcNet += freightChargeNet;
+                        forTheAccountCommissionAmount += commissionAmount;
+                        forTheAccountNetMarginAmount += netMarginAmount;
+                    }
 
                     #endregion
 
@@ -3421,6 +3449,101 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #endregion -- Summary Row --
 
+                if (forTheAccountRows.Count > 0)
+                {
+                    var forTheAccountSectionRow = rowForSummary + 3;
+                    gmReportWorksheet.Cells[forTheAccountSectionRow, 1].Value = "FAO";
+                    gmReportWorksheet.Cells[forTheAccountSectionRow, 1].Style.Font.Bold = true;
+                    gmReportWorksheet.Cells[forTheAccountSectionRow, 1].Style.Font.Color.SetColor(Color.Red);
+
+                    var forTheAccountHeaderRow = forTheAccountSectionRow + 1;
+                    gmReportWorksheet.Cells[7, 1, 7, 27]
+                        .Copy(gmReportWorksheet.Cells[forTheAccountHeaderRow, 1]);
+
+                    var forTheAccountDetailRow = forTheAccountHeaderRow + 1;
+                    foreach (var sourceRow in forTheAccountRows)
+                    {
+                        gmReportWorksheet.Cells[sourceRow, 1, sourceRow, 27]
+                            .Copy(gmReportWorksheet.Cells[forTheAccountDetailRow, 1]);
+                        forTheAccountDetailRow++;
+                    }
+
+                    var forTheAccountCostPerLiter = DivideOrZero(forTheAccountCostAmount, forTheAccountVolume);
+                    var forTheAccountCosPrice = DivideOrZero(forTheAccountSalesAmount, forTheAccountVolume);
+                    var forTheAccountGmPerLiter = DivideOrZero(forTheAccountGmAmount, forTheAccountVolume);
+                    var forTheAccountFreightCharge = DivideOrZero(forTheAccountFcAmount, forTheAccountVolume);
+                    var forTheAccountCommissionPerLiter = DivideOrZero(forTheAccountCommissionAmount, forTheAccountVolume);
+                    var forTheAccountNetMarginPerLiter = DivideOrZero(forTheAccountNetMarginAmount, forTheAccountVolume);
+
+                    gmReportWorksheet.Cells[forTheAccountDetailRow, 10].Value = "TOTAL FAO:";
+                    gmReportWorksheet.Cells[forTheAccountDetailRow, 12].Value = forTheAccountVolume;
+                    gmReportWorksheet.Cells[forTheAccountDetailRow, 13].Value = forTheAccountCosPrice;
+                    gmReportWorksheet.Cells[forTheAccountDetailRow, 14].Value = forTheAccountSalesAmount;
+                    gmReportWorksheet.Cells[forTheAccountDetailRow, 15].Value = forTheAccountNetSales;
+                    gmReportWorksheet.Cells[forTheAccountDetailRow, 16].Value = forTheAccountCostPerLiter;
+                    gmReportWorksheet.Cells[forTheAccountDetailRow, 17].Value = forTheAccountCostAmount;
+                    gmReportWorksheet.Cells[forTheAccountDetailRow, 18].Value = forTheAccountNetPurchases;
+                    gmReportWorksheet.Cells[forTheAccountDetailRow, 19].Value = forTheAccountGmPerLiter;
+                    gmReportWorksheet.Cells[forTheAccountDetailRow, 20].Value = forTheAccountGmAmount;
+                    gmReportWorksheet.Cells[forTheAccountDetailRow, 21].Value = forTheAccountFreightCharge;
+                    gmReportWorksheet.Cells[forTheAccountDetailRow, 22].Value = forTheAccountFcAmount;
+                    gmReportWorksheet.Cells[forTheAccountDetailRow, 23].Value = forTheAccountFcNet;
+                    gmReportWorksheet.Cells[forTheAccountDetailRow, 24].Value = forTheAccountCommissionPerLiter;
+                    gmReportWorksheet.Cells[forTheAccountDetailRow, 25].Value = forTheAccountCommissionAmount;
+                    gmReportWorksheet.Cells[forTheAccountDetailRow, 26].Value = forTheAccountNetMarginPerLiter;
+                    gmReportWorksheet.Cells[forTheAccountDetailRow, 27].Value = forTheAccountNetMarginAmount;
+
+                    using (var range = gmReportWorksheet.Cells[forTheAccountDetailRow, 1, forTheAccountDetailRow, 27])
+                    {
+                        range.Style.Font.Bold = true;
+                        range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                        range.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(172, 185, 202));
+                    }
+
+                    using (var range = gmReportWorksheet.Cells[forTheAccountDetailRow, 10, forTheAccountDetailRow, 27])
+                    {
+                        range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                        range.Style.Border.Bottom.Style = ExcelBorderStyle.Double;
+                    }
+
+                    var actualGmRow = forTheAccountDetailRow + 2;
+                    var actualVolume = totalVolume - forTheAccountVolume;
+                    var actualCostAmount = totalCostAmount - forTheAccountCostAmount;
+                    var actualNetPurchases = totalNetPurchases - forTheAccountNetPurchases;
+                    var actualSalesAmount = totalSalesAmount - forTheAccountSalesAmount;
+                    var actualNetSales = totalNetSales - forTheAccountNetSales;
+                    var actualGmAmount = totalGmAmount - forTheAccountGmAmount;
+                    var actualFcAmount = totalFcAmount - forTheAccountFcAmount;
+                    var actualFcNet = totalFcNet - forTheAccountFcNet;
+                    var actualCommissionAmount = totalCommissionAmount - forTheAccountCommissionAmount;
+                    var actualNetMarginAmount = totalNetMarginAmount - forTheAccountNetMarginAmount;
+
+                    gmReportWorksheet.Cells[actualGmRow, 10].Value = "TOTAL GM";
+                    gmReportWorksheet.Cells[actualGmRow, 12].Value = actualVolume;
+                    gmReportWorksheet.Cells[actualGmRow, 13].Value = DivideOrZero(actualSalesAmount, actualVolume);
+                    gmReportWorksheet.Cells[actualGmRow, 14].Value = actualSalesAmount;
+                    gmReportWorksheet.Cells[actualGmRow, 15].Value = actualNetSales;
+                    gmReportWorksheet.Cells[actualGmRow, 16].Value = DivideOrZero(actualCostAmount, actualVolume);
+                    gmReportWorksheet.Cells[actualGmRow, 17].Value = actualCostAmount;
+                    gmReportWorksheet.Cells[actualGmRow, 18].Value = actualNetPurchases;
+                    gmReportWorksheet.Cells[actualGmRow, 19].Value = DivideOrZero(actualGmAmount, actualVolume);
+                    gmReportWorksheet.Cells[actualGmRow, 20].Value = actualGmAmount;
+                    gmReportWorksheet.Cells[actualGmRow, 21].Value = DivideOrZero(actualFcAmount, actualVolume);
+                    gmReportWorksheet.Cells[actualGmRow, 22].Value = actualFcAmount;
+                    gmReportWorksheet.Cells[actualGmRow, 23].Value = actualFcNet;
+                    gmReportWorksheet.Cells[actualGmRow, 24].Value = DivideOrZero(actualCommissionAmount, actualVolume);
+                    gmReportWorksheet.Cells[actualGmRow, 25].Value = actualCommissionAmount;
+                    gmReportWorksheet.Cells[actualGmRow, 26].Value = DivideOrZero(actualNetMarginAmount, actualVolume);
+                    gmReportWorksheet.Cells[actualGmRow, 27].Value = actualNetMarginAmount;
+
+                    using var actualGmRange = gmReportWorksheet.Cells[actualGmRow, 1, actualGmRow, 27];
+                    actualGmRange.Style.Font.Bold = true;
+                    actualGmRange.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                    actualGmRange.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(252, 228, 214));
+                    actualGmRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                    actualGmRange.Style.Border.Bottom.Style = ExcelBorderStyle.Double;
+                }
+
                 // Auto-fit columns for better readability
                 gmReportWorksheet.Cells.AutoFitColumns();
                 gmReportWorksheet.View.FreezePanes(8, 1);
@@ -3471,7 +3594,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 var receivingReports = await _dbContext.FilprideReceivingReports
                     .Include(rr => rr.PurchaseOrder).ThenInclude(po => po!.Supplier)
-                    .Where(rr => true&& rr.Date <= model.DateTo)
+                    .Where(rr => rr.Date <= model.DateTo)
                     .OrderBy(rr => rr.Date.Year)
                     .ThenBy(rr => rr.Date.Month)
                     .ThenBy(rr => rr.PurchaseOrder!.Supplier!.SupplierName)
@@ -3614,7 +3737,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 var grandTotalEndingGross = 0m;
                                 var grandTotalEndingEwt = 0m;
                                 var grandTotalEndingNetAmount = 0m;
-                                var repoCalculator = _unitOfWork.FilpridePurchaseOrder;
 
                                 #endregion -- Initialize Variable for Computation
 
@@ -3899,8 +4021,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             idsOfRrsOfSelectedPeriodFromCv.FirstOrDefault(rr => rr.ReceivingReportId == rrSet.ReceivingReportId)!.AmountPaid
                     })
                     .GroupBy(rr => new MonthYear(
-                        rr.ReceivingReport.Date!.Year,
-                        rr.ReceivingReport.Date!.Month
+                        rr.ReceivingReport.Date.Year,
+                        rr.ReceivingReport.Date.Month
                     ));
 
                 var rrAndAmountPaidForPreviousPeriodFromCv = allRr
@@ -3913,29 +4035,29 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             idsOfRrsOfPreviousPeriodsFromCv.FirstOrDefault(rr => rr.ReceivingReportId == rrSet.ReceivingReportId)!.AmountPaid
                     })
                     .GroupBy(rr => new MonthYear(
-                        rr.ReceivingReport.Date!.Year,
-                        rr.ReceivingReport.Date!.Month
+                        rr.ReceivingReport.Date.Year,
+                        rr.ReceivingReport.Date.Month
                     ));
 
                 var allRrGroupedByMonthYear = allRr
                     .GroupBy(rr => new MonthYear(
-                        rr.Date!.Year,
-                        rr.Date!.Month
+                        rr.Date.Year,
+                        rr.Date.Month
                     ));
 
                 var allPreviousRrGroupedByMonthYear = allRr
-                    .Where(rr => rr.Date! < dateFrom)
+                    .Where(rr => rr.Date < dateFrom)
                     .GroupBy(rr => new MonthYear(
-                        rr.Date!.Year,
-                        rr.Date!.Month
+                        rr.Date.Year,
+                        rr.Date.Month
                     ))
                     .ToList();
 
                 var allSelectedRrGroupedByMonthYear = allRr
-                    .Where(rr => rr.Date! >= dateFrom)
+                    .Where(rr => rr.Date >= dateFrom)
                     .GroupBy(rr => new MonthYear(
-                        rr.Date!.Year,
-                        rr.Date!.Month
+                        rr.Date.Year,
+                        rr.Date.Month
                     ))
                     .ToList();
 
@@ -4062,8 +4184,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var grandTotalEwtEnding = 0m;
                 var grandTotalNetEnding = 0m;
 
-                var repoCalculator = _unitOfWork.FilpridePurchaseOrder;
-
                 #endregion == Initialize Variables ==
 
                 foreach (var allRrsSameMonthYear in allRrGroupedByMonthYear)
@@ -4076,9 +4196,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .ToList();
 
                     // MONTH YEAR LABEL
-                    worksheet.Cells[row, 1].Value = (CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(sameMonthYearGroupedBySupplier.FirstOrDefault()?.FirstOrDefault()?.Date!.Month ?? 0))
+                    worksheet.Cells[row, 1].Value = (CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(sameMonthYearGroupedBySupplier.FirstOrDefault()?.FirstOrDefault()?.Date.Month ?? 0))
                                                     + " " +
-                                                    (sameMonthYearGroupedBySupplier.FirstOrDefault()?.FirstOrDefault()?.Date!.Year.ToString() ?? " ");
+                                                    (sameMonthYearGroupedBySupplier.FirstOrDefault()?.FirstOrDefault()?.Date.Year.ToString() ?? " ");
                     worksheet.Cells[row, 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
                     worksheet.Cells[row, 1].Style.Fill.BackgroundColor.SetColor(Color.Yellow);
                     row++;
@@ -4144,8 +4264,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 foreach (var sameMonthYear in loopingMainRrGroupedByMonthYear)
                                 {
                                     // this process finds the rr that has the same month/year for current month/year section
-                                    if (sameMonthYear.FirstOrDefault()?.Date!.Month != allRrsSameMonthYear.FirstOrDefault()?.Date!.Month ||
-                                        sameMonthYear.FirstOrDefault()?.Date!.Year != allRrsSameMonthYear.FirstOrDefault()?.Date!.Year)
+                                    if (sameMonthYear.FirstOrDefault()?.Date!.Month != allRrsSameMonthYear.FirstOrDefault()?.Date.Month ||
+                                        sameMonthYear.FirstOrDefault()?.Date!.Year != allRrsSameMonthYear.FirstOrDefault()?.Date.Year)
                                     {
                                         continue;
                                     }
@@ -4181,7 +4301,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                             if (secondLoopSameMonthYear != null)
                                             {
                                                 secondLoopSameMonthYearSameSupplier = secondLoopSameMonthYear
-                                                    .Where(rr => rr.ReceivingReport!.PurchaseOrder!.Supplier!.SupplierName == sameMonthYearSameSupplier
+                                                    .Where(rr => rr.ReceivingReport.PurchaseOrder!.Supplier!.SupplierName == sameMonthYearSameSupplier
                                                     .FirstOrDefault()?.PurchaseOrder!.Supplier!.SupplierName)
                                                     .ToList();
 
@@ -4626,7 +4746,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ToList();
 
                 int row = 5;
-                var repoCalculator = _unitOfWork.FilpridePurchaseOrder;
                 var productList = GetOrderedProductNames(
                     groupBySupplierTermsAndType.SelectMany(group => group),
                     po => po.ProductName);
@@ -5379,9 +5498,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[13, 3].Value = "Date Needed: ";
                 worksheet.Cells[13, 4].Value = "ASAP";
                 worksheet.Cells[14, 3].Value = "Supplier: ";
-                worksheet.Cells[14, 4].Value = purchaseOrder!.Supplier!.SupplierName;
+                worksheet.Cells[14, 4].Value = purchaseOrder.Supplier!.SupplierName;
                 worksheet.Cells[15, 3].Value = "IBS PO #: ";
-                worksheet.Cells[15, 4].Value = purchaseOrder!.PurchaseOrderNo;
+                worksheet.Cells[15, 4].Value = purchaseOrder.PurchaseOrderNo;
                 worksheet.Cells[16, 3].Value = "PO Date Created: ";
                 worksheet.Cells[16, 4].Value = receivingReports.FirstOrDefault()!.PurchaseOrder!.CreatedDate.ToString("MMM dd, yyyy");
                 worksheet.Cells[17, 3].Value = "Product: ";
