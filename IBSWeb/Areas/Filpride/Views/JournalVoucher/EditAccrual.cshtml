@@ -361,12 +361,12 @@
                         let rowIndex = 0;
                         let totalDebitSum = 0;
 
-                        for (let i = 0; i < data.accountNo.length; i++) {
+                        for (let i = 0; i < data.details.length; i++) {
 
-                            const accountNumber  = data.accountNo[i];
-                            const accountTitle   = `${accountNumber} ${data.accountName[i]}`;
-                            const debitFormatted = formatNumberToFour(parseNumber(String(data.debit[i] ?? "")));
-                            const creditFormatted = formatNumberToFour(parseNumber(String(data.credit[i] ?? "")));
+                            const accountNumber  = data.details[i].accountNo;
+                            const accountTitle   = `${accountNumber} ${data.details[i].accountName}`;
+                            const debitFormatted = formatNumberToFour(parseNumber(String(data.details[i].debit ?? "")));
+                            const creditFormatted = formatNumberToFour(parseNumber(String(data.details[i].credit ?? "")));
 
                             let previewRow = $("<tr></tr>");
                             previewRow.append(`<td style='width:60%; padding-left:20px;'>${accountTitle}</td>`);
@@ -374,7 +374,7 @@
                             previewRow.append(`<td class='text-end' style='width:7%;'>${creditFormatted}</td>`);
                             tableBody.append(previewRow);
 
-                            const debitVal = parseNumber(String(data.debit[i] ?? ""));
+                            const debitVal = parseNumber(String(data.details[i].debit ?? ""));
                             if (debitVal === 0) continue;
 
                             totalDebitSum += debitVal;
@@ -445,12 +445,12 @@
                     else
                     {
                         let rowIndex = 0;
-                        for (let i = 0; i < data.accountNo.length; i++) {
+                        for (let i = 0; i < data.details.length; i++) {
 
-                            const accountNumber  = data.accountNo[i];
-                            const accountTitle   = `${accountNumber} ${data.accountName[i]}`;
-                            const debitFormatted = formatNumberToFour(parseNumber(String(data.debit[i] ?? "")));
-                            const creditFormatted = formatNumberToFour(parseNumber(String(data.credit[i] ?? "")));
+                            const accountNumber  = data.details[i].accountNo;
+                            const accountTitle   = `${accountNumber} ${data.details[i].accountName}`;
+                            const debitFormatted = formatNumberToFour(parseNumber(String(data.details[i].debit ?? "")));
+                            const creditFormatted = formatNumberToFour(parseNumber(String(data.details[i].credit ?? "")));
 
                             let previewRow = $("<tr></tr>");
                             previewRow.append(`<td style='width:60%; padding-left:20px;'>${accountTitle}</td>`);

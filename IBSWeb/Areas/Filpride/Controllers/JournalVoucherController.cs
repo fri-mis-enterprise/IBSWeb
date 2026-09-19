@@ -400,8 +400,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
             if (model != null)
             {
                 var chartOfAccount = _unitOfWork.FilprideChartOfAccount
-                    .GetAllQuery(x => x.AccountNumber != null &&
-                                      x.AccountNumber.StartsWith("55") &&
+                    .GetAllQuery(x =>
+                        (x.AccountNumber.StartsWith("55") ||
+                         x.AccountNumber.StartsWith("65")) &&
                                       !x.HasChildren)
                     .Select(x => new
                     {
@@ -410,6 +411,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .OrderBy(x => x.AccountNumber)
                     .ToList();
+                var details = model.Details!
+                    .Select(x => new
+                    {
+                        x.AccountNo,
+                        x.AccountName,
+                        x.Debit,
+                        x.Credit
+                    })
+                    .ToList();
+
                 return Json(new
                 {
                     CVNo = model.CheckVoucherHeaderNo,
@@ -423,10 +434,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     Amount = model.Total,
                     model.Particulars,
                     model.CheckNo,
-                    AccountNo = model.Details!.Select(jvd => jvd.AccountNo),
-                    AccountName = model.Details!.Select(jvd => jvd.AccountName),
-                    Debit = model.Details!.Select(jvd => jvd.Debit),
-                    Credit = model.Details!.Select(jvd => jvd.Credit),
+                    Details = details,
                     TotalDebit = model.Details!.Sum(cvd => cvd.Debit),
                     TotalCredit = model.Details!.Sum(cvd => cvd.Credit),
                     ChartOfAccount = chartOfAccount
@@ -2086,9 +2094,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var endingMonth = startingMonth.AddMonths(viewModel.NumberOfMonths - 1);
                 var expenseAccount = viewModel.Details.First(d => d.Debit > 0).AccountTitle;
                 var prepaidAccount = viewModel.Details.First(d => d.Credit > 0).AccountTitle;
-                var expenseTitle = string.Join(" ", expenseAccount.Split(' ').Skip(1));
 
-                var particulars = $"Amortization of '{expenseTitle}' from {startingMonth:MMM yyyy} to {endingMonth:MMM yyyy}.";
                 var model = new FilprideJournalVoucherHeader
                 {
                     Type = cv.Type,
@@ -2096,7 +2102,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     Date = viewModel.TransactionDate,
                     References = viewModel.References,
                     CVId = viewModel.CvId,
-                    Particulars = particulars,
+                    Particulars = viewModel.Particulars,
                     CRNo = viewModel.CrNo,
                     JVReason = viewModel.Reason,
                     CreatedBy = GetUserFullName(),
@@ -2222,7 +2228,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     MinDate = minDate,
                     SelectedExpenseAccount = existingAmortizationSetting.ExpenseAccount.Split(" ")[0],
                     SelectedPrepaidAccount = existingAmortizationSetting.PrepaidAccount.Split(" ")[0],
-                    NumberOfMonths = existingAmortizationSetting.OccurrenceTotal
+                    NumberOfMonths = existingAmortizationSetting.OccurrenceTotal,
+                    Particulars = header.Particulars
                 };
 
                 model.CvList = await _dbContext.FilprideCheckVoucherHeaders
@@ -2341,14 +2348,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var endingMonth = startingMonth.AddMonths(viewModel.NumberOfMonths - 1);
                 var expenseAccount = viewModel.Details.First(d => d.Debit > 0).AccountTitle;
                 var prepaidAccount = viewModel.Details.First(d => d.Credit > 0).AccountTitle;
-                var expenseTitle = string.Join(" ", expenseAccount.Split(' ').Skip(1));
-
-                var particulars = $"Amortization of '{expenseTitle}' from {startingMonth:MMM yyyy} to {endingMonth:MMM yyyy}.";
 
                 existingHeaderModel.Date = viewModel.TransactionDate;
                 existingHeaderModel.References = viewModel.References;
                 existingHeaderModel.CVId = viewModel.CvId;
-                existingHeaderModel.Particulars = particulars;
+                existingHeaderModel.Particulars = viewModel.Particulars;
                 existingHeaderModel.CRNo = viewModel.CrNo;
                 existingHeaderModel.JVReason = viewModel.Reason;
                 existingHeaderModel.EditedBy = GetUserFullName();
