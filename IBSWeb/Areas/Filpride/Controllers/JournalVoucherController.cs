@@ -411,6 +411,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .OrderBy(x => x.AccountNumber)
                     .ToList();
+                var details = model.Details!
+                    .Select(x => new
+                    {
+                        x.AccountNo,
+                        x.AccountName,
+                        x.Debit,
+                        x.Credit
+                    })
+                    .ToList();
+
                 return Json(new
                 {
                     CVNo = model.CheckVoucherHeaderNo,
@@ -424,10 +434,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     Amount = model.Total,
                     model.Particulars,
                     model.CheckNo,
-                    AccountNo = model.Details!.Select(jvd => jvd.AccountNo),
-                    AccountName = model.Details!.Select(jvd => jvd.AccountName),
-                    Debit = model.Details!.Select(jvd => jvd.Debit),
-                    Credit = model.Details!.Select(jvd => jvd.Credit),
+                    Details = details,
                     TotalDebit = model.Details!.Sum(cvd => cvd.Debit),
                     TotalCredit = model.Details!.Sum(cvd => cvd.Credit),
                     ChartOfAccount = chartOfAccount

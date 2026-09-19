@@ -297,12 +297,11 @@
                     $("#totalDebit").text(formatNumberToFour(data.totalDebit));
                     $("#totalCredit").text(formatNumberToFour(data.totalCredit));
 
-                    for (let i = 0; i < data.accountNo.length; i++) {
+                    for (let i = 0; i < data.details.length; i++) {
                         let row = $("<tr></tr>");
-                        let accountNumber = data.accountNo[i];
-                        let accountTitle = data.accountNo[i] + " " + data.accountName[i];
-                        let debit = formatNumberToFour(data.debit[i]);
-                        let credit = formatNumberToFour(data.credit[i]);
+                        let accountTitle = data.details[i].accountNo + " " + data.details[i].accountName;
+                        let debit = formatNumberToFour(data.details[i].debit);
+                        let credit = formatNumberToFour(data.details[i].credit);
 
                         row.append("<td style='width:60%; padding-left:20px;'>" + accountTitle + "</td>");
                         row.append("<td class='text-end' style='width:7%;'>" + debit + "</td>");
@@ -320,8 +319,8 @@
                     for (let i = 0; i < data.chartOfAccount.length; i++) {
                         let accountTitle = data.chartOfAccount[i].accountNumber + " " + data.chartOfAccount[i].accountName;
 
-                        if (debitAmount === 0 && data.debit[i] > 0) {
-                            debitAmount = data.debit[i];
+                        if (debitAmount === 0 && data.details[i].debit > 0) {
+                            debitAmount = data.details[i].debit;
                         }
                         expenseAccountDropdown.append(
                             `<option value="${data.chartOfAccount[i].accountNumber}" data-debit="${debitAmount}">${accountTitle}</option>`
