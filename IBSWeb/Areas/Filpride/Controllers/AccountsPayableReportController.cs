@@ -68,9 +68,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private readonly BrandingOptions _brandingOptions;
 
-        private readonly ILogger<GeneralLedgerReportController> _logger;
+        private readonly ILogger<AccountsPayableReportController> _logger;
 
-        public AccountsPayableReportController(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager, IUnitOfWork unitOfWork, IWebHostEnvironment webHostEnvironment, ILogger<GeneralLedgerReportController> logger,
+        public AccountsPayableReportController(
+            ApplicationDbContext dbContext,
+            UserManager<ApplicationUser> userManager,
+            IUnitOfWork unitOfWork,
+            IWebHostEnvironment webHostEnvironment,
+            ILogger<AccountsPayableReportController> logger,
             IOptions<BrandingOptions> brandingOptions)
         {
             _dbContext = dbContext;
@@ -422,7 +427,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Include(coa => coa.ParentAccount)
                         .ThenInclude(a => a!.ParentAccount)
                         .ThenInclude(a => a!.ParentAccount)
-                    .ToDictionaryAsync(c => c.AccountNumber!, cancellationToken);
+                    .ToDictionaryAsync(c => c.AccountNumber, cancellationToken);
 
                 foreach (var cd in clearedDisbursementReport)
                 {
@@ -441,7 +446,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         continue;
                     }
 
-                    var levelOneAccount = coa?.ParentAccount?.ParentAccount?.ParentAccount;
+                    var levelOneAccount = coa.ParentAccount?.ParentAccount?.ParentAccount;
 
                     worksheet.Cells[row, 1].Value = $"{levelOneAccount?.AccountNumber} " +
                                                     $"{levelOneAccount?.AccountName}";
@@ -518,8 +523,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var nonTradeInvoiceReport =
                     await _dbContext.FilprideCheckVoucherDetails
                         .AsNoTracking()
-                        .Where(cvd => true
-                                      && cvd.CheckVoucherHeader!.CvType == nameof(CVType.Invoicing)
+                        .Where(cvd => cvd.CheckVoucherHeader!.CvType == nameof(CVType.Invoicing)
                                       && cvd.CheckVoucherHeader.Date >= dateFrom &&
                                       cvd.CheckVoucherHeader.Date <= dateTo
                                       && (statusFilter == "ValidOnly"
@@ -541,8 +545,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Where(x =>
                         x.PostedBy != null &&
                         x.Reference != null &&
-                        nonTradeNos.Contains(x.Reference) &&
-                        true)
+                        nonTradeNos.Contains(x.Reference))
                     .Select(x => new
                     {
                         x.Reference,
@@ -2860,7 +2863,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var totalCommissionAmount = 0m;
                 var totalNetMarginPerLiter = 0m;
                 var totalNetMarginAmount = 0m;
-                var repoCalculator = _unitOfWork.FilpridePurchaseOrder;
 
                 #endregion -- Initialize "total" Variables for operations --
 
@@ -3471,7 +3473,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 var receivingReports = await _dbContext.FilprideReceivingReports
                     .Include(rr => rr.PurchaseOrder).ThenInclude(po => po!.Supplier)
-                    .Where(rr => true&& rr.Date <= model.DateTo)
+                    .Where(rr => rr.Date <= model.DateTo)
                     .OrderBy(rr => rr.Date.Year)
                     .ThenBy(rr => rr.Date.Month)
                     .ThenBy(rr => rr.PurchaseOrder!.Supplier!.SupplierName)
@@ -3614,7 +3616,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 var grandTotalEndingGross = 0m;
                                 var grandTotalEndingEwt = 0m;
                                 var grandTotalEndingNetAmount = 0m;
-                                var repoCalculator = _unitOfWork.FilpridePurchaseOrder;
 
                                 #endregion -- Initialize Variable for Computation
 
@@ -3899,8 +3900,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             idsOfRrsOfSelectedPeriodFromCv.FirstOrDefault(rr => rr.ReceivingReportId == rrSet.ReceivingReportId)!.AmountPaid
                     })
                     .GroupBy(rr => new MonthYear(
-                        rr.ReceivingReport.Date!.Year,
-                        rr.ReceivingReport.Date!.Month
+                        rr.ReceivingReport.Date.Year,
+                        rr.ReceivingReport.Date.Month
                     ));
 
                 var rrAndAmountPaidForPreviousPeriodFromCv = allRr
@@ -3913,29 +3914,29 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             idsOfRrsOfPreviousPeriodsFromCv.FirstOrDefault(rr => rr.ReceivingReportId == rrSet.ReceivingReportId)!.AmountPaid
                     })
                     .GroupBy(rr => new MonthYear(
-                        rr.ReceivingReport.Date!.Year,
-                        rr.ReceivingReport.Date!.Month
+                        rr.ReceivingReport.Date.Year,
+                        rr.ReceivingReport.Date.Month
                     ));
 
                 var allRrGroupedByMonthYear = allRr
                     .GroupBy(rr => new MonthYear(
-                        rr.Date!.Year,
-                        rr.Date!.Month
+                        rr.Date.Year,
+                        rr.Date.Month
                     ));
 
                 var allPreviousRrGroupedByMonthYear = allRr
-                    .Where(rr => rr.Date! < dateFrom)
+                    .Where(rr => rr.Date < dateFrom)
                     .GroupBy(rr => new MonthYear(
-                        rr.Date!.Year,
-                        rr.Date!.Month
+                        rr.Date.Year,
+                        rr.Date.Month
                     ))
                     .ToList();
 
                 var allSelectedRrGroupedByMonthYear = allRr
-                    .Where(rr => rr.Date! >= dateFrom)
+                    .Where(rr => rr.Date >= dateFrom)
                     .GroupBy(rr => new MonthYear(
-                        rr.Date!.Year,
-                        rr.Date!.Month
+                        rr.Date.Year,
+                        rr.Date.Month
                     ))
                     .ToList();
 
@@ -4062,8 +4063,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var grandTotalEwtEnding = 0m;
                 var grandTotalNetEnding = 0m;
 
-                var repoCalculator = _unitOfWork.FilpridePurchaseOrder;
-
                 #endregion == Initialize Variables ==
 
                 foreach (var allRrsSameMonthYear in allRrGroupedByMonthYear)
@@ -4076,9 +4075,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .ToList();
 
                     // MONTH YEAR LABEL
-                    worksheet.Cells[row, 1].Value = (CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(sameMonthYearGroupedBySupplier.FirstOrDefault()?.FirstOrDefault()?.Date!.Month ?? 0))
+                    worksheet.Cells[row, 1].Value = (CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(sameMonthYearGroupedBySupplier.FirstOrDefault()?.FirstOrDefault()?.Date.Month ?? 0))
                                                     + " " +
-                                                    (sameMonthYearGroupedBySupplier.FirstOrDefault()?.FirstOrDefault()?.Date!.Year.ToString() ?? " ");
+                                                    (sameMonthYearGroupedBySupplier.FirstOrDefault()?.FirstOrDefault()?.Date.Year.ToString() ?? " ");
                     worksheet.Cells[row, 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
                     worksheet.Cells[row, 1].Style.Fill.BackgroundColor.SetColor(Color.Yellow);
                     row++;
@@ -4144,8 +4143,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 foreach (var sameMonthYear in loopingMainRrGroupedByMonthYear)
                                 {
                                     // this process finds the rr that has the same month/year for current month/year section
-                                    if (sameMonthYear.FirstOrDefault()?.Date!.Month != allRrsSameMonthYear.FirstOrDefault()?.Date!.Month ||
-                                        sameMonthYear.FirstOrDefault()?.Date!.Year != allRrsSameMonthYear.FirstOrDefault()?.Date!.Year)
+                                    if (sameMonthYear.FirstOrDefault()?.Date!.Month != allRrsSameMonthYear.FirstOrDefault()?.Date.Month ||
+                                        sameMonthYear.FirstOrDefault()?.Date!.Year != allRrsSameMonthYear.FirstOrDefault()?.Date.Year)
                                     {
                                         continue;
                                     }
@@ -4181,7 +4180,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                             if (secondLoopSameMonthYear != null)
                                             {
                                                 secondLoopSameMonthYearSameSupplier = secondLoopSameMonthYear
-                                                    .Where(rr => rr.ReceivingReport!.PurchaseOrder!.Supplier!.SupplierName == sameMonthYearSameSupplier
+                                                    .Where(rr => rr.ReceivingReport.PurchaseOrder!.Supplier!.SupplierName == sameMonthYearSameSupplier
                                                     .FirstOrDefault()?.PurchaseOrder!.Supplier!.SupplierName)
                                                     .ToList();
 
@@ -4626,7 +4625,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ToList();
 
                 int row = 5;
-                var repoCalculator = _unitOfWork.FilpridePurchaseOrder;
                 var productList = GetOrderedProductNames(
                     groupBySupplierTermsAndType.SelectMany(group => group),
                     po => po.ProductName);
@@ -5379,9 +5377,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[13, 3].Value = "Date Needed: ";
                 worksheet.Cells[13, 4].Value = "ASAP";
                 worksheet.Cells[14, 3].Value = "Supplier: ";
-                worksheet.Cells[14, 4].Value = purchaseOrder!.Supplier!.SupplierName;
+                worksheet.Cells[14, 4].Value = purchaseOrder.Supplier!.SupplierName;
                 worksheet.Cells[15, 3].Value = "IBS PO #: ";
-                worksheet.Cells[15, 4].Value = purchaseOrder!.PurchaseOrderNo;
+                worksheet.Cells[15, 4].Value = purchaseOrder.PurchaseOrderNo;
                 worksheet.Cells[16, 3].Value = "PO Date Created: ";
                 worksheet.Cells[16, 4].Value = receivingReports.FirstOrDefault()!.PurchaseOrder!.CreatedDate.ToString("MMM dd, yyyy");
                 worksheet.Cells[17, 3].Value = "Product: ";
