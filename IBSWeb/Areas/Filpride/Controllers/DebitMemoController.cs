@@ -431,6 +431,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .RecalculateTaxBalancesAsync(model.SalesInvoiceId.Value, cancellationToken);
                 }
 
+                if (model.ServiceInvoiceId.HasValue)
+                {
+                    await _unitOfWork.FilprideServiceInvoice
+                        .RecalculateTaxBalancesAsync(model.ServiceInvoiceId.Value, cancellationToken);
+                }
+
                 await _unitOfWork.SaveAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 TempData["success"] = "Debit Memo has been Posted.";
@@ -503,6 +509,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (model.ServiceInvoice != null)
                 {
                     model.ServiceInvoice.Balance -= model.DebitAmount;
+                    model.ServiceInvoice.DebitAmount -= model.DebitAmount;
                     model.ServiceInvoice.IsPaid = model.ServiceInvoice.Balance <= 0;
                     model.ServiceInvoice.PaymentStatus = model.ServiceInvoice.Balance < 0 ? "OverPaid"
                         : model.ServiceInvoice.Balance == 0 ? "Paid" : "Pending";
@@ -512,6 +519,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     await _unitOfWork.FilprideSalesInvoice
                         .RecalculateTaxBalancesAsync(model.SalesInvoiceId.Value, cancellationToken);
+                }
+
+                if (model.ServiceInvoiceId.HasValue)
+                {
+                    await _unitOfWork.FilprideServiceInvoice
+                        .RecalculateTaxBalancesAsync(model.ServiceInvoiceId.Value, cancellationToken);
                 }
 
                 await _unitOfWork.GeneralLedger.ReverseEntries(model.DebitMemoNo, cancellationToken);
@@ -1280,6 +1293,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (debitMemo.ServiceInvoice != null)
                 {
                     debitMemo.ServiceInvoice.Balance -= debitMemo.DebitAmount;
+                    debitMemo.ServiceInvoice.DebitAmount -= debitMemo.DebitAmount;
                     debitMemo.ServiceInvoice.IsPaid = debitMemo.ServiceInvoice.Balance <= 0;
                     debitMemo.ServiceInvoice.PaymentStatus = debitMemo.ServiceInvoice.Balance < 0 ? "OverPaid"
                         : debitMemo.ServiceInvoice.Balance == 0 ? "Paid" : "Pending";
@@ -1289,6 +1303,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     await _unitOfWork.FilprideSalesInvoice
                         .RecalculateTaxBalancesAsync(debitMemo.SalesInvoiceId.Value, cancellationToken);
+                }
+
+                if (debitMemo.ServiceInvoiceId.HasValue)
+                {
+                    await _unitOfWork.FilprideServiceInvoice
+                        .RecalculateTaxBalancesAsync(debitMemo.ServiceInvoiceId.Value, cancellationToken);
                 }
 
                 debitMemo.PostedBy = null;
@@ -1373,6 +1393,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .RecalculateTaxBalancesAsync(model.SalesInvoiceId.Value, cancellationToken);
                 }
 
+                if (model.ServiceInvoiceId.HasValue)
+                {
+                    await _unitOfWork.FilprideServiceInvoice
+                        .RecalculateTaxBalancesAsync(model.ServiceInvoiceId.Value, cancellationToken);
+                }
+
                 await _unitOfWork.SaveAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 TempData["success"] = "Debit Memo has been approved and posted.";
@@ -1432,6 +1458,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             if (model.ServiceInvoice != null)
             {
                 model.ServiceInvoice.Balance += model.DebitAmount;
+                model.ServiceInvoice.DebitAmount += model.DebitAmount;
                 model.ServiceInvoice.IsPaid = model.ServiceInvoice.Balance <= 0;
                 model.ServiceInvoice.PaymentStatus = model.ServiceInvoice.Balance < 0 ? "OverPaid"
                     : model.ServiceInvoice.Balance == 0 ? "Paid" : "Pending";

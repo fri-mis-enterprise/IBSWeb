@@ -621,6 +621,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .RecalculateTaxBalancesAsync(model.SalesInvoiceId.Value, cancellationToken);
                 }
 
+                if (model.ServiceInvoiceId.HasValue)
+                {
+                    await _unitOfWork.FilprideServiceInvoice
+                        .RecalculateTaxBalancesAsync(model.ServiceInvoiceId.Value, cancellationToken);
+                }
+
                 await _unitOfWork.SaveAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 TempData["success"] = "Credit Memo has been Posted.";
@@ -693,7 +699,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 if (model.ServiceInvoice != null)
                 {
-                    model.ServiceInvoice.Balance += Math.Abs(model.CreditAmount);
+                    var creditAmount = Math.Abs(model.CreditAmount);
+                    model.ServiceInvoice.Balance += creditAmount;
+                    model.ServiceInvoice.CreditAmount -= creditAmount;
                     model.ServiceInvoice.IsPaid = model.ServiceInvoice.Balance <= 0;
                     model.ServiceInvoice.PaymentStatus = model.ServiceInvoice.Balance < 0 ? "OverPaid"
                         : model.ServiceInvoice.Balance == 0 ? "Paid" : "Pending";
@@ -703,6 +711,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     await _unitOfWork.FilprideSalesInvoice
                         .RecalculateTaxBalancesAsync(model.SalesInvoiceId.Value, cancellationToken);
+                }
+
+                if (model.ServiceInvoiceId.HasValue)
+                {
+                    await _unitOfWork.FilprideServiceInvoice
+                        .RecalculateTaxBalancesAsync(model.ServiceInvoiceId.Value, cancellationToken);
                 }
 
                 await _unitOfWork.GeneralLedger.ReverseEntries(model.CreditMemoNo, cancellationToken);
@@ -1285,7 +1299,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 if (creditMemo.ServiceInvoice != null)
                 {
-                    creditMemo.ServiceInvoice.Balance += Math.Abs(creditMemo.CreditAmount);
+                    var creditAmount = Math.Abs(creditMemo.CreditAmount);
+                    creditMemo.ServiceInvoice.Balance += creditAmount;
+                    creditMemo.ServiceInvoice.CreditAmount -= creditAmount;
                     creditMemo.ServiceInvoice.IsPaid = creditMemo.ServiceInvoice.Balance <= 0;
                     creditMemo.ServiceInvoice.PaymentStatus = creditMemo.ServiceInvoice.Balance < 0 ? "OverPaid"
                         : creditMemo.ServiceInvoice.Balance == 0 ? "Paid" : "Pending";
@@ -1295,6 +1311,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     await _unitOfWork.FilprideSalesInvoice
                         .RecalculateTaxBalancesAsync(creditMemo.SalesInvoiceId.Value, cancellationToken);
+                }
+
+                if (creditMemo.ServiceInvoiceId.HasValue)
+                {
+                    await _unitOfWork.FilprideServiceInvoice
+                        .RecalculateTaxBalancesAsync(creditMemo.ServiceInvoiceId.Value, cancellationToken);
                 }
 
                 creditMemo.PostedBy = null;
@@ -1379,6 +1401,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .RecalculateTaxBalancesAsync(model.SalesInvoiceId.Value, cancellationToken);
                 }
 
+                if (model.ServiceInvoiceId.HasValue)
+                {
+                    await _unitOfWork.FilprideServiceInvoice
+                        .RecalculateTaxBalancesAsync(model.ServiceInvoiceId.Value, cancellationToken);
+                }
+
                 await _unitOfWork.SaveAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 TempData["success"] = "Credit Memo has been approved and posted.";
@@ -1438,7 +1466,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             if (model.ServiceInvoice != null)
             {
-                model.ServiceInvoice.Balance -= Math.Abs(model.CreditAmount);
+                var creditAmount = Math.Abs(model.CreditAmount);
+                model.ServiceInvoice.Balance -= creditAmount;
+                model.ServiceInvoice.CreditAmount += creditAmount;
                 model.ServiceInvoice.IsPaid = model.ServiceInvoice.Balance <= 0;
                 model.ServiceInvoice.PaymentStatus = model.ServiceInvoice.Balance < 0 ? "OverPaid"
                     : model.ServiceInvoice.Balance == 0 ? "Paid" : "Pending";

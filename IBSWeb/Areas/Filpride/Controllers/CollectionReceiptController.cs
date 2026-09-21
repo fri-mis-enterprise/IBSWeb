@@ -176,6 +176,60 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        private async Task ValidateServiceInvoiceTaxAllocationAsync(
+            int serviceInvoiceId,
+            int customerId,
+            decimal ewt,
+            decimal wvat,
+            int? excludedCollectionReceiptId,
+            bool has2307,
+            bool has2306,
+            CancellationToken cancellationToken)
+        {
+            if (ewt < 0m || wvat < 0m)
+            {
+                throw new ArgumentException("EWT and WVAT allocations cannot be negative.");
+            }
+
+            var serviceInvoice = await _unitOfWork.FilprideServiceInvoice
+                .GetAsync(sv => sv.ServiceInvoiceId == serviceInvoiceId, cancellationToken);
+
+            if (serviceInvoice == null || serviceInvoice.CustomerId != customerId || serviceInvoice.PostedBy == null)
+            {
+                throw new ArgumentException("The selected service invoice is invalid for this receipt.");
+            }
+
+            var taxBalance = await _unitOfWork.FilprideServiceInvoice
+                .GetTaxBalanceAsync(serviceInvoiceId, excludedCollectionReceiptId, cancellationToken)
+                ?? throw new ArgumentException("The selected service invoice was not found.");
+
+            if ((ewt > 0m && ewt > taxBalance.CwtBalance) ||
+                (wvat > 0m && wvat > taxBalance.CwVatBalance))
+            {
+                throw new ArgumentException($"Tax allocation exceeds the selected invoice's remaining tax balance. CWT remaining: {taxBalance.CwtBalance:#,##0.0000}; CWVAT remaining: {taxBalance.CwVatBalance:#,##0.0000}.");
+            }
+
+            if (ewt > 0m && !has2307)
+            {
+                throw new ArgumentException("BIR 2307 is required for a positive CWT allocation.");
+            }
+
+            if (wvat > 0m && !has2306)
+            {
+                throw new ArgumentException("BIR 2306 is required for a positive CWVAT allocation.");
+            }
+        }
+
+        private async Task RecalculateServiceInvoiceTaxBalancesAsync(int? serviceInvoiceId,
+            CancellationToken cancellationToken)
+        {
+            if (serviceInvoiceId.HasValue)
+            {
+                await _unitOfWork.FilprideServiceInvoice
+                    .RecalculateTaxBalancesAsync(serviceInvoiceId.Value, cancellationToken);
+            }
+        }
+
         public async Task<IActionResult> Index(string? view, CancellationToken cancellationToken)
         {
             try
@@ -1220,7 +1274,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
             viewModel.ServiceInvoices = (await _unitOfWork.FilprideServiceInvoice
-                .GetAllAsync(si => si.Balance > 0
+                .GetAllAsync(si => (si.Balance > 0 || si.CwtBalance > 0 || si.CwVatBalance > 0)
                                    && si.CustomerId == viewModel.CustomerId
                                    && si.PostedBy != null, cancellationToken))
                 .OrderBy(si => si.ServiceInvoiceId)
@@ -1233,7 +1287,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
 
-            var total = viewModel.CashAmount + viewModel.CheckAmount + viewModel.ManagersCheckAmount + viewModel.EWT + viewModel.WVAT;
+            var ewt = DecimalRoundingHelper.RoundToFour(viewModel.EWT);
+            var wvat = DecimalRoundingHelper.RoundToFour(viewModel.WVAT);
+            var total = viewModel.CashAmount + viewModel.CheckAmount + viewModel.ManagersCheckAmount + ewt + wvat;
             if (total == 0)
             {
                 TempData["warning"] = "Please input at least one type form of payment";
@@ -1243,6 +1299,25 @@ namespace IBSWeb.Areas.Filpride.Controllers
             if (!ModelState.IsValid)
             {
                 TempData["warning"] = "The information you submitted is not valid!";
+                return View(viewModel);
+            }
+
+            try
+            {
+                await ValidateServiceInvoiceTaxAllocationAsync(
+                    viewModel.ServiceInvoiceId,
+                    viewModel.CustomerId,
+                    ewt,
+                    wvat,
+                    null,
+                    viewModel.Bir2307 is { Length: > 0 },
+                    viewModel.Bir2306 is { Length: > 0 },
+                    cancellationToken);
+            }
+            catch (ArgumentException ex)
+            {
+                ModelState.AddModelError(string.Empty, ex.Message);
+                TempData["warning"] = ex.Message;
                 return View(viewModel);
             }
 
@@ -1282,8 +1357,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     ManagersCheckBank = viewModel.ManagersCheckBank,
                     ManagersCheckBranch = viewModel.ManagersCheckBranch,
                     ManagersCheckAmount = viewModel.ManagersCheckAmount,
-                    EWT = viewModel.EWT,
-                    WVAT = viewModel.WVAT,
+                    EWT = ewt,
+                    WVAT = wvat,
                     Total = total,
                     CreatedBy = GetUserFullName(),
                     Type = existingServiceInvoice.Type,
@@ -1314,12 +1389,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     CollectionReceiptNo = model.CollectionReceiptNo,
                     InvoiceDate = DateOnly.FromDateTime(existingServiceInvoice.CreatedDate),
                     InvoiceNo = existingServiceInvoice.ServiceInvoiceNo,
-                    Amount = model.Total
+                    Amount = model.Total,
+                    EWT = model.EWT,
+                    WVAT = model.WVAT
                 };
 
                 await _dbContext.FilprideCollectionReceiptDetails.AddAsync(details, cancellationToken);
 
                 await _unitOfWork.FilprideCollectionReceipt.UpdateSV(model.ServiceInvoice!.ServiceInvoiceId, model.Total, cancellationToken);
+                await RecalculateServiceInvoiceTaxBalancesAsync(existingServiceInvoice.ServiceInvoiceId, cancellationToken);
+                await _unitOfWork.SaveAsync(cancellationToken);
 
                 #endregion --Saving default value
 
@@ -1453,7 +1532,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     invoices = (await _unitOfWork.FilprideServiceInvoice
                             .GetAllAsync(si =>
-                                    (si.Balance > 0 || invoiceNo.Contains(si.ServiceInvoiceNo)) &&
+                                    ((si.Balance > 0 || si.CwtBalance > 0 || si.CwVatBalance > 0) || invoiceNo.Contains(si.ServiceInvoiceNo)) &&
                                     si.CustomerId == customerNo &&
                                     si.PostedBy != null,
                                 cancellationToken))
@@ -1464,7 +1543,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     invoices = (await _unitOfWork.FilprideServiceInvoice
                             .GetAllAsync(si => si.CustomerId == customerNo
-                                               && si.Balance > 0
+                                               && (si.Balance > 0 || si.CwtBalance > 0 || si.CwVatBalance > 0)
                                                && si.PostedBy != null, cancellationToken))
                         .OrderBy(si => si.ServiceInvoiceId)
                         .ToList();
@@ -1541,15 +1620,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         return NotFound();
                     }
 
-                    var netOfVatAmount = sv.VatType == SD.VatType_Vatable
-                        ? _unitOfWork.FilprideServiceInvoice.ComputeNetOfVat(sv.Total - sv.Discount)
-                        : sv.Total - sv.Discount;
-                    var withHoldingTaxAmount = sv.HasEwt
-                        ? _unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVatAmount, 0.01m)
-                        : 0;
-                    var withHoldingVatAmount = sv.HasWvat
-                        ? _unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVatAmount, 0.05m)
-                        : 0;
+                    var netDiscount = sv.Total - sv.Discount;
+                    var taxBalance = await _unitOfWork.FilprideServiceInvoice
+                        .GetTaxBalanceAsync(sv.ServiceInvoiceId, crId, cancellationToken)
+                        ?? throw new InvalidOperationException("Service invoice tax balance not found.");
                     var balance = sv.Balance;
                     var amountPaid = sv.AmountPaid;
 
@@ -1574,12 +1648,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     return Json(new
                     {
-                        Amount = sv.Total.ToString(SD.Two_Decimal_Format),
+                        Amount = netDiscount.ToString(SD.Two_Decimal_Format),
                         AmountPaid = amountPaid.ToString(SD.Two_Decimal_Format),
                         Balance = balance.ToString(SD.Two_Decimal_Format),
-                        Ewt = withHoldingTaxAmount.ToString(SD.Two_Decimal_Format),
-                        Wvat = withHoldingVatAmount.ToString(SD.Two_Decimal_Format),
-                        Total = (sv.Total - (withHoldingTaxAmount + withHoldingVatAmount)).ToString(SD.Two_Decimal_Format)
+                        Ewt = taxBalance.CwtAmount.ToString(SD.Four_Decimal_Format),
+                        Wvat = taxBalance.CwVatAmount.ToString(SD.Four_Decimal_Format),
+                        EwtAmountPaid = taxBalance.CwtAmountPaid.ToString(SD.Four_Decimal_Format),
+                        WvatAmountPaid = taxBalance.CwVatAmountPaid.ToString(SD.Four_Decimal_Format),
+                        EwtBalance = taxBalance.CwtBalance.ToString(SD.Four_Decimal_Format),
+                        WvatBalance = taxBalance.CwVatBalance.ToString(SD.Four_Decimal_Format),
+                        Total = (netDiscount - (taxBalance.CwtAmount + taxBalance.CwVatAmount)).ToString(SD.Two_Decimal_Format),
+                        Debit = sv.DebitAmount,
+                        Credit = sv.CreditAmount
                     });
                 }
 
@@ -1639,18 +1719,24 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     }
 
                     decimal netDiscount = sv.Total - sv.Discount;
-                    decimal netOfVatAmount = sv.VatType == SD.VatType_Vatable ? _unitOfWork.FilprideServiceInvoice.ComputeNetOfVat(netDiscount) : netDiscount;
-                    decimal withHoldingTaxAmount = sv.HasEwt ? _unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVatAmount, 0.01m) : 0;
-                    decimal withHoldingVatAmount = sv.HasWvat ? _unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVatAmount, 0.05m) : 0;
+                    var taxBalance = await _unitOfWork.FilprideServiceInvoice
+                        .GetTaxBalanceAsync(sv.ServiceInvoiceId, crId, cancellationToken)
+                        ?? throw new InvalidOperationException("Service invoice tax balance not found.");
 
                     return Json(new
                     {
                         Amount = netDiscount,
                         sv.AmountPaid,
                         sv.Balance,
-                        WithholdingTax = withHoldingTaxAmount,
-                        WithholdingVat = withHoldingVatAmount,
-                        Total = netDiscount - (withHoldingTaxAmount + withHoldingVatAmount)
+                        WithholdingTax = taxBalance.CwtAmount,
+                        WithholdingVat = taxBalance.CwVatAmount,
+                        CwtAmountPaid = taxBalance.CwtAmountPaid,
+                        CwVatAmountPaid = taxBalance.CwVatAmountPaid,
+                        CwtBalance = taxBalance.CwtBalance,
+                        CwVatBalance = taxBalance.CwVatBalance,
+                        Total = netDiscount - (taxBalance.CwtAmount + taxBalance.CwVatAmount),
+                        sv.DebitAmount,
+                        sv.CreditAmount
                     });
                 }
             }
@@ -2010,7 +2096,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     ServiceInvoiceId = existingModel.ServiceInvoiceId ?? 0,
                     ServiceInvoices = (await _unitOfWork.FilprideServiceInvoice
                             .GetAllAsync(si =>
-                                    (si.Balance > 0 || invoiceNo.Contains(si.ServiceInvoiceNo)) &&
+                                    ((si.Balance > 0 || si.CwtBalance > 0 || si.CwVatBalance > 0) || invoiceNo.Contains(si.ServiceInvoiceNo)) &&
                                     si.CustomerId == existingModel.CustomerId &&
                                     si.PostedBy != null,
                                 cancellationToken))
@@ -2081,7 +2167,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             viewModel.ServiceInvoices = (await _unitOfWork.FilprideServiceInvoice
                     .GetAllAsync(si =>
-                        (si.Balance > 0 || invoicesPaid.Contains(si.ServiceInvoiceNo)) &&
+                        ((si.Balance > 0 || si.CwtBalance > 0 || si.CwVatBalance > 0) || invoicesPaid.Contains(si.ServiceInvoiceNo)) &&
                         si.CustomerId == existingModel.CustomerId &&
                         si.PostedBy != null, cancellationToken))
                 .OrderBy(si => si.ServiceInvoiceId)
@@ -2099,7 +2185,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
             viewModel.HasAlready2306 = !string.IsNullOrWhiteSpace(existingModel.F2306FilePath);
             viewModel.HasAlready2307 = !string.IsNullOrWhiteSpace(existingModel.F2307FilePath);
 
-            var total = viewModel.CashAmount + viewModel.CheckAmount + viewModel.ManagersCheckAmount + viewModel.EWT + viewModel.WVAT;
+            var ewt = DecimalRoundingHelper.RoundToFour(viewModel.EWT);
+            var wvat = DecimalRoundingHelper.RoundToFour(viewModel.WVAT);
+            var total = viewModel.CashAmount + viewModel.CheckAmount + viewModel.ManagersCheckAmount + ewt + wvat;
             if (total == 0)
             {
                 TempData["warning"] = "Please input at least one type form of payment";
@@ -2109,6 +2197,25 @@ namespace IBSWeb.Areas.Filpride.Controllers
             if (!ModelState.IsValid)
             {
                 TempData["warning"] = "The information you submitted is not valid!";
+                return View(viewModel);
+            }
+
+            try
+            {
+                await ValidateServiceInvoiceTaxAllocationAsync(
+                    viewModel.ServiceInvoiceId,
+                    viewModel.CustomerId,
+                    ewt,
+                    wvat,
+                    existingModel.CollectionReceiptId,
+                    viewModel.HasAlready2307 || viewModel.Bir2307 is { Length: > 0 },
+                    viewModel.HasAlready2306 || viewModel.Bir2306 is { Length: > 0 },
+                    cancellationToken);
+            }
+            catch (ArgumentException ex)
+            {
+                ModelState.AddModelError(string.Empty, ex.Message);
+                TempData["warning"] = ex.Message;
                 return View(viewModel);
             }
 
@@ -2125,6 +2232,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     return NotFound();
                 }
+
+                var oldServiceInvoiceId = existingModel.ServiceInvoiceId;
 
                 var detail = await _dbContext.FilprideCollectionReceiptDetails
                     .Where(crd => crd.CollectionReceiptId == existingModel.CollectionReceiptId)
@@ -2154,8 +2263,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingModel.ManagersCheckBranch = viewModel.ManagersCheckBranch;
                 existingModel.ManagersCheckAmount = viewModel.ManagersCheckAmount;
                 existingModel.CashAmount = viewModel.CashAmount;
-                existingModel.EWT = viewModel.EWT;
-                existingModel.WVAT = viewModel.WVAT;
+                existingModel.EWT = ewt;
+                existingModel.WVAT = wvat;
                 existingModel.Total = total;
                 existingModel.BatchNumber = viewModel.BatchNumber;
 
@@ -2192,13 +2301,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     CollectionReceiptNo = existingModel.CollectionReceiptNo!,
                     InvoiceDate = DateOnly.FromDateTime(existingServiceInvoice.CreatedDate),
                     InvoiceNo = existingServiceInvoice.ServiceInvoiceNo,
-                    Amount = existingModel.Total
+                    Amount = existingModel.Total,
+                    EWT = existingModel.EWT,
+                    WVAT = existingModel.WVAT
                 };
 
                 await _dbContext.FilprideCollectionReceiptDetails.AddAsync(details, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
 
                 await _unitOfWork.FilprideCollectionReceipt.UpdateSV(existingModel.ServiceInvoice!.ServiceInvoiceId, existingModel.Total, cancellationToken);
+                await RecalculateServiceInvoiceTaxBalancesAsync(oldServiceInvoiceId, cancellationToken);
+                if (oldServiceInvoiceId != existingServiceInvoice.ServiceInvoiceId)
+                {
+                    await RecalculateServiceInvoiceTaxBalancesAsync(existingServiceInvoice.ServiceInvoiceId, cancellationToken);
+                }
+                await _unitOfWork.SaveAsync(cancellationToken);
 
                 #endregion --Saving default value
 
@@ -2318,6 +2435,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var salesInvoiceIds = model.SalesInvoiceId.HasValue
                 ? new[] { model.SalesInvoiceId.Value }
                 : model.MultipleSIId ?? Array.Empty<int>();
+            var serviceInvoiceId = model.ServiceInvoiceId;
 
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
             try
@@ -2347,6 +2465,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 await RecalculateSalesInvoiceTaxBalancesAsync(salesInvoiceIds, cancellationToken);
+                await RecalculateServiceInvoiceTaxBalancesAsync(serviceInvoiceId, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
 
                 #region --Audit Trail Recording
@@ -2390,6 +2509,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var salesInvoiceIds = model.SalesInvoiceId.HasValue
                 ? new[] { model.SalesInvoiceId.Value }
                 : model.MultipleSIId ?? Array.Empty<int>();
+            var serviceInvoiceId = model.ServiceInvoiceId;
 
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
@@ -2436,6 +2556,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await _unitOfWork.SaveAsync(cancellationToken);
                 await RecalculateSalesInvoiceTaxBalancesAsync(salesInvoiceIds, cancellationToken);
+                await RecalculateServiceInvoiceTaxBalancesAsync(serviceInvoiceId, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
 
                 #region --Audit Trail Recording
