@@ -975,7 +975,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             viewModel.SalesInvoices = (await _unitOfWork.FilprideSalesInvoice.GetAllAsync(si =>
                     ((si.Balance > 0 || si.CwtBalance > 0 || si.CwVatBalance > 0) || invoicesPaid.Contains(si.SalesInvoiceNo!))
-                    && si.CustomerId == existingModel.CustomerId
+                    && si.CustomerId == viewModel.CustomerId
                     && si.PostedBy != null, cancellationToken))
                 .OrderBy(s => s.SalesInvoiceId)
                 .Select(s => new SelectListItem
@@ -989,6 +989,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
             viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
+            viewModel.HasAlready2306 = !string.IsNullOrWhiteSpace(existingModel.F2306FilePath);
+            viewModel.HasAlready2307 = !string.IsNullOrWhiteSpace(existingModel.F2307FilePath);
+            viewModel.InvoicePayments = (viewModel.MultipleSIId ?? Array.Empty<int>())
+                .Select((invoiceId, index) => new InvoicePayment
+                {
+                    InvoiceId = invoiceId,
+                    InvoiceNumber = string.Empty,
+                    PaymentAmount = viewModel.SIMultipleAmount != null && index < viewModel.SIMultipleAmount.Length
+                        ? viewModel.SIMultipleAmount[index]
+                        : 0m
+                })
+                .ToList();
 
             var roundedEwtAmounts = viewModel.SIMultipleEwtAmount?
                 .Select(DecimalRoundingHelper.RoundToFour)
