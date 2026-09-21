@@ -165,6 +165,30 @@ namespace IBS.Models.Filpride.AccountsReceivable
         [Column(TypeName = "numeric(18,4)")]
         public decimal WVAT { get; set; }
 
+        [Column(TypeName = "date")]
+        public DateOnly? EwtPeriodFrom { get; set; }
+
+        [Column(TypeName = "date")]
+        public DateOnly? EwtPeriodTo { get; set; }
+
+        [StringLength(50)]
+        public string? EwtReference1 { get; set; }
+
+        [StringLength(50)]
+        public string? EwtReference2 { get; set; }
+
+        [Column(TypeName = "date")]
+        public DateOnly? CwVatPeriodFrom { get; set; }
+
+        [Column(TypeName = "date")]
+        public DateOnly? CwVatPeriodTo { get; set; }
+
+        [StringLength(50)]
+        public string? CwVatReference1 { get; set; }
+
+        [StringLength(50)]
+        public string? CwVatReference2 { get; set; }
+
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = false)]
         [Column(TypeName = "numeric(18,4)")]
         public decimal Total { get; set; }
