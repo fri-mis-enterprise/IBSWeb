@@ -1727,8 +1727,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     WVAT = existingModel.WVAT,
                     CwtBalance = existingModel.SalesInvoice?.CwtBalance ?? 0m,
                     CwVatBalance = existingModel.SalesInvoice?.CwVatBalance ?? 0m,
-                    HasAlready2306 = existingModel.F2306FilePath != null,
-                    HasAlready2307 = existingModel.F2307FilePath != null,
+                    HasAlready2306 = !string.IsNullOrWhiteSpace(existingModel.F2306FilePath),
+                    HasAlready2307 = !string.IsNullOrWhiteSpace(existingModel.F2307FilePath),
                     MinDate = minDate,
                     BatchNumber = existingModel.BatchNumber
                 };
@@ -1787,6 +1787,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
+            viewModel.HasAlready2306 = !string.IsNullOrWhiteSpace(existingModel.F2306FilePath);
+            viewModel.HasAlready2307 = !string.IsNullOrWhiteSpace(existingModel.F2307FilePath);
 
             var ewt = DecimalRoundingHelper.RoundToFour(viewModel.EWT);
             var wvat = DecimalRoundingHelper.RoundToFour(viewModel.WVAT);
@@ -2021,8 +2023,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken),
                     EWT = existingModel.EWT,
                     WVAT = existingModel.WVAT,
-                    HasAlready2306 = existingModel.F2306FilePath != null,
-                    HasAlready2307 = existingModel.F2307FileName != null,
+                    HasAlready2306 = !string.IsNullOrWhiteSpace(existingModel.F2306FilePath),
+                    HasAlready2307 = !string.IsNullOrWhiteSpace(existingModel.F2307FilePath),
                     MinDate = minDate,
                     BatchNumber = existingModel.BatchNumber
                 };
@@ -2082,6 +2084,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
             viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
 
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
+            viewModel.HasAlready2306 = !string.IsNullOrWhiteSpace(existingModel.F2306FilePath);
+            viewModel.HasAlready2307 = !string.IsNullOrWhiteSpace(existingModel.F2307FilePath);
 
             var total = viewModel.CashAmount + viewModel.CheckAmount + viewModel.ManagersCheckAmount + viewModel.EWT + viewModel.WVAT;
             if (total == 0)

@@ -198,6 +198,8 @@ Balance:        <span id="balance"></span>
     }
     <script>
         let collectionReceiptId = @Html.Raw(Json.Serialize(Model.CollectionReceiptId));
+        let hasExisting2306 = @Html.Raw(Json.Serialize(Model.HasAlready2306));
+        let hasExisting2307 = @Html.Raw(Json.Serialize(Model.HasAlready2307));
 
         $(document).ready(function () {
             $("#CustomerId").change(function () {
@@ -328,11 +330,11 @@ Balance:        <span id="balance"></span>
 
             let missing = [];
 
-            if (ewtValue > 0 && bir2307File === 0) {
+            if (ewtValue > 0 && bir2307File === 0 && !hasExisting2307) {
                 missing.push("BIR 2307 is required when EWT has a value.");
             }
 
-            if (wvatValue > 0 && bir2306File === 0) {
+            if (wvatValue > 0 && bir2306File === 0 && !hasExisting2306) {
                 missing.push("BIR 2306 is required when WVAT has a value.");
             }
 
