@@ -24,5 +24,11 @@ namespace IBS.Models.Filpride.AccountsReceivable
 
         [Column(TypeName = "numeric(18,4)")]
         public decimal Amount { get; set; }
+
+        [Column(TypeName = "numeric(18,4)")]
+        public decimal EWT { get; set; }
+
+        [Column(TypeName = "numeric(18,4)")]
+        public decimal WVAT { get; set; }
     }
 }

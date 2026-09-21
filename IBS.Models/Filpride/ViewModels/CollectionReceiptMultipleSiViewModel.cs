@@ -58,6 +58,10 @@ namespace IBS.Models.Filpride.ViewModels
 
         public decimal WVAT { get; set; }
 
+        public decimal[] SIMultipleEwtAmount { get; set; } = null!;
+
+        public decimal[] SIMultipleWvatAmount { get; set; } = null!;
+
         public IFormFile? Bir2306 { get; set; }
 
         public IFormFile? Bir2307 { get; set; }
