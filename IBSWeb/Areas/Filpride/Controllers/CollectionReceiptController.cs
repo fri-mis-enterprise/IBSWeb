@@ -2516,6 +2516,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.VoidedBy = GetUserFullName();
                 model.VoidedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 model.Status = nameof(CollectionReceiptStatus.Voided);
+                await _unitOfWork.SaveAsync(cancellationToken);
                 await _unitOfWork.GeneralLedger.ReverseEntries(model.CollectionReceiptNo, cancellationToken);
 
                 if (model.SINo != null)
@@ -3400,9 +3401,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         continue;
                     }
 
-                    var hasWvat = salesInvoice.CustomerOrderSlip.HasWVAT;
-                    var hasWtax = salesInvoice.CustomerOrderSlip.HasEWT;
-                    var isVatable = salesInvoice.CustomerOrderSlip.VatType == SD.VatType_Vatable;
                     var dr = salesInvoice.DeliveryReceipt!;
                     var getHolidays = await DateTimeHelper.GetNonWorkingDays(salesInvoice.DueDate, model.DepositedDate.Value);
                     var daysDelayed = model.DepositedDate.Value.DayNumber - salesInvoice.DueDate.DayNumber - getHolidays.Count;
@@ -3412,17 +3410,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         continue;
                     }
 
-                    var netOfVat = isVatable
-                        ? _unitOfWork.FilprideCollectionReceipt.ComputeNetOfVat(receipt.Amount)
-                        : receipt.Amount;
-                    var wvatAmount = hasWvat
-                        ? _unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, salesInvoice.DeliveryReceipt?.CwvPercent ?? 0.0500m)
-                        : 0m;
-                    var wtaxAmount = hasWtax
-                        ? _unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, salesInvoice.DeliveryReceipt?.CwtPercent ?? 0.0100m)
-                        : 0m;
-
-                    var paymentAmount = receipt.Amount - wvatAmount - wtaxAmount;
+                    var paymentAmount = receipt.Amount - receipt.EWT - receipt.WVAT;
 
                     //Formula: Payment Amount x 3% x Days Delayed / 360
                     var costOfMoney = paymentAmount * .03m * daysDelayed / 360m;
@@ -5365,9 +5353,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             continue;
                         }
 
-                        var hasWvat = salesInvoice.CustomerOrderSlip!.HasWVAT;
-                        var hasWtax = salesInvoice.CustomerOrderSlip!.HasEWT;
-                        var isVatable = salesInvoice.CustomerOrderSlip!.VatType == SD.VatType_Vatable;
                         var dr = salesInvoice.DeliveryReceipt!;
                         var getHolidays = await DateTimeHelper.GetNonWorkingDays(salesInvoice.DueDate, collection.DepositedDate!.Value);
                         var daysDelayed = collection.DepositedDate.Value.DayNumber - salesInvoice.DueDate.DayNumber - getHolidays.Count;
@@ -5377,16 +5362,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             continue;
                         }
 
-                        var netOfVat = isVatable
-                            ? _unitOfWork.FilprideCollectionReceipt.ComputeNetOfVat(receipt.Amount)
-                            : receipt.Amount;
-                        var wvatAmount = hasWvat
-                            ? _unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, salesInvoice.DeliveryReceipt?.CwvPercent ?? 0.0500m)
-                            : 0m;
-                        var wtaxAmount = hasWtax
-                            ? _unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, salesInvoice.DeliveryReceipt?.CwtPercent ?? 0.0100m)
-                            : 0m;
-                        var paymentAmount = receipt.Amount - wvatAmount - wtaxAmount;
+                        var paymentAmount = receipt.Amount - receipt.EWT - receipt.WVAT;
 
                         //Formula: Payment Amount x 3% x Days Delayed / 360
                         var costOfMoney = paymentAmount * .03m * daysDelayed / 360m;
@@ -5449,9 +5425,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             continue;
                         }
 
-                        var hasWvat = salesInvoice.CustomerOrderSlip.HasWVAT;
-                        var hasWtax = salesInvoice.CustomerOrderSlip.HasEWT;
-                        var isVatable = salesInvoice.CustomerOrderSlip.VatType == SD.VatType_Vatable;
                         var dr = salesInvoice.DeliveryReceipt!;
                         var getHolidays = await DateTimeHelper.GetNonWorkingDays(salesInvoice.DueDate, model.DepositedDate.Value);
                         var daysDelayed = model.DepositedDate.Value.DayNumber - salesInvoice.DueDate.DayNumber - getHolidays.Count;
@@ -5461,17 +5434,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             continue;
                         }
 
-                        var netOfVat = isVatable
-                            ? _unitOfWork.FilprideCollectionReceipt.ComputeNetOfVat(receipt.Amount)
-                            : receipt.Amount;
-                        var wvatAmount = hasWvat
-                            ? _unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, salesInvoice.DeliveryReceipt?.CwvPercent ?? 0.0500m)
-                            : 0m;
-                        var wtaxAmount = hasWtax
-                            ? _unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, salesInvoice.DeliveryReceipt?.CwtPercent ?? 0.0100m)
-                            : 0m;
-
-                        var paymentAmount = receipt.Amount - wvatAmount - wtaxAmount;
+                        var paymentAmount = receipt.Amount - receipt.EWT - receipt.WVAT;
 
                         //Formula: Payment Amount x 3% x Days Delayed / 360
                         var costOfMoney = paymentAmount * .03m * daysDelayed / 360m;
