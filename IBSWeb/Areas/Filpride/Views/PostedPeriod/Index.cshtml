@@ -30,7 +30,7 @@
                     <!-- Post Period Form -->
                     <form asp-action="PostPeriod" method="post" id="postPeriodForm">
                         @Html.AntiForgeryToken()
-                        
+
                         <div class="row mb-3">
                             <div class="col-md-3">
                                 <label for="Month" class="form-label">Month</label>
@@ -76,7 +76,7 @@
                                         @foreach (var module in Model.AvailableModules)
                                         {
                                             <div class="form-check">
-                                                <input type="checkbox" name="SelectedModules" value="@module.Value" 
+                                                <input type="checkbox" name="SelectedModules" value="@module.Value"
                                                        class="form-check-input" id="module_@module.Value">
                                                 <label class="form-check-label" for="module_@module.Value">
                                                     @module.Text
@@ -118,7 +118,6 @@
                 <div class="card-body">
                     @if (Model.PostedPeriods.Any())
                     {
-                        <div class="table-responsive">
                             <form asp-action="UnpostPeriods" method="post" id="unpostPeriodsForm">
                                 @Html.AntiForgeryToken()
                             </form>
@@ -151,7 +150,6 @@
                                     }
                                 </tbody>
                             </table>
-                        </div>
                         <div class="d-flex align-items-center gap-3 mt-3">
                             <button type="submit" form="unpostPeriodsForm" class="btn btn-outline-danger" id="unpostSelectedButton" disabled>
                                 <i class="fas fa-undo"></i> Unpost Selected
@@ -189,7 +187,7 @@
                 updateModuleSelectAll();
             }
         });
-        
+
         // Form validation
         document.getElementById('postPeriodForm').addEventListener('submit', function(e) {
             const checkedBoxes = document.querySelectorAll('input[name="SelectedModules"]:checked');
@@ -205,7 +203,7 @@
         const month = document.getElementById('monthSelect').value;
         const year = document.getElementById('yearSelect').value;
         const moduleContainer = document.getElementById('moduleCheckboxes');
-        
+
         // Show loading
         moduleContainer.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading modules...</div>';
 
@@ -219,12 +217,12 @@
                     moduleContainer.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
                     return;
                 }
-                
+
                 if (data.length === 0) {
                     moduleContainer.innerHTML = '<p class="text-muted mb-0">No modules available for posting in the selected period.</p>';
                     return;
                 }
-                
+
                 let html = `
                     <div class="form-check">
                         <input type="checkbox" id="selectAllModules" class="form-check-input" aria-label="Select all modules to post">
@@ -237,7 +235,7 @@
                 data.forEach(module => {
                     html += `
                         <div class="form-check">
-                            <input type="checkbox" name="SelectedModules" value="${module.value}" 
+                            <input type="checkbox" name="SelectedModules" value="${module.value}"
                                    class="form-check-input" id="module_${module.value}">
                             <label class="form-check-label" for="module_${module.value}">
                                 ${module.text}
@@ -245,7 +243,7 @@
                         </div>
                     `;
                 });
-                
+
                 moduleContainer.innerHTML = html;
                 document.getElementById('selectAllModules').addEventListener('change', function () {
                     setAllModuleCheckboxes(this.checked);
@@ -297,6 +295,7 @@
 
         const selectedPeriodIds = new Set();
         const table = $('#postedPeriodsTable').DataTable({
+            scrollY: '70vh',
             responsive: true,
             pageLength: 10,
             order: [[4, 'desc']],
@@ -390,15 +389,15 @@
     .form-check {
         margin-bottom: 0.5rem;
     }
-    
+
     .badge {
         font-size: 0.875rem;
     }
-    
+
     .table th {
         border-top: none;
     }
-    
+
     .card-header {
         background-color: #f8f9fa;
         border-bottom: 1px solid #dee2e6;

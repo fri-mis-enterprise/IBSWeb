@@ -20,28 +20,26 @@
                 <label class="fw-semibold small text-muted mb-1">Filter by Date</label>
                 <input type="date" id="inputDate" class="form-control rounded-3 shadow-sm" style="width:150px;">
             </div>
-            <div class="table-responsive" style="max-height: 70vh">
-                <table class="table table-hover mb-0" id="paginatedTable">
-                    <thead class="bg-light">
-                    <tr>
-                        <th class="text-start">PO# / Sub PO#</th>
-                        <th class="text-start">Date</th>
-                        <th class="text-start">Supplier</th>
-                        <th class="text-start">Terms</th>
-                        <th class="text-start">Purchase Type</th>
-                        <th class="text-start">Depot</th>
-                        <th class="text-start">Product</th>
-                        <th class="text-start">Quantity</th>
-                        <th class="text-start">Price</th>
-                        <th class="text-start">Unlifted</th>
-                        <th class="text-start">Amount</th>
-                        <th class="text-start">Created By</th>
-                        <th class="text-start">Status</th>
-                        <th class="text-center" style="width: 100px;">Actions</th>
-                    </tr>
-                    </thead>
-                </table>
-            </div>
+            <table class="table table-hover mb-0" id="paginatedTable">
+                <thead class="bg-light">
+                <tr>
+                    <th class="text-start">PO# / Sub PO#</th>
+                    <th class="text-start">Date</th>
+                    <th class="text-start">Supplier</th>
+                    <th class="text-start">Terms</th>
+                    <th class="text-start">Purchase Type</th>
+                    <th class="text-start">Depot</th>
+                    <th class="text-start">Product</th>
+                    <th class="text-start">Quantity</th>
+                    <th class="text-start">Price</th>
+                    <th class="text-start">Unlifted</th>
+                    <th class="text-start">Amount</th>
+                    <th class="text-start">Created By</th>
+                    <th class="text-start">Status</th>
+                    <th class="text-center" style="width: 100px;">Actions</th>
+                </tr>
+                </thead>
+            </table>
         </div>
     </div>
 </div>
@@ -219,6 +217,7 @@
             "serverSide": true, // Enable server-side processing
             "stateSave" : true,
             "stateDuration": 86400,
+            "scrollY": '70vh',
             stateLoadParams: function (settings, data) {
                 if (filterType && filterType.trim() !== "") {
                     data.search.search = '';

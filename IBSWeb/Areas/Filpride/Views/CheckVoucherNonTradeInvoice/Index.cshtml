@@ -23,36 +23,34 @@
                 <label class="fw-semibold small text-muted mb-1">Filter by Date</label>
                 <input type="date" id="inputDate" class="form-control rounded-3 shadow-sm" style="width:150px;">
             </div>
-            <div class="table-responsive" style="max-height: 70vh">
-                <table class="table table-hover mb-0" id="paginatedTable">
-                    <thead class="bg-light">
-                        <tr>
-                            <th class="text-start">Invoice#</th>
-                            <th class="text-start">Date</th>
-                            <th class="text-start">Payee</th>
-                            <th class="text-start">Payable Amount</th>
-                            <th class="text-start">Amount Paid</th>
-                            <th class="text-start">Balance</th>
-                            <th class="text-start">Status</th>
-                            <th class="text-center" style="width: 100px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tfoot>
-                        <tr class="bg-secondary text-white fw-bold">
-                            <td class="py-3"></td>
-                            <td class="py-3"></td>
-                            <td class="text-end py-3">
-                                <span class="text-uppercase">Grand Total:</span>
-                            </td>
-                            <td class="text-start py-3" id="totalAmount"></td>
-                            <td class="text-start py-3" id="totalAmountPaid"></td>
-                            <td class="text-start py-3" id="totalBalance"></td>
-                            <td class="py-3"></td>
-                            <td class="py-3"></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
+            <table class="table table-hover mb-0" id="paginatedTable">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="text-start">Invoice#</th>
+                        <th class="text-start">Date</th>
+                        <th class="text-start">Payee</th>
+                        <th class="text-start">Payable Amount</th>
+                        <th class="text-start">Amount Paid</th>
+                        <th class="text-start">Balance</th>
+                        <th class="text-start">Status</th>
+                        <th class="text-center" style="width: 100px;">Actions</th>
+                    </tr>
+                </thead>
+                <tfoot>
+                    <tr class="bg-secondary text-white fw-bold">
+                        <td class="py-3"></td>
+                        <td class="py-3"></td>
+                        <td class="text-end py-3">
+                            <span class="text-uppercase">Grand Total:</span>
+                        </td>
+                        <td class="text-start py-3" id="totalAmount"></td>
+                        <td class="text-start py-3" id="totalAmountPaid"></td>
+                        <td class="text-start py-3" id="totalBalance"></td>
+                        <td class="py-3"></td>
+                        <td class="py-3"></td>
+                    </tr>
+                </tfoot>
+            </table>
         </div>
     </div>
 </div>
@@ -164,6 +162,7 @@
                 "serverSide": true,
                 "stateSave": true,
                 "stateDuration": 86400,
+                "scrollY": '70vh',
                 stateLoadParams: function (settings, data) {
                     if (filterType && filterType.trim() !== "") {
                         data.search.search = '';

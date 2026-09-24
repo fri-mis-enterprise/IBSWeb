@@ -12,7 +12,7 @@
             </div>
         </div>
     </div>
-    <div class="card-body p-4 table-responsive">
+    <div class="card-body p-4">
         <div class="row pb-3">
             <div class="col-6">
                 <div class="row g-3 align-items-end">
@@ -57,19 +57,20 @@
 @section Scripts{
     <script>
         let selectedRecords = new Set();
-        
+
         $(document).ready(function () {
             // Load persisted date filters from localStorage
             let dateFromValue = localStorage.getItem('exportCustomerDateFrom') || "";
             let dateToValue = localStorage.getItem('exportCustomerDateTo') || "";
             $('#dateFrom').val(dateFromValue);
             $('#dateTo').val(dateToValue);
-            
+
             let table = $('#customerTable').DataTable({
                 processing: true,
                 serverSide: true,      // ENABLE SERVER-SIDE PROCESSING
                 stateSave: true,
                 stateDuration: 86400,  // 24 hours
+                scrollY: '70vh',
                 lengthMenu: [ [10, 25, 50, 100, -1], [10, 25, 50, 100, "All"] ],
                 language: {
                     processing: `<div class="d-flex justify-content-center">
@@ -96,33 +97,33 @@
                 },
                 columns: [
                     {
-                        data: 'customerId', 
-                        orderable: false, 
+                        data: 'customerId',
+                        orderable: false,
                         searchable: false,
                         name: 'customerId',
                         render: DataTable.render.select()
                     },
-                    { 
+                    {
                         data: 'customerCode',
                         name: 'customerCode'
                     },
-                    { 
+                    {
                         data: 'customerName',
                         name: 'customerName'
                     },
-                    { 
+                    {
                         data: 'customerTin',
                         name: 'customerTin'
                     },
-                    { 
+                    {
                         data: 'businessStyle',
                         name: 'businessStyle'
                     },
-                    { 
+                    {
                         data: 'customerTerms',
                         name: 'customerTerms'
                     },
-                    { 
+                    {
                         data: 'customerType',
                         name: 'customerType'
                     },
@@ -131,10 +132,10 @@
                         name: "createdDate",
                         render: function (data) {
                             let date = new Date(data);
-                            return date.toLocaleDateString('en-US', { 
-                                year: 'numeric', 
-                                month: 'short', 
-                                day: '2-digit' 
+                            return date.toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: '2-digit'
                             });
                         }
                     }
@@ -162,20 +163,20 @@
                 // Persist the date values
                 localStorage.setItem('exportCustomerDateFrom', $('#dateFrom').val());
                 localStorage.setItem('exportCustomerDateTo', $('#dateTo').val());
-                
+
                 // Reload table with new date filters
                 table.ajax.reload();
             });
         });
-        
+
         function exportToExcel() {
             let selectedIds = Array.from(selectedRecords).join(',');
-            
+
             if (selectedIds) {
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = '@Url.Action("Export", "Customer", new { area = "Filpride" })';
-                
+
                 const input = document.createElement('input');
                 input.type = 'hidden';
                 input.name = 'selectedRecord';

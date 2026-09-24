@@ -21,24 +21,22 @@
                 <label class="fw-semibold small text-muted mb-1">Filter by Date</label>
                 <input type="date" id="inputDate" class="form-control rounded-3 shadow-sm" style="width:150px;">
             </div>
-            <div class="table-responsive" style="max-height: 70vh">
-                <table class="table table-hover mb-0" id="paginatedTable">
-                    <thead class="bg-light">
-                    <tr>
-                        <th class="text-start">SI#</th>
-                        <th class="text-start">DR#</th>
-                        <th class="text-start">Date</th>
-                        <th class="text-start">Customer</th>
-                        <th class="text-start">Terms</th>
-                        <th class="text-start">Product</th>
-                        <th class="text-start">Amount</th>
-                        <th class="text-start">Created By</th>
-                        <th class="text-start">Status</th>
-                        <th class="text-center" style="width: 100px;">Actions</th>
-                    </tr>
-                    </thead>
-                </table>
-            </div>
+            <table class="table table-hover mb-0" id="paginatedTable">
+                <thead class="bg-light">
+                <tr>
+                    <th class="text-start">SI#</th>
+                    <th class="text-start">DR#</th>
+                    <th class="text-start">Date</th>
+                    <th class="text-start">Customer</th>
+                    <th class="text-start">Terms</th>
+                    <th class="text-start">Product</th>
+                    <th class="text-start">Amount</th>
+                    <th class="text-start">Created By</th>
+                    <th class="text-start">Status</th>
+                    <th class="text-center" style="width: 100px;">Actions</th>
+                </tr>
+                </thead>
+            </table>
         </div>
     </div>
 </div>
@@ -143,6 +141,7 @@
                 "serverSide": true, // Enable server-side processing
                 "stateSave" : true,
                 "stateDuration": 86400,
+                "scrollY": '70vh',
                 "language": {
                     "processing": `<div class="d-flex justify-content-center">
                                     <div class="spinner-border text-primary" role="status">

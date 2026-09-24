@@ -11,7 +11,7 @@
             </div>
         </div>
     </div>
-    <div class="card-body p-4 table-responsive">
+    <div class="card-body p-4">
         <div class="row pb-3">
             <div class="col-6">
                 <div class="row g-3 align-items-end">
@@ -56,19 +56,20 @@
 @section Scripts {
     <script>
         let selectedRecords = new Set();
-        
+
         $(document).ready(function () {
             // Load persisted date filters from localStorage
             let dateFromValue = localStorage.getItem('exportDMDateFrom') || "";
             let dateToValue = localStorage.getItem('exportDMDateTo') || "";
             $('#dateFrom').val(dateFromValue);
             $('#dateTo').val(dateToValue);
-            
+
             let table = $('#debitMemoTable').DataTable({
                 processing: true,
                 serverSide: true,      // ENABLE SERVER-SIDE PROCESSING
                 stateSave: true,
                 stateDuration: 86400,  // 24 hours
+                scrollY: '70vh',
                 lengthMenu: [ [1, 25, 50, 100, -1], [1, 25, 50, 100, "All"] ],
                 language: {
                     processing: `<div class="d-flex justify-content-center">
@@ -95,13 +96,13 @@
                 },
                 columns: [
                     {
-                        data: 'debitMemoId', 
-                        orderable: false, 
+                        data: 'debitMemoId',
+                        orderable: false,
                         searchable: false,
                         name: 'debitMemoId',
                         render: DataTable.render.select()
                     },
-                    { 
+                    {
                         data: 'debitMemoNo',
                         name: 'debitMemoNo'
                     },
@@ -110,10 +111,10 @@
                         name: "transactionDate",
                         render: function (data) {
                             let date = new Date(data);
-                            return date.toLocaleDateString('en-US', { 
-                                year: 'numeric', 
-                                month: 'short', 
-                                day: '2-digit' 
+                            return date.toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: '2-digit'
                             });
                         }
                     },
@@ -130,18 +131,18 @@
                             }
                         }
                     },
-                    { 
+                    {
                         data: 'source',
                         name: 'source'
                     },
-                    { 
+                    {
                         data: 'debitAmount',
                         name: 'debitAmount',
                         render: function (data) {
                             return formatNumber(data);
                         }
                     },
-                    { 
+                    {
                         data: 'createdBy',
                         name: 'createdBy'
                     },
@@ -188,20 +189,20 @@
                 // Persist the date values
                 localStorage.setItem('exportDMDateFrom', $('#dateFrom').val());
                 localStorage.setItem('exportDMDateTo', $('#dateTo').val());
-                
+
                 // Reload table with new date filters
                 table.ajax.reload();
             });
         });
-        
+
         function exportToExcel() {
             let selectedIds = Array.from(selectedRecords).join(',');
-            
+
             if (selectedIds) {
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = '@Url.Action("Export", "DebitMemo", new { area = "Filpride" })';
-                
+
                 const input = document.createElement('input');
                 input.type = 'hidden';
                 input.name = 'selectedRecord';
