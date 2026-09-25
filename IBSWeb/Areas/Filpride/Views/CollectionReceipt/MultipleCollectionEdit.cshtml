@@ -82,12 +82,12 @@
                         <table style="border:dotted 1px; min-width: 750px;">
                             <thead class="m-2 sticky-top bg-white">
                                 <tr>
-                                    <th colspan="7" class="text-center py-4">Invoice Details</th>
+                                    <th colspan="9" class="text-center py-4">Invoice Details</th>
                                 </tr><tr>
                                     <th style="width:11.11%; padding-left:20px;" class="text-center">SI No's</th>
                                     <th class="text-end" style="width:11.11%;">Invoice Amount</th>
-                                    <th class="text-end" style="width:11.11%;">WVat</th>
-                                    <th class="text-end" style="width:11.11%;">EWT</th>
+                                    <th class="text-end" style="width:11.11%;">CWVAT Remaining</th>
+                                    <th class="text-end" style="width:11.11%;">CWT Remaining</th>
                                     <th class="text-end" style="width:11.11%; padding-left:20px;">Less EWT/WVat</th>
                                     <th class="text-end" style="width:11.11%;">Amount Paid</th>
                                     <th class="text-end" style="width:11.11%;">Debit</th>
@@ -120,8 +120,10 @@
                     <table class="table">
                         <thead>
                         <tr>
-                            <th class="w-50 text-center">SI List</th>
-                            <th class="w-50 text-center">Amount</th>
+                            <th class="text-center">SI List</th>
+                            <th class="text-center">Amount</th>
+                            <th class="text-center">CWT</th>
+                            <th class="text-center">CWVAT</th>
                         </tr>
                         </thead>
                         <tbody class="siList">
@@ -178,20 +180,20 @@
                         </tr>
 
                         <tr>
-                            <td style="padding-left:20px;">EWT</td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input asp-for="EWT" style="border:none" class="form-control moneyInput" /></td>
+                            <td style="padding-left:20px;">EWT Cert</td>
+                            <td><input asp-for="EwtPeriodFrom" type="date" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="EwtPeriodTo" type="date" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="EwtReference1" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="EwtReference2" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="EWT" readonly style="border:none" class="form-control moneyInput" /></td>
                         </tr>
                         <tr>
-                            <td style="padding-left:20px;">WVAT</td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input asp-for="WVAT" style="border:none" class="form-control moneyInput" /></td>
+                            <td style="padding-left:20px;">WVAT Cert</td>
+                            <td><input asp-for="CwVatPeriodFrom" type="date" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="CwVatPeriodTo" type="date" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="CwVatReference1" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="CwVatReference2" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="WVAT" readonly style="border:none" class="form-control moneyInput" /></td>
                         </tr>
                         <tr>
                             <td></td>
@@ -242,8 +244,12 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
     // Store existing selected invoices for edit mode
     var existingSelectedInvoices = @Html.Raw(Json.Serialize(Model.MultipleSIId));
     var existingSIAmounts = @Html.Raw(Json.Serialize(Model.SIMultipleAmount));
+    var existingSIEwtAmounts = @Html.Raw(Json.Serialize(Model.SIMultipleEwtAmount));
+    var existingSIWvatAmounts = @Html.Raw(Json.Serialize(Model.SIMultipleWvatAmount));
     var InvoicePayments = @Html.Raw(Json.Serialize(Model.InvoicePayments));
     var collectionReceiptId = @Html.Raw(Json.Serialize(Model.CollectionReceiptId));
+    var hasExisting2306 = @Html.Raw(Json.Serialize(Model.HasAlready2306));
+    var hasExisting2307 = @Html.Raw(Json.Serialize(Model.HasAlready2307));
 </script>
 
 <script>
@@ -331,11 +337,15 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
             });
 
             calculateGrandTotalInvoiceAmount();
+            updateTaxTotals();
         });
 
         function appendSIListRow(siNo, siText) {
             // Get existing amount if available
-            var existingAmount = existingSIAmounts[siNo] || '';
+            var invoiceIndex = existingSelectedInvoices.indexOf(parseInt(siNo));
+            var existingAmount = invoiceIndex >= 0 ? existingSIAmounts[invoiceIndex] : '';
+            var existingEwtAmount = invoiceIndex >= 0 ? existingSIEwtAmounts[invoiceIndex] : '0.0000';
+            var existingWvatAmount = invoiceIndex >= 0 ? existingSIWvatAmounts[invoiceIndex] : '0.0000';
 
             $siList.append(`
                     <tr>
@@ -344,6 +354,8 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
                             <input class="text-center" type='text' value='${siText}' style='border:none' readonly />
                         </td>
                         <td class="text-center"><input type='text' name='SIMultipleAmount' class="text-center inputAmount money paymentAmount_${siNo}" value='${existingAmount}'/></td>
+                        <td class="text-center"><input type='number' name='SIMultipleEwtAmount' class="text-center inputAmount taxAmount ewtAmount_${siNo}" min='0' step='0.0001' value='${existingEwtAmount}'/></td>
+                        <td class="text-center"><input type='number' name='SIMultipleWvatAmount' class="text-center inputAmount taxAmount wvatAmount_${siNo}" min='0' step='0.0001' value='${existingWvatAmount}'/></td>
                     </tr>`);
         }
 
@@ -375,8 +387,8 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
 
                     const gross = data.amount;
                     const netAmount = gross / 1.12;
-                    const vatAmount = data.wvatAmount;
-                    const ewtAmount = data.ewtAmount;
+                    const vatAmount = data.cwVatBalance;
+                    const ewtAmount = data.cwtBalance;
                     const netOfEWT = gross - (vatAmount + ewtAmount);
                     const amountPaid = data.amountPaid;
                     const balance = data.balance;
@@ -387,6 +399,8 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
                     $(`#netAmount_${siNo}`).text(formatNumber(netAmount));
                     $(`#vatAmount_${siNo}`).text(formatNumber(vatAmount));
                     $(`#ewtAmount_${siNo}`).text(formatNumber(ewtAmount));
+                    $(`.ewtAmount_${siNo}`).attr("max", data.cwtBalance);
+                    $(`.wvatAmount_${siNo}`).attr("max", data.cwVatBalance);
                     $(`#siAmountNetOfEWT_${siNo}`).text(formatNumber(netOfEWT));
                     $(`#amountPaid_${siNo}`).text(formatNumber(amountPaid));
                     $(`#debit_${siNo}`).text(formatNumber(debit));
@@ -416,6 +430,23 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
                 }
             });
         }
+
+        function updateTaxTotals() {
+            let totalEwt = 0;
+            let totalWvat = 0;
+            $("input[name='SIMultipleEwtAmount']").each(function () {
+                totalEwt += parseNumber($(this).val());
+            });
+            $("input[name='SIMultipleWvatAmount']").each(function () {
+                totalWvat += parseNumber($(this).val());
+            });
+            $("#EWT").val(totalEwt.toFixed(4));
+            $("#WVAT").val(totalWvat.toFixed(4));
+            document.getElementById("EWT").dispatchEvent(new Event("input", { bubbles: true }));
+            document.getElementById("WVAT").dispatchEvent(new Event("input", { bubbles: true }));
+        }
+
+        $(document).on("input change", "input[name='SIMultipleEwtAmount'], input[name='SIMultipleWvatAmount']", updateTaxTotals);
 
         function calculateGrandTotalInvoiceAmount() {
             let grandTotalRRAmount = 0,
@@ -520,11 +551,11 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
 
         let missing = [];
 
-        if (ewtValue > 0 && bir2307File === 0) {
+        if (ewtValue > 0 && bir2307File === 0 && !hasExisting2307) {
             missing.push("BIR 2307 is required when EWT has a value.");
         }
 
-        if (wvatValue > 0 && bir2306File === 0) {
+        if (wvatValue > 0 && bir2306File === 0 && !hasExisting2306) {
             missing.push("BIR 2306 is required when WVAT has a value.");
         }
 

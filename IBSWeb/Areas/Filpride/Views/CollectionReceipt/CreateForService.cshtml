@@ -87,10 +87,14 @@
 Invoice Amount: <span id="amount"></span>
 EWT:            <span id="ewt"></span>
 WVAT:           <span id="wvat"></span>
+CWT Remaining:  <span id="cwtBalance"></span>
+CWVAT Remaining:<span id="cwVatBalance"></span>
 ==================================
 Less EWT/WVAT:  <span id="total"></span>
 ==================================
 Amount Paid:    <span id="amountPaid"></span>
+Debit:          <span id="debit"></span>
+Credit:         <span id="credit"></span>
 Balance:        <span id="balance"></span>
 
             </pre>
@@ -142,19 +146,19 @@ Balance:        <span id="balance"></span>
 
                         <tr>
                             <td style="padding-left:20px;">EWT Cert</td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input asp-for="EWT" style="border:none" class="form-control moneyInput" /></td>
+                            <td><input asp-for="EwtPeriodFrom" type="date" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="EwtPeriodTo" type="date" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="EwtReference1" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="EwtReference2" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="EWT" min="0" step="0.0001" style="border:none" class="form-control moneyInput" /></td>
                         </tr>
                         <tr>
                             <td style="padding-left:20px;">WVAT Cert</td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input asp-for="WVAT" style="border:none" class="form-control moneyInput" /></td>
+                            <td><input asp-for="CwVatPeriodFrom" type="date" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="CwVatPeriodTo" type="date" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="CwVatReference1" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="CwVatReference2" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="WVAT" min="0" step="0.0001" style="border:none" class="form-control moneyInput" /></td>
                         </tr>
                         <tr>
                             <td></td>
@@ -263,7 +267,13 @@ Balance:        <span id="balance"></span>
                         document.getElementById("balance").innerHTML = data.balance;
                         document.getElementById("ewt").innerHTML = data.ewt;
                         document.getElementById("wvat").innerHTML = data.wvat;
+                        document.getElementById("cwtBalance").innerHTML = data.ewtBalance;
+                        document.getElementById("cwVatBalance").innerHTML = data.wvatBalance;
+                        $("#EWT").attr("max", data.ewtBalance);
+                        $("#WVAT").attr("max", data.wvatBalance);
                         document.getElementById("total").innerHTML = data.total;
+                        document.getElementById("debit").innerHTML = data.debit;
+                        document.getElementById("credit").innerHTML = data.credit;
                     }
                 });
             }

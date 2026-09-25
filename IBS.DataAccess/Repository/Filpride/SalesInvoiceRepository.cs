@@ -1,8 +1,11 @@
 using System.Linq.Expressions;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Filpride.IRepository;
+using IBS.DTOs;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsReceivable;
+using IBS.Utility.Constants;
+using IBS.Utility.Helpers;
 using Microsoft.EntityFrameworkCore;
 
 namespace IBS.DataAccess.Repository.Filpride
@@ -72,6 +75,88 @@ namespace IBS.DataAccess.Repository.Filpride
             var incrementedNumber = long.Parse(numericPart) + 1;
 
             return lastSeries.Substring(0, 3) + incrementedNumber.ToString("D9");
+        }
+
+        public async Task<SalesInvoiceTaxBalanceDto?> GetTaxBalanceAsync(int salesInvoiceId,
+            int? excludedCollectionReceiptId = null,
+            CancellationToken cancellationToken = default)
+        {
+            var salesInvoice = await _db.FilprideSalesInvoices
+                .Include(si => si.Customer)
+                .Include(si => si.CustomerOrderSlip)
+                .FirstOrDefaultAsync(si => si.SalesInvoiceId == salesInvoiceId, cancellationToken);
+
+            if (salesInvoice == null)
+            {
+                return null;
+            }
+
+            var isVatable = (salesInvoice.CustomerOrderSlip?.VatType ?? salesInvoice.Customer?.VatType) == SD.VatType_Vatable;
+            var hasEwt = salesInvoice.CustomerOrderSlip?.HasEWT ?? salesInvoice.Customer?.WithHoldingTax ?? false;
+            var hasWvat = salesInvoice.CustomerOrderSlip?.HasWVAT ?? salesInvoice.Customer?.WithHoldingVat ?? false;
+            var adjustedGrossAmount = salesInvoice.Amount - salesInvoice.Discount + salesInvoice.DebitAmount - salesInvoice.CreditAmount;
+            var netOfVatAmount = isVatable
+                ? DecimalRoundingHelper.ComputeNetOfVat(adjustedGrossAmount)
+                : DecimalRoundingHelper.RoundToFour(adjustedGrossAmount);
+            var cwtAmount = hasEwt
+                ? DecimalRoundingHelper.ComputeEwtAmount(netOfVatAmount, salesInvoice.CwtPercent)
+                : 0m;
+            var cwVatAmount = hasWvat
+                ? DecimalRoundingHelper.ComputeEwtAmount(netOfVatAmount, salesInvoice.CwVatPercent)
+                : 0m;
+
+            var activeDetails = _db.FilprideCollectionReceiptDetails
+                .Where(detail => detail.InvoiceNo == salesInvoice.SalesInvoiceNo &&
+                                 detail.FilprideCollectionReceipt != null &&
+                                 (detail.FilprideCollectionReceipt.SalesInvoiceId == salesInvoiceId ||
+                                  (detail.FilprideCollectionReceipt.MultipleSIId != null &&
+                                   detail.FilprideCollectionReceipt.MultipleSIId.Contains(salesInvoiceId))) &&
+                                 detail.FilprideCollectionReceipt.Status != nameof(CollectionReceiptStatus.Canceled) &&
+                                 detail.FilprideCollectionReceipt.Status != nameof(CollectionReceiptStatus.Voided));
+
+            if (excludedCollectionReceiptId.HasValue)
+            {
+                activeDetails = activeDetails.Where(detail => detail.CollectionReceiptId != excludedCollectionReceiptId.Value);
+            }
+
+            var paidAmounts = await activeDetails
+                .GroupBy(_ => 1)
+                .Select(group => new
+                {
+                    CwtAmountPaid = group.Sum(detail => detail.EWT),
+                    CwVatAmountPaid = group.Sum(detail => detail.WVAT)
+                })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            var cwtAmountPaid = DecimalRoundingHelper.RoundToFour(paidAmounts?.CwtAmountPaid ?? 0m);
+            var cwVatAmountPaid = DecimalRoundingHelper.RoundToFour(paidAmounts?.CwVatAmountPaid ?? 0m);
+
+            return new SalesInvoiceTaxBalanceDto
+            {
+                SalesInvoiceId = salesInvoice.SalesInvoiceId,
+                InvoiceNo = salesInvoice.SalesInvoiceNo ?? string.Empty,
+                CwtAmount = cwtAmount,
+                CwtAmountPaid = cwtAmountPaid,
+                CwtBalance = DecimalRoundingHelper.RoundToFour(cwtAmount - cwtAmountPaid),
+                CwVatAmount = cwVatAmount,
+                CwVatAmountPaid = cwVatAmountPaid,
+                CwVatBalance = DecimalRoundingHelper.RoundToFour(cwVatAmount - cwVatAmountPaid)
+            };
+        }
+
+        public async Task RecalculateTaxBalancesAsync(int salesInvoiceId, CancellationToken cancellationToken = default)
+        {
+            var taxBalance = await GetTaxBalanceAsync(salesInvoiceId, cancellationToken: cancellationToken)
+                             ?? throw new InvalidOperationException("Sales invoice not found.");
+
+            var salesInvoice = await _db.FilprideSalesInvoices
+                .FirstOrDefaultAsync(si => si.SalesInvoiceId == salesInvoiceId, cancellationToken)
+                ?? throw new InvalidOperationException("Sales invoice not found.");
+
+            salesInvoice.CwtAmountPaid = taxBalance.CwtAmountPaid;
+            salesInvoice.CwtBalance = taxBalance.CwtBalance;
+            salesInvoice.CwVatAmountPaid = taxBalance.CwVatAmountPaid;
+            salesInvoice.CwVatBalance = taxBalance.CwVatBalance;
         }
 
         public override async Task<FilprideSalesInvoice?> GetAsync(Expression<Func<FilprideSalesInvoice, bool>> filter, CancellationToken cancellationToken = default)

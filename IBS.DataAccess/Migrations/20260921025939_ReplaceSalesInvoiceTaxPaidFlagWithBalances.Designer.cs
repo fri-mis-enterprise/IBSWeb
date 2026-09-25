@@ -3,6 +3,7 @@ using System;
 using IBS.DataAccess.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IBS.DataAccess.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260921025939_ReplaceSalesInvoiceTaxPaidFlagWithBalances")]
+    partial class ReplaceSalesInvoiceTaxPaidFlagWithBalances
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1288,24 +1291,6 @@ namespace IBS.DataAccess.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("customer_id");
 
-                    b.Property<DateOnly?>("CwVatPeriodFrom")
-                        .HasColumnType("date")
-                        .HasColumnName("cw_vat_period_from");
-
-                    b.Property<DateOnly?>("CwVatPeriodTo")
-                        .HasColumnType("date")
-                        .HasColumnName("cw_vat_period_to");
-
-                    b.Property<string>("CwVatReference1")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("cw_vat_reference1");
-
-                    b.Property<string>("CwVatReference2")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("cw_vat_reference2");
-
                     b.Property<DateOnly?>("DepositedDate")
                         .HasColumnType("date")
                         .HasColumnName("deposited_date");
@@ -1321,24 +1306,6 @@ namespace IBS.DataAccess.Migrations
                     b.Property<DateTime?>("EditedDate")
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("edited_date");
-
-                    b.Property<DateOnly?>("EwtPeriodFrom")
-                        .HasColumnType("date")
-                        .HasColumnName("ewt_period_from");
-
-                    b.Property<DateOnly?>("EwtPeriodTo")
-                        .HasColumnType("date")
-                        .HasColumnName("ewt_period_to");
-
-                    b.Property<string>("EwtReference1")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("ewt_reference1");
-
-                    b.Property<string>("EwtReference2")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("ewt_reference2");
 
                     b.Property<string>("F2306FileName")
                         .HasMaxLength(100)
@@ -2361,10 +2328,6 @@ namespace IBS.DataAccess.Migrations
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("created_date");
 
-                    b.Property<decimal>("CreditAmount")
-                        .HasColumnType("numeric(18,4)")
-                        .HasColumnName("credit_amount");
-
                     b.Property<decimal>("CurrentAndPreviousAmount")
                         .HasColumnType("numeric(18,4)")
                         .HasColumnName("current_and_previous_amount");
@@ -2395,26 +2358,6 @@ namespace IBS.DataAccess.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("customer_tin");
-
-                    b.Property<decimal>("CwVatAmountPaid")
-                        .HasColumnType("numeric(18,4)")
-                        .HasColumnName("cw_vat_amount_paid");
-
-                    b.Property<decimal>("CwVatBalance")
-                        .HasColumnType("numeric(18,4)")
-                        .HasColumnName("cw_vat_balance");
-
-                    b.Property<decimal>("CwtAmountPaid")
-                        .HasColumnType("numeric(18,4)")
-                        .HasColumnName("cwt_amount_paid");
-
-                    b.Property<decimal>("CwtBalance")
-                        .HasColumnType("numeric(18,4)")
-                        .HasColumnName("cwt_balance");
-
-                    b.Property<decimal>("DebitAmount")
-                        .HasColumnType("numeric(18,4)")
-                        .HasColumnName("debit_amount");
 
                     b.Property<int?>("DeliveryReceiptId")
                         .HasColumnType("integer")

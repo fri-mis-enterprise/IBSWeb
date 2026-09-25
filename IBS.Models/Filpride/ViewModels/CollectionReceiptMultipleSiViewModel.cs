@@ -58,6 +58,30 @@ namespace IBS.Models.Filpride.ViewModels
 
         public decimal WVAT { get; set; }
 
+        public DateOnly? EwtPeriodFrom { get; set; }
+
+        public DateOnly? EwtPeriodTo { get; set; }
+
+        [StringLength(50)]
+        public string? EwtReference1 { get; set; }
+
+        [StringLength(50)]
+        public string? EwtReference2 { get; set; }
+
+        public DateOnly? CwVatPeriodFrom { get; set; }
+
+        public DateOnly? CwVatPeriodTo { get; set; }
+
+        [StringLength(50)]
+        public string? CwVatReference1 { get; set; }
+
+        [StringLength(50)]
+        public string? CwVatReference2 { get; set; }
+
+        public decimal[] SIMultipleEwtAmount { get; set; } = null!;
+
+        public decimal[] SIMultipleWvatAmount { get; set; } = null!;
+
         public IFormFile? Bir2306 { get; set; }
 
         public IFormFile? Bir2307 { get; set; }

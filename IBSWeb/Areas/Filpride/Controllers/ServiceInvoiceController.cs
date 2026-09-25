@@ -274,6 +274,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 TempData["success"] = $"Service invoice #{model.ServiceInvoiceNo} created successfully.";
                 await _unitOfWork.SaveAsync(cancellationToken);
+                await _unitOfWork.FilprideServiceInvoice.RecalculateTaxBalancesAsync(model.ServiceInvoiceId, cancellationToken);
+                await _unitOfWork.SaveAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 return RedirectToAction(nameof(Index));
             }
@@ -340,6 +342,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.Status = nameof(Status.Posted);
 
                 await _unitOfWork.FilprideServiceInvoice.PostAsync(model, cancellationToken);
+                await _unitOfWork.FilprideServiceInvoice.RecalculateTaxBalancesAsync(model.ServiceInvoiceId, cancellationToken);
 
                 if (model.ServiceName == "TRANSACTION FEE")
                 {
@@ -652,6 +655,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #endregion --Additional procedure for Transaction Fee
 
+                await _unitOfWork.SaveAsync(cancellationToken);
+                await _unitOfWork.FilprideServiceInvoice.RecalculateTaxBalancesAsync(existingModel.ServiceInvoiceId, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 TempData["success"] = "Service invoice updated successfully.";
