@@ -1635,18 +1635,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     return Json(new
                     {
-                        Amount = netDiscount.ToString(SD.Two_Decimal_Format),
-                        AmountPaid = amountPaid.ToString(SD.Two_Decimal_Format),
-                        Balance = balance.ToString(SD.Two_Decimal_Format),
+                        Amount = netDiscount.ToString(SD.Four_Decimal_Format),
+                        AmountPaid = amountPaid.ToString(SD.Four_Decimal_Format),
+                        Balance = balance.ToString(SD.Four_Decimal_Format),
                         Ewt = taxBalance.CwtAmount.ToString(SD.Four_Decimal_Format),
                         Wvat = taxBalance.CwVatAmount.ToString(SD.Four_Decimal_Format),
                         EwtAmountPaid = taxBalance.CwtAmountPaid.ToString(SD.Four_Decimal_Format),
                         WvatAmountPaid = taxBalance.CwVatAmountPaid.ToString(SD.Four_Decimal_Format),
                         EwtBalance = taxBalance.CwtBalance.ToString(SD.Four_Decimal_Format),
                         WvatBalance = taxBalance.CwVatBalance.ToString(SD.Four_Decimal_Format),
-                        Total = (netDiscount - (taxBalance.CwtAmount + taxBalance.CwVatAmount)).ToString(SD.Two_Decimal_Format),
-                        Debit = si.DebitAmount,
-                        Credit = si.CreditAmount
+                        Total = (netDiscount - (taxBalance.CwtAmount + taxBalance.CwVatAmount)).ToString(SD.Four_Decimal_Format),
+                        Debit = si.DebitAmount.ToString(SD.Four_Decimal_Format),
+                        Credit = si.CreditAmount.ToString(SD.Four_Decimal_Format)
                     });
                 }
 
@@ -1688,18 +1688,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     return Json(new
                     {
-                        Amount = netDiscount.ToString(SD.Two_Decimal_Format),
-                        AmountPaid = amountPaid.ToString(SD.Two_Decimal_Format),
-                        Balance = balance.ToString(SD.Two_Decimal_Format),
+                        Amount = netDiscount.ToString(SD.Four_Decimal_Format),
+                        AmountPaid = amountPaid.ToString(SD.Four_Decimal_Format),
+                        Balance = balance.ToString(SD.Four_Decimal_Format),
                         Ewt = taxBalance.CwtAmount.ToString(SD.Four_Decimal_Format),
                         Wvat = taxBalance.CwVatAmount.ToString(SD.Four_Decimal_Format),
                         EwtAmountPaid = taxBalance.CwtAmountPaid.ToString(SD.Four_Decimal_Format),
                         WvatAmountPaid = taxBalance.CwVatAmountPaid.ToString(SD.Four_Decimal_Format),
                         EwtBalance = taxBalance.CwtBalance.ToString(SD.Four_Decimal_Format),
                         WvatBalance = taxBalance.CwVatBalance.ToString(SD.Four_Decimal_Format),
-                        Total = (netDiscount - (taxBalance.CwtAmount + taxBalance.CwVatAmount)).ToString(SD.Two_Decimal_Format),
-                        Debit = sv.DebitAmount,
-                        Credit = sv.CreditAmount
+                        Total = (netDiscount - (taxBalance.CwtAmount + taxBalance.CwVatAmount)).ToString(SD.Four_Decimal_Format),
+                        Debit = sv.DebitAmount.ToString(SD.Four_Decimal_Format),
+                        Credit = sv.CreditAmount.ToString(SD.Four_Decimal_Format)
                     });
                 }
 

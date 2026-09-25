@@ -16,7 +16,7 @@
     var customerAddress = Model.SalesInvoice?.CustomerOrderSlip?.CustomerAddress ?? Model.ServiceInvoice?.CustomerAddress ?? Model.Customer!.CustomerAddress;
     var customerTin = Model.SalesInvoice?.CustomerOrderSlip?.CustomerTin ?? Model.ServiceInvoice?.CustomerTin ?? Model.Customer!.CustomerTin;
     var customerBusinessStyle = Model.SalesInvoice?.CustomerOrderSlip?.BusinessStyle ?? Model.ServiceInvoice?.Customer!.BusinessStyle ?? Model.Customer!.BusinessStyle;
-    var decimalFormat = customerType != nameof(CustomerType.Government) ? SD.Two_Decimal_Format : SD.Four_Decimal_Format;
+    const string decimalFormat = SD.Four_Decimal_Format;
 }
 
 <style>

@@ -131,7 +131,7 @@
                         <tfoot>
                         <tr>
                             <td class="text-end fw-bold">Total:</td>
-                            <td class="text-center fw-bold" id="siTotal">0.00</td>
+                            <td class="text-center fw-bold" id="siTotal">0.0000</td>
                         </tr>
                         </tfoot>
                     </table>
@@ -366,14 +366,14 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
                             <input type='hidden' value='${siNo}' />
                             <input class="text-center" type='text' value='${siText}' style='border:none' readonly />
                         </td>
-                        <td class="text-end" id='amount_${siNo}'>0.00</td>
-                        <td class="text-end" id='vatAmount_${siNo}'>0.00</td>
-                        <td class="text-end" id='ewtAmount_${siNo}'>0.00</td>
-                        <td class="text-end" id='siAmountNetOfEWT_${siNo}' style="padding-left:20px;">0.00</td>
-                        <td class="text-end" id='amountPaid_${siNo}'>0.00</td>
-                        <td class="text-end" id='debit_${siNo}'>0.00</td>
-                        <td class="text-end" id='credit_${siNo}'>0.00</td>
-                        <td class="text-end" id='balance_${siNo}' style="padding-right:20px;">0.00</td>
+                        <td class="text-end" id='amount_${siNo}'>0.0000</td>
+                        <td class="text-end" id='vatAmount_${siNo}'>0.0000</td>
+                        <td class="text-end" id='ewtAmount_${siNo}'>0.0000</td>
+                        <td class="text-end" id='siAmountNetOfEWT_${siNo}' style="padding-left:20px;">0.0000</td>
+                        <td class="text-end" id='amountPaid_${siNo}'>0.0000</td>
+                        <td class="text-end" id='debit_${siNo}'>0.0000</td>
+                        <td class="text-end" id='credit_${siNo}'>0.0000</td>
+                        <td class="text-end" id='balance_${siNo}' style="padding-right:20px;">0.0000</td>
                     </tr>`);
         }
 
@@ -395,22 +395,22 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
                     const debit = data.debit;
                     const credit = data.credit;
 
-                    $(`#amount_${siNo}`).text(formatNumber(gross));
-                    $(`#netAmount_${siNo}`).text(formatNumber(netAmount));
-                    $(`#vatAmount_${siNo}`).text(formatNumber(vatAmount));
-                    $(`#ewtAmount_${siNo}`).text(formatNumber(ewtAmount));
+                    $(`#amount_${siNo}`).text(formatNumberToFour(gross));
+                    $(`#netAmount_${siNo}`).text(formatNumberToFour(netAmount));
+                    $(`#vatAmount_${siNo}`).text(formatNumberToFour(vatAmount));
+                    $(`#ewtAmount_${siNo}`).text(formatNumberToFour(ewtAmount));
                     $(`.ewtAmount_${siNo}`).attr("max", data.cwtBalance);
                     $(`.wvatAmount_${siNo}`).attr("max", data.cwVatBalance);
-                    $(`#siAmountNetOfEWT_${siNo}`).text(formatNumber(netOfEWT));
-                    $(`#amountPaid_${siNo}`).text(formatNumber(amountPaid));
-                    $(`#debit_${siNo}`).text(formatNumber(debit));
-                    $(`#credit_${siNo}`).text(formatNumber(credit));
-                    $(`#balance_${siNo}`).text(formatNumber(balance));
+                    $(`#siAmountNetOfEWT_${siNo}`).text(formatNumberToFour(netOfEWT));
+                    $(`#amountPaid_${siNo}`).text(formatNumberToFour(amountPaid));
+                    $(`#debit_${siNo}`).text(formatNumberToFour(debit));
+                    $(`#credit_${siNo}`).text(formatNumberToFour(credit));
+                    $(`#balance_${siNo}`).text(formatNumberToFour(balance));
 
                     // Only set balance if no existing amount
                     const existingPayment = InvoicePayments.find(item => item.invoiceId === parseInt(siNo));
                     if (existingPayment) {
-                        $(`.paymentAmount_${siNo}`).val(formatNumber(existingPayment.paymentAmount)).attr("data-max", balance);
+                        $(`.paymentAmount_${siNo}`).val(formatNumberToFour(existingPayment.paymentAmount)).attr("data-max", balance);
                     }
                     else{
                         InvoicePayments.push({
@@ -418,7 +418,7 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
                             invoiceNumber: $invoices.find(`option[value='${siNo}']`).text(),
                             paymentAmount: balance
                         });
-                        $(`.paymentAmount_${siNo}`).val(formatNumber(balance)).attr("data-max", balance);
+                        $(`.paymentAmount_${siNo}`).val(formatNumberToFour(balance)).attr("data-max", balance);
                     }
 
                     calculateGrandTotalInvoiceAmount();
@@ -473,15 +473,15 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
                 grandTotalBalance += parseNumber($row.find("[id^='balance_']").text());
             });
 
-            $("#grandTotalRRAmount").text(formatNumber(grandTotalRRAmount));
-            $("#grandTotalNetAmount").text(formatNumber(grandTotalNetAmount));
-            $("#grandTotalVatAmount").text(formatNumber(grandTotalVatAmount));
-            $("#grandTotalEWTAmount").text(formatNumber(grandTotalEWTAmount));
-            $("#grandTotalNetOfEWT").text(formatNumber(grandTotalNetOfEWT));
-            $("#grandTotalAmountPaid").text(formatNumber(grandTotalAmountPaid));
-            $("#grandTotalBalance").text(formatNumber(grandTotalBalance));
-            $("#grandTotalDebit").text(formatNumber(grandTotalDebit));
-            $("#grandTotalCredit").text(formatNumber(grandTotalCredit));
+            $("#grandTotalRRAmount").text(formatNumberToFour(grandTotalRRAmount));
+            $("#grandTotalNetAmount").text(formatNumberToFour(grandTotalNetAmount));
+            $("#grandTotalVatAmount").text(formatNumberToFour(grandTotalVatAmount));
+            $("#grandTotalEWTAmount").text(formatNumberToFour(grandTotalEWTAmount));
+            $("#grandTotalNetOfEWT").text(formatNumberToFour(grandTotalNetOfEWT));
+            $("#grandTotalAmountPaid").text(formatNumberToFour(grandTotalAmountPaid));
+            $("#grandTotalBalance").text(formatNumberToFour(grandTotalBalance));
+            $("#grandTotalDebit").text(formatNumberToFour(grandTotalDebit));
+            $("#grandTotalCredit").text(formatNumberToFour(grandTotalCredit));
         }
     });
 </script>
@@ -502,8 +502,8 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
                 total += value;
             });
             totalCell.textContent = total.toLocaleString("en-US", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
+                minimumFractionDigits: 4,
+                maximumFractionDigits: 4
             });
 
             if (total === 0){
@@ -525,7 +525,7 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
     function validateAndSubmit (event){
         let checkTotal = parseFloat($("#checkTotal").text().replace(/,/g, "")) || 0;
 
-        if (Math.round(checkTotal * 100) !== Math.round(totalBalance * 100)){
+        if (Math.round(checkTotal * 10000) !== Math.round(totalBalance * 10000)){
             event.preventDefault();
             Swal.fire({
                 title: "Error",
@@ -581,7 +581,7 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
         });
 
         // Always refresh display, even if total didn't change
-        $("#siTotal").text(formatNumber(totalBalance));
+        $("#siTotal").text(formatNumberToFour(totalBalance));
     }
 </script>
 
@@ -591,7 +591,7 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
         let maxValue = parseFloat($(this).attr("data-max")) || 0;
 
         if (numValue > maxValue) {
-            $(this).val(formatNumber(maxValue)); // auto-correct
+            $(this).val(formatNumberToFour(maxValue)); // auto-correct
             setTimeout(() => {
                 updateTotal2();
             }, 200);
@@ -601,11 +601,11 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
                 icon: "error"
             });
         } else {
-            $(this).val(formatNumber(numValue)); // format nicely on blur
+            $(this).val(formatNumberToFour(numValue)); // format nicely on blur
         }
 
         if (numValue === 0){
-            $(this).val(formatNumber(1)); // auto-correct
+            $(this).val(formatNumberToFour(1)); // auto-correct
             setTimeout(() => {
                 updateTotal2();
             }, 200);
