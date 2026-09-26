@@ -25,6 +25,10 @@ namespace IBS.DataAccess.Repository.Filpride.IRepository
 
         Task RemoveMultipleSIPayment(int[] id, decimal[] paidAmount, CancellationToken cancellationToken = default);
 
+        Task RemoveMultipleSVPayment(int[] id, decimal[] paidAmount, CancellationToken cancellationToken = default);
+
+        Task UpdateMultipleSV(int[] id, decimal[] paidAmount, CancellationToken cancellationToken = default);
+
         Task UpdateSV(int id, decimal paidAmount, CancellationToken cancellationToken = default);
 
         Task PostAsync(FilprideCollectionReceipt collectionReceipt, CancellationToken cancellationToken = default);

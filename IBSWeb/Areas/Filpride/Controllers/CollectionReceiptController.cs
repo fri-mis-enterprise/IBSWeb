@@ -230,6 +230,69 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        private async Task RecalculateMultipleServiceInvoiceTaxBalancesAsync(IEnumerable<int> serviceInvoiceIds,
+            CancellationToken cancellationToken)
+        {
+            foreach (var serviceInvoiceId in serviceInvoiceIds.Distinct())
+            {
+                await RecalculateServiceInvoiceTaxBalancesAsync(serviceInvoiceId, cancellationToken);
+            }
+        }
+
+        private async Task<List<FilprideServiceInvoice>> ValidateMultipleServiceInvoiceTaxAllocationsAsync(
+            int[]? serviceInvoiceIds, decimal[]? paymentAmounts, decimal[]? ewtAmounts, decimal[]? wvatAmounts,
+            int customerId, int? excludedCollectionReceiptId, bool has2307, bool has2306,
+            CancellationToken cancellationToken)
+        {
+            if (serviceInvoiceIds == null || paymentAmounts == null || ewtAmounts == null || wvatAmounts == null ||
+                serviceInvoiceIds.Length == 0 || serviceInvoiceIds.Length != paymentAmounts.Length ||
+                serviceInvoiceIds.Length != ewtAmounts.Length || serviceInvoiceIds.Length != wvatAmounts.Length)
+            {
+                throw new ArgumentException("Invoice, payment, EWT, and WVAT allocations must have matching non-empty lengths.");
+            }
+
+            if (serviceInvoiceIds.Distinct().Count() != serviceInvoiceIds.Length ||
+                paymentAmounts.Any(amount => amount <= 0m || amount != DecimalRoundingHelper.RoundToFour(amount)) ||
+                ewtAmounts.Any(amount => amount != DecimalRoundingHelper.RoundToFour(amount)) ||
+                wvatAmounts.Any(amount => amount != DecimalRoundingHelper.RoundToFour(amount)))
+            {
+                throw new ArgumentException("Each service invoice must be selected once with positive, four-decimal allocations.");
+            }
+
+            var invoices = (await _unitOfWork.FilprideServiceInvoice
+                .GetAllAsync(sv => serviceInvoiceIds.Contains(sv.ServiceInvoiceId), cancellationToken)).ToList();
+            if (invoices.Count != serviceInvoiceIds.Length ||
+                invoices.Any(sv => sv.CustomerId != customerId || sv.PostedBy == null))
+            {
+                throw new ArgumentException("The selected service invoices are invalid for this receipt.");
+            }
+
+            if (invoices.Select(sv => sv.Type).Distinct().Count() != 1)
+            {
+                throw new ArgumentException("Selected service invoices must use the same receipt series.");
+            }
+
+            for (var i = 0; i < serviceInvoiceIds.Length; i++)
+            {
+                await ValidateServiceInvoiceTaxAllocationAsync(serviceInvoiceIds[i], customerId,
+                    ewtAmounts[i], wvatAmounts[i], excludedCollectionReceiptId, has2307, has2306,
+                    cancellationToken);
+                var invoice = invoices.Single(sv => sv.ServiceInvoiceId == serviceInvoiceIds[i]);
+                var oldAllocation = excludedCollectionReceiptId.HasValue
+                    ? await _dbContext.FilprideCollectionReceiptDetails
+                        .Where(detail => detail.CollectionReceiptId == excludedCollectionReceiptId.Value &&
+                                         detail.InvoiceNo == invoice.ServiceInvoiceNo)
+                        .SumAsync(detail => detail.Amount, cancellationToken)
+                    : 0m;
+                if (paymentAmounts[i] > invoice.Balance + oldAllocation)
+                {
+                    throw new ArgumentException($"Allocation exceeds the remaining balance of {invoice.ServiceInvoiceNo}.");
+                }
+            }
+
+            return invoices;
+        }
+
         public async Task<IActionResult> Index(string? view, CancellationToken cancellationToken)
         {
             try
@@ -291,7 +354,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     case "Service":
                         collectionReceipts = collectionReceipts
-                            .Where(s => s.ServiceInvoiceId != null);
+                            .Where(s => s.ServiceInvoiceId != null || s.MultipleSVId != null);
                         break;
                 }
 
@@ -350,6 +413,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         c.PostedBy,
                         c.CanceledBy,
                         c.MultipleSIId,
+                        c.MultipleSVId,
                         c.DepositedDate,
                         c.ClearedDate,
                         c.BankId
@@ -1275,6 +1339,639 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptCreateForService))]
         [HttpGet]
+        public async Task<IActionResult> MultipleCollectionCreateForService(CancellationToken cancellationToken)
+        {
+            try
+            {
+                var viewModel = new CollectionReceiptMultipleSvViewModel();
+
+                viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
+
+
+                viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
+
+                viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load multiple service invoice collection receipt create form. Error: {ErrorMessage}, Stack: {StackTrace}.",
+                    ex.Message, ex.StackTrace);
+                TempData["error"] = ex.Message;
+                return RedirectToAction(nameof(ServiceInvoiceIndex));
+            }
+        }
+
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptCreateForService))]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MultipleCollectionCreateForService(CollectionReceiptMultipleSvViewModel viewModel, CancellationToken cancellationToken)
+        {
+
+            viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
+
+            viewModel.ServiceInvoices = (await _unitOfWork.FilprideServiceInvoice.GetAllAsync(si =>
+                    (si.Balance > 0 || si.CwtBalance > 0 || si.CwVatBalance > 0)
+                    && si.CustomerId == viewModel.CustomerId
+                    && si.PostedBy != null, cancellationToken))
+                .OrderBy(s => s.ServiceInvoiceId)
+                .Select(s => new SelectListItem
+                {
+                    Value = s.ServiceInvoiceId.ToString(),
+                    Text = s.ServiceInvoiceNo
+                })
+                .ToList();
+
+
+            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
+
+            viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
+
+            var roundedEwtAmounts = viewModel.SVMultipleEwtAmount?
+                .Select(DecimalRoundingHelper.RoundToFour)
+                .ToArray();
+            var roundedWvatAmounts = viewModel.SVMultipleWvatAmount?
+                .Select(DecimalRoundingHelper.RoundToFour)
+                .ToArray();
+            var totalEwt = roundedEwtAmounts?.Sum() ?? 0m;
+            var totalWvat = roundedWvatAmounts?.Sum() ?? 0m;
+            viewModel.EWT = DecimalRoundingHelper.RoundToFour(totalEwt);
+            viewModel.WVAT = DecimalRoundingHelper.RoundToFour(totalWvat);
+            var total = viewModel.CashAmount + viewModel.CheckAmount + viewModel.ManagersCheckAmount + viewModel.EWT + viewModel.WVAT;
+            if (total == 0)
+            {
+                TempData["warning"] = "Please input at least one type form of payment";
+                return View(viewModel);
+            }
+
+            if (viewModel.MultipleSVId == null || viewModel.SVMultipleAmount == null ||
+                viewModel.MultipleSVId.Length == 0 ||
+                viewModel.MultipleSVId.Length != viewModel.SVMultipleAmount.Length ||
+                viewModel.SVMultipleAmount.Any(amount => amount <= 0) ||
+                DecimalRoundingHelper.RoundToFour(viewModel.SVMultipleAmount.Sum()) != DecimalRoundingHelper.RoundToFour(total))
+            {
+                ModelState.AddModelError(nameof(viewModel.SVMultipleAmount),
+                    "The total payment amount must equal the total invoice allocation.");
+                TempData["warning"] = "The information you submitted is not valid!";
+                return View(viewModel);
+            }
+
+            if (!ModelState.IsValid)
+            {
+                TempData["warning"] = "The information you submitted is not valid!";
+                return View(viewModel);
+            }
+
+            if (await _unitOfWork.IsPeriodPostedAsync(Module.CollectionReceipt, viewModel.TransactionDate, cancellationToken))
+            {
+                ModelState.AddModelError(nameof(viewModel.TransactionDate), "The collection receipt period is closed.");
+                return View(viewModel);
+            }
+
+            var has2306 = viewModel.Bir2306 is { Length: > 0 };
+            var has2307 = viewModel.Bir2307 is { Length: > 0 };
+            List<FilprideServiceInvoice> serviceInvoices;
+            try
+            {
+                serviceInvoices = await ValidateMultipleServiceInvoiceTaxAllocationsAsync(
+                    viewModel.MultipleSVId,
+                    viewModel.SVMultipleAmount,
+                    viewModel.SVMultipleEwtAmount,
+                    viewModel.SVMultipleWvatAmount,
+                    viewModel.CustomerId,
+                    null,
+                    has2307,
+                    has2306,
+                    cancellationToken);
+            }
+            catch (ArgumentException ex)
+            {
+                ModelState.AddModelError(string.Empty, ex.Message);
+                TempData["warning"] = ex.Message;
+                return View(viewModel);
+            }
+
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                #region --Saving default value
+
+                var model = new FilprideCollectionReceipt
+                {
+                    TransactionDate = viewModel.TransactionDate,
+                    CustomerId = viewModel.CustomerId,
+                    ReferenceNo = viewModel.ReferenceNo,
+                    Remarks = viewModel.Remarks,
+                    CashAmount = viewModel.CashAmount,
+                    CheckAmount = viewModel.CheckAmount,
+                    CheckNo = viewModel.CheckNo,
+                    CheckBranch = viewModel.CheckBranch,
+                    CheckDate = viewModel.CheckDate,
+                    CheckBank = viewModel.CheckBank,
+                    ManagersCheckDate = viewModel.ManagersCheckDate,
+                    ManagersCheckNo = viewModel.ManagersCheckNo,
+                    ManagersCheckBank = viewModel.ManagersCheckBank,
+                    ManagersCheckBranch = viewModel.ManagersCheckBranch,
+                    ManagersCheckAmount = viewModel.ManagersCheckAmount,
+                    EWT = viewModel.EWT,
+                    WVAT = viewModel.WVAT,
+                    EwtPeriodFrom = viewModel.EwtPeriodFrom,
+                    EwtPeriodTo = viewModel.EwtPeriodTo,
+                    EwtReference1 = viewModel.EwtReference1,
+                    EwtReference2 = viewModel.EwtReference2,
+                    CwVatPeriodFrom = viewModel.CwVatPeriodFrom,
+                    CwVatPeriodTo = viewModel.CwVatPeriodTo,
+                    CwVatReference1 = viewModel.CwVatReference1,
+                    CwVatReference2 = viewModel.CwVatReference2,
+                    Total = total,
+                    CreatedBy = GetUserFullName(),
+                    MultipleSVId = viewModel.MultipleSVId,
+                    SVMultipleAmount = viewModel.SVMultipleAmount,
+                    BatchNumber = viewModel.BatchNumber
+                };
+
+                model.MultipleSV = new string[model.MultipleSVId.Length];
+                model.MultipleTransactionDate = new DateOnly[model.MultipleSVId.Length];
+
+                await _unitOfWork.FilprideCollectionReceipt.AddAsync(model, cancellationToken);
+
+                var details = new List<FilprideCollectionReceiptDetail>();
+
+                for (var i = 0; i < viewModel.MultipleSVId.Length; i++)
+                {
+                    var svId = viewModel.MultipleSVId[i];
+                    var serviceInvoice = await _unitOfWork.FilprideServiceInvoice
+                        .GetAsync(si => si.ServiceInvoiceId == svId, cancellationToken);
+
+                    if (serviceInvoice == null)
+                    {
+                        throw new InvalidOperationException("Service Invoice not found");
+                    }
+
+                    model.MultipleSV[i] = serviceInvoice.ServiceInvoiceNo!;
+                    model.MultipleTransactionDate[i] = DateOnly.FromDateTime(serviceInvoice.CreatedDate);
+
+                    if (model.Type == null)
+                    {
+                        model.Type = serviceInvoice.Type;
+
+                        model.CollectionReceiptNo = await _unitOfWork.FilprideCollectionReceipt
+                            .GenerateCodeAsync(model.Type!, cancellationToken);
+                    }
+
+                    details.Add(new FilprideCollectionReceiptDetail
+                    {
+                        CollectionReceiptId = model.CollectionReceiptId,
+                        CollectionReceiptNo = model.CollectionReceiptNo!,
+                        InvoiceDate = DateOnly.FromDateTime(serviceInvoice.CreatedDate),
+                        InvoiceNo = serviceInvoice.ServiceInvoiceNo!,
+                        Amount = viewModel.SVMultipleAmount[i],
+                        EWT = roundedEwtAmounts![i],
+                        WVAT = roundedWvatAmounts![i]
+                    });
+                }
+
+                await _dbContext.FilprideCollectionReceiptDetails.AddRangeAsync(details, cancellationToken);
+
+                if (viewModel.Bir2306 != null && viewModel.Bir2306.Length > 0)
+                {
+                    model.F2306FileName = GenerateFileNameToSave(viewModel.Bir2306.FileName);
+                    model.F2306FilePath =
+                        await _cloudStorageService.UploadFileAsync(viewModel.Bir2306, model.F2306FileName!);
+                    model.IsCertificateUpload = true;
+                }
+
+                if (viewModel.Bir2307 != null && viewModel.Bir2307.Length > 0)
+                {
+                    model.F2307FileName = GenerateFileNameToSave(viewModel.Bir2307.FileName);
+                    model.F2307FilePath =
+                        await _cloudStorageService.UploadFileAsync(viewModel.Bir2307, model.F2307FileName!);
+                    model.IsCertificateUpload = true;
+                }
+
+                #endregion --Saving default value
+
+                await _unitOfWork.FilprideCollectionReceipt.UpdateMultipleSV(model.MultipleSVId!, model.SVMultipleAmount, cancellationToken);
+                await _unitOfWork.SaveAsync(cancellationToken);
+                await RecalculateMultipleServiceInvoiceTaxBalancesAsync(serviceInvoices.Select(serviceInvoice => serviceInvoice.ServiceInvoiceId), cancellationToken);
+                await _unitOfWork.SaveAsync(cancellationToken);
+
+                #region --Audit Trail Recording
+
+                FilprideAuditTrail auditTrailBook = new(model.CreatedBy,
+                    $"Create new collection receipt# {model.CollectionReceiptNo}", "Collection Receipt");
+                await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
+
+                #endregion --Audit Trail Recording
+
+                TempData["success"] = $"Collection receipt #{model.CollectionReceiptNo} created successfully.";
+                await transaction.CommitAsync(cancellationToken);
+                return RedirectToAction(nameof(ServiceInvoiceIndex));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to create service invoice multiple collection receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Created by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+                await transaction.RollbackAsync(cancellationToken);
+                TempData["error"] = ex.Message;
+                return View(viewModel);
+            }
+        }
+
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptEditForService))]
+        [HttpGet]
+        public async Task<IActionResult> MultipleCollectionEditForService(int? id, CancellationToken cancellationToken)
+        {
+            try
+            {
+
+                if (id == null)
+                {
+                    return NotFound();
+                }
+                var existingModel = await _unitOfWork.FilprideCollectionReceipt
+                    .GetAsync(x => x.CollectionReceiptId == id, cancellationToken);
+
+                if (existingModel == null)
+                {
+                    return NotFound();
+                }
+
+                if (existingModel.MultipleSVId == null)
+                {
+                    return NotFound();
+                }
+
+                if (existingModel.Status != nameof(CollectionReceiptStatus.Pending) ||
+                    existingModel.PostedBy != null || existingModel.CanceledBy != null || existingModel.VoidedBy != null)
+                {
+                    TempData["warning"] = "Only pending collection receipts can be edited.";
+                    return RedirectToAction(nameof(ServiceInvoiceIndex));
+                }
+
+                var minDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
+
+                if (await _unitOfWork.IsPeriodPostedAsync(Module.CollectionReceipt, existingModel.TransactionDate, cancellationToken))
+                {
+                    throw new ArgumentException($"Cannot edit this record because the period {existingModel.TransactionDate:MMM yyyy} is already closed.");
+                }
+
+                var listOfDetails = await _dbContext.FilprideCollectionReceiptDetails
+                    .Where(x => x.CollectionReceiptId == id).ToListAsync(cancellationToken);
+                var detailsByInvoiceNo = listOfDetails.ToDictionary(detail => detail.InvoiceNo, StringComparer.OrdinalIgnoreCase);
+
+                var crPayments = new List<InvoicePayment>();
+
+                foreach (var detail in listOfDetails)
+                {
+                    var crPayment = new InvoicePayment
+                    {
+                        InvoiceId = (await _dbContext.FilprideServiceInvoices
+                                .Where(si => si.ServiceInvoiceNo == detail.InvoiceNo).FirstOrDefaultAsync(cancellationToken))!
+                            .ServiceInvoiceId,
+                        InvoiceNumber = detail.InvoiceNo,
+                        PaymentAmount = detail.Amount
+                    };
+                    crPayments.Add(crPayment);
+                }
+
+                var invoicesPaid = await _dbContext.FilprideCollectionReceiptDetails
+                    .Where(crd => crd.CollectionReceiptNo == existingModel.CollectionReceiptNo)
+                    .Select(crd => crd.InvoiceNo)
+                    .ToListAsync(cancellationToken);
+
+                var viewModel = new CollectionReceiptMultipleSvViewModel
+                {
+                    CollectionReceiptId = existingModel.CollectionReceiptId,
+                    CustomerId = existingModel.CustomerId,
+                    Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken),
+                    TransactionDate = existingModel.TransactionDate,
+                    ReferenceNo = existingModel.ReferenceNo,
+                    Remarks = existingModel.Remarks,
+                    MultipleSVId = existingModel.MultipleSVId!,
+                    ServiceInvoices = (await _unitOfWork.FilprideServiceInvoice
+                            .GetAllAsync(si =>
+
+                                (
+                                    ((si.Balance > 0 || si.CwtBalance > 0 || si.CwVatBalance > 0) || invoicesPaid.Contains(si.ServiceInvoiceNo!)) &&
+                                    si.CustomerId == existingModel.CustomerId &&
+                                    si.PostedBy != null
+                                ),
+                                cancellationToken))
+                        .OrderBy(s => s.ServiceInvoiceId)
+                        .Select(s => new SelectListItem
+                        {
+                            Value = s.ServiceInvoiceId.ToString(),
+                            Text = s.ServiceInvoiceNo
+                        })
+                        .ToList(),
+                    CashAmount = existingModel.CashAmount,
+                    CheckBranch = existingModel.CheckBranch,
+                    CheckNo = existingModel.CheckNo,
+                    CheckDate = existingModel.CheckDate,
+                    CheckAmount = existingModel.CheckAmount,
+                    CheckBank = existingModel.CheckBank,
+                    ManagersCheckDate = existingModel.ManagersCheckDate,
+                    ManagersCheckNo = existingModel.ManagersCheckNo,
+                    ManagersCheckBank = existingModel.ManagersCheckBank,
+                    ManagersCheckBranch = existingModel.ManagersCheckBranch,
+                    ManagersCheckAmount = existingModel.ManagersCheckAmount,
+                    BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken),
+                    EWT = existingModel.EWT,
+                    WVAT = existingModel.WVAT,
+                    EwtPeriodFrom = existingModel.EwtPeriodFrom,
+                    EwtPeriodTo = existingModel.EwtPeriodTo,
+                    EwtReference1 = existingModel.EwtReference1,
+                    EwtReference2 = existingModel.EwtReference2,
+                    CwVatPeriodFrom = existingModel.CwVatPeriodFrom,
+                    CwVatPeriodTo = existingModel.CwVatPeriodTo,
+                    CwVatReference1 = existingModel.CwVatReference1,
+                    CwVatReference2 = existingModel.CwVatReference2,
+                    SVMultipleEwtAmount = (existingModel.MultipleSV ?? Array.Empty<string>())
+                        .Select(invoiceNo => detailsByInvoiceNo.TryGetValue(invoiceNo, out var detail) ? detail.EWT : 0m)
+                        .ToArray(),
+                    SVMultipleWvatAmount = (existingModel.MultipleSV ?? Array.Empty<string>())
+                        .Select(invoiceNo => detailsByInvoiceNo.TryGetValue(invoiceNo, out var detail) ? detail.WVAT : 0m)
+                        .ToArray(),
+                    HasAlready2306 = existingModel.F2306FilePath != null,
+                    HasAlready2307 = existingModel.F2307FilePath != null,
+                    SVMultipleAmount = existingModel.SVMultipleAmount!,
+                    InvoicePayments = crPayments,
+                    MinDate = minDate,
+                    BatchNumber = existingModel.BatchNumber
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load multiple service invoice collection receipt edit form. Error: {ErrorMessage}, Stack: {StackTrace}.",
+                    ex.Message, ex.StackTrace);
+                TempData["error"] = ex.Message;
+                return RedirectToAction(nameof(ServiceInvoiceIndex));
+            }
+        }
+
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptEditForService))]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MultipleCollectionEditForService(CollectionReceiptMultipleSvViewModel viewModel, CancellationToken cancellationToken)
+        {
+            var existingModel = await _unitOfWork.FilprideCollectionReceipt
+                .GetAsync(cr => cr.CollectionReceiptId == viewModel.CollectionReceiptId, cancellationToken);
+
+            if (existingModel == null)
+            {
+                return NotFound();
+            }
+
+            if (existingModel.MultipleSVId == null)
+            {
+                return NotFound();
+            }
+
+            if (existingModel.Status != nameof(CollectionReceiptStatus.Pending) ||
+                existingModel.PostedBy != null || existingModel.CanceledBy != null || existingModel.VoidedBy != null)
+            {
+                TempData["warning"] = "Only pending collection receipts can be edited.";
+                return RedirectToAction(nameof(ServiceInvoiceIndex));
+            }
+
+            viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
+
+            var invoicesPaid = await _dbContext.FilprideCollectionReceiptDetails
+                .Where(crd => crd.CollectionReceiptNo == existingModel.CollectionReceiptNo)
+                .Select(crd => crd.InvoiceNo)
+                .ToListAsync(cancellationToken);
+
+            viewModel.ServiceInvoices = (await _unitOfWork.FilprideServiceInvoice.GetAllAsync(si =>
+                    ((si.Balance > 0 || si.CwtBalance > 0 || si.CwVatBalance > 0) || invoicesPaid.Contains(si.ServiceInvoiceNo!))
+                    && si.CustomerId == viewModel.CustomerId
+                    && si.PostedBy != null, cancellationToken))
+                .OrderBy(s => s.ServiceInvoiceId)
+                .Select(s => new SelectListItem
+                {
+                    Value = s.ServiceInvoiceId.ToString(),
+                    Text = s.ServiceInvoiceNo
+                })
+                .ToList();
+
+
+            viewModel.BankAccounts = await _unitOfWork.GetFilprideBankAccountListById(cancellationToken);
+
+            viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CollectionReceipt, cancellationToken);
+            viewModel.HasAlready2306 = !string.IsNullOrWhiteSpace(existingModel.F2306FilePath);
+            viewModel.HasAlready2307 = !string.IsNullOrWhiteSpace(existingModel.F2307FilePath);
+            viewModel.InvoicePayments = (viewModel.MultipleSVId ?? Array.Empty<int>())
+                .Select((invoiceId, index) => new InvoicePayment
+                {
+                    InvoiceId = invoiceId,
+                    InvoiceNumber = string.Empty,
+                    PaymentAmount = viewModel.SVMultipleAmount != null && index < viewModel.SVMultipleAmount.Length
+                        ? viewModel.SVMultipleAmount[index]
+                        : 0m
+                })
+                .ToList();
+
+            var roundedEwtAmounts = viewModel.SVMultipleEwtAmount?
+                .Select(DecimalRoundingHelper.RoundToFour)
+                .ToArray();
+            var roundedWvatAmounts = viewModel.SVMultipleWvatAmount?
+                .Select(DecimalRoundingHelper.RoundToFour)
+                .ToArray();
+            var totalEwt = roundedEwtAmounts?.Sum() ?? 0m;
+            var totalWvat = roundedWvatAmounts?.Sum() ?? 0m;
+            viewModel.EWT = DecimalRoundingHelper.RoundToFour(totalEwt);
+            viewModel.WVAT = DecimalRoundingHelper.RoundToFour(totalWvat);
+            var total = viewModel.CashAmount + viewModel.CheckAmount + viewModel.ManagersCheckAmount + viewModel.EWT + viewModel.WVAT;
+            if (total == 0)
+            {
+                TempData["error"] = "Please input at least one type form of payment";
+                return View(viewModel);
+            }
+
+            if (viewModel.MultipleSVId == null || viewModel.SVMultipleAmount == null ||
+                viewModel.MultipleSVId.Length == 0 ||
+                viewModel.MultipleSVId.Length != viewModel.SVMultipleAmount.Length ||
+                viewModel.SVMultipleAmount.Any(amount => amount <= 0) ||
+                DecimalRoundingHelper.RoundToFour(viewModel.SVMultipleAmount.Sum()) != DecimalRoundingHelper.RoundToFour(total))
+            {
+                ModelState.AddModelError(nameof(viewModel.SVMultipleAmount),
+                    "The total payment amount must equal the total invoice allocation.");
+                TempData["warning"] = "The information you submitted is not valid!";
+                return View(viewModel);
+            }
+
+            if (!ModelState.IsValid)
+            {
+                TempData["warning"] = "The information you submitted is not valid!";
+                return View(viewModel);
+            }
+
+            if (await _unitOfWork.IsPeriodPostedAsync(Module.CollectionReceipt, existingModel.TransactionDate, cancellationToken) ||
+                await _unitOfWork.IsPeriodPostedAsync(Module.CollectionReceipt, viewModel.TransactionDate, cancellationToken))
+            {
+                ModelState.AddModelError(nameof(viewModel.TransactionDate), "The collection receipt period is closed.");
+                return View(viewModel);
+            }
+
+            var has2306 = viewModel.Bir2306 is { Length: > 0 } || !string.IsNullOrWhiteSpace(existingModel.F2306FilePath);
+            var has2307 = viewModel.Bir2307 is { Length: > 0 } || !string.IsNullOrWhiteSpace(existingModel.F2307FilePath);
+            List<FilprideServiceInvoice> serviceInvoices;
+            try
+            {
+                serviceInvoices = await ValidateMultipleServiceInvoiceTaxAllocationsAsync(
+                    viewModel.MultipleSVId,
+                    viewModel.SVMultipleAmount,
+                    viewModel.SVMultipleEwtAmount,
+                    viewModel.SVMultipleWvatAmount,
+                    viewModel.CustomerId,
+                    existingModel.CollectionReceiptId,
+                    has2307,
+                    has2306,
+                    cancellationToken);
+            }
+            catch (ArgumentException ex)
+            {
+                ModelState.AddModelError(string.Empty, ex.Message);
+                TempData["warning"] = ex.Message;
+                return View(viewModel);
+            }
+
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                #region --Saving default value
+
+                // get existing details
+                var listOfDetails = await _dbContext.FilprideCollectionReceiptDetails
+                    .Where(crd => crd.CollectionReceiptId == existingModel.CollectionReceiptId)
+                    .ToListAsync(cancellationToken);
+                var oldServiceInvoiceIds = existingModel.MultipleSVId ?? Array.Empty<int>();
+
+                foreach (var detail in listOfDetails)
+                {
+                    // based on details, revert the calculation done to service invoices
+                    await _unitOfWork.FilprideCollectionReceipt.UndoServiceInvoiceChanges(detail, cancellationToken);
+                }
+
+                // delete all details
+                await _dbContext.FilprideCollectionReceiptDetails
+                    .Where(x => x.CollectionReceiptId == existingModel.CollectionReceiptId)
+                    .ExecuteDeleteAsync(cancellationToken);
+
+                var details = new List<FilprideCollectionReceiptDetail>();
+
+                existingModel.CustomerId = viewModel.CustomerId;
+                existingModel.TransactionDate = viewModel.TransactionDate;
+                existingModel.ReferenceNo = viewModel.ReferenceNo;
+                existingModel.Remarks = viewModel.Remarks;
+                existingModel.CashAmount = viewModel.CashAmount;
+                existingModel.CheckAmount = viewModel.CheckAmount;
+                existingModel.CheckNo = viewModel.CheckNo;
+                existingModel.CheckBranch = viewModel.CheckBranch;
+                existingModel.CheckDate = viewModel.CheckDate;
+                existingModel.CheckBank = viewModel.CheckBank;
+                existingModel.ManagersCheckDate = viewModel.ManagersCheckDate;
+                existingModel.ManagersCheckNo = viewModel.ManagersCheckNo;
+                existingModel.ManagersCheckBank = viewModel.ManagersCheckBank;
+                existingModel.ManagersCheckBranch = viewModel.ManagersCheckBranch;
+                existingModel.ManagersCheckAmount = viewModel.ManagersCheckAmount;
+                existingModel.EWT = viewModel.EWT;
+                existingModel.WVAT = viewModel.WVAT;
+                existingModel.EwtPeriodFrom = viewModel.EwtPeriodFrom;
+                existingModel.EwtPeriodTo = viewModel.EwtPeriodTo;
+                existingModel.EwtReference1 = viewModel.EwtReference1;
+                existingModel.EwtReference2 = viewModel.EwtReference2;
+                existingModel.CwVatPeriodFrom = viewModel.CwVatPeriodFrom;
+                existingModel.CwVatPeriodTo = viewModel.CwVatPeriodTo;
+                existingModel.CwVatReference1 = viewModel.CwVatReference1;
+                existingModel.CwVatReference2 = viewModel.CwVatReference2;
+                existingModel.Total = total;
+                existingModel.MultipleSVId = new int[viewModel.MultipleSVId.Length];
+                existingModel.MultipleSV = new string[viewModel.MultipleSVId.Length];
+                existingModel.SVMultipleAmount = new decimal[viewModel.MultipleSVId.Length];
+                existingModel.MultipleTransactionDate = new DateOnly[viewModel.MultipleSVId.Length];
+                existingModel.BatchNumber = viewModel.BatchNumber;
+
+                // looping all the new SI
+                for (var i = 0; i < viewModel.MultipleSVId.Length; i++)
+                {
+                    var svId = viewModel.MultipleSVId[i];
+                    var serviceInvoice = await _unitOfWork.FilprideServiceInvoice
+                        .GetAsync(si => si.ServiceInvoiceId == svId, cancellationToken);
+
+                    if (serviceInvoice == null)
+                    {
+                        throw new InvalidOperationException("Service Invoice not found");
+                    }
+
+                    existingModel.MultipleSVId[i] = viewModel.MultipleSVId[i];
+                    existingModel.MultipleSV[i] = serviceInvoice.ServiceInvoiceNo!;
+                    existingModel.MultipleTransactionDate[i] = DateOnly.FromDateTime(serviceInvoice.CreatedDate);
+                    existingModel.SVMultipleAmount[i] = viewModel.SVMultipleAmount[i];
+
+                    details.Add(new FilprideCollectionReceiptDetail
+                    {
+                        CollectionReceiptId = existingModel.CollectionReceiptId,
+                        CollectionReceiptNo = existingModel.CollectionReceiptNo!,
+                        InvoiceDate = DateOnly.FromDateTime(serviceInvoice.CreatedDate),
+                        InvoiceNo = serviceInvoice.ServiceInvoiceNo!,
+                        Amount = existingModel.SVMultipleAmount[i],
+                        EWT = roundedEwtAmounts![i],
+                        WVAT = roundedWvatAmounts![i]
+                    });
+                }
+
+                await _dbContext.FilprideCollectionReceiptDetails.AddRangeAsync(details, cancellationToken);
+
+                await _unitOfWork.FilprideCollectionReceipt.UpdateMultipleSV(existingModel.MultipleSVId!, existingModel.SVMultipleAmount!, cancellationToken);
+
+                if (viewModel.Bir2306 != null && viewModel.Bir2306.Length > 0)
+                {
+                    existingModel.F2306FileName = GenerateFileNameToSave(viewModel.Bir2306.FileName);
+                    existingModel.F2306FilePath =
+                        await _cloudStorageService.UploadFileAsync(viewModel.Bir2306, existingModel.F2306FileName!);
+                    existingModel.IsCertificateUpload = true;
+                }
+
+                if (viewModel.Bir2307 != null && viewModel.Bir2307.Length > 0)
+                {
+                    existingModel.F2307FileName = GenerateFileNameToSave(viewModel.Bir2307.FileName);
+                    existingModel.F2307FilePath =
+                        await _cloudStorageService.UploadFileAsync(viewModel.Bir2307, existingModel.F2307FileName!);
+                    existingModel.IsCertificateUpload = true;
+                }
+
+                #endregion --Saving default value
+
+                existingModel.EditedBy = GetUserFullName();
+                existingModel.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
+
+                await _unitOfWork.SaveAsync(cancellationToken);
+                await RecalculateMultipleServiceInvoiceTaxBalancesAsync(oldServiceInvoiceIds.Concat(serviceInvoices.Select(serviceInvoice => serviceInvoice.ServiceInvoiceId)), cancellationToken);
+                await _unitOfWork.SaveAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                TempData["success"] = "Collection Receipt updated successfully";
+                return RedirectToAction(nameof(ServiceInvoiceIndex));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to update service invoice multiple collection receipt. Error: {ErrorMessage}, Stack: {StackTrace}. Edited by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+                await transaction.RollbackAsync(cancellationToken);
+                TempData["error"] = ex.Message;
+                return View(viewModel);
+            }
+        }
+
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptCreateForService))]
+        [HttpGet]
         public async Task<IActionResult> CreateForService(CancellationToken cancellationToken)
         {
             try
@@ -1493,7 +2190,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 _logger.LogError(ex, "Failed to preview collection receipt. Error: {ErrorMessage}, Stack: {StackTrace}.",
                     ex.Message, ex.StackTrace);
                 TempData["error"] = ex.Message;
-                return cr?.ServiceInvoiceId != null
+                return cr?.ServiceInvoiceId != null || cr?.MultipleSVId != null
                     ? RedirectToAction(nameof(ServiceInvoiceIndex))
                     : RedirectToAction(nameof(Index));
             }
@@ -2423,12 +3120,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
-            bool isMultipleSi = model.MultipleSIId?.Length > 0;
+            bool isMultipleSi = model.MultipleSIId?.Length > 0 || model.MultipleSVId?.Length > 0;
 
             if (model.PostedBy != null || model.Status == nameof(CollectionReceiptStatus.Posted))
             {
                 TempData["info"] = "Collection Receipt has already been posted.";
-                return RedirectToAction(isMultipleSi ? nameof(MultipleCollectionPrint) : nameof(Print), new { id });
+                return RedirectToAction(model.MultipleSVId?.Length > 0
+                    ? nameof(MultipleCollectionPrintForService)
+                    : isMultipleSi ? nameof(MultipleCollectionPrint) : nameof(Print), new { id });
             }
 
             if (await _unitOfWork.IsPeriodPostedAsync(Module.CollectionReceipt, model.TransactionDate, cancellationToken))
@@ -2440,7 +3139,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 model.PostedBy != null || model.CanceledBy != null || model.VoidedBy != null)
             {
                 TempData["warning"] = "Only pending collection receipts can be posted.";
-                return RedirectToAction(model.ServiceInvoiceId != null ? nameof(ServiceInvoiceIndex) : nameof(Index));
+                return RedirectToAction((model.ServiceInvoiceId != null || model.MultipleSVId != null) ? nameof(ServiceInvoiceIndex) : nameof(Index));
             }
 
             var dateToday = DateTimeHelper.GetCurrentPhilippineTime();
@@ -2449,7 +3148,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             if (model.CheckDate.HasValue && model.CheckDate.Value > lastDayOfThisMonth)
             {
                 TempData["error"] = "Future-dated checks cannot be posted.";
-                return RedirectToAction(model.ServiceInvoiceId != null ? nameof(ServiceInvoiceIndex) : nameof(Index));
+                return RedirectToAction((model.ServiceInvoiceId != null || model.MultipleSVId != null) ? nameof(ServiceInvoiceIndex) : nameof(Index));
             }
 
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
@@ -2472,7 +3171,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 await transaction.CommitAsync(cancellationToken);
                 TempData["success"] = "Collection Receipt has been Posted.";
 
-                return RedirectToAction(isMultipleSi ? nameof(MultipleCollectionPrint) : nameof(Print), new { id });
+                return RedirectToAction(model.MultipleSVId?.Length > 0
+                    ? nameof(MultipleCollectionPrintForService)
+                    : isMultipleSi ? nameof(MultipleCollectionPrint) : nameof(Print), new { id });
             }
             catch (Exception ex)
             {
@@ -2507,7 +3208,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var salesInvoiceIds = model.SalesInvoiceId.HasValue
                 ? new[] { model.SalesInvoiceId.Value }
                 : model.MultipleSIId ?? Array.Empty<int>();
-            var serviceInvoiceId = model.ServiceInvoiceId;
+            var serviceInvoiceIds = model.ServiceInvoiceId.HasValue
+                ? new[] { model.ServiceInvoiceId.Value }
+                : model.MultipleSVId ?? Array.Empty<int>();
 
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
             try
@@ -2531,6 +3234,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     await _unitOfWork.FilprideCollectionReceipt.RemoveMultipleSIPayment(model.MultipleSIId!, model.SIMultipleAmount!, cancellationToken);
                 }
+                else if (model.MultipleSVId != null)
+                {
+                    await _unitOfWork.FilprideCollectionReceipt.RemoveMultipleSVPayment(model.MultipleSVId, model.SVMultipleAmount!, cancellationToken);
+                }
                 else
                 {
                     TempData["info"] = "No series number found";
@@ -2538,7 +3245,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 await RecalculateSalesInvoiceTaxBalancesAsync(salesInvoiceIds, cancellationToken);
-                await RecalculateServiceInvoiceTaxBalancesAsync(serviceInvoiceId, cancellationToken);
+                await RecalculateMultipleServiceInvoiceTaxBalancesAsync(serviceInvoiceIds, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
 
                 #region --Audit Trail Recording
@@ -2582,7 +3289,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
             var salesInvoiceIds = model.SalesInvoiceId.HasValue
                 ? new[] { model.SalesInvoiceId.Value }
                 : model.MultipleSIId ?? Array.Empty<int>();
-            var serviceInvoiceId = model.ServiceInvoiceId;
+            var serviceInvoiceIds = model.ServiceInvoiceId.HasValue
+                ? new[] { model.ServiceInvoiceId.Value }
+                : model.MultipleSVId ?? Array.Empty<int>();
 
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
@@ -2617,6 +3326,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         await _unitOfWork.FilprideCollectionReceipt.UndoSalesInvoiceChanges(details, cancellationToken);
                     }
                 }
+                else if (model.MultipleSVId != null)
+                {
+                    var listOfDetails = await _dbContext.FilprideCollectionReceiptDetails
+                        .Where(crd => crd.CollectionReceiptId == model.CollectionReceiptId)
+                        .ToListAsync(cancellationToken);
+                    foreach (var receiptDetail in listOfDetails)
+                    {
+                        await _unitOfWork.FilprideCollectionReceipt.UndoServiceInvoiceChanges(receiptDetail, cancellationToken);
+                    }
+                }
                 else
                 {
                     throw new NullReferenceException("Collection Receipt Details Not Found.");
@@ -2629,7 +3348,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await _unitOfWork.SaveAsync(cancellationToken);
                 await RecalculateSalesInvoiceTaxBalancesAsync(salesInvoiceIds, cancellationToken);
-                await RecalculateServiceInvoiceTaxBalancesAsync(serviceInvoiceId, cancellationToken);
+                await RecalculateMultipleServiceInvoiceTaxBalancesAsync(serviceInvoiceIds, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
 
                 #region --Audit Trail Recording
@@ -2695,7 +3414,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 _logger.LogError(ex, "Failed to mark collection receipt as printed. Error: {ErrorMessage}, Stack: {StackTrace}.",
                     ex.Message, ex.StackTrace);
                 TempData["error"] = ex.Message;
-                return cr?.ServiceInvoiceId != null
+                return cr?.ServiceInvoiceId != null || cr?.MultipleSVId != null
                     ? RedirectToAction(nameof(ServiceInvoiceIndex))
                     : RedirectToAction(nameof(Index));
             }
@@ -2760,6 +3479,47 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
+        [HttpGet]
+        public async Task<IActionResult> MultipleServiceInvoiceBalance(int siNo, int? collectionReceiptId,
+            CancellationToken cancellationToken)
+        {
+            var invoice = await _unitOfWork.FilprideServiceInvoice
+                .GetAsync(sv => sv.ServiceInvoiceId == siNo, cancellationToken);
+            if (invoice == null)
+            {
+                return Json(null);
+            }
+
+            var receiptAmount = collectionReceiptId.HasValue
+                ? await _dbContext.FilprideCollectionReceiptDetails
+                    .Where(detail => detail.CollectionReceiptId == collectionReceiptId.Value &&
+                                     detail.InvoiceNo == invoice.ServiceInvoiceNo)
+                    .SumAsync(detail => detail.Amount, cancellationToken)
+                : 0m;
+            var taxBalance = await _unitOfWork.FilprideServiceInvoice
+                .GetTaxBalanceAsync(invoice.ServiceInvoiceId, collectionReceiptId, cancellationToken);
+            if (taxBalance == null)
+            {
+                return Json(null);
+            }
+
+            var adjustedGross = invoice.Total - invoice.Discount + invoice.DebitAmount - invoice.CreditAmount;
+            var netAmount = invoice.VatType == SD.VatType_Vatable
+                ? DecimalRoundingHelper.ComputeNetOfVat(adjustedGross)
+                : DecimalRoundingHelper.RoundToFour(adjustedGross);
+            return Json(new
+            {
+                Amount = invoice.Total,
+                NetAmount = netAmount,
+                AmountPaid = invoice.AmountPaid - receiptAmount,
+                Balance = invoice.Balance + receiptAmount,
+                CwtBalance = taxBalance.CwtBalance,
+                CwVatBalance = taxBalance.CwVatBalance,
+                Debit = invoice.DebitAmount,
+                Credit = invoice.CreditAmount
+            });
+        }
+
         [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptMultipleCollectionPreview))]
         public async Task<IActionResult> MultipleCollectionPrint(int id, CancellationToken cancellationToken)
         {
@@ -2814,6 +3574,43 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 TempData["error"] = ex.Message;
                 return RedirectToAction(nameof(Index));
             }
+        }
+
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptPreview))]
+        [HttpGet]
+        public async Task<IActionResult> MultipleCollectionPrintForService(int id, CancellationToken cancellationToken)
+        {
+            var receipt = await _unitOfWork.FilprideCollectionReceipt
+                .GetAsync(cr => cr.CollectionReceiptId == id, cancellationToken);
+            if (receipt?.MultipleSVId == null)
+            {
+                return NotFound();
+            }
+
+            return View(nameof(MultipleCollectionPrint), receipt);
+        }
+
+        [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptPreview))]
+        [HttpGet]
+        public async Task<IActionResult> PrintedMultipleCRForService(int id, CancellationToken cancellationToken)
+        {
+            var receipt = await _unitOfWork.FilprideCollectionReceipt
+                .GetAsync(cr => cr.CollectionReceiptId == id, cancellationToken);
+            if (receipt?.MultipleSVId == null)
+            {
+                return NotFound();
+            }
+
+            if (!receipt.IsPrinted)
+            {
+                receipt.IsPrinted = true;
+                FilprideAuditTrail auditTrail = new(GetUserFullName(),
+                    $"Printed original copy of collection receipt# {receipt.CollectionReceiptNo}", "Collection Receipt");
+                await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrail, cancellationToken);
+                await _unitOfWork.SaveAsync(cancellationToken);
+            }
+
+            return RedirectToAction(nameof(MultipleCollectionPrintForService), new { id });
         }
 
         //Download as .xlsx file.(Export)
@@ -2958,6 +3755,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["AL1"].Value = "CanceledDate";
                 worksheet.Cells["AM1"].Value = "VoidedBy";
                 worksheet.Cells["AN1"].Value = "VoidedDate";
+                worksheet.Cells["AO1"].Value = "MultipleSV";
+                worksheet.Cells["AP1"].Value = "MultipleSVId";
+                worksheet.Cells["AQ1"].Value = "SVMultipleAmount";
 
                 #endregion -- Collection Receipt Table Header --
 
@@ -3010,6 +3810,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 38].Value = item.CanceledDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
                     worksheet.Cells[row, 39].Value = item.VoidedBy;
                     worksheet.Cells[row, 40].Value = item.VoidedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                    if (item.MultipleSVId != null)
+                    {
+                        worksheet.Cells[row, 41].Value = string.Join(", ", item.MultipleSV ?? Array.Empty<string>());
+                        worksheet.Cells[row, 42].Value = string.Join(", ", item.MultipleSVId);
+                        worksheet.Cells[row, 43].Value = string.Join(", ", item.SVMultipleAmount?.Select(amount => amount.ToString(SD.Four_Decimal_Format)) ?? Array.Empty<string>());
+                    }
 
                     row++;
                 }
@@ -3075,49 +3881,62 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 #region -- Service Invoice Export --
 
                 int svRow = 2;
-                var currentSv = "";
+                var exportedServiceInvoiceIds = new HashSet<int>();
+                var multipleServiceInvoiceIds = selectedList.SelectMany(item => item.MultipleSVId ?? Array.Empty<int>()).Distinct().ToArray();
+                var multipleServiceInvoices = await _dbContext.FilprideServiceInvoices
+                    .Where(invoice => multipleServiceInvoiceIds.Contains(invoice.ServiceInvoiceId))
+                    .ToDictionaryAsync(invoice => invoice.ServiceInvoiceId);
 
                 foreach (var item in selectedList)
                 {
-                    if (item.ServiceInvoice == null)
+                    var serviceInvoices = new List<FilprideServiceInvoice>();
+                    if (item.ServiceInvoice != null)
                     {
-                        continue;
+                        serviceInvoices.Add(item.ServiceInvoice);
                     }
-                    if (item.ServiceInvoice.ServiceInvoiceNo == currentSv)
+                    foreach (var invoiceId in item.MultipleSVId ?? Array.Empty<int>())
                     {
-                        continue;
+                        if (multipleServiceInvoices.TryGetValue(invoiceId, out var invoice))
+                        {
+                            serviceInvoices.Add(invoice);
+                        }
                     }
+                    foreach (var serviceInvoice in serviceInvoices)
+                    {
+                        if (!exportedServiceInvoiceIds.Add(serviceInvoice.ServiceInvoiceId))
+                        {
+                            continue;
+                        }
+                        worksheet4.Cells[svRow, 1].Value = serviceInvoice.DueDate.ToString("yyyy-MM-dd");
+                        worksheet4.Cells[svRow, 2].Value = serviceInvoice.Period.ToString("yyyy-MM-dd");
+                        worksheet4.Cells[svRow, 3].Value = serviceInvoice.Total;
+                        worksheet4.Cells[svRow, 4].Value = serviceInvoice.Total;
+                        worksheet4.Cells[svRow, 5].Value = serviceInvoice.Discount;
+                        worksheet4.Cells[svRow, 6].Value = serviceInvoice.CurrentAndPreviousAmount;
+                        worksheet4.Cells[svRow, 7].Value = serviceInvoice.UnearnedAmount;
+                        worksheet4.Cells[svRow, 8].Value = serviceInvoice.Status;
+                        worksheet4.Cells[svRow, 9].Value = serviceInvoice.AmountPaid;
+                        worksheet4.Cells[svRow, 10].Value = serviceInvoice.Balance;
+                        worksheet4.Cells[svRow, 11].Value = serviceInvoice.Instructions;
+                        worksheet4.Cells[svRow, 12].Value = serviceInvoice.IsPaid;
+                        worksheet4.Cells[svRow, 13].Value = serviceInvoice.CreatedBy;
+                        worksheet4.Cells[svRow, 14].Value = serviceInvoice.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
+                        worksheet4.Cells[svRow, 15].Value = serviceInvoice.CancellationRemarks;
+                        worksheet4.Cells[svRow, 16].Value = serviceInvoice.CustomerId;
+                        worksheet4.Cells[svRow, 17].Value = serviceInvoice.ServiceInvoiceNo;
+                        worksheet4.Cells[svRow, 18].Value = serviceInvoice.ServiceId;
+                        worksheet4.Cells[svRow, 19].Value = serviceInvoice.ServiceInvoiceId;
+                        worksheet4.Cells[svRow, 20].Value = serviceInvoice.PostedBy;
+                        worksheet4.Cells[svRow, 21].Value = serviceInvoice.PostedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                        worksheet4.Cells[svRow, 22].Value = serviceInvoice.EditedBy;
+                        worksheet4.Cells[svRow, 23].Value = serviceInvoice.EditedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                        worksheet4.Cells[svRow, 24].Value = serviceInvoice.CanceledBy;
+                        worksheet4.Cells[svRow, 25].Value = serviceInvoice.CanceledDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                        worksheet4.Cells[svRow, 26].Value = serviceInvoice.VoidedBy;
+                        worksheet4.Cells[svRow, 27].Value = serviceInvoice.VoidedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
 
-                    currentSv = item.ServiceInvoice.ServiceInvoiceNo;
-                    worksheet4.Cells[svRow, 1].Value = item.ServiceInvoice.DueDate.ToString("yyyy-MM-dd");
-                    worksheet4.Cells[svRow, 2].Value = item.ServiceInvoice.Period.ToString("yyyy-MM-dd");
-                    worksheet4.Cells[svRow, 3].Value = item.ServiceInvoice.Total;
-                    worksheet4.Cells[svRow, 4].Value = item.ServiceInvoice.Total;
-                    worksheet4.Cells[svRow, 5].Value = item.ServiceInvoice.Discount;
-                    worksheet4.Cells[svRow, 6].Value = item.ServiceInvoice.CurrentAndPreviousAmount;
-                    worksheet4.Cells[svRow, 7].Value = item.ServiceInvoice.UnearnedAmount;
-                    worksheet4.Cells[svRow, 8].Value = item.ServiceInvoice.Status;
-                    worksheet4.Cells[svRow, 9].Value = item.ServiceInvoice.AmountPaid;
-                    worksheet4.Cells[svRow, 10].Value = item.ServiceInvoice.Balance;
-                    worksheet4.Cells[svRow, 11].Value = item.ServiceInvoice.Instructions;
-                    worksheet4.Cells[svRow, 12].Value = item.ServiceInvoice.IsPaid;
-                    worksheet4.Cells[svRow, 13].Value = item.ServiceInvoice.CreatedBy;
-                    worksheet4.Cells[svRow, 14].Value = item.ServiceInvoice.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
-                    worksheet4.Cells[svRow, 15].Value = item.ServiceInvoice.CancellationRemarks;
-                    worksheet4.Cells[svRow, 16].Value = item.ServiceInvoice.CustomerId;
-                    worksheet4.Cells[svRow, 17].Value = item.ServiceInvoice.ServiceInvoiceNo;
-                    worksheet4.Cells[svRow, 18].Value = item.ServiceInvoice.ServiceId;
-                    worksheet4.Cells[svRow, 19].Value = item.ServiceInvoice.ServiceInvoiceId;
-                    worksheet4.Cells[svRow, 20].Value = item.ServiceInvoice.PostedBy;
-                    worksheet4.Cells[svRow, 21].Value = item.ServiceInvoice.PostedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
-                    worksheet4.Cells[svRow, 22].Value = item.ServiceInvoice.EditedBy;
-                    worksheet4.Cells[svRow, 23].Value = item.ServiceInvoice.EditedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
-                    worksheet4.Cells[svRow, 24].Value = item.ServiceInvoice.CanceledBy;
-                    worksheet4.Cells[svRow, 25].Value = item.ServiceInvoice.CanceledDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
-                    worksheet4.Cells[svRow, 26].Value = item.ServiceInvoice.VoidedBy;
-                    worksheet4.Cells[svRow, 27].Value = item.ServiceInvoice.VoidedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
-
-                    svRow++;
+                        svRow++;
+                    }
                 }
 
                 #endregion -- Service Invoice Export --
@@ -3580,7 +4399,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                                           .GetAsync(x => x.CollectionReceiptId == id, cancellationToken)
                                                       ?? throw new NullReferenceException("Collection receipt id not found.");
 
-                bool isMultipleSi = collectionReceipt.MultipleSIId?.Length > 0;
+                bool isMultipleSi = collectionReceipt.MultipleSIId?.Length > 0 || collectionReceipt.MultipleSVId?.Length > 0;
 
                 if (collectionReceipt.PostedDate == null)
                 {
@@ -3590,9 +4409,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (await _unitOfWork.IsPeriodPostedAsync(Module.CollectionReceipt, DateOnly.FromDateTime(collectionReceipt.PostedDate.Value), cancellationToken))
                 {
                     TempData["error"] = $"Cannot unpost this record because the period {collectionReceipt.TransactionDate:MMM yyyy} is already closed.";
-                    return RedirectToAction(isMultipleSi
-                        ? nameof(MultipleCollectionPrint)
-                        : nameof(Print), new { id });
+                    return RedirectToAction(collectionReceipt.MultipleSVId?.Length > 0
+                        ? nameof(MultipleCollectionPrintForService)
+                        : isMultipleSi ? nameof(MultipleCollectionPrint) : nameof(Print), new { id });
                 }
 
                 collectionReceipt.PostedBy = null;
@@ -3612,7 +4431,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 await transaction.CommitAsync(cancellationToken);
                 TempData["success"] = "Collection receipt has been Unposted.";
 
-                return RedirectToAction(isMultipleSi ? nameof(MultipleCollectionPrint) : nameof(Print), new { id });
+                return RedirectToAction(collectionReceipt.MultipleSVId?.Length > 0
+                    ? nameof(MultipleCollectionPrintForService)
+                    : isMultipleSi ? nameof(MultipleCollectionPrint) : nameof(Print), new { id });
             }
             catch (Exception ex)
             {

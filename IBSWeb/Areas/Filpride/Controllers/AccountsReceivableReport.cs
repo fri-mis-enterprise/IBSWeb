@@ -2646,6 +2646,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     multipleSalesInvoicesByCollectionReceiptId[receipt.CollectionReceiptId] = salesInvoices.ToList();
                 }
 
+                var multipleServiceInvoicesByCollectionReceiptId = new Dictionary<int, List<FilprideServiceInvoice>>();
+                foreach (var receipt in collectionReceiptReport.Where(cr => cr.MultipleSVId != null))
+                {
+                    var serviceInvoices = await _unitOfWork.FilprideServiceInvoice
+                        .GetAllAsync(sv => receipt.MultipleSVId!.Contains(sv.ServiceInvoiceId), cancellationToken);
+                    multipleServiceInvoicesByCollectionReceiptId[receipt.CollectionReceiptId] = serviceInvoices
+                        .OrderBy(sv => Array.IndexOf(receipt.MultipleSVId!, sv.ServiceInvoiceId)).ToList();
+                }
+
                 var document = Document.Create(container =>
                 {
                     container.Page(page =>
@@ -2783,6 +2792,26 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                         totalAmount += currentAmount;
                                     }
+                                    if (record.MultipleSVId != null)
+                                    {
+                                        var serviceInvoices = multipleServiceInvoicesByCollectionReceiptId[record.CollectionReceiptId];
+                                        var currentAmount = record.CashAmount + record.CheckAmount;
+
+                                        table.Cell().Border(0.5f).Padding(3).Text(record.Customer?.CustomerCode);
+                                        table.Cell().Border(0.5f).Padding(3).Text(record.Customer?.CustomerName);
+                                        table.Cell().Border(0.5f).Padding(3).Text(record.Customer?.CustomerType);
+                                        table.Cell().Border(0.5f).Padding(3).Text(string.Join(", ", serviceInvoices.Select(sv => sv.CreatedDate.ToString(SD.Date_Format))));
+                                        table.Cell().Border(0.5f).Padding(3).Text(record.CollectionReceiptNo);
+                                        table.Cell().Border(0.5f).Padding(3).Text(string.Join(", ", record.MultipleSV ?? Array.Empty<string>()));
+                                        table.Cell().Border(0.5f).Padding(3).Text(string.Empty);
+                                        table.Cell().Border(0.5f).Padding(3).Text(string.Join(", ", serviceInvoices.Select(sv => sv.DueDate.ToString(SD.Date_Format))));
+                                        table.Cell().Border(0.5f).Padding(3).Text(record.CheckDate?.ToString(SD.Date_Format));
+                                        table.Cell().Border(0.5f).Padding(3).Text(record.DepositedDate?.ToString(SD.Date_Format));
+                                        table.Cell().Border(0.5f).Padding(3).Text($"{record.BankAccount?.Bank} {record.BankAccountNumber}");
+                                        table.Cell().Border(0.5f).Padding(3).Text(record.CheckNo);
+                                        table.Cell().Border(0.5f).Padding(3).AlignRight().Text(currentAmount != 0 ? currentAmount.ToString(SD.Two_Decimal_Format) : null);
+                                        totalAmount += currentAmount;
+                                    }
                                     if (record.MultipleSIId != null)
                                     {
                                         var salesInvoices = multipleSalesInvoicesByCollectionReceiptId[record.CollectionReceiptId];
@@ -2893,6 +2922,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             .Include(si => si.CustomerOrderSlip)
                             .Where(si => multipleSalesInvoiceIds.Contains(si.SalesInvoiceId))
                             .ToDictionaryAsync(si => si.SalesInvoiceId, cancellationToken);
+
+                    var multipleServiceInvoiceIds = collectionReceiptReport
+                        .Where(cr => cr.MultipleSVId is { Length: > 0 })
+                        .SelectMany(cr => cr.MultipleSVId!)
+                        .Distinct()
+                        .ToList();
+                    var serviceInvoicesById = multipleServiceInvoiceIds.Count == 0
+                        ? new Dictionary<int, FilprideServiceInvoice>()
+                        : await _dbContext.FilprideServiceInvoices
+                            .AsNoTracking()
+                            .Where(sv => multipleServiceInvoiceIds.Contains(sv.ServiceInvoiceId))
+                            .ToDictionaryAsync(sv => sv.ServiceInvoiceId, cancellationToken);
 
                     using var package = new ExcelPackage();
                     var worksheet = package.Workbook.Worksheets.Add("COLLECTION");
@@ -3186,6 +3227,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 invoiceNumbers,
                                 terms,
                                 dueDates,
+                                formatInvoiceDate: false,
+                                formatDueDate: false);
+                        }
+                        else if (cr.MultipleSVId != null)
+                        {
+                            var serviceInvoices = cr.MultipleSVId
+                                .Where(serviceInvoicesById.ContainsKey)
+                                .Select(id => serviceInvoicesById[id])
+                                .ToList();
+                            WriteCollectionRow(
+                                cr,
+                                cr.Customer?.CustomerName,
+                                cr.Customer?.CustomerType,
+                                serviceInvoices.Select((invoice, index) => (
+                                    DateOnly.FromDateTime(invoice.CreatedDate),
+                                    cr.SVMultipleAmount != null && index < cr.SVMultipleAmount.Length
+                                        ? cr.SVMultipleAmount[index]
+                                        : 0m)),
+                                string.Join(Environment.NewLine, serviceInvoices.Select(sv => sv.CreatedDate.ToString(dateTextFormat))),
+                                string.Join(Environment.NewLine, serviceInvoices.Select(sv => sv.ServiceInvoiceNo)),
+                                null,
+                                string.Join(Environment.NewLine, serviceInvoices.Select(sv => sv.DueDate.ToString(dateTextFormat))),
                                 formatInvoiceDate: false,
                                 formatDueDate: false);
                         }

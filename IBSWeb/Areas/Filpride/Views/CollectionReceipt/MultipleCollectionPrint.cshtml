@@ -16,6 +16,8 @@
     var customerTin = Model.SalesInvoice?.CustomerOrderSlip?.CustomerTin ?? Model.Customer!.CustomerTin;
     var customerBusinessStyle = Model.SalesInvoice?.CustomerOrderSlip?.BusinessStyle ?? Model.Customer!.BusinessStyle;
     const string decimalFormat = SD.Four_Decimal_Format;
+    var invoiceNumbers = Model.MultipleSV ?? Model.MultipleSI ?? Array.Empty<string>();
+    var invoiceAmounts = Model.SVMultipleAmount ?? Model.SIMultipleAmount ?? Array.Empty<decimal>();
 }
 
 <style>
@@ -172,9 +174,9 @@
             <tr>
                 <td colspan="2" style="padding-left:10px;">
                     IN FULL/PARTIAL payment of:
-                    @for (int i = 0; i < Model.MultipleSI!.Length; i++)
+                    @for (int i = 0; i < invoiceNumbers.Length; i++)
                     {
-                        var siNo = $"{Model.MultipleSI[i]}, ";
+                        var siNo = $"{invoiceNumbers[i]}, ";
                         @siNo
                     }
                 </td>
@@ -196,10 +198,10 @@
                 <td class="text-center" style="width:33%">INVOICE #</td>
                 <td class="text-center" style="width:33%">AMOUNT</td>
             </tr>
-            @for (int i = 0; i < Model.MultipleSI.Length; i++)
+            @for (int i = 0; i < invoiceNumbers.Length; i++)
             {
-                var siAmount = $"{Model.SIMultipleAmount![i].ToString(decimalFormat)}";
-                var siNo = $"{Model.MultipleSI[i]}";
+                var siAmount = $"{invoiceAmounts[i].ToString(decimalFormat)}";
+                var siNo = $"{invoiceNumbers[i]}";
                 var siDate = $"{Model.MultipleTransactionDate?[i].ToString(SD.Date_Format)}";
                 <tr class="text-center">
                     <td style="width:33%">@siDate</td>
@@ -426,7 +428,7 @@
     }
 
     <div class="col-6 col-md-3">
-        <a asp-area="Filpride" asp-controller="CollectionReceipt" asp-action="Index" class="btn btn-outline-primary border form-control buttons">Back to List</a>
+        <a asp-area="Filpride" asp-controller="CollectionReceipt" asp-action="@(Model.MultipleSVId != null ? "ServiceInvoiceIndex" : "Index")" class="btn btn-outline-primary border form-control buttons">Back to List</a>
     </div>
 </div>
 
@@ -466,7 +468,7 @@
                 if (result.isConfirmed) {
                     const afterPrintHandler = () => {
                         window.removeEventListener('afterprint', afterPrintHandler);
-                        var url = `@Url.Action("PrintedMultipleCR", "CollectionReceipt", new { area = "Filpride" })/${id}`;
+                        var url = `@(Model.MultipleSVId != null ? Url.Action("PrintedMultipleCRForService", "CollectionReceipt", new { area = "Filpride" }) : Url.Action("PrintedMultipleCR", "CollectionReceipt", new { area = "Filpride" }))/${id}`;
                         window.location.href = url;
                     };
 
