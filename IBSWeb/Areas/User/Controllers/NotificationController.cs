@@ -40,7 +40,30 @@ namespace IBSWeb.Areas.User.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> MarkAsRead(Guid userNotificationId)
         {
-            await _unitOfWork.Notifications.MarkAsReadAsync(userNotificationId);
+            var userId = _userManager.GetUserId(User);
+            if (userId == null || !await _unitOfWork.Notifications.MarkAsReadAsync(userNotificationId, userId))
+            {
+                return NotFound();
+            }
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return Ok();
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarkAsUnread(Guid userNotificationId)
+        {
+            var userId = _userManager.GetUserId(User);
+            if (userId == null || !await _unitOfWork.Notifications.MarkAsUnreadAsync(userNotificationId, userId))
+            {
+                return NotFound();
+            }
+
             return RedirectToAction(nameof(Index));
         }
 

@@ -10,7 +10,9 @@ namespace IBS.DataAccess.Repository.IRepository
 
         Task<List<UserNotification>> GetUserNotificationsAsync(string userId);
 
-        Task MarkAsReadAsync(Guid userNotificationId);
+        Task<bool> MarkAsReadAsync(Guid userNotificationId, string userId);
+
+        Task<bool> MarkAsUnreadAsync(Guid userNotificationId, string userId);
 
         Task<int> GetUnreadNotificationCountAsync(string userId);
 

@@ -1,11 +1,15 @@
 using System.Security.Claims;
 using IBS.DataAccess.Data;
-using IBS.Models.Filpride.Books;
+using IBS.DataAccess.Repository.IRepository;
 using IBS.Models;
+using IBS.Models.Filpride.Books;
 using IBS.Services;
+using IBSWeb.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -21,16 +25,24 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private readonly ApplicationDbContext _dbContext;
 
+        private readonly IUnitOfWork _unitOfWork;
+
+        private readonly IHubContext<NotificationHub> _hubContext;
+
         public MonthlyPeriodController(
             ILogger<MonthlyPeriodController> logger,
             IMonthlyClosureService monthlyClosureService,
             UserManager<ApplicationUser> userManager,
-            ApplicationDbContext dbContext)
+            ApplicationDbContext dbContext,
+            IUnitOfWork unitOfWork,
+            IHubContext<NotificationHub> hubContext)
         {
             _logger = logger;
             _monthlyClosureService = monthlyClosureService;
             _userManager = userManager;
             _dbContext = dbContext;
+            _unitOfWork = unitOfWork;
+            _hubContext = hubContext;
         }
 
         private string GetUserFullName()
@@ -62,6 +74,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
 
+                await NotifyAdminAsync($"{GetUserFullName()} closed the books for {monthDate:MMM yyyy}.",
+                    cancellationToken);
+
                 TempData["success"] = $"Month of {monthDate:MMM yyyy} closed successfully.";
                 return RedirectToAction(nameof(Index));
             }
@@ -91,6 +106,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
 
+                await NotifyAdminAsync($"{GetUserFullName()} opened the books for {monthDate:MMM yyyy}.",
+                    cancellationToken);
+
                 TempData["success"] = $"Month of {monthDate:MMM yyyy} opened successfully.";
                 return RedirectToAction(nameof(Index));
             }
@@ -99,6 +117,38 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 TempData["error"] = ex.Message;
                 _logger.LogError(ex, "Failed to open period. Open by: {Username}", GetUserFullName());
                 return RedirectToAction(nameof(Index));
+            }
+        }
+
+        private async Task NotifyAdminAsync(string message, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var adminName = "azh";
+                var recipient = await _userManager.FindByNameAsync(adminName);
+
+                if (recipient == null || !recipient.IsActive)
+                {
+                    _logger.LogWarning("Posting activity notification recipient {AdminName} was not found or is inactive", adminName);
+                    return;
+                }
+
+                await _unitOfWork.Notifications.AddNotificationAsync(recipient.Id, message);
+
+                var connectionIds = await _dbContext.HubConnections
+                    .Where(connection => connection.UserName == recipient.UserName)
+                    .Select(connection => connection.ConnectionId)
+                    .ToListAsync(cancellationToken);
+
+                foreach (var connectionId in connectionIds)
+                {
+                    await _hubContext.Clients.Client(connectionId)
+                        .SendAsync("ReceivedNotification", "You have a new message.", cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to deliver posting activity notification to azh");
             }
         }
     }

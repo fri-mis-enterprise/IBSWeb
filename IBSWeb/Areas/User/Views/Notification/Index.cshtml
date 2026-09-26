@@ -1,4 +1,4 @@
-﻿@model List<UserNotification>
+@model List<UserNotification>
 @{
     ViewData["Title"] = "Notifications";
 }
@@ -34,7 +34,7 @@ else
              data-date="@item.Notification.CreatedDate"
              data-requires-response="@item.RequiresResponse.ToString().ToLower()"
              data-notification-id="@item.UserNotificationId">
-        
+
             <div class="notification-content">
                 <p class="notification-message mb-1">
                     @if (!item.IsRead)
@@ -49,45 +49,50 @@ else
             <div class="button-group">
                 @if (!item.RequiresResponse)
                 {
-                    @if (!item.IsRead)
-                    {
-                        <form asp-action="MarkAsRead" method="post" class="d-inline">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="userNotificationId" value="@item.UserNotificationId"/>
-                            <button type="submit" class="btn btn-sm btn-outline-primary">Mark as Read</button>
-                        </form>
-                    }
-                    @if (item is { IsArchived: false, IsRead: true })
-                    {
-                        <form asp-action="Archive" method="post" class="d-inline">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="userNotificationId" value="@item.UserNotificationId"/>
-                            <button type="submit" class="btn btn-sm btn-outline-secondary">
-                                <i class="bi bi-trash-fill"></i>
-                            </button>
-                        </form>
-                    }
+                    <form asp-action="MarkAsRead" method="post" class="mark-as-read-form d-inline @(item.IsRead ? "d-none" : "")">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="userNotificationId" value="@item.UserNotificationId"/>
+                        <button type="submit" class="btn btn-sm btn-outline-primary">Mark as Read</button>
+                    </form>
+                    <form asp-action="Archive" method="post" class="archive-form d-inline @(!item.IsRead ? "d-none" : "")">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="userNotificationId" value="@item.UserNotificationId"/>
+                        <button type="submit" class="btn btn-sm btn-outline-secondary" title="Archive">
+                            <i class="bi bi-trash-fill"></i>
+                        </button>
+                    </form>
                 }
+                <form asp-action="MarkAsUnread" method="post" class="mark-as-unread-form d-inline @(!item.IsRead ? "d-none" : "")">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="userNotificationId" value="@item.UserNotificationId"/>
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Mark as Unread</button>
+                </form>
             </div>
         </div>
     }
 </div>
 
-<!-- Notification Modal -->
-<div id="notificationModal" class="modal">
+<div id="notificationModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="notificationModalTitle">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Notification Details</h5>
-                <button type="button" class="close" aria-label="Close">&times;</button>
+                <div class="modal-heading">
+                    <span class="modal-icon" aria-hidden="true"><i class="bi bi-bell"></i></span>
+                    <div>
+                        <span class="modal-eyebrow">NOTIFICATION</span>
+                        <h5 id="notificationModalTitle" class="modal-title">Message details</h5>
+                    </div>
+                </div>
+                <button type="button" class="close" aria-label="Close notification details"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
             </div>
 
             <div class="modal-body">
-                <p id="modalMessage" class="font-weight-bold"></p>
-                <small id="modalDate" class="text-muted"></small>
+                <div id="modalMessage" class="modal-message"></div>
+                <div class="modal-timestamp"><i class="bi bi-clock" aria-hidden="true"></i><time id="modalDate"></time></div>
             </div>
 
             <div id="responseButtons" class="modal-footer">
+                <span class="response-label">Response required</span>
                 <form asp-action="RespondToNotification" method="post">
                     @Html.AntiForgeryToken()
                     <input type="hidden" id="modalNotificationId" name="userNotificationId"/>
@@ -111,39 +116,6 @@ else
 
         .notification-item:hover {
             background-color: #f1f1f1;
-        }
-
-    .modal {
-        display: none;
-        position: fixed;
-        z-index: 1050;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        background-color: rgba(0,0,0,0.5);
-    }
-
-    .modal-dialog {
-        margin: 15% auto;
-        max-width: 500px;
-    }
-
-    .modal-content {
-        padding: 20px;
-    }
-
-    .close {
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        color: #555;
-        cursor: pointer;
-    }
-
-        .close:hover {
-            color: #333;
         }
 
     /* Notification List Styles */
@@ -174,46 +146,156 @@ else
         align-items: center;
     }
 
-    /* Modal Styles */
-    .modal {
+    #notificationModal {
         display: none;
         position: fixed;
-        top: 0;
-        left: 0;
+        inset: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0,0,0,0.5);
-        z-index: 1050;
-    }
-
-    .modal-dialog {
-        margin: 2rem auto;
-        max-width: 600px;
-        width: 95%;
-    }
-
-    .modal-content {
-        max-height: 80vh;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
         overflow-y: auto;
-        background: #ffffff;
-        border-radius: 12px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        background-color: rgba(16, 32, 30, 0.6);
+        z-index: 2000;
     }
 
-    .modal-body {
+    #notificationModal .modal-dialog {
+        margin: auto;
+        width: 100%;
+        max-width: 560px;
+    }
+
+    #notificationModal .modal-content {
+        max-height: calc(100vh - 2rem);
+        overflow: hidden;
+        border: 0;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
+    }
+
+    #notificationModal .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #e7ecea;
+    }
+
+    .modal-heading {
+        display: flex;
+        align-items: center;
+        gap: 0.875rem;
+    }
+
+    .modal-icon {
+        display: grid;
+        width: 2.75rem;
+        height: 2.75rem;
+        place-items: center;
+        border-radius: 12px;
+        background: #e9f2ef;
+        color: #1c3833;
+        font-size: 1.2rem;
+    }
+
+    .modal-eyebrow {
+        color: #55736b;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+    }
+
+    #notificationModal .modal-title {
+        margin: 0;
+        color: #1c3833;
+        font-size: 1.15rem;
+        font-weight: 650;
+    }
+
+    #notificationModal .close {
+        display: grid;
+        width: 2.25rem;
+        height: 2.25rem;
+        place-items: center;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: #52615d;
+    }
+
+    #notificationModal .close:hover,
+    #notificationModal .close:focus-visible {
+        background: #edf2f0;
+        color: #1c3833;
+    }
+
+    #notificationModal .modal-body {
         padding: 1.5rem;
+        overflow-y: auto;
+    }
+
+    .modal-message {
+        color: #27332f;
+        font-size: 1rem;
+        line-height: 1.65;
+        overflow-wrap: anywhere;
+    }
+
+    .modal-message p:last-child {
+        margin-bottom: 0;
+    }
+
+    .modal-timestamp {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 1.25rem;
+        color: #66736f;
+        font-size: 0.875rem;
+    }
+
+    #notificationModal .modal-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1rem 1.5rem;
+        border-top: 1px solid #e7ecea;
+    }
+
+    .response-label {
+        color: #52615d;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    #responseButtons form {
+        display: flex;
+        gap: 0.5rem;
     }
 
     /* Responsive Styles */
     @@media (max-width: 768px) {
-    .button-group {
-        flex-direction: column;
-    }
+        .button-group {
+            flex-direction: column;
+        }
 
-    .modal-dialog {
-        margin: 1rem;
-        width: calc(100% - 2rem);
-    }
+        #notificationModal .modal-header,
+        #notificationModal .modal-body,
+        #notificationModal .modal-footer {
+            padding: 1rem;
+        }
+
+        #notificationModal .modal-footer {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        #responseButtons form button {
+            flex: 1;
+        }
     }
 
     /* Unread notification styling */
@@ -240,6 +322,10 @@ else
 <!-- JavaScript for Modal Functionality -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.notification-item .button-group').forEach(group => {
+            group.addEventListener('click', event => event.stopPropagation());
+        });
+
         // Open modal when clicking notification
         document.querySelectorAll('.notification-item').forEach(item => {
             item.addEventListener('click', function() {
@@ -254,9 +340,34 @@ else
 
                 // Toggle response buttons
                 document.getElementById('responseButtons').style.display =
-                    requiresResponse ? 'block' : 'none';
+                    requiresResponse ? 'flex' : 'none';
 
-                document.getElementById('notificationModal').style.display = 'block';
+                document.getElementById('notificationModal').style.display = 'flex';
+
+                if (this.classList.contains('unread') && !this.dataset.markingRead) {
+                    this.dataset.markingRead = 'true';
+                    const form = this.querySelector('.mark-as-read-form') || document.getElementById('markAllAsReadForm');
+                    const formData = new FormData(form);
+                    formData.set('userNotificationId', notificationId);
+
+                    fetch('@Url.Action("MarkAsRead", "Notification", new { area = "User" })', {
+                        method: 'POST',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        body: formData
+                    }).then(response => {
+                        if (!response.ok) {
+                            throw new Error('Unable to mark notification as read');
+                        }
+
+                        this.classList.remove('unread');
+                        this.querySelector('.unread-indicator')?.remove();
+                        this.querySelector('.mark-as-read-form')?.classList.add('d-none');
+                        this.querySelector('.mark-as-unread-form').classList.remove('d-none');
+                        this.querySelector('.archive-form')?.classList.remove('d-none');
+                        window.updateNotificationCount?.();
+                    }).catch(error => console.error(error))
+                        .finally(() => delete this.dataset.markingRead);
+                }
             });
         });
 
