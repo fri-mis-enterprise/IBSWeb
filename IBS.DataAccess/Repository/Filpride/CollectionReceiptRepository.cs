@@ -99,9 +99,7 @@ namespace IBS.DataAccess.Repository.Filpride
             var customerName = collectionReceipt.SalesInvoiceId != null
                 ?
                 collectionReceipt.SalesInvoice!.Customer!.CustomerName
-                : collectionReceipt.MultipleSIId != null
-                    ? collectionReceipt.Customer!.CustomerName
-                    : collectionReceipt.ServiceInvoice!.Customer!.CustomerName;
+                : collectionReceipt.Customer!.CustomerName;
 
             var postedDateAndTime = DateTimeHelper.GetCurrentPhilippineTime();
             var postedDate = DateOnly.FromDateTime(postedDateAndTime);
@@ -250,9 +248,7 @@ namespace IBS.DataAccess.Repository.Filpride
             var customerName = collectionReceipt.SalesInvoiceId != null
                 ?
                 collectionReceipt.SalesInvoice!.Customer!.CustomerName
-                : collectionReceipt.MultipleSIId != null
-                    ? collectionReceipt.Customer!.CustomerName
-                    : collectionReceipt.ServiceInvoice!.Customer!.CustomerName;
+                : collectionReceipt.Customer!.CustomerName;
 
             if (collectionReceipt.SalesInvoiceId != null || collectionReceipt.MultipleSIId != null)
             {
@@ -270,6 +266,11 @@ namespace IBS.DataAccess.Repository.Filpride
                     var connectedCrNoAndDate = string.Join(", ", crNoAndDate);
                     description = $"CR Ref collected from {customerName} for {connectedCrNoAndDate} Check No. {collectionReceipt.CheckNo} issued by {collectionReceipt.BankAccountNumber} {collectionReceipt.BankAccountName}";
                 }
+            }
+            else if (collectionReceipt.MultipleSVId != null)
+            {
+                var invoices = string.Join(", ", collectionReceipt.ReceiptDetails!.Select(rd => $"{rd.InvoiceNo} SV Dated {rd.InvoiceDate:MMM/dd/yyyy}"));
+                description = $"CR Ref collected from {customerName} for {invoices} Check No. {collectionReceipt.CheckNo} issued by {collectionReceipt.BankAccountNumber} {collectionReceipt.BankAccountName}";
             }
             else
             {
@@ -357,14 +358,25 @@ namespace IBS.DataAccess.Repository.Filpride
             {
                 sv.AmountPaid -= paidAmount;
                 sv.Balance += paidAmount;
-
-                if (sv.IsPaid && sv.PaymentStatus == "Paid" || sv.IsPaid && sv.PaymentStatus == "OverPaid")
-                {
-                    sv.IsPaid = false;
-                    sv.PaymentStatus = "Pending";
-                }
+                UpdateServiceInvoicePaymentStatus(sv);
 
                 await _db.SaveChangesAsync(cancellationToken);
+            }
+        }
+
+        public async Task RemoveMultipleSVPayment(int[] ids, decimal[] paidAmounts, CancellationToken cancellationToken = default)
+        {
+            for (var i = 0; i < ids.Length; i++)
+            {
+                await RemoveSVPayment(ids[i], paidAmounts[i], cancellationToken);
+            }
+        }
+
+        public async Task UpdateMultipleSV(int[] ids, decimal[] paidAmounts, CancellationToken cancellationToken = default)
+        {
+            for (var i = 0; i < ids.Length; i++)
+            {
+                await UpdateSV(ids[i], paidAmounts[i], cancellationToken);
             }
         }
 
@@ -469,13 +481,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
             sv.AmountPaid -= collectionReceiptDetail.Amount;
             sv.Balance += collectionReceiptDetail.Amount;
-            sv.IsPaid = false;
-            sv.PaymentStatus = "Pending";
-
-            if (sv.Balance < 0)
-            {
-                sv.PaymentStatus = "OverPaid";
-            }
+            UpdateServiceInvoicePaymentStatus(sv);
 
             await _db.SaveChangesAsync(cancellationToken);
         }
@@ -521,25 +527,21 @@ namespace IBS.DataAccess.Repository.Filpride
 
             if (sv != null)
             {
-                // Preserve memo adjustments already included in the outstanding balance.
-                decimal adjustedTotal = sv.Balance + sv.AmountPaid - sv.Discount;
+                decimal adjustedTotal = sv.Total - sv.Discount + sv.DebitAmount - sv.CreditAmount;
 
                 sv.AmountPaid += paidAmount;
                 sv.Balance = adjustedTotal - sv.AmountPaid;
 
-                if (sv.Balance == 0 && sv.AmountPaid == adjustedTotal)
-                {
-                    sv.IsPaid = true;
-                    sv.PaymentStatus = "Paid";
-                }
-                else if (sv.AmountPaid > adjustedTotal)
-                {
-                    sv.IsPaid = true;
-                    sv.PaymentStatus = "OverPaid";
-                }
+                UpdateServiceInvoicePaymentStatus(sv);
 
                 await _db.SaveChangesAsync(cancellationToken);
             }
+        }
+
+        private static void UpdateServiceInvoicePaymentStatus(FilprideServiceInvoice invoice)
+        {
+            invoice.IsPaid = invoice.Balance <= 0m;
+            invoice.PaymentStatus = invoice.Balance < 0m ? "OverPaid" : invoice.IsPaid ? "Paid" : "Pending";
         }
 
         public override async Task<IEnumerable<FilprideCollectionReceipt>> GetAllAsync(Expression<Func<FilprideCollectionReceipt, bool>>? filter, CancellationToken cancellationToken = default)
@@ -728,9 +730,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
             var customerName = collectionReceipt.SalesInvoiceId != null
                 ? collectionReceipt.SalesInvoice!.Customer!.CustomerName
-                : collectionReceipt.MultipleSIId != null
-                    ? collectionReceipt.Customer!.CustomerName
-                    : collectionReceipt.ServiceInvoice!.Customer!.CustomerName;
+                : collectionReceipt.Customer!.CustomerName;
 
             if (collectionReceipt.CashAmount > 0 || collectionReceipt.CheckAmount > 0 || collectionReceipt.ManagersCheckAmount > 0)
             {
@@ -881,9 +881,7 @@ namespace IBS.DataAccess.Repository.Filpride
             var customerName = collectionReceipt.SalesInvoiceId != null
                 ?
                 collectionReceipt.SalesInvoice!.Customer!.CustomerName
-                : collectionReceipt.MultipleSIId != null
-                    ? collectionReceipt.Customer!.CustomerName
-                    : collectionReceipt.ServiceInvoice!.Customer!.CustomerName;
+                : collectionReceipt.Customer!.CustomerName;
 
             if (collectionReceipt.SalesInvoiceId != null || collectionReceipt.MultipleSIId != null)
             {
@@ -901,6 +899,11 @@ namespace IBS.DataAccess.Repository.Filpride
                     var connectedCrNoAndDate = string.Join(", ", crNoAndDate);
                     description = $"CR Ref collected from {customerName} for {connectedCrNoAndDate} Check No. {collectionReceipt.CheckNo} issued by {collectionReceipt.BankAccountNumber} {collectionReceipt.BankAccountName}";
                 }
+            }
+            else if (collectionReceipt.MultipleSVId != null)
+            {
+                var invoices = string.Join(", ", collectionReceipt.ReceiptDetails!.Select(rd => $"{rd.InvoiceNo} SV Dated {rd.InvoiceDate:MMM/dd/yyyy}"));
+                description = $"CR Ref collected from {customerName} for {invoices} Check No. {collectionReceipt.CheckNo} issued by {collectionReceipt.BankAccountNumber} {collectionReceipt.BankAccountName}";
             }
             else
             {

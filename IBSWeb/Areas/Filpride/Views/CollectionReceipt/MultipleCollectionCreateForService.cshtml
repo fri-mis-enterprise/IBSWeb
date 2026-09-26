@@ -1,0 +1,574 @@
+@model CollectionReceiptMultipleSvViewModel
+
+@{
+    ViewData["Title"] = "Collection Receipt for Multiple Service Invoices - Create";
+}
+
+<style>
+    .table-bordered tbody tr:last-child,
+    .table-bordered tbody tr:last-child td {
+        border-left: none !important;
+        border-right: none !important;
+        border-bottom: none !important;
+    }
+    .table-bordered tbody tr:last-child,
+    .table-bordered tbody tr:last-child td {
+        border-bottom: none !important;
+    }
+</style>
+
+<link rel="stylesheet" href="~/css/form-style.css">
+
+<div class="loader-container">
+    <div class="loader"></div>
+    <div class="loader-text">Loading...</div>
+</div>
+<div class="card shadow border-0 mt-4">
+    <div class="card-header bg-secondary bg-gradient ml-0 py-3">
+        <div class="row">
+            <div class="col-12 text-center">
+                <h2 class="text-white py-2">@ViewData["Title"]</h2>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-4">
+        <form method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <div class="row">
+                <div class="col-12 col-md-4">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <div class="form-group mb-3">
+                        <label class="control-label">Customers<span class="required">*</span></label>
+                        <select asp-for="CustomerId" asp-items="@Model.Customers" class="form-select js-select2" style="width:100%" required>
+                            <option></option>
+                        </select>
+                        <span asp-validation-for="CustomerId" class="text-danger"></span>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label asp-for="TransactionDate" class="control-label">Transaction Date<span class="required">*</span></label>
+                        <input asp-for="TransactionDate"
+                               type="Date"
+                               class="form-control"
+                               value="@DateTimeHelper.GetCurrentPhilippineTime().ToString("yyyy-MM-dd")"
+                               min="@Model.MinDate.ToString("yyyy-MM-dd")"/>
+                        <span asp-validation-for="TransactionDate" class="text-danger"></span>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input asp-for="ReferenceNo" type="text" class="form-control" placeholder="Reference #" required/>
+                        <label asp-for="ReferenceNo" class="control-label">Reference# (Manual CR#)<span class="required">*</span></label>
+                        <span asp-validation-for="ReferenceNo" class="text-danger"></span>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input asp-for="Remarks" type="text" class="form-control" placeholder="Optional" />
+                        <label asp-for="Remarks" class="control-label">Remarks</label>
+                        <span asp-validation-for="Remarks" class="text-danger"></span>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input asp-for="BatchNumber" type="text" class="form-control" placeholder="Optional" />
+                        <label asp-for="BatchNumber" class="control-label">Batch#</label>
+                        <span asp-validation-for="BatchNumber" class="text-danger"></span>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="control-label">SI NO.<span class="required">*</span></label>
+                        <select asp-for="MultipleSVId" id="invoices" asp-items="@Model.ServiceInvoices" class="form-select js-multiple siNo" multiple="multiple" style="width:100%">
+                            <option></option>
+                        </select>
+                        <span asp-validation-for="MultipleSVId" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-8">
+                    <div class="row mb-3 table-responsive" style="max-height: 400px;">
+                        <table style="border:dotted 1px; min-width: 750px">
+                            <thead class="m-2 sticky-top bg-white">
+                                <tr>
+                                    <th colspan="9" class="text-center py-4">Invoice Details</th>
+                                </tr>
+                                <tr>
+                                    <th style="width:11.11%; padding-left:20px;" class="text-center">Service Invoice Nos.</th>
+                                    <th class="text-end" style="width:11.11%;">Invoice Amount</th>
+                                    <th class="text-end" style="width:11.11%;">CWVAT Remaining</th>
+                                    <th class="text-end" style="width:11.11%;">CWT Remaining</th>
+                                    <th class="text-end" style="width:11.11%; padding-left:20px;">Less EWT/WVat</th>
+                                    <th class="text-end" style="width:11.11%;">Amount Paid</th>
+                                    <th class="text-end" style="width:11.11%;">Debit</th>
+                                    <th class="text-end" style="width:11.11%;">Credit</th>
+                                    <th class="text-end" style="width:11.11%; padding-right:20px;">Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody class="siAmount">
+                            </tbody>
+                            <tbody>
+                                <tr style="border-bottom:double;">
+                                    <td class="pt-1"></td>
+                                </tr>
+                                <tr class="sticky-bottom bg-white">
+                                    <td class="text-end fw-bold p-3">Grand Total:</td>
+                                    <td class="text-end" id="grandTotalRRAmount">0.0000</td>
+                                    <td class="text-end" id="grandTotalVatAmount">0.0000</td>
+                                    <td class="text-end" id="grandTotalEWTAmount">0.0000</td>
+                                    <td class="text-end" id="grandTotalNetOfEWT" style="padding-left:20px;">0.0000</td>
+                                    <td class="text-end" id="grandTotalAmountPaid">0.0000</td>
+                                    <td class="text-end" id="grandTotalDebit">0.0000</td>
+                                    <td class="text-end" id="grandTotalCredit">0.0000</td>
+                                    <td class="text-end" id="grandTotalBalance" style="padding-right:20px;">0.0000</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="row mb-4 overflow-auto" style="max-height: 300px;">
+                    <table class="table" style="table-layout: fixed;">
+                        <thead class="sticky-top bg-white">
+                        <tr>
+                            <th class="text-center">SI List</th>
+                            <th class="text-center">Amount</th>
+                            <th class="text-center">CWT</th>
+                            <th class="text-center">CWVAT</th>
+                        </tr>
+                        </thead>
+                        <tbody class="siList">
+                        </tbody>
+                        <tfoot>
+                        <tr>
+                            <td class="text-end fw-bold">Total:</td>
+                            <td class="text-center fw-bold" id="siTotal">0.0000</td>
+                        </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table-bordered w-100" style="min-width: 750px;">
+                        <tbody>
+                        <tr>
+                            <td colspan="6" style="padding-left:20px;">FORM OF PAYMENT<span class="required">*</span></td>
+                        </tr>
+                        <tr>
+                            <td class="text-center" style="width:25%"></td>
+                            <td class="text-center" style="width:15%">DATE</td>
+                            <td class="text-center" style="width:15%">CHK #</td>
+                            <td class="text-center" style="width:15%">BANK</td>
+                            <td class="text-center" style="width:15%">BRANCH</td>
+                            <td class="text-center" style="width:15%">AMOUNT</td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding-left:20px;">Cash</td>
+                            <td><input style="border:none" class="form-control" disabled /></td>
+                            <td><input style="border:none" class="form-control" disabled /></td>
+                            <td><input style="border:none" class="form-control" disabled /></td>
+                            <td><input style="border:none" class="form-control" disabled /></td>
+                            <td><input asp-for="CashAmount" style="border:none" class="form-control moneyInput" /></td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding-left:20px;">Check</td>
+                            <td><input asp-for="CheckDate" type="date" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="CheckNo" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="CheckBank" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="CheckBranch" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="CheckAmount" style="border:none" class="form-control moneyInput" /></td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding-left:20px;">Manager's Check</td>
+                            <td><input asp-for="ManagersCheckDate" type="date" style="border:none" class="form-control"/></td>
+                            <td><input asp-for="ManagersCheckNo" style="border:none" class="form-control"/></td>
+                            <td><input asp-for="ManagersCheckBank" style="border:none" class="form-control"/></td>
+                            <td><input asp-for="ManagersCheckBranch" style="border:none" class="form-control"/></td>
+                            <td><input asp-for="ManagersCheckAmount" style="border:none" class="form-control moneyInput"/></td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding-left:20px;">EWT Cert</td>
+                            <td><input asp-for="EwtPeriodFrom" type="date" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="EwtPeriodTo" type="date" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="EwtReference1" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="EwtReference2" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="EWT" readonly style="border:none" class="form-control moneyInput" /></td>
+                        </tr>
+                        <tr>
+                            <td style="padding-left:20px;">WVAT Cert</td>
+                            <td><input asp-for="CwVatPeriodFrom" type="date" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="CwVatPeriodTo" type="date" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="CwVatReference1" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="CwVatReference2" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="WVAT" readonly style="border:none" class="form-control moneyInput" /></td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td style="padding-left:20px; padding-top: 5px; padding-bottom: 5px;">TOTAL: </td>
+                            <td id="checkTotal" style="padding-left:15px; padding-top: 5px; padding-bottom: 5px;"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="form-group my-3">
+                    <label class="form-label fst-italic">If applicable, upload the certificate.</label>
+                    <div class="mb-3">
+                        <label asp-for="Bir2306" class="form-label">BIR 2306 Form</label>
+                        <input class="form-control form-control-sm w-25" asp-for="Bir2306" type="file">
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Bir2307" class="form-label">BIR 2307 Form</label>
+                        <input class="form-control form-control-sm w-25" asp-for="Bir2307" type="file">
+                    </div>
+                </div>
+
+
+                <br />
+                <div class="row pt-2">
+                    <div class="col-6 col-md-3">
+                        <button id="submitButton" type="submit" class="btn btn-primary form-control">Create</button>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <a asp-area="Filpride" asp-controller="CollectionReceipt" asp-action="ServiceInvoiceIndex" class="btn btn-outline-primary border  form-control ">Back to List</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+
+
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        $(document).ready(function () {
+            $("#CustomerId").change(function () {
+                var customerNo = $(this).val();
+
+                $.ajax({
+                    url: '@Url.Action("GetServiceInvoices", "CollectionReceipt", new { area = "Filpride" })',
+                    type: "GET",
+                    data: { customerNo: customerNo },
+                    success: function (data) {
+
+                        $("#invoices").empty();
+
+                        // Check if data is an array and not null
+                        if (Array.isArray(data) && data.length > 0) {
+
+                            $("#invoices").append('<option>');
+
+                            // Iterate over the array and append options
+                            $.each(data, function (index, item) {
+                                $("#invoices").append($('<option>', {
+                                    value: item.value,   // Use the correct property for value
+                                    text: item.text      // Use the correct property for text
+                                }));
+                            });
+                        } else {
+                            // Handle the case where data is null or empty
+                            console.log("No service invoices found for the selected customer.");
+                        }
+                    }
+                });
+            });
+        });
+
+    </script>
+
+
+    <script>
+    $(document).ready(function () {
+        const $invoices = $("#invoices");
+        const $siList = $(".siList");
+        const $siAmount = $(".siAmount");
+
+        $invoices.change(function () {
+            const selectedInvoices = $invoices.val() || [];
+            $siList.empty();
+            $siAmount.empty();
+
+            selectedInvoices.forEach(siNo => {
+                const siText = $invoices.find(`option[value='${siNo}']`).text();
+
+                appendSIListRow(siNo, siText);
+                appendSIAmountRow(siNo, siText);
+
+                if (siNo) {
+                    fetchInvoiceBalance(siNo);
+                }
+            });
+
+            calculateGrandTotalInvoiceAmount();
+            updateTaxTotals();
+        });
+
+        function appendSIListRow(siNo, siText) {
+            $siList.append(`
+                <tr>
+                    <td class="text-center">
+                        <input type='hidden' value='${siNo}' />
+                        <input class="text-center w-100" type='text' value='${siText}' style='border:none' readonly />
+                    </td>
+                    <td class="text-center">
+                        <input type='text' name='SVMultipleAmount' class='text-center inputAmount money w-100 paymentAmount_${siNo}'/>
+                    </td>
+                    <td class="text-center">
+                        <input type='number' name='SVMultipleEwtAmount' class='text-center inputAmount taxAmount w-100 ewtAmount_${siNo}' min='0' step='0.0001' value='0.0000'/>
+                    </td>
+                    <td class="text-center">
+                        <input type='number' name='SVMultipleWvatAmount' class='text-center inputAmount taxAmount w-100 wvatAmount_${siNo}' min='0' step='0.0001' value='0.0000'/>
+                    </td>
+                </tr>`);
+        }
+
+        function appendSIAmountRow(siNo, siText) {
+            $siAmount.append(`
+                <tr id='row_${siNo}'>
+                    <td class="text-center">
+                        <input type='hidden' value='${siNo}' />
+                        <input class="text-center" type='text' value='${siText}' style='border:none' readonly />
+                    </td>
+                    <td class="text-end" id='amount_${siNo}'>0.0000</td>
+                    <td class="text-end" id='vatAmount_${siNo}'>0.0000</td>
+                    <td class="text-end" id='ewtAmount_${siNo}'>0.0000</td>
+                    <td class="text-end" id='siAmountNetOfEWT_${siNo}' style="padding-left:20px;">0.0000</td>
+                    <td class="text-end" id='amountPaid_${siNo}'>0.0000</td>
+                    <td class="text-end" id='debit_${siNo}'>0.0000</td>
+                    <td class="text-end" id='credit_${siNo}'>0.0000</td>
+                    <td class="text-end" id='balance_${siNo}' style="padding-right:20px;">0.0000</td>
+                </tr>`);
+        }
+
+        function fetchInvoiceBalance(siNo) {
+            $.ajax({
+                url: '@Url.Action("MultipleServiceInvoiceBalance", "CollectionReceipt", new { area = "Filpride" })',
+                method: "GET",
+                data: { siNo },
+                success: function (data) {
+                    if (!data) return;
+
+                    const gross = data.amount;
+                    const netAmount = data.netAmount;
+                    const vatAmount = data.cwVatBalance;
+                    const ewtAmount = data.cwtBalance;
+                    const netOfEWT = gross - (vatAmount + ewtAmount);
+                    const amountPaid = data.amountPaid;
+                    const balance = data.balance;
+                    const debit = data.debit;
+                    const credit = data.credit;
+
+                    $(`#amount_${siNo}`).text(formatNumberToFour(gross));
+                    $(`#netAmount_${siNo}`).text(formatNumberToFour(netAmount));
+                    $(`#vatAmount_${siNo}`).text(formatNumberToFour(vatAmount));
+                    $(`#ewtAmount_${siNo}`).text(formatNumberToFour(ewtAmount));
+                    $(`.ewtAmount_${siNo}`).attr("max", data.cwtBalance);
+                    $(`.wvatAmount_${siNo}`).attr("max", data.cwVatBalance);
+                    $(`#siAmountNetOfEWT_${siNo}`).text(formatNumberToFour(netOfEWT));
+                    $(`#amountPaid_${siNo}`).text(formatNumberToFour(amountPaid));
+                    $(`#balance_${siNo}`).text(formatNumberToFour(balance));
+                    $(`#debit_${siNo}`).text(formatNumberToFour(debit));
+                    $(`#credit_${siNo}`).text(formatNumberToFour(credit));
+                    $(`.paymentAmount_${siNo}`).val(formatNumberToFour(balance)).attr("data-max", balance);
+
+                    calculateGrandTotalInvoiceAmount();
+
+                    updateTotal2();
+
+                },
+                error: function (xhr, status, error) {
+                    console.error('Error fetching balance:', error);
+                }
+            });
+        }
+
+        function updateTaxTotals() {
+            let totalEwt = 0;
+            let totalWvat = 0;
+            $("input[name='SVMultipleEwtAmount']").each(function () {
+                totalEwt += parseNumber($(this).val());
+            });
+            $("input[name='SVMultipleWvatAmount']").each(function () {
+                totalWvat += parseNumber($(this).val());
+            });
+            $("#EWT").val(totalEwt.toFixed(4));
+            $("#WVAT").val(totalWvat.toFixed(4));
+            document.getElementById("EWT").dispatchEvent(new Event("input", { bubbles: true }));
+            document.getElementById("WVAT").dispatchEvent(new Event("input", { bubbles: true }));
+        }
+
+        $(document).on("input change", "input[name='SVMultipleEwtAmount'], input[name='SVMultipleWvatAmount']", updateTaxTotals);
+
+        function calculateGrandTotalInvoiceAmount() {
+            let grandTotalRRAmount = 0,
+                grandTotalNetAmount = 0,
+                grandTotalVatAmount = 0,
+                grandTotalEWTAmount = 0,
+                grandTotalNetOfEWT = 0,
+                grandTotalAmountPaid = 0,
+                grandTotalBalance = 0,
+                grandTotalDebit = 0,
+                grandTotalCredit = 0;
+
+            $(".siAmount tr").each(function () {
+                const $row = $(this);
+
+                grandTotalRRAmount += parseNumber($row.find("[id^='amount_']").text());
+                grandTotalNetAmount += parseNumber($row.find("[id^='netAmount_']").text());
+                grandTotalVatAmount += parseNumber($row.find("[id^='vatAmount_']").text());
+                grandTotalEWTAmount += parseNumber($row.find("[id^='ewtAmount_']").text());
+                grandTotalNetOfEWT += parseNumber($row.find("[id^='siAmountNetOfEWT_']").text());
+                grandTotalAmountPaid += parseNumber($row.find("[id^='amountPaid_']").text());
+                grandTotalDebit += parseNumber($row.find("[id^='debit_']").text());
+                grandTotalCredit += parseNumber($row.find("[id^='credit_']").text());
+                grandTotalBalance += parseNumber($row.find("[id^='balance_']").text());
+            });
+
+            $("#grandTotalRRAmount").text(formatNumberToFour(grandTotalRRAmount));
+            $("#grandTotalNetAmount").text(formatNumberToFour(grandTotalNetAmount));
+            $("#grandTotalVatAmount").text(formatNumberToFour(grandTotalVatAmount));
+            $("#grandTotalEWTAmount").text(formatNumberToFour(grandTotalEWTAmount));
+            $("#grandTotalNetOfEWT").text(formatNumberToFour(grandTotalNetOfEWT));
+            $("#grandTotalAmountPaid").text(formatNumberToFour(grandTotalAmountPaid));
+            $("#grandTotalBalance").text(formatNumberToFour(grandTotalBalance));
+            $("#grandTotalDebit").text(formatNumberToFour(grandTotalDebit));
+            $("#grandTotalCredit").text(formatNumberToFour(grandTotalCredit));
+        }
+    });
+</script>
+
+
+    <script>
+        let totalBalance = 0;
+
+        document.addEventListener("DOMContentLoaded", function () {
+            $("#submitButton").on("click", validateAndSubmit);
+            let inputs = document.querySelectorAll(".moneyInput");
+            let totalCell = document.getElementById("checkTotal");
+
+            function updateTotal() {
+                let total = 0;
+                inputs.forEach(input => {
+                    const value = parseFloat(input.value.replace(/,/g, "")) || 0;
+                    total += value;
+                });
+                totalCell.textContent = total.toLocaleString("en-US", {
+                    minimumFractionDigits: 4,
+                    maximumFractionDigits: 4
+                });
+
+                if (total === 0){
+                    $("#submitButton").trigger("change").prop("disabled", true);
+                }
+                else{
+                    $("#submitButton").trigger("change").prop("disabled", false);
+                }
+            }
+
+            inputs.forEach(input => {
+                input.addEventListener("input", updateTotal);
+                input.addEventListener("change", updateTotal);
+            });
+
+            updateTotal();
+        });
+
+        function validateAndSubmit (event){
+            let checkTotal = parseFloat($("#checkTotal").text().replace(/,/g, "")) || 0;
+
+            if (Math.round(checkTotal * 10000) !== Math.round(totalBalance * 10000)){
+                event.preventDefault();
+                Swal.fire({
+                    title: "Error",
+                    text: "Total payment amount should be equal to the total balance.",
+                    icon: "error"
+                });
+                return;
+            }
+            if (checkTotal === 0 || totalBalance === 0){
+                event.preventDefault();
+                Swal.fire({
+                    title: "Error",
+                    text: "Total payment amount or total balance cannot be zero",
+                    icon: "error"
+                });
+            }
+
+            let ewtValue = parseFloat($("#EWT").val().replace(/,/g, "")) || 0;
+            let wvatValue = parseFloat($("#WVAT").val().replace(/,/g, "")) || 0;
+
+            let bir2307File = $("#Bir2307")[0].files.length;
+            let bir2306File = $("#Bir2306")[0].files.length;
+
+            let missing = [];
+
+            if (ewtValue > 0 && bir2307File === 0) {
+                missing.push("BIR 2307 is required when EWT has a value.");
+            }
+
+            if (wvatValue > 0 && bir2306File === 0) {
+                missing.push("BIR 2306 is required when WVAT has a value.");
+            }
+
+            if (missing.length > 0) {
+                event.preventDefault();
+                Swal.fire({
+                    title: "Missing Certificate(s)",
+                    html: missing.map(m => `<p style="margin:4px 0">${m}</p>`).join(""),
+                    icon: "warning"
+                });
+            }
+        }
+
+        $(document).on("input", "input[name='SVMultipleAmount']", updateTotal2);
+
+        function updateTotal2() {
+            totalBalance = 0;
+
+            $("input[name='SVMultipleAmount']").each(function () {
+                let val = $(this).val().replace(/,/g, '');
+                let num = parseFloat(val) || 0;
+                totalBalance += num;
+            });
+
+            // Always refresh display, even if total didn't change
+            $("#siTotal").text(formatNumberToFour(totalBalance));
+        }
+    </script>
+
+    <script>
+        $(document).on("blur change", "[name='SVMultipleAmount']", function () {
+            let numValue = parseNumber($(this).val());
+            let maxValue = parseFloat($(this).attr("data-max")) || 0;
+
+            if (numValue > maxValue) {
+                $(this).val(formatNumberToFour(maxValue)); // auto-correct
+                setTimeout(() => {
+                    updateTotal2();
+                }, 200);
+                Swal.fire({
+                    title: "Error",
+                    text: "Amount cannot exceed the balance",
+                    icon: "error"
+                });
+            } else {
+                $(this).val(formatNumberToFour(numValue)); // format nicely on blur
+            }
+
+            if (numValue === 0){
+                $(this).val(formatNumberToFour(1)); // auto-correct
+                setTimeout(() => {
+                    updateTotal2();
+                }, 200);
+                Swal.fire({
+                    title: "Error",
+                    text: "Balance to pay cannot be zero",
+                    icon: "error"
+                });
+            }
+        });
+    </script>
+}

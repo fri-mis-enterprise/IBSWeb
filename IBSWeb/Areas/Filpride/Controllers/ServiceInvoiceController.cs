@@ -445,7 +445,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
 
             var hasAlreadyBeenUsed =
-                await _dbContext.FilprideCollectionReceipts.AnyAsync(cr => cr.ServiceInvoiceId == model.ServiceInvoiceId && cr.Status != nameof(Status.Voided), cancellationToken) ||
+                await _dbContext.FilprideCollectionReceipts.AnyAsync(cr =>
+                    (cr.ServiceInvoiceId == model.ServiceInvoiceId ||
+                     (cr.MultipleSVId != null && cr.MultipleSVId.Contains(model.ServiceInvoiceId))) &&
+                    cr.Status != nameof(Status.Voided), cancellationToken) ||
                 await _dbContext.FilprideDebitMemos.AnyAsync(dm => dm.ServiceInvoiceId == model.ServiceInvoiceId && dm.Status != nameof(Status.Voided), cancellationToken) ||
                 await _dbContext.FilprideCreditMemos.AnyAsync(cm => cm.ServiceInvoiceId == model.ServiceInvoiceId && cm.Status != nameof(Status.Voided), cancellationToken);
 

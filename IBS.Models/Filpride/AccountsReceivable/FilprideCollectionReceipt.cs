@@ -27,6 +27,10 @@ namespace IBS.Models.Filpride.AccountsReceivable
         [Display(Name = "Sales Invoice No.")]
         public string[]? MultipleSI { get; set; }
 
+        public int[]? MultipleSVId { get; set; }
+
+        public string[]? MultipleSV { get; set; }
+
         [ForeignKey(nameof(SalesInvoiceId))]
         public FilprideSalesInvoice? SalesInvoice { get; set; }
 
@@ -209,6 +213,9 @@ namespace IBS.Models.Filpride.AccountsReceivable
 
         [Column(TypeName = "numeric[]")]
         public decimal[]? SIMultipleAmount { get; set; }
+
+        [Column(TypeName = "numeric[]")]
+        public decimal[]? SVMultipleAmount { get; set; }
 
         public bool IsPrinted { get; set; }
 

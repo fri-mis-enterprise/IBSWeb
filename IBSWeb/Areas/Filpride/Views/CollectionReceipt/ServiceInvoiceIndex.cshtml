@@ -12,11 +12,23 @@
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center bg-secondary p-3 rounded shadow">
         <h2 class="text-white m-0">@ViewData["Title"]</h2>
-        <div class="d-flex gap-2">
-            <a asp-area="Filpride" asp-controller="CollectionReceipt" asp-action="CreateForService"
-               class="btn btn-light d-flex align-items-center gap-2">
-                <i class="bi bi-plus-circle"></i> Create
-            </a>
+        <div class="dropdown actions-dropdown">
+            <button class="btn btn-light btn-sm dropdown-toggle w-100"
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false">
+                <i class="bi bi-plus-circle"></i> New Receipt
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                <li>
+                    <a class="dropdown-item responsive-index-button" asp-area="Filpride" asp-controller="CollectionReceipt" asp-action="CreateForService">
+                        <i class="bi bi-plus-circle"></i> Single Invoice
+                    </a>
+                    <a class="dropdown-item responsive-index-button" asp-controller="CollectionReceipt" asp-action="MultipleCollectionCreateForService">
+                        <i class="bi bi-plus-circle"></i> Multiple Invoice
+                    </a>
+                </li>
+            </ul>
         </div>
     </div>
 
@@ -364,7 +376,7 @@
         $(document).ready(function () {
             let filterValue = localStorage.getItem('filterDate') || "";
             $('#inputDate').val(filterValue);
-            
+
             let table = $('#paginatedTable').DataTable({
                 "processing": true,
                 "serverSide": true,
@@ -444,7 +456,7 @@
                             var statusClass = row.status === "@nameof(CollectionReceiptStatus.Posted)"
                             || row.status === "@nameof(CollectionReceiptStatus.Deposited)"
                             || row.status === "@nameof(CollectionReceiptStatus.Redeposited)"
-                                ? "bg-info" 
+                                ? "bg-info"
                                 : row.status === "@nameof(CollectionReceiptStatus.Cleared)"
                                     ? "bg-success"
                                     : row.status === "@nameof(CollectionReceiptStatus.Voided)"
@@ -463,9 +475,9 @@
                         "render": function (data, type, row) {
                             let dropdownHtml = `
                                     <div class="dropdown actions-dropdown" style="${row.voidedBy != null || row.canceledBy != null ? 'display:none;' : ''}">
-                                        <button class="btn btn-light btn-sm dropdown-toggle w-100" 
-                                                        type="button" 
-                                                        data-bs-toggle="dropdown" 
+                                        <button class="btn btn-light btn-sm dropdown-toggle w-100"
+                                                        type="button"
+                                                        data-bs-toggle="dropdown"
                                                         aria-expanded="false">
                                                     <i class="bi bi-three-dots"></i>
                                         </button>
@@ -473,8 +485,8 @@
 
                             if (row.postedBy == null) {
                                 dropdownHtml += `
-                                        <li><a href="@Url.Action("EditForService", "CollectionReceipt", new { area = "Filpride" })/${row.collectionReceiptId}" class="dropdown-item">Edit</a></li>
-                                        <li><a href="@Url.Action("Print", "CollectionReceipt", new { area = "Filpride" })/${row.collectionReceiptId}" class="dropdown-item">Preview</a></li>`;
+                                        <li><a href="${row.multipleSVId ? '@Url.Action("MultipleCollectionEditForService", "CollectionReceipt", new { area = "Filpride" })' : '@Url.Action("EditForService", "CollectionReceipt", new { area = "Filpride" })'}/${row.collectionReceiptId}" class="dropdown-item">Edit</a></li>
+                                        <li><a href="${row.multipleSVId ? '@Url.Action("MultipleCollectionPrintForService", "CollectionReceipt", new { area = "Filpride" })' : '@Url.Action("Print", "CollectionReceipt", new { area = "Filpride" })'}/${row.collectionReceiptId}" class="dropdown-item">Preview</a></li>`;
                                 dropdownHtml += `<li><a class="dropdown-item" onclick="confirmCancel(${row.collectionReceiptId})">Cancel</a></li>`;
                             } else {
                                 const hasDeposit = row.depositedDate && row.depositedDate !== "";
@@ -490,8 +502,8 @@
                                 } else{
                                     dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="returnCheck(${row.collectionReceiptId})">Return Check</a></li>`;
                                 }
-                                
-                                dropdownHtml += `<li><a href="@Url.Action("Print", "CollectionReceipt", new { area = "Filpride" })/${row.collectionReceiptId}" class="dropdown-item">Preview</a></li>`;
+
+                                dropdownHtml += `<li><a href="${row.multipleSVId ? '@Url.Action("MultipleCollectionPrintForService", "CollectionReceipt", new { area = "Filpride" })' : '@Url.Action("Print", "CollectionReceipt", new { area = "Filpride" })'}/${row.collectionReceiptId}" class="dropdown-item">Preview</a></li>`;
                                 dropdownHtml += `<li><a class="dropdown-item" onclick="confirmVoid(${row.collectionReceiptId})">Void</a></li>`;
                             }
                             dropdownHtml += `</ul></div>`;
@@ -501,7 +513,7 @@
 
                 ],
             });
-            
+
             $('#inputDate').on('change', function() {
                 filterValue = $(this).val();
                 localStorage.setItem('filterDate', filterValue); // persist the date

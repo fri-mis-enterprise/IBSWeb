@@ -105,7 +105,9 @@ namespace IBS.DataAccess.Repository.Filpride
             var activeDetails = _db.FilprideCollectionReceiptDetails
                 .Where(detail => detail.InvoiceNo == serviceInvoice.ServiceInvoiceNo &&
                                  detail.FilprideCollectionReceipt != null &&
-                                 detail.FilprideCollectionReceipt.ServiceInvoiceId == serviceInvoiceId &&
+                                 (detail.FilprideCollectionReceipt.ServiceInvoiceId == serviceInvoiceId ||
+                                  (detail.FilprideCollectionReceipt.MultipleSVId != null &&
+                                   detail.FilprideCollectionReceipt.MultipleSVId.Contains(serviceInvoiceId))) &&
                                  detail.FilprideCollectionReceipt.Status != nameof(CollectionReceiptStatus.Canceled) &&
                                  detail.FilprideCollectionReceipt.Status != nameof(CollectionReceiptStatus.Voided));
 
