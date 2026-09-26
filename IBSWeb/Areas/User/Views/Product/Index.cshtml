@@ -58,18 +58,16 @@
 
     <div class="card shadow border-0 mt-3">
         <div class="card-body p-3">
-            <div class="table-responsive" style="max-height: 70vh">
-                <table class="table table-hover mb-0" id="paginatedTable">
-                    <thead class="bg-light">
-                    <tr>
-                        <th class="text-start">Product Code</th>
-                        <th class="text-start">Product Name</th>
-                        <th class="text-start">Product Unit</th>
-                        <th></th>
-                    </tr>
-                    </thead>
-                </table>
-            </div>
+            <table class="table table-hover mb-0" id="paginatedTable">
+                <thead class="bg-light">
+                <tr>
+                    <th class="text-start">Product Code</th>
+                    <th class="text-start">Product Name</th>
+                    <th class="text-start">Product Unit</th>
+                    <th></th>
+                </tr>
+                </thead>
+            </table>
         </div>
     </div>
 </div>
@@ -90,6 +88,7 @@
                 "processing": true,
                 "serverSide": true,
                 "stateDuration": 86400,
+                "scrollY": '70vh',
                 "language": {
                     "processing": `<div class="d-flex justify-content-center">
                                     <div class="spinner-border text-primary" role="status">

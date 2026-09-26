@@ -13,38 +13,36 @@
 
     <div class="card shadow border-0 mt-3">
         <div class="card-body p-3">
-            <div class="table-responsive" style="max-height: 70vh">
-                <div class="btn-group mb-3" role="group" aria-label="Filter Options">
-                    <button id="filterAll" class="btn btn-outline-primary active">
-                        <i class="bi bi-list"></i> All
-                    </button>
-                    <button id="filterWithDCP" class="btn btn-outline-primary">
-                        <i class="bi bi-calendar-check"></i> With DCP Date
-                    </button>
-                    <button id="filterWithDCR" class="btn btn-outline-primary">
-                        <i class="bi bi-calendar-check"></i> With DCR Date
-                    </button>
-                    <button id="filterWithoutDates" class="btn btn-outline-primary">
-                        <i class="bi bi-x-circle"></i> Without Dates
-                    </button>
-                </div>
-
-                <table class="table table-hover mb-0" id="paginatedTable">
-                    <thead class="bg-light">
-                    <tr>
-                        <th class="text-start">CV#</th>
-                        <th class="text-start">Date</th>
-                        <th class="text-start">Payee</th>
-                        <th class="text-start">INV#</th>
-                        <th class="text-start">Check#</th>
-                        <th class="text-start">Total</th>
-                        <th class="text-start">DCP Date</th>
-                        <th class="text-start">DCR Date</th>
-                        <th class="text-center" style="width: 100px;">Actions</th>
-                    </tr>
-                    </thead>
-                </table>
+            <div class="btn-group mb-3" role="group" aria-label="Filter Options">
+                <button id="filterAll" class="btn btn-outline-primary active">
+                    <i class="bi bi-list"></i> All
+                </button>
+                <button id="filterWithDCP" class="btn btn-outline-primary">
+                    <i class="bi bi-calendar-check"></i> With DCP Date
+                </button>
+                <button id="filterWithDCR" class="btn btn-outline-primary">
+                    <i class="bi bi-calendar-check"></i> With DCR Date
+                </button>
+                <button id="filterWithoutDates" class="btn btn-outline-primary">
+                    <i class="bi bi-x-circle"></i> Without Dates
+                </button>
             </div>
+
+            <table class="table table-hover mb-0" id="paginatedTable">
+                <thead class="bg-light">
+                <tr>
+                    <th class="text-start">CV#</th>
+                    <th class="text-start">Date</th>
+                    <th class="text-start">Payee</th>
+                    <th class="text-start">INV#</th>
+                    <th class="text-start">Check#</th>
+                    <th class="text-start">Total</th>
+                    <th class="text-start">DCP Date</th>
+                    <th class="text-start">DCR Date</th>
+                    <th class="text-center" style="width: 100px;">Actions</th>
+                </tr>
+                </thead>
+            </table>
         </div>
     </div>
 </div>
@@ -58,6 +56,7 @@
                 "serverSide": true,
                 "stateSave": true,
                 "stateDuration": 86400,
+                "scrollY": '70vh',
                 "language": {
                     "processing": `<div class="d-flex justify-content-center">
                                     <div class="spinner-border text-primary" role="status">

@@ -20,25 +20,23 @@
                 <label class="fw-semibold small text-muted mb-1">Filter by Date</label>
                 <input type="date" id="inputDate" class="form-control rounded-3 shadow-sm" style="width:150px;">
             </div>
-            <div class="table-responsive" style="max-height: 70vh">
-                <table class="table table-hover mb-0" id="paginatedTable">
-                    <thead class="bg-light">
-                    <tr>
-                        <th>PR#</th>
-                        <th>Date</th>
-                        <th>Deposited Date</th>
-                        <th>Cleared Date</th>
-                        <th>Received From</th>
-                        <th>Collection Category</th>
-                        <th>Reference#</th>
-                        <th>Total</th>
-                        <th>Created By</th>
-                        <th>Status</th>
-                        <th class="text-center">Actions</th>
-                    </tr>
-                    </thead>
-                </table>
-            </div>
+            <table class="table table-hover mb-0" id="paginatedTable">
+                <thead class="bg-light">
+                <tr>
+                    <th>PR#</th>
+                    <th>Date</th>
+                    <th>Deposited Date</th>
+                    <th>Cleared Date</th>
+                    <th>Received From</th>
+                    <th>Collection Category</th>
+                    <th>Reference#</th>
+                    <th>Total</th>
+                    <th>Created By</th>
+                    <th>Status</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+                </thead>
+            </table>
         </div>
     </div>
 </div>
@@ -347,6 +345,7 @@
                 serverSide: true,
                 stateSave: true,
                 stateDuration: 86400,
+                scrollY: '70vh',
                 language: {
                     processing: `<div class="d-flex justify-content-center">
                                     <div class="spinner-border text-primary" role="status">

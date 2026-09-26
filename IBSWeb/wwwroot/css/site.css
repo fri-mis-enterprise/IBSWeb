@@ -1050,12 +1050,3 @@ body.loading {
     font-size: 0.7rem;
     padding: 0.25em 0.4em;
 }
-
-.dt-input {
-    margin-right: .5rem;
-}
-
-.dt-layout-table {
-    height: 55vh !important;
-    overflow-y: scroll;
-}

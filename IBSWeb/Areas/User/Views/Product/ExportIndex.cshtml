@@ -54,7 +54,7 @@
             </div>
         </div>
     </div>
-    <div class="card-body p-4 table-responsive">
+    <div class="card-body p-4">
         <div class="row pb-3">
             <div class="col-6">
                 <div class="row g-3 align-items-end">
@@ -112,6 +112,7 @@
                 processing: true,
                 serverSide: false,
                 stateSave: true,
+                scrollY: '70vh',
                 ajax: {
                     url: '@Url.Action("GetProducts", "Product")',
                     type: 'POST',
@@ -175,20 +176,20 @@
                 $('#productTable').DataTable().draw();
             });
         });
-        
+
         function exportToExcel() {
             let selectedIds = Array.from(selectedRecords).join(',');
-            
+
             if (selectedIds) {
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = '@Url.Action("Export", "Product")';
-                
+
                 const input = document.createElement('input');
                 input.type = 'hidden';
                 input.name = 'selectedRecord';
                 input.value = selectedIds;
-                
+
                 const tokenInput = document.createElement('input');
                 tokenInput.type = 'hidden';
                 tokenInput.name = '__RequestVerificationToken';
