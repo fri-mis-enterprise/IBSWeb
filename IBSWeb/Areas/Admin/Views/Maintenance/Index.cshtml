@@ -1,0 +1,71 @@
+@model bool
+
+@{
+    ViewData["Title"] = "Maintenance Mode";
+}
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center bg-secondary p-3 rounded shadow">
+        <h2 class="text-white m-0">@ViewData["Title"]</h2>
+    </div>
+
+    <div class="card shadow border-0 mt-3">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-4">
+                <span class="material-symbols-outlined fs-1 @(Model ? "text-warning" : "text-success")">
+                    @(Model ? "construction" : "check_circle")
+                </span>
+                <div>
+                    <h4 class="mb-1">Website status</h4>
+                    <p class="mb-0 text-muted">
+                        The website is currently <strong>@(Model ? "under maintenance" : "available to users")</strong>.
+                    </p>
+                </div>
+            </div>
+
+            @if (Model)
+            {
+                <div class="alert alert-warning" role="alert">
+                    Non-admin users are redirected to the maintenance page. Admin users can continue to access the website.
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info" role="alert">
+                    Enabling maintenance mode will sign out non-admin users on their next request and redirect them to the maintenance page.
+                </div>
+            }
+
+            <form asp-area="Admin" asp-controller="Maintenance" asp-action="Index" method="post" id="maintenanceForm">
+                <div class="form-check form-switch mb-4">
+                    @Html.CheckBox("isEnabled", Model, new
+                    {
+                        @class = "form-check-input",
+                        id = "maintenanceMode",
+                        role = "switch",
+                        data_initial_state = Model.ToString().ToLowerInvariant()
+                    })
+                    <label class="form-check-label" for="maintenanceMode">Enable maintenance mode</label>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> Save Setting
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('maintenanceForm').addEventListener('submit', function (event) {
+            const maintenanceMode = document.getElementById('maintenanceMode');
+            const wasEnabled = maintenanceMode.dataset.initialState === 'true';
+
+            if (!wasEnabled && maintenanceMode.checked &&
+                !confirm('Enable maintenance mode? Non-admin users will be signed out on their next request.')) {
+                event.preventDefault();
+            }
+        });
+    </script>
+}
