@@ -155,6 +155,21 @@ namespace IBS.DataAccess.Repository.Filpride
                 var supplierId = header.CheckVoucherHeader?.SupplierId;
                 var supplierName = header.CheckVoucherHeader?.SupplierName ?? header.CheckVoucherHeader?.Payee;
 
+                if (!supplierId.HasValue)
+                {
+                    var counterparty = await _db.FilprideCheckVoucherHeaders
+                        .AsNoTracking()
+                        .Where(checkVoucher => checkVoucher.CheckVoucherHeaderId == header.CVId.Value)
+                        .Select(checkVoucher => new
+                        {
+                            checkVoucher.SupplierId,
+                            Name = checkVoucher.SupplierName ?? checkVoucher.Payee
+                        })
+                        .SingleOrDefaultAsync(cancellationToken);
+                    supplierId = counterparty?.SupplierId;
+                    supplierName = counterparty?.Name;
+                }
+
                 if (supplierId.HasValue)
                 {
                     ledgers.SetCounterparty(
