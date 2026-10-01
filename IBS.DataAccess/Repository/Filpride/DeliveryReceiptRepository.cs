@@ -14,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IBS.DataAccess.Repository.Filpride
 {
-    public class DeliveryReceiptRepository : Repository<FilprideDeliveryReceipt>, IDeliveryReceiptRepository
+    public class DeliveryReceiptRepository: Repository<FilprideDeliveryReceipt>, IDeliveryReceiptRepository
     {
         private readonly ApplicationDbContext _db;
 
@@ -122,6 +122,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .Include(dr => dr.AuthorityToLoad)
                 .Include(dr => dr.Details).ThenInclude(d => d.CustomerOrderSlip).ThenInclude(cos => cos!.Product)
                 .Include(dr => dr.Details).ThenInclude(d => d.PurchaseOrder).ThenInclude(po => po!.Supplier)
+                .Include(dr => dr.Details).ThenInclude(d => d.PurchaseOrder).ThenInclude(po => po!.Product)
                 .Include(dr => dr.Details).ThenInclude(d => d.AuthorityToLoad)
                 .AsSplitQuery()
                 .AsNoTracking();
@@ -263,7 +264,9 @@ namespace IBS.DataAccess.Repository.Filpride
                     .ToListAsync(cancellationToken);
         }
 
-        public async Task PostAsync(FilprideDeliveryReceipt deliveryReceipt, CancellationToken cancellationToken = default)
+        public async Task PostAsync(FilprideDeliveryReceipt deliveryReceipt,
+            CancellationToken cancellationToken = default,
+            List<AccountTitleDto>? accountTitlesDto = null)
         {
             try
             {
@@ -271,7 +274,7 @@ namespace IBS.DataAccess.Repository.Filpride
 
                 var ledgers = new List<FilprideGeneralLedgerBook>();
                 var unitOfWork = new UnitOfWork(_db);
-                var accountTitlesDto = await GetListOfAccountTitleDto(cancellationToken);
+                accountTitlesDto ??= await GetListOfAccountTitleDto(cancellationToken);
                 var arTradeTitle = accountTitlesDto.Find(c => c.AccountNumber == "101020100") ?? throw new ArgumentException("Account title '101020100' not found.");
                 var vatOutputTitle = accountTitlesDto.Find(c => c.AccountNumber == "201030100") ?? throw new ArgumentException("Account title '201030100' not found.");
                 var vatInputTitle = accountTitlesDto.Find(c => c.AccountNumber == "101060200") ?? throw new ArgumentException("Account title '101060200' not found.");
@@ -358,10 +361,10 @@ namespace IBS.DataAccess.Repository.Filpride
                 for (var index = 0; index < detailLines.Count; index++)
                 {
                     var detail = detailLines[index];
-                    var customerOrderSlip = detail.CustomerOrderSlip ?? cosLookup[detail.CustomerOrderSlipId];
-                    var purchaseOrder = detail.PurchaseOrder ?? poLookup[detail.PurchaseOrderId];
+                    var customerOrderSlip = detail.CustomerOrderSlip;
+                    var purchaseOrder = detail.PurchaseOrder;
                     var isLastLine = index == detailLines.Count - 1;
-                    var description = $"{customerOrderSlip.DeliveryOption} by {deliveryReceipt.Hauler?.SupplierName ?? "Client"}";
+                    var description = $"{customerOrderSlip!.DeliveryOption} by {deliveryReceipt.Hauler?.SupplierName ?? "Client"}";
                     var lineFreightGrossAmount = AllocateByQuantity(deliveryReceipt.Freight, detail.Quantity, isLastLine, ref allocatedFreight);
                     var lineEccGrossAmount = AllocateByQuantity(deliveryReceipt.ECC, detail.Quantity, isLastLine, ref allocatedEcc);
 
@@ -369,7 +372,7 @@ namespace IBS.DataAccess.Repository.Filpride
                     var (cogsAcctNo, _) = GetCogsAccountTitle(customerOrderSlip.Product.ProductCode);
                     var (freightAcctNo, _) = GetFreightAccount(customerOrderSlip.Product.ProductCode);
                     var (commissionAcctNo, _) = GetCommissionAccount(customerOrderSlip.Product.ProductCode);
-                    var (inventoryAcctNo, _) = GetInventoryAccountTitle(purchaseOrder.Product!.ProductCode);
+                    var (inventoryAcctNo, _) = GetInventoryAccountTitle(purchaseOrder!.Product!.ProductCode);
                     var salesTitle = accountTitlesDto.Find(c => c.AccountNumber == salesAcctNo) ?? throw new ArgumentException($"Account title '{salesAcctNo}' not found.");
                     var cogsTitle = accountTitlesDto.Find(c => c.AccountNumber == cogsAcctNo) ?? throw new ArgumentException($"Account title '{cogsAcctNo}' not found.");
                     var freightTitle = accountTitlesDto.Find(c => c.AccountNumber == freightAcctNo) ?? throw new ArgumentException($"Account title '{freightAcctNo}' not found.");

@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IBS.DataAccess.Repository.Filpride
 {
-    public class ServiceInvoiceRepository : Repository<FilprideServiceInvoice>, IServiceInvoiceRepository
+    public class ServiceInvoiceRepository: Repository<FilprideServiceInvoice>, IServiceInvoiceRepository
     {
         private readonly ApplicationDbContext _db;
 
@@ -198,7 +198,9 @@ namespace IBS.DataAccess.Repository.Filpride
             return query;
         }
 
-        public async Task PostAsync(FilprideServiceInvoice model, CancellationToken cancellationToken = default)
+        public async Task PostAsync(FilprideServiceInvoice model,
+            CancellationToken cancellationToken = default,
+            List<AccountTitleDto>? accountTitlesDto = null)
         {
             #region --Sales Book Recording
 
@@ -228,7 +230,7 @@ namespace IBS.DataAccess.Repository.Filpride
             }
 
             var ledgers = new List<FilprideGeneralLedgerBook>();
-            var accountTitlesDto = await GetListOfAccountTitleDto(cancellationToken);
+            accountTitlesDto ??= await GetListOfAccountTitleDto(cancellationToken);
             var arTradeTitle = accountTitlesDto.Find(c => c.AccountNumber == "101020100")
                                ?? throw new ArgumentException("Account title '101020100' not found.");
             var arTradeCwt = accountTitlesDto.Find(c => c.AccountNumber == "101020200")

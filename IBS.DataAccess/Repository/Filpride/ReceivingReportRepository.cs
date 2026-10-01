@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Filpride.IRepository;
 using IBS.DTOs;
@@ -8,11 +9,10 @@ using IBS.Models.Filpride.Integrated;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Expressions;
 
 namespace IBS.DataAccess.Repository.Filpride
 {
-    public class ReceivingReportRepository : Repository<FilprideReceivingReport>, IReceivingReportRepository
+    public class ReceivingReportRepository: Repository<FilprideReceivingReport>, IReceivingReportRepository
     {
         private readonly ApplicationDbContext _db;
 
@@ -307,7 +307,9 @@ namespace IBS.DataAccess.Repository.Filpride
             return string.Join(", ", generatedReceivingReportNos);
         }
 
-        public async Task PostAsync(FilprideReceivingReport model, CancellationToken cancellationToken = default)
+        public async Task PostAsync(FilprideReceivingReport model,
+            CancellationToken cancellationToken = default,
+            List<AccountTitleDto>? accountTitlesDto = null)
         {
             #region --General Ledger Recording
 
@@ -333,7 +335,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 : model.Amount;
 
             var (inventoryAcctNo, inventoryAcctTitle) = GetInventoryAccountTitle(model.PurchaseOrder.Product!.ProductCode);
-            var accountTitlesDto = await GetListOfAccountTitleDto(cancellationToken);
+            accountTitlesDto ??= await GetListOfAccountTitleDto(cancellationToken);
             var vatInputTitle = accountTitlesDto.Find(c => c.AccountNumber == "101060200")
                                 ?? throw new ArgumentException("Account title '101060200' not found.");
             AccountTitleDto? ewtTitle = null;
@@ -676,12 +678,12 @@ namespace IBS.DataAccess.Repository.Filpride
             {
                 ledgers.Add(new FilprideGeneralLedgerBook
                 {
-                        Date = purchasePostingDate,
-                        Reference = model.ReceivingReportNo!,
-                        Description = particulars,
-                        AccountId = ewtTitle!.AccountId,
-                        AccountNo = ewtTitle.AccountNumber,
-                        AccountTitle = ewtTitle.AccountName,
+                    Date = purchasePostingDate,
+                    Reference = model.ReceivingReportNo!,
+                    Description = particulars,
+                    AccountId = ewtTitle!.AccountId,
+                    AccountNo = ewtTitle.AccountNumber,
+                    AccountTitle = ewtTitle.AccountName,
                     Debit = !isIncremental ? ewtAmount : 0,
                     Credit = isIncremental ? ewtAmount : 0,
                     CreatedBy = userName,

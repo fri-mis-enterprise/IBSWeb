@@ -1,10 +1,11 @@
 using IBS.DataAccess.Repository.IRepository;
+using IBS.DTOs;
 using IBS.Models.Filpride.AccountsPayable;
 using IBS.Models.Filpride.Integrated;
 
 namespace IBS.DataAccess.Repository.Filpride.IRepository
 {
-    public interface IReceivingReportRepository : IRepository<FilprideReceivingReport>
+    public interface IReceivingReportRepository: IRepository<FilprideReceivingReport>
     {
         Task<string> GenerateCodeAsync(string type, CancellationToken cancellationToken = default);
 
@@ -12,7 +13,8 @@ namespace IBS.DataAccess.Repository.Filpride.IRepository
 
         Task<string> AutoGenerateReceivingReport(FilprideDeliveryReceipt deliveryReceipt, DateOnly liftingDate, string userName, CancellationToken cancellationToken = default);
 
-        Task PostAsync(FilprideReceivingReport model, CancellationToken cancellationToken = default);
+        Task PostAsync(FilprideReceivingReport model, CancellationToken cancellationToken = default,
+            List<AccountTitleDto>? accountTitlesDto = null);
 
         Task VoidReceivingReportAsync(int receivingReportId, string currentUser, CancellationToken cancellationToken = default);
 
