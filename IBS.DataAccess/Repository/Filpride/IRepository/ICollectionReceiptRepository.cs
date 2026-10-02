@@ -1,13 +1,13 @@
-using IBS.DTOs;
 using IBS.DataAccess.Repository.IRepository;
+using IBS.DTOs;
+using IBS.Models.Filpride;
 using IBS.Models.Filpride.AccountsReceivable;
 using IBS.Models.Filpride.Integrated;
 using IBS.Models.Filpride.MasterFile;
-using IBS.Models.Filpride;
 
 namespace IBS.DataAccess.Repository.Filpride.IRepository
 {
-    public interface ICollectionReceiptRepository : IRepository<FilprideCollectionReceipt>
+    public interface ICollectionReceiptRepository: IRepository<FilprideCollectionReceipt>
     {
         Task<string> GenerateCodeAsync(string type, CancellationToken cancellationToken = default);
 
@@ -31,11 +31,26 @@ namespace IBS.DataAccess.Repository.Filpride.IRepository
 
         Task UpdateSV(int id, decimal paidAmount, CancellationToken cancellationToken = default);
 
-        Task PostAsync(FilprideCollectionReceipt collectionReceipt, CancellationToken cancellationToken = default);
+        Task PostAsync(FilprideCollectionReceipt collectionReceipt,
+            CancellationToken cancellationToken = default,
+            List<AccountTitleDto>? accountTitlesDto = null,
+            bool saveChanges = true,
+            DateTime? postedDateAndTime = null);
 
-        Task ApplyClearingDateAsync(FilprideCollectionReceipt collectionReceipt, CancellationToken cancellationToken = default);
+        Task ApplyClearingDateAsync(FilprideCollectionReceipt collectionReceipt,
+            CancellationToken cancellationToken = default,
+            List<AccountTitleDto>? accountTitlesDto = null,
+            bool saveChanges = true);
 
-        Task ApplyCostOfMoney(FilprideDeliveryReceipt deliveryReceipt, decimal costOfMoney, string currentUser, DateOnly depositedDate, CancellationToken cancellationToken = default);
+        Task ApplyCostOfMoney(FilprideDeliveryReceipt deliveryReceipt,
+            decimal costOfMoney,
+            string currentUser,
+            DateOnly depositedDate,
+            CancellationToken cancellationToken = default,
+            List<AccountTitleDto>? accountTitlesDto = null,
+            bool saveChanges = true,
+            bool checkExistingEntry = true,
+            int? sourceCollectionReceiptDetailId = null);
 
         Task BatchPostCollectionAsync(FilprideCollectionReceipt collectionReceipt, List<AccountTitleDto> accountTitlesDto, CancellationToken cancellationToken = default);
 

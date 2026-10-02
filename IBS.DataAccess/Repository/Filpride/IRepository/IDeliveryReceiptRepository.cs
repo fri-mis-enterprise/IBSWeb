@@ -1,11 +1,12 @@
 using IBS.DataAccess.Repository.IRepository;
+using IBS.DTOs;
 using IBS.Models.Filpride.Integrated;
 using IBS.Models.Filpride.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace IBS.DataAccess.Repository.Filpride.IRepository
 {
-    public interface IDeliveryReceiptRepository : IRepository<FilprideDeliveryReceipt>
+    public interface IDeliveryReceiptRepository: IRepository<FilprideDeliveryReceipt>
     {
         Task<string> GenerateCodeAsync(string documentType, CancellationToken cancellationToken = default);
 
@@ -15,7 +16,8 @@ namespace IBS.DataAccess.Repository.Filpride.IRepository
 
         Task<List<SelectListItem>> GetDeliveryReceiptListForSalesInvoice(int cosId, CancellationToken cancellationToken = default);
 
-        Task PostAsync(FilprideDeliveryReceipt deliveryReceipt, CancellationToken cancellationToken = default);
+        Task PostAsync(FilprideDeliveryReceipt deliveryReceipt, CancellationToken cancellationToken = default,
+            List<AccountTitleDto>? accountTitlesDto = null);
 
         Task DeductTheVolumeToCos(int cosId, decimal drVolume, CancellationToken cancellationToken = default);
 

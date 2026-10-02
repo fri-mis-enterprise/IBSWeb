@@ -1,8 +1,8 @@
 using System.Globalization;
 using System.Linq.Expressions;
-using IBS.DTOs;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Filpride.IRepository;
+using IBS.DTOs;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsReceivable;
 using IBS.Models.Filpride.Books;
@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IBS.DataAccess.Repository.Filpride
 {
-    public class ProvisionalReceiptRepository : Repository<FilprideProvisionalReceipt>, IProvisionalReceiptRepository
+    public class ProvisionalReceiptRepository: Repository<FilprideProvisionalReceipt>, IProvisionalReceiptRepository
     {
         private readonly ApplicationDbContext _db;
 
@@ -54,102 +54,28 @@ namespace IBS.DataAccess.Repository.Filpride
                     throw new InvalidOperationException("The posting user could not be identified.");
                 }
 
-                var paymentAmount = receipt.CashAmount + receipt.CheckAmount + receipt.ManagersCheckAmount;
-                var fullTotal = paymentAmount + receipt.EWT + receipt.WVAT;
-                if (receipt.CashAmount < 0 || receipt.CheckAmount < 0 || receipt.ManagersCheckAmount < 0 ||
-                    receipt.EWT < 0 || receipt.WVAT < 0 || fullTotal <= 0 || receipt.Total != fullTotal)
-                {
-                    throw new InvalidOperationException("Receipt amounts must be non-negative, total must be positive, and the saved total must match its payment and withholding amounts.");
-                }
-
                 var category = await _db.FilprideCollectionCategories
                     .IgnoreQueryFilters()
                     .Include(c => c.CreditAccount)
                     .SingleOrDefaultAsync(c => c.Id == receipt.CollectionCategoryId, cancellationToken)
                     ?? throw new InvalidOperationException("The receipt collection category could not be found.");
-                if (!Enum.IsDefined(category.TaggingRequirement))
-                {
-                    throw new InvalidOperationException("The receipt category has an invalid tagging requirement.");
-                }
-                var creditAccount = category.CreditAccount;
-                if (creditAccount.HasChildren ||
-                    string.IsNullOrWhiteSpace(creditAccount.AccountNumber) ||
-                    string.IsNullOrWhiteSpace(creditAccount.AccountName))
-                {
-                    throw new InvalidOperationException("The category must use a valid credit account with no child accounts.");
-                }
 
                 var accountTitles = await GetListOfAccountTitleDto(cancellationToken);
-                var cashInBank = accountTitles.SingleOrDefault(a => a.AccountNumber == "101010100")
-                                 ?? throw new InvalidOperationException("Account title '101010100' not found.");
-                var cwt = accountTitles.SingleOrDefault(a => a.AccountNumber == "101060400")
-                          ?? throw new InvalidOperationException("Account title '101060400' not found.");
-                var cwv = accountTitles.SingleOrDefault(a => a.AccountNumber == "101060600")
-                          ?? throw new InvalidOperationException("Account title '101060600' not found.");
-
+                var accountTitlesByNumber = accountTitles.ToDictionary(account => account.AccountNumber);
                 var postedDateAndTime = DateTimeHelper.GetCurrentPhilippineTime();
                 var postedDate = DateOnly.FromDateTime(postedDateAndTime);
-                var description = $"Collection of Provisional Receipt# {receipt.SeriesNumber} from {receipt.PayerName}";
-                var ledgers = new List<FilprideGeneralLedgerBook>();
-
-                void AddDebit(AccountTitleDto account, decimal amount)
-                {
-                    if (amount <= 0)
-                    {
-                        return;
-                    }
-
-                    ledgers.Add(new FilprideGeneralLedgerBook
-                    {
-                        Date = postedDate,
-                        Reference = receipt.SeriesNumber,
-                        Description = description,
-                        AccountId = account.AccountId,
-                        AccountNo = account.AccountNumber,
-                        AccountTitle = account.AccountName,
-                        Debit = amount,
-                        Credit = 0,
-                        CreatedBy = postedBy,
-                        CreatedDate = postedDateAndTime,
-                        ModuleType = nameof(ModuleType.Collection)
-                    });
-                }
-
-                AddDebit(cashInBank, paymentAmount);
-                AddDebit(cwt, receipt.EWT);
-                AddDebit(cwv, receipt.WVAT);
-                ledgers.Add(new FilprideGeneralLedgerBook
-                {
-                    Date = postedDate,
-                    Reference = receipt.SeriesNumber,
-                    Description = description,
-                    AccountId = creditAccount.AccountId,
-                    AccountNo = creditAccount.AccountNumber!,
-                    AccountTitle = creditAccount.AccountName,
-                    Debit = 0,
-                    Credit = fullTotal,
-                    CreatedBy = postedBy,
-                    CreatedDate = postedDateAndTime,
-                    SubAccountType = subAccountInfo?.Type,
-                    SubAccountId = subAccountInfo?.Id,
-                    SubAccountName = subAccountInfo?.Name,
-                    ModuleType = nameof(ModuleType.Collection)
-                });
+                var ledgers = BuildPostingEntries(
+                    receipt,
+                    category,
+                    subAccountInfo,
+                    accountTitlesByNumber,
+                    postedDate,
+                    postedDateAndTime,
+                    postedBy);
 
                 receipt.PostedBy = postedBy;
                 receipt.PostedDate = postedDateAndTime;
                 receipt.Status = nameof(CollectionReceiptStatus.Posted);
-                ledgers.SetCounterparty(
-                    subAccountInfo?.Type switch
-                    {
-                        SubAccountType.Customer => CounterpartyType.Customer,
-                        SubAccountType.Supplier => CounterpartyType.Supplier,
-                        SubAccountType.BankAccount => CounterpartyType.BankAccount,
-                        SubAccountType.Company => CounterpartyType.Company,
-                        _ => null
-                    },
-                    subAccountInfo?.Id,
-                    subAccountInfo?.Name ?? receipt.PayerName);
                 _db.FilprideGeneralLedgerBooks.AddRange(ledgers);
                 _db.FilprideAuditTrails.Add(new FilprideAuditTrail(postedBy,
                     $"Posted provisional receipt# {receipt.SeriesNumber}", "Provisional Receipt"));
@@ -162,6 +88,213 @@ namespace IBS.DataAccess.Repository.Filpride
                 await transaction.RollbackAsync(cancellationToken);
                 throw;
             }
+        }
+
+        public async Task<int> RebuildGeneralLedgerAsync(
+            DateOnly startDate,
+            DateOnly endDate,
+            CancellationToken cancellationToken = default)
+        {
+            var receipts = await _db.FilprideProvisionalReceipts
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Include(receipt => receipt.CollectionCategory)
+                .ThenInclude(category => category.CreditAccount)
+                .Include(receipt => receipt.TaggedCompany)
+                .Include(receipt => receipt.TaggedSupplier)
+                .Include(receipt => receipt.TaggedBankAccount)
+                .Where(receipt =>
+                    receipt.PostedBy != null &&
+                    receipt.Status != nameof(CollectionReceiptStatus.Voided) &&
+                    receipt.Status != nameof(CollectionReceiptStatus.Canceled) &&
+                    receipt.DepositedDate != null &&
+                    receipt.TransactionDate >= startDate &&
+                    receipt.TransactionDate < endDate)
+                .OrderBy(receipt => receipt.TransactionDate)
+                .AsSplitQuery()
+                .ToListAsync(cancellationToken);
+
+            if (receipts.Count == 0)
+            {
+                return 0;
+            }
+
+            var accountTitles = await GetListOfAccountTitleDto(cancellationToken);
+            var accountTitlesByNumber = accountTitles.ToDictionary(account => account.AccountNumber);
+            var ledgers = new List<FilprideGeneralLedgerBook>();
+
+            foreach (var receipt in receipts)
+            {
+                var subAccountInfo = GetSubAccountInfo(receipt);
+                var createdDate = receipt.PostedDate ?? receipt.CreatedDate;
+                var postedDate = DateOnly.FromDateTime(createdDate);
+                ledgers.AddRange(BuildPostingEntries(
+                    receipt,
+                    receipt.CollectionCategory,
+                    subAccountInfo,
+                    accountTitlesByNumber,
+                    postedDate,
+                    createdDate,
+                    receipt.PostedBy!));
+            }
+
+            var references = receipts
+                .Select(receipt => receipt.SeriesNumber)
+                .Distinct()
+                .ToList();
+            await _db.FilprideGeneralLedgerBooks
+                .Where(entry =>
+                    references.Contains(entry.Reference) &&
+                    entry.ModuleType == nameof(ModuleType.Collection))
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
+            foreach (var receipt in receipts.Where(receipt => receipt.ClearedDate.HasValue))
+            {
+                await ApplyClearingDateAsync(
+                    receipt,
+                    cancellationToken,
+                    accountTitles,
+                    saveChanges: false);
+            }
+
+            await _db.SaveChangesAsync(cancellationToken);
+            return receipts.Count;
+        }
+
+        private static List<FilprideGeneralLedgerBook> BuildPostingEntries(
+            FilprideProvisionalReceipt receipt,
+            FilprideCollectionCategory category,
+            SubAccountInfoDto? subAccountInfo,
+            IReadOnlyDictionary<string, AccountTitleDto> accountTitlesByNumber,
+            DateOnly postedDate,
+            DateTime createdDate,
+            string createdBy)
+        {
+            if (!Enum.IsDefined(category.TaggingRequirement))
+            {
+                throw new InvalidOperationException("The receipt category has an invalid tagging requirement.");
+            }
+
+            var paymentAmount = receipt.CashAmount + receipt.CheckAmount + receipt.ManagersCheckAmount;
+            var fullTotal = paymentAmount + receipt.EWT + receipt.WVAT;
+            if (receipt.CashAmount < 0 || receipt.CheckAmount < 0 || receipt.ManagersCheckAmount < 0 ||
+                receipt.EWT < 0 || receipt.WVAT < 0 || fullTotal <= 0 || receipt.Total != fullTotal)
+            {
+                throw new InvalidOperationException("Receipt amounts must be non-negative, total must be positive, and the saved total must match its payment and withholding amounts.");
+            }
+
+            var creditAccount = category.CreditAccount;
+            if (creditAccount.HasChildren ||
+                string.IsNullOrWhiteSpace(creditAccount.AccountNumber) ||
+                string.IsNullOrWhiteSpace(creditAccount.AccountName))
+            {
+                throw new InvalidOperationException("The category must use a valid credit account with no child accounts.");
+            }
+
+            if (!accountTitlesByNumber.TryGetValue("101010100", out var cashInBank))
+            {
+                throw new InvalidOperationException("Account title '101010100' not found.");
+            }
+
+            if (!accountTitlesByNumber.TryGetValue("101060400", out var cwt))
+            {
+                throw new InvalidOperationException("Account title '101060400' not found.");
+            }
+
+            if (!accountTitlesByNumber.TryGetValue("101060600", out var cwv))
+            {
+                throw new InvalidOperationException("Account title '101060600' not found.");
+            }
+
+            var description = $"Collection of Provisional Receipt# {receipt.SeriesNumber} from {receipt.PayerName}";
+            var ledgers = new List<FilprideGeneralLedgerBook>();
+
+            void AddDebit(AccountTitleDto account, decimal amount)
+            {
+                if (amount <= 0)
+                {
+                    return;
+                }
+
+                ledgers.Add(new FilprideGeneralLedgerBook
+                {
+                    Date = postedDate,
+                    Reference = receipt.SeriesNumber,
+                    Description = description,
+                    AccountId = account.AccountId,
+                    AccountNo = account.AccountNumber,
+                    AccountTitle = account.AccountName,
+                    Debit = amount,
+                    Credit = 0,
+                    CreatedBy = createdBy,
+                    CreatedDate = createdDate,
+                    ModuleType = nameof(ModuleType.Collection)
+                });
+            }
+
+            AddDebit(cashInBank, paymentAmount);
+            AddDebit(cwt, receipt.EWT);
+            AddDebit(cwv, receipt.WVAT);
+            ledgers.Add(new FilprideGeneralLedgerBook
+            {
+                Date = postedDate,
+                Reference = receipt.SeriesNumber,
+                Description = description,
+                AccountId = creditAccount.AccountId,
+                AccountNo = creditAccount.AccountNumber,
+                AccountTitle = creditAccount.AccountName,
+                Debit = 0,
+                Credit = fullTotal,
+                CreatedBy = createdBy,
+                CreatedDate = createdDate,
+                SubAccountType = subAccountInfo?.Type,
+                SubAccountId = subAccountInfo?.Id,
+                SubAccountName = subAccountInfo?.Name,
+                ModuleType = nameof(ModuleType.Collection)
+            });
+
+            ledgers.SetCounterparty(
+                subAccountInfo?.Type switch
+                {
+                    SubAccountType.Customer => CounterpartyType.Customer,
+                    SubAccountType.Supplier => CounterpartyType.Supplier,
+                    SubAccountType.BankAccount => CounterpartyType.BankAccount,
+                    SubAccountType.Company => CounterpartyType.Company,
+                    _ => null
+                },
+                subAccountInfo?.Id,
+                subAccountInfo?.Name ?? receipt.PayerName);
+
+            return ledgers;
+        }
+
+        private static SubAccountInfoDto? GetSubAccountInfo(FilprideProvisionalReceipt receipt)
+        {
+            return receipt.TagType switch
+            {
+                CollectionTagType.Company when receipt.TaggedCompanyId.HasValue => new SubAccountInfoDto
+                {
+                    Type = SubAccountType.Company,
+                    Id = receipt.TaggedCompanyId.Value,
+                    Name = receipt.TaggedCompany?.CompanyName ?? receipt.PayerName
+                },
+                CollectionTagType.Employee when receipt.TaggedSupplierId.HasValue => new SubAccountInfoDto
+                {
+                    Type = SubAccountType.Supplier,
+                    Id = receipt.TaggedSupplierId.Value,
+                    Name = receipt.TaggedSupplier?.SupplierName ?? receipt.PayerName
+                },
+                CollectionTagType.BankAccount when receipt.TaggedBankAccountId.HasValue => new SubAccountInfoDto
+                {
+                    Type = SubAccountType.BankAccount,
+                    Id = receipt.TaggedBankAccountId.Value,
+                    Name = receipt.TaggedBankAccount == null
+                        ? receipt.PayerName
+                        : $"{receipt.TaggedBankAccount.AccountNo} {receipt.TaggedBankAccount.AccountName}"
+                },
+                _ => null
+            };
         }
 
         public async Task UnpostAsync(int receiptId, string unpostedBy, CancellationToken cancellationToken = default)
@@ -255,10 +388,14 @@ namespace IBS.DataAccess.Repository.Filpride
             return lastSeries.Substring(0, 3) + incrementedNumber.ToString("D9");
         }
 
-        public async Task ApplyClearingDateAsync(FilprideProvisionalReceipt provisionalReceipt, CancellationToken cancellationToken = default)
+        public async Task ApplyClearingDateAsync(
+            FilprideProvisionalReceipt provisionalReceipt,
+            CancellationToken cancellationToken = default,
+            List<AccountTitleDto>? accountTitlesDto = null,
+            bool saveChanges = true)
         {
             var ledgers = new List<FilprideGeneralLedgerBook>();
-            var accountTitlesDto = await GetListOfAccountTitleDto(cancellationToken);
+            accountTitlesDto ??= await GetListOfAccountTitleDto(cancellationToken);
             var cashInBankTitle = accountTitlesDto.Find(c => c.AccountNumber == "101010100")
                                   ?? throw new ArgumentException("Account title '101010100' not found.");
 
@@ -323,7 +460,10 @@ namespace IBS.DataAccess.Repository.Filpride
                 provisionalReceipt.PayerName);
 
             await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
-            await _db.SaveChangesAsync(cancellationToken);
+            if (saveChanges)
+            {
+                await _db.SaveChangesAsync(cancellationToken);
+            }
         }
 
         public override async Task<FilprideProvisionalReceipt?> GetAsync(Expression<Func<FilprideProvisionalReceipt, bool>> filter, CancellationToken cancellationToken = default)

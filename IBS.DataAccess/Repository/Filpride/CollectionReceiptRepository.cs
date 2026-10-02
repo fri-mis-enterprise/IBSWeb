@@ -1,20 +1,20 @@
 using System.Linq.Expressions;
-using IBS.DTOs;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Filpride.IRepository;
+using IBS.DTOs;
 using IBS.Models.Enums;
+using IBS.Models.Filpride;
 using IBS.Models.Filpride.AccountsReceivable;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.Integrated;
 using IBS.Models.Filpride.MasterFile;
-using IBS.Models.Filpride;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.EntityFrameworkCore;
 
 namespace IBS.DataAccess.Repository.Filpride
 {
-    public class CollectionReceiptRepository : Repository<FilprideCollectionReceipt>, ICollectionReceiptRepository
+    public class CollectionReceiptRepository: Repository<FilprideCollectionReceipt>, ICollectionReceiptRepository
     {
         private readonly ApplicationDbContext _db;
 
@@ -81,10 +81,15 @@ namespace IBS.DataAccess.Repository.Filpride
             return lastSeries.Substring(0, 3) + incrementedNumber.ToString("D9");
         }
 
-        public async Task PostAsync(FilprideCollectionReceipt collectionReceipt, CancellationToken cancellationToken = default)
+        public async Task PostAsync(
+            FilprideCollectionReceipt collectionReceipt,
+            CancellationToken cancellationToken = default,
+            List<AccountTitleDto>? accountTitlesDto = null,
+            bool saveChanges = true,
+            DateTime? postedDateAndTime = null)
         {
             var ledgers = new List<FilprideGeneralLedgerBook>();
-            var accountTitlesDto = await GetListOfAccountTitleDto(cancellationToken);
+            accountTitlesDto ??= await GetListOfAccountTitleDto(cancellationToken);
             var cashInBankTitle = accountTitlesDto.Find(c => c.AccountNumber == "101010100") ?? throw new ArgumentException("Account title '101010100' not found.");
             var arTradeTitle = accountTitlesDto.Find(c => c.AccountNumber == "101020100") ?? throw new ArgumentException("Account title '101020100' not found.");
             var arTradeCwt = accountTitlesDto.Find(c => c.AccountNumber == "101020200") ?? throw new ArgumentException("Account title '101020200' not found.");
@@ -92,17 +97,13 @@ namespace IBS.DataAccess.Repository.Filpride
             var cwt = accountTitlesDto.Find(c => c.AccountNumber == "101060400") ?? throw new ArgumentException("Account title '101060400' not found.");
             var cwv = accountTitlesDto.Find(c => c.AccountNumber == "101060600") ?? throw new ArgumentException("Account title '101060600' not found.");
 
-            collectionReceipt.ReceiptDetails = await _db.FilprideCollectionReceiptDetails
-                .Where(rd => rd.CollectionReceiptId == collectionReceipt.CollectionReceiptId)
-                .ToListAsync(cancellationToken);
-
             var customerName = collectionReceipt.SalesInvoiceId != null
                 ?
                 collectionReceipt.SalesInvoice!.Customer!.CustomerName
                 : collectionReceipt.Customer!.CustomerName;
 
-            var postedDateAndTime = DateTimeHelper.GetCurrentPhilippineTime();
-            var postedDate = DateOnly.FromDateTime(postedDateAndTime);
+            postedDateAndTime ??= DateTimeHelper.GetCurrentPhilippineTime();
+            var postedDate = DateOnly.FromDateTime(postedDateAndTime.Value);
 
             if (collectionReceipt.CashAmount > 0 || collectionReceipt.CheckAmount > 0 || collectionReceipt.ManagersCheckAmount > 0)
             {
@@ -118,7 +119,7 @@ namespace IBS.DataAccess.Repository.Filpride
                         Debit = collectionReceipt.CashAmount + collectionReceipt.CheckAmount + collectionReceipt.ManagersCheckAmount,
                         Credit = 0,
                         CreatedBy = collectionReceipt.PostedBy!,
-                        CreatedDate = postedDateAndTime,
+                        CreatedDate = postedDateAndTime.Value,
                         ModuleType = nameof(ModuleType.Collection)
                     }
                 );
@@ -138,7 +139,7 @@ namespace IBS.DataAccess.Repository.Filpride
                         Debit = collectionReceipt.EWT,
                         Credit = 0,
                         CreatedBy = collectionReceipt.PostedBy!,
-                        CreatedDate = postedDateAndTime,
+                        CreatedDate = postedDateAndTime.Value,
                         ModuleType = nameof(ModuleType.Collection)
                     }
                 );
@@ -158,7 +159,7 @@ namespace IBS.DataAccess.Repository.Filpride
                         Debit = collectionReceipt.WVAT,
                         Credit = 0,
                         CreatedBy = collectionReceipt.PostedBy!,
-                        CreatedDate = postedDateAndTime,
+                        CreatedDate = postedDateAndTime.Value,
                         ModuleType = nameof(ModuleType.Collection)
                     }
                 );
@@ -178,7 +179,7 @@ namespace IBS.DataAccess.Repository.Filpride
                         Debit = 0,
                         Credit = collectionReceipt.CashAmount + collectionReceipt.CheckAmount + collectionReceipt.ManagersCheckAmount,
                         CreatedBy = collectionReceipt.PostedBy!,
-                        CreatedDate = postedDateAndTime,
+                        CreatedDate = postedDateAndTime.Value,
                         SubAccountType = SubAccountType.Customer,
                         SubAccountId = collectionReceipt.CustomerId,
                         SubAccountName = customerName,
@@ -201,7 +202,7 @@ namespace IBS.DataAccess.Repository.Filpride
                         Debit = 0,
                         Credit = collectionReceipt.EWT,
                         CreatedBy = collectionReceipt.PostedBy!,
-                        CreatedDate = postedDateAndTime,
+                        CreatedDate = postedDateAndTime.Value,
                         ModuleType = nameof(ModuleType.Collection)
                     }
                 );
@@ -221,7 +222,7 @@ namespace IBS.DataAccess.Repository.Filpride
                         Debit = 0,
                         Credit = collectionReceipt.WVAT,
                         CreatedBy = collectionReceipt.PostedBy!,
-                        CreatedDate = postedDateAndTime,
+                        CreatedDate = postedDateAndTime.Value,
                         ModuleType = nameof(ModuleType.Collection)
                     }
                 );
@@ -233,14 +234,20 @@ namespace IBS.DataAccess.Repository.Filpride
                 customerName);
 
             await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
-
-            await _db.SaveChangesAsync(cancellationToken);
+            if (saveChanges)
+            {
+                await _db.SaveChangesAsync(cancellationToken);
+            }
         }
 
-        public async Task ApplyClearingDateAsync(FilprideCollectionReceipt collectionReceipt, CancellationToken cancellationToken = default)
+        public async Task ApplyClearingDateAsync(
+            FilprideCollectionReceipt collectionReceipt,
+            CancellationToken cancellationToken = default,
+            List<AccountTitleDto>? accountTitlesDto = null,
+            bool saveChanges = true)
         {
             var ledgers = new List<FilprideGeneralLedgerBook>();
-            var accountTitlesDto = await GetListOfAccountTitleDto(cancellationToken);
+            accountTitlesDto ??= await GetListOfAccountTitleDto(cancellationToken);
             var cashInBankTitle = accountTitlesDto.Find(c => c.AccountNumber == "101010100")
                                   ?? throw new ArgumentException("Account title '101010100' not found.");
             string description;
@@ -324,7 +331,10 @@ namespace IBS.DataAccess.Repository.Filpride
                 customerName);
 
             await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
-            await _db.SaveChangesAsync(cancellationToken);
+            if (saveChanges)
+            {
+                await _db.SaveChangesAsync(cancellationToken);
+            }
         }
 
         public async Task RemoveSIPayment(int id, decimal paidAmount, CancellationToken cancellationToken = default)
@@ -615,17 +625,36 @@ namespace IBS.DataAccess.Repository.Filpride
             return query;
         }
 
-        public async Task ApplyCostOfMoney(FilprideDeliveryReceipt deliveryReceipt, decimal costOfMoney,
-            string currentUser, DateOnly depositedDate, CancellationToken cancellationToken = default)
+        public async Task ApplyCostOfMoney(
+            FilprideDeliveryReceipt deliveryReceipt,
+            decimal costOfMoney,
+            string currentUser,
+            DateOnly depositedDate,
+            CancellationToken cancellationToken = default,
+            List<AccountTitleDto>? accountTitlesDto = null,
+            bool saveChanges = true,
+            bool checkExistingEntry = true,
+            int? sourceCollectionReceiptDetailId = null)
         {
-            var hasExistingCostOfMoneyEntry = await _db.FilprideGeneralLedgerBooks.AnyAsync(entry =>
+            var sourceMarker = sourceCollectionReceiptDetailId.HasValue
+                ? $" Collection detail #{sourceCollectionReceiptDetailId.Value}."
+                : string.Empty;
+            var description = $"Cost of money from late deposit – {deliveryReceipt.CustomerOrderSlip!.DeliveryOption} by {deliveryReceipt.Hauler?.SupplierName ?? "Client"}.{sourceMarker}";
 
-                entry.Reference == deliveryReceipt.DeliveryReceiptNo &&
-                entry.Description.StartsWith("Cost of money from late deposit"), cancellationToken);
-
-            if (hasExistingCostOfMoneyEntry)
+            if (checkExistingEntry)
             {
-                return;
+                var existingEntries = _db.FilprideGeneralLedgerBooks.Where(entry =>
+                    entry.Reference == deliveryReceipt.DeliveryReceiptNo &&
+                    entry.Description.StartsWith("Cost of money from late deposit"));
+
+                var hasExistingCostOfMoneyEntry = sourceCollectionReceiptDetailId.HasValue
+                    ? await existingEntries.AnyAsync(entry => entry.Description.EndsWith(sourceMarker), cancellationToken)
+                    : await existingEntries.AnyAsync(cancellationToken);
+
+                if (hasExistingCostOfMoneyEntry)
+                {
+                    return;
+                }
             }
 
             deliveryReceipt.CommissionAmount -= costOfMoney;
@@ -638,7 +667,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 : costOfMoney;
 
             var (commissionAcctNo, commissionAcctTitle) = GetCommissionAccount(deliveryReceipt.CustomerOrderSlip!.Product!.ProductCode);
-            var accountTitlesDto = await GetListOfAccountTitleDto(cancellationToken);
+            accountTitlesDto ??= await GetListOfAccountTitleDto(cancellationToken);
             var commissionTitle = accountTitlesDto.Find(c => c.AccountNumber == commissionAcctNo)
                                   ?? throw new ArgumentException($"Account title '{commissionAcctNo}' not found.");
             var apCommissionPayableTitle = accountTitlesDto.Find(c => c.AccountNumber == "201010200")
@@ -656,7 +685,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 {
                     Date = depositedDate,
                     Reference = deliveryReceipt.DeliveryReceiptNo,
-                    Description = $"Cost of money from late deposit – {deliveryReceipt.CustomerOrderSlip.DeliveryOption} by {deliveryReceipt.Hauler?.SupplierName ?? "Client"}.",
+                    Description = description,
                     AccountId = apCommissionPayableTitle.AccountId,
                     AccountNo = apCommissionPayableTitle.AccountNumber,
                     AccountTitle = apCommissionPayableTitle.AccountName,
@@ -677,7 +706,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 {
                     Date = depositedDate,
                     Reference = deliveryReceipt.DeliveryReceiptNo,
-                    Description = $"Cost of money from late deposit – {deliveryReceipt.CustomerOrderSlip.DeliveryOption} by {deliveryReceipt.Hauler?.SupplierName ?? "Client"}.",
+                    Description = description,
                     AccountId = ewtTitle!.AccountId,
                     AccountNo = ewtTitle.AccountNumber,
                     AccountTitle = ewtTitle.AccountName,
@@ -693,7 +722,7 @@ namespace IBS.DataAccess.Repository.Filpride
             {
                 Date = depositedDate,
                 Reference = deliveryReceipt.DeliveryReceiptNo,
-                Description = $"Cost of money from late deposit – {deliveryReceipt.CustomerOrderSlip.DeliveryOption} by {deliveryReceipt.Hauler?.SupplierName ?? "Client"}.",
+                Description = description,
                 AccountId = commissionTitle.AccountId,
                 AccountNo = commissionTitle.AccountNumber,
                 AccountTitle = commissionTitle.AccountName,
@@ -715,7 +744,10 @@ namespace IBS.DataAccess.Repository.Filpride
                 deliveryReceipt.CustomerOrderSlip.CustomerName);
 
             await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
-            await _db.SaveChangesAsync(cancellationToken);
+            if (saveChanges)
+            {
+                await _db.SaveChangesAsync(cancellationToken);
+            }
         }
 
         public async Task BatchPostCollectionAsync(FilprideCollectionReceipt collectionReceipt, List<AccountTitleDto> accountTitlesDto, CancellationToken cancellationToken = default)

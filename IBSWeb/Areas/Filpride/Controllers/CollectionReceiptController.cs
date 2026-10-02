@@ -4224,18 +4224,26 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var getHolidays = await DateTimeHelper.GetNonWorkingDays(salesInvoice.DueDate, model.DepositedDate.Value);
                     var daysDelayed = model.DepositedDate.Value.DayNumber - salesInvoice.DueDate.DayNumber - getHolidays.Count;
 
-                    if (daysDelayed <= 0 || dr.CommissionAmount <= 0)
+                    var baseCommission = DecimalRoundingHelper.ComputeAmountFromUnitPrice(
+                        dr.Quantity,
+                        dr.CommissionRate);
+                    if (daysDelayed <= 0 || baseCommission <= 0)
                     {
                         continue;
                     }
 
                     var paymentAmount = receipt.Amount - receipt.EWT - receipt.WVAT;
+                    if (paymentAmount <= 0)
+                    {
+                        continue;
+                    }
 
                     //Formula: Payment Amount x 3% x Days Delayed / 360
                     var costOfMoney = paymentAmount * .03m * daysDelayed / 360m;
 
                     await _unitOfWork.FilprideCollectionReceipt.ApplyCostOfMoney(dr, costOfMoney,
-                        GetUserFullName(), model.DepositedDate.Value, cancellationToken);
+                        GetUserFullName(), model.DepositedDate.Value, cancellationToken,
+                        sourceCollectionReceiptDetailId: receipt.Id);
                 }
 
                 #region --Audit Trail Recording
