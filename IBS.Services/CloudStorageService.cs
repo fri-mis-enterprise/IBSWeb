@@ -26,25 +26,30 @@ namespace IBS.Services
     {
         private readonly GCSConfigOptions _options;
         private readonly ILogger<CloudStorageService> _logger;
+        private readonly IHostEnvironment _environment;
         private readonly GoogleCredential _googleCredential;
         private readonly StorageClient _storageClient;
 
-        public CloudStorageService(IOptions<GCSConfigOptions> options, ILogger<CloudStorageService> logger)
+        public CloudStorageService(
+            IOptions<GCSConfigOptions> options,
+            ILogger<CloudStorageService> logger,
+            IHostEnvironment environment)
         {
             _options = options.Value;
             _logger = logger;
+            _environment = environment;
 
             try
             {
-                var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-                if (environment == Environments.Production)
+                var environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+                if (environmentName == Environments.Production)
                 {
                     _googleCredential = GoogleCredential.GetApplicationDefault();
                 }
                 else
                 {
                     // Log for debugging purposes
-                    _logger.LogInformation($"Environment: {environment}, Auth File: {_options.GCPStorageAuthFile}");
+                    _logger.LogInformation($"Environment: {environmentName}, Auth File: {_options.GCPStorageAuthFile}");
 
                     if (!File.Exists(_options.GCPStorageAuthFile))
                     {
@@ -105,6 +110,23 @@ namespace IBS.Services
             {
                 _logger.LogError("File upload failed: No file provided or file is empty.");
                 throw new ArgumentException("File is either null or empty.", nameof(fileToUpload));
+            }
+
+            if (_environment.IsDevelopment())
+            {
+                if (!string.Equals(fileNameToSave, Path.GetFileName(fileNameToSave), StringComparison.Ordinal))
+                {
+                    throw new ArgumentException("File name must not contain a path.", nameof(fileNameToSave));
+                }
+
+                var filesDirectory = Path.Combine(_environment.ContentRootPath, "Files");
+                Directory.CreateDirectory(filesDirectory);
+
+                var filePath = Path.Combine(filesDirectory, fileNameToSave);
+                await using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
+                await fileToUpload.CopyToAsync(fileStream);
+
+                return Path.Combine("Files", fileNameToSave).Replace('\\', '/');
             }
 
             try
