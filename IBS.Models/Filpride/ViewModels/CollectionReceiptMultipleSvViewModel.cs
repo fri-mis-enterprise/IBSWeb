@@ -1,0 +1,108 @@
+using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Rendering;
+
+namespace IBS.Models.Filpride.ViewModels
+{
+    public class CollectionReceiptMultipleSvViewModel
+    {
+        public int? CollectionReceiptId { get; set; }
+
+        public int CustomerId { get; set; }
+
+        public List<SelectListItem>? Customers { get; set; }
+
+        public DateOnly TransactionDate { get; set; }
+
+        [StringLength(50)]
+        public string ReferenceNo { get; set; } = null!;
+
+        [StringLength(100)]
+        public string? Remarks { get; set; }
+
+        public int[] MultipleSVId { get; set; } = null!;
+
+        public List<SelectListItem>? ServiceInvoices { get; set; }
+
+        public decimal CashAmount { get; set; }
+
+        public DateOnly? CheckDate { get; set; }
+
+        [StringLength(50)]
+        public string? CheckNo { get; set; }
+
+        public string? CheckBank { get; set; }
+
+        [StringLength(50)]
+        public string? CheckBranch { get; set; }
+
+        public decimal CheckAmount { get; set; }
+
+        public DateOnly? ManagersCheckDate { get; set; }
+
+        [StringLength(50)]
+        public string? ManagersCheckNo { get; set; }
+
+        public string? ManagersCheckBank { get; set; }
+
+        [StringLength(50)]
+        public string? ManagersCheckBranch { get; set; }
+
+        public decimal ManagersCheckAmount { get; set; }
+
+        public int? BankId { get; set; }
+
+        public List<SelectListItem>? BankAccounts { get; set; }
+
+        public decimal EWT { get; set; }
+
+        public decimal WVAT { get; set; }
+
+        public DateOnly? EwtPeriodFrom { get; set; }
+
+        public DateOnly? EwtPeriodTo { get; set; }
+
+        [StringLength(50)]
+        public string? EwtReference1 { get; set; }
+
+        [StringLength(50)]
+        public string? EwtReference2 { get; set; }
+
+        public DateOnly? CwVatPeriodFrom { get; set; }
+
+        public DateOnly? CwVatPeriodTo { get; set; }
+
+        [StringLength(50)]
+        public string? CwVatReference1 { get; set; }
+
+        [StringLength(50)]
+        public string? CwVatReference2 { get; set; }
+
+        public decimal[] SVMultipleEwtAmount { get; set; } = null!;
+
+        public decimal[] SVMultipleWvatAmount { get; set; } = null!;
+
+        public IFormFile? Bir2306 { get; set; }
+
+        public IFormFile? Bir2307 { get; set; }
+
+        public string[]? AccountTitleText { get; set; }
+
+        public string[]? AccountTitle { get; set; }
+
+        public decimal[]? AccountAmount { get; set; }
+
+
+        public bool HasAlready2306 { get; set; }
+
+        public bool HasAlready2307 { get; set; }
+
+        public decimal[] SVMultipleAmount { get; set; } = null!;
+
+        public List<InvoicePayment>? InvoicePayments { get; set; }
+
+        public DateTime MinDate { get; set; }
+
+        public string? BatchNumber { get; set; }
+    }
+}

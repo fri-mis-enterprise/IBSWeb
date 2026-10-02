@@ -82,13 +82,13 @@
                         <table style="border:dotted 1px; min-width: 750px">
                             <thead class="m-2 sticky-top bg-white">
                                 <tr>
-                                    <th colspan="7" class="text-center py-4">Invoice Details</th>
+                                    <th colspan="9" class="text-center py-4">Invoice Details</th>
                                 </tr>
                                 <tr>
                                     <th style="width:11.11%; padding-left:20px;" class="text-center">SI No's</th>
                                     <th class="text-end" style="width:11.11%;">Invoice Amount</th>
-                                    <th class="text-end" style="width:11.11%;">WVat</th>
-                                    <th class="text-end" style="width:11.11%;">EWT</th>
+                                    <th class="text-end" style="width:11.11%;">CWVAT Remaining</th>
+                                    <th class="text-end" style="width:11.11%;">CWT Remaining</th>
                                     <th class="text-end" style="width:11.11%; padding-left:20px;">Less EWT/WVat</th>
                                     <th class="text-end" style="width:11.11%;">Amount Paid</th>
                                     <th class="text-end" style="width:11.11%;">Debit</th>
@@ -118,11 +118,13 @@
                     </div>
                 </div>
                 <div class="row mb-4 overflow-auto" style="max-height: 300px;">
-                    <table class="table">
+                    <table class="table" style="table-layout: fixed;">
                         <thead class="sticky-top bg-white">
                         <tr>
-                            <th class="w-50 text-center">SI List</th>
-                            <th class="w-50 text-center">Amount</th>
+                            <th class="text-center">SI List</th>
+                            <th class="text-center">Amount</th>
+                            <th class="text-center">CWT</th>
+                            <th class="text-center">CWVAT</th>
                         </tr>
                         </thead>
                         <tbody class="siList">
@@ -130,7 +132,7 @@
                         <tfoot>
                         <tr>
                             <td class="text-end fw-bold">Total:</td>
-                            <td class="text-center fw-bold" id="siTotal">0.00</td>
+                            <td class="text-center fw-bold" id="siTotal">0.0000</td>
                         </tr>
                         </tfoot>
                     </table>
@@ -179,20 +181,20 @@
                         </tr>
 
                         <tr>
-                            <td style="padding-left:20px;">EWT</td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input asp-for="EWT" style="border:none" class="form-control moneyInput" /></td>
+                            <td style="padding-left:20px;">EWT Cert</td>
+                            <td><input asp-for="EwtPeriodFrom" type="date" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="EwtPeriodTo" type="date" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="EwtReference1" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="EwtReference2" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="EWT" readonly style="border:none" class="form-control moneyInput" /></td>
                         </tr>
                         <tr>
-                            <td style="padding-left:20px;">WVAT</td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input style="border:none" class="form-control" disabled /></td>
-                            <td><input asp-for="WVAT" style="border:none" class="form-control moneyInput" /></td>
+                            <td style="padding-left:20px;">WVAT Cert</td>
+                            <td><input asp-for="CwVatPeriodFrom" type="date" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="CwVatPeriodTo" type="date" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="CwVatReference1" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="CwVatReference2" style="border:none" class="form-control" /></td>
+                            <td><input asp-for="WVAT" readonly style="border:none" class="form-control moneyInput" /></td>
                         </tr>
                         <tr>
                             <td></td>
@@ -301,6 +303,7 @@
             });
 
             calculateGrandTotalInvoiceAmount();
+            updateTaxTotals();
         });
 
         function appendSIListRow(siNo, siText) {
@@ -308,10 +311,16 @@
                 <tr>
                     <td class="text-center">
                         <input type='hidden' value='${siNo}' />
-                        <input class="text-center" type='text' value='${siText}' style='border:none' readonly />
+                        <input class="text-center w-100" type='text' value='${siText}' style='border:none' readonly />
                     </td>
                     <td class="text-center">
-                        <input type='text' name='SIMultipleAmount' class='text-center inputAmount money paymentAmount_${siNo}'/>
+                        <input type='text' name='SIMultipleAmount' class='text-center inputAmount money w-100 paymentAmount_${siNo}'/>
+                    </td>
+                    <td class="text-center">
+                        <input type='number' name='SIMultipleEwtAmount' class='text-center inputAmount taxAmount w-100 ewtAmount_${siNo}' min='0' step='0.0001' value='0.0000'/>
+                    </td>
+                    <td class="text-center">
+                        <input type='number' name='SIMultipleWvatAmount' class='text-center inputAmount taxAmount w-100 wvatAmount_${siNo}' min='0' step='0.0001' value='0.0000'/>
                     </td>
                 </tr>`);
         }
@@ -323,14 +332,14 @@
                         <input type='hidden' value='${siNo}' />
                         <input class="text-center" type='text' value='${siText}' style='border:none' readonly />
                     </td>
-                    <td class="text-end" id='amount_${siNo}'>0.00</td>
-                    <td class="text-end" id='vatAmount_${siNo}'>0.00</td>
-                    <td class="text-end" id='ewtAmount_${siNo}'>0.00</td>
-                    <td class="text-end" id='siAmountNetOfEWT_${siNo}' style="padding-left:20px;">0.00</td>
-                    <td class="text-end" id='amountPaid_${siNo}'>0.00</td>
-                    <td class="text-end" id='debit_${siNo}'>0.00</td>
-                    <td class="text-end" id='credit_${siNo}'>0.00</td>
-                    <td class="text-end" id='balance_${siNo}' style="padding-right:20px;">0.00</td>
+                    <td class="text-end" id='amount_${siNo}'>0.0000</td>
+                    <td class="text-end" id='vatAmount_${siNo}'>0.0000</td>
+                    <td class="text-end" id='ewtAmount_${siNo}'>0.0000</td>
+                    <td class="text-end" id='siAmountNetOfEWT_${siNo}' style="padding-left:20px;">0.0000</td>
+                    <td class="text-end" id='amountPaid_${siNo}'>0.0000</td>
+                    <td class="text-end" id='debit_${siNo}'>0.0000</td>
+                    <td class="text-end" id='credit_${siNo}'>0.0000</td>
+                    <td class="text-end" id='balance_${siNo}' style="padding-right:20px;">0.0000</td>
                 </tr>`);
         }
 
@@ -344,24 +353,26 @@
 
                     const gross = data.amount;
                     const netAmount = gross / 1.12;
-                    const vatAmount = data.wvatAmount;
-                    const ewtAmount = data.ewtAmount;
+                    const vatAmount = data.cwVatBalance;
+                    const ewtAmount = data.cwtBalance;
                     const netOfEWT = gross - (vatAmount + ewtAmount);
                     const amountPaid = data.amountPaid;
                     const balance = data.balance;
                     const debit = data.debit;
                     const credit = data.credit;
 
-                    $(`#amount_${siNo}`).text(formatNumber(gross));
-                    $(`#netAmount_${siNo}`).text(formatNumber(netAmount));
-                    $(`#vatAmount_${siNo}`).text(formatNumber(vatAmount));
-                    $(`#ewtAmount_${siNo}`).text(formatNumber(ewtAmount));
-                    $(`#siAmountNetOfEWT_${siNo}`).text(formatNumber(netOfEWT));
-                    $(`#amountPaid_${siNo}`).text(formatNumber(amountPaid));
-                    $(`#balance_${siNo}`).text(formatNumber(balance));
-                    $(`#debit_${siNo}`).text(formatNumber(debit));
-                    $(`#credit_${siNo}`).text(formatNumber(credit));
-                    $(`.paymentAmount_${siNo}`).val(formatNumber(balance)).attr("data-max", balance);
+                    $(`#amount_${siNo}`).text(formatNumberToFour(gross));
+                    $(`#netAmount_${siNo}`).text(formatNumberToFour(netAmount));
+                    $(`#vatAmount_${siNo}`).text(formatNumberToFour(vatAmount));
+                    $(`#ewtAmount_${siNo}`).text(formatNumberToFour(ewtAmount));
+                    $(`.ewtAmount_${siNo}`).attr("max", data.cwtBalance);
+                    $(`.wvatAmount_${siNo}`).attr("max", data.cwVatBalance);
+                    $(`#siAmountNetOfEWT_${siNo}`).text(formatNumberToFour(netOfEWT));
+                    $(`#amountPaid_${siNo}`).text(formatNumberToFour(amountPaid));
+                    $(`#balance_${siNo}`).text(formatNumberToFour(balance));
+                    $(`#debit_${siNo}`).text(formatNumberToFour(debit));
+                    $(`#credit_${siNo}`).text(formatNumberToFour(credit));
+                    $(`.paymentAmount_${siNo}`).val(formatNumberToFour(balance)).attr("data-max", balance);
 
                     calculateGrandTotalInvoiceAmount();
 
@@ -373,6 +384,23 @@
                 }
             });
         }
+
+        function updateTaxTotals() {
+            let totalEwt = 0;
+            let totalWvat = 0;
+            $("input[name='SIMultipleEwtAmount']").each(function () {
+                totalEwt += parseNumber($(this).val());
+            });
+            $("input[name='SIMultipleWvatAmount']").each(function () {
+                totalWvat += parseNumber($(this).val());
+            });
+            $("#EWT").val(totalEwt.toFixed(4));
+            $("#WVAT").val(totalWvat.toFixed(4));
+            document.getElementById("EWT").dispatchEvent(new Event("input", { bubbles: true }));
+            document.getElementById("WVAT").dispatchEvent(new Event("input", { bubbles: true }));
+        }
+
+        $(document).on("input change", "input[name='SIMultipleEwtAmount'], input[name='SIMultipleWvatAmount']", updateTaxTotals);
 
         function calculateGrandTotalInvoiceAmount() {
             let grandTotalRRAmount = 0,
@@ -399,15 +427,15 @@
                 grandTotalBalance += parseNumber($row.find("[id^='balance_']").text());
             });
 
-            $("#grandTotalRRAmount").text(formatNumber(grandTotalRRAmount));
-            $("#grandTotalNetAmount").text(formatNumber(grandTotalNetAmount));
-            $("#grandTotalVatAmount").text(formatNumber(grandTotalVatAmount));
-            $("#grandTotalEWTAmount").text(formatNumber(grandTotalEWTAmount));
-            $("#grandTotalNetOfEWT").text(formatNumber(grandTotalNetOfEWT));
-            $("#grandTotalAmountPaid").text(formatNumber(grandTotalAmountPaid));
-            $("#grandTotalBalance").text(formatNumber(grandTotalBalance));
-            $("#grandTotalDebit").text(formatNumber(grandTotalDebit));
-            $("#grandTotalCredit").text(formatNumber(grandTotalCredit));
+            $("#grandTotalRRAmount").text(formatNumberToFour(grandTotalRRAmount));
+            $("#grandTotalNetAmount").text(formatNumberToFour(grandTotalNetAmount));
+            $("#grandTotalVatAmount").text(formatNumberToFour(grandTotalVatAmount));
+            $("#grandTotalEWTAmount").text(formatNumberToFour(grandTotalEWTAmount));
+            $("#grandTotalNetOfEWT").text(formatNumberToFour(grandTotalNetOfEWT));
+            $("#grandTotalAmountPaid").text(formatNumberToFour(grandTotalAmountPaid));
+            $("#grandTotalBalance").text(formatNumberToFour(grandTotalBalance));
+            $("#grandTotalDebit").text(formatNumberToFour(grandTotalDebit));
+            $("#grandTotalCredit").text(formatNumberToFour(grandTotalCredit));
         }
     });
 </script>
@@ -428,8 +456,8 @@
                     total += value;
                 });
                 totalCell.textContent = total.toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
+                    minimumFractionDigits: 4,
+                    maximumFractionDigits: 4
                 });
 
                 if (total === 0){
@@ -451,7 +479,7 @@
         function validateAndSubmit (event){
             let checkTotal = parseFloat($("#checkTotal").text().replace(/,/g, "")) || 0;
 
-            if (Math.round(checkTotal * 100) !== Math.round(totalBalance * 100)){
+            if (Math.round(checkTotal * 10000) !== Math.round(totalBalance * 10000)){
                 event.preventDefault();
                 Swal.fire({
                     title: "Error",
@@ -507,7 +535,7 @@
             });
 
             // Always refresh display, even if total didn't change
-            $("#siTotal").text(formatNumber(totalBalance));
+            $("#siTotal").text(formatNumberToFour(totalBalance));
         }
     </script>
 
@@ -517,7 +545,7 @@
             let maxValue = parseFloat($(this).attr("data-max")) || 0;
 
             if (numValue > maxValue) {
-                $(this).val(formatNumber(maxValue)); // auto-correct
+                $(this).val(formatNumberToFour(maxValue)); // auto-correct
                 setTimeout(() => {
                     updateTotal2();
                 }, 200);
@@ -527,11 +555,11 @@
                     icon: "error"
                 });
             } else {
-                $(this).val(formatNumber(numValue)); // format nicely on blur
+                $(this).val(formatNumberToFour(numValue)); // format nicely on blur
             }
 
             if (numValue === 0){
-                $(this).val(formatNumber(1)); // auto-correct
+                $(this).val(formatNumberToFour(1)); // auto-correct
                 setTimeout(() => {
                     updateTotal2();
                 }, 200);

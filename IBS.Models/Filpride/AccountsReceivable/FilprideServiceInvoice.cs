@@ -82,6 +82,24 @@ namespace IBS.Models.Filpride.AccountsReceivable
         [Column(TypeName = "numeric(18,4)")]
         public decimal Balance { get; set; }
 
+        [Column(TypeName = "numeric(18,4)")]
+        public decimal CwtBalance { get; set; }
+
+        [Column(TypeName = "numeric(18,4)")]
+        public decimal CwVatBalance { get; set; }
+
+        [Column(TypeName = "numeric(18,4)")]
+        public decimal CwtAmountPaid { get; set; }
+
+        [Column(TypeName = "numeric(18,4)")]
+        public decimal CwVatAmountPaid { get; set; }
+
+        [Column(TypeName = "numeric(18,4)")]
+        public decimal DebitAmount { get; set; }
+
+        [Column(TypeName = "numeric(18,4)")]
+        public decimal CreditAmount { get; set; }
+
         [StringLength(1000)]
         public string Instructions
         {

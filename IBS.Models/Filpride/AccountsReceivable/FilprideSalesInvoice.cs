@@ -97,7 +97,17 @@ namespace IBS.Models.Filpride.AccountsReceivable
 
         public bool IsPaid { get; set; }
 
-        public bool IsTaxAndVatPaid { get; set; }
+        [Column(TypeName = "numeric(18,4)")]
+        public decimal CwtBalance { get; set; }
+
+        [Column(TypeName = "numeric(18,4)")]
+        public decimal CwVatBalance { get; set; }
+
+        [Column(TypeName = "numeric(18,4)")]
+        public decimal CwtAmountPaid { get; set; }
+
+        [Column(TypeName = "numeric(18,4)")]
+        public decimal CwVatAmountPaid { get; set; }
 
         [Display(Name = "Due Date")]
         [Column(TypeName = "date")]

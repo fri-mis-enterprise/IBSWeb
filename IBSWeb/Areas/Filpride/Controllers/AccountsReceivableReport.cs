@@ -2646,6 +2646,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     multipleSalesInvoicesByCollectionReceiptId[receipt.CollectionReceiptId] = salesInvoices.ToList();
                 }
 
+                var multipleServiceInvoicesByCollectionReceiptId = new Dictionary<int, List<FilprideServiceInvoice>>();
+                foreach (var receipt in collectionReceiptReport.Where(cr => cr.MultipleSVId != null))
+                {
+                    var serviceInvoices = await _unitOfWork.FilprideServiceInvoice
+                        .GetAllAsync(sv => receipt.MultipleSVId!.Contains(sv.ServiceInvoiceId), cancellationToken);
+                    multipleServiceInvoicesByCollectionReceiptId[receipt.CollectionReceiptId] = serviceInvoices
+                        .OrderBy(sv => Array.IndexOf(receipt.MultipleSVId!, sv.ServiceInvoiceId)).ToList();
+                }
+
                 var document = Document.Create(container =>
                 {
                     container.Page(page =>
@@ -2783,6 +2792,26 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                                         totalAmount += currentAmount;
                                     }
+                                    if (record.MultipleSVId != null)
+                                    {
+                                        var serviceInvoices = multipleServiceInvoicesByCollectionReceiptId[record.CollectionReceiptId];
+                                        var currentAmount = record.CashAmount + record.CheckAmount;
+
+                                        table.Cell().Border(0.5f).Padding(3).Text(record.Customer?.CustomerCode);
+                                        table.Cell().Border(0.5f).Padding(3).Text(record.Customer?.CustomerName);
+                                        table.Cell().Border(0.5f).Padding(3).Text(record.Customer?.CustomerType);
+                                        table.Cell().Border(0.5f).Padding(3).Text(string.Join(", ", serviceInvoices.Select(sv => sv.CreatedDate.ToString(SD.Date_Format))));
+                                        table.Cell().Border(0.5f).Padding(3).Text(record.CollectionReceiptNo);
+                                        table.Cell().Border(0.5f).Padding(3).Text(string.Join(", ", record.MultipleSV ?? Array.Empty<string>()));
+                                        table.Cell().Border(0.5f).Padding(3).Text(string.Empty);
+                                        table.Cell().Border(0.5f).Padding(3).Text(string.Join(", ", serviceInvoices.Select(sv => sv.DueDate.ToString(SD.Date_Format))));
+                                        table.Cell().Border(0.5f).Padding(3).Text(record.CheckDate?.ToString(SD.Date_Format));
+                                        table.Cell().Border(0.5f).Padding(3).Text(record.DepositedDate?.ToString(SD.Date_Format));
+                                        table.Cell().Border(0.5f).Padding(3).Text($"{record.BankAccount?.Bank} {record.BankAccountNumber}");
+                                        table.Cell().Border(0.5f).Padding(3).Text(record.CheckNo);
+                                        table.Cell().Border(0.5f).Padding(3).AlignRight().Text(currentAmount != 0 ? currentAmount.ToString(SD.Two_Decimal_Format) : null);
+                                        totalAmount += currentAmount;
+                                    }
                                     if (record.MultipleSIId != null)
                                     {
                                         var salesInvoices = multipleSalesInvoicesByCollectionReceiptId[record.CollectionReceiptId];
@@ -2893,6 +2922,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             .Include(si => si.CustomerOrderSlip)
                             .Where(si => multipleSalesInvoiceIds.Contains(si.SalesInvoiceId))
                             .ToDictionaryAsync(si => si.SalesInvoiceId, cancellationToken);
+
+                    var multipleServiceInvoiceIds = collectionReceiptReport
+                        .Where(cr => cr.MultipleSVId is { Length: > 0 })
+                        .SelectMany(cr => cr.MultipleSVId!)
+                        .Distinct()
+                        .ToList();
+                    var serviceInvoicesById = multipleServiceInvoiceIds.Count == 0
+                        ? new Dictionary<int, FilprideServiceInvoice>()
+                        : await _dbContext.FilprideServiceInvoices
+                            .AsNoTracking()
+                            .Where(sv => multipleServiceInvoiceIds.Contains(sv.ServiceInvoiceId))
+                            .ToDictionaryAsync(sv => sv.ServiceInvoiceId, cancellationToken);
 
                     using var package = new ExcelPackage();
                     var worksheet = package.Workbook.Worksheets.Add("COLLECTION");
@@ -3186,6 +3227,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 invoiceNumbers,
                                 terms,
                                 dueDates,
+                                formatInvoiceDate: false,
+                                formatDueDate: false);
+                        }
+                        else if (cr.MultipleSVId != null)
+                        {
+                            var serviceInvoices = cr.MultipleSVId
+                                .Where(serviceInvoicesById.ContainsKey)
+                                .Select(id => serviceInvoicesById[id])
+                                .ToList();
+                            WriteCollectionRow(
+                                cr,
+                                cr.Customer?.CustomerName,
+                                cr.Customer?.CustomerType,
+                                serviceInvoices.Select((invoice, index) => (
+                                    DateOnly.FromDateTime(invoice.CreatedDate),
+                                    cr.SVMultipleAmount != null && index < cr.SVMultipleAmount.Length
+                                        ? cr.SVMultipleAmount[index]
+                                        : 0m)),
+                                string.Join(Environment.NewLine, serviceInvoices.Select(sv => sv.CreatedDate.ToString(dateTextFormat))),
+                                string.Join(Environment.NewLine, serviceInvoices.Select(sv => sv.ServiceInvoiceNo)),
+                                null,
+                                string.Join(Environment.NewLine, serviceInvoices.Select(sv => sv.DueDate.ToString(dateTextFormat))),
                                 formatInvoiceDate: false,
                                 formatDueDate: false);
                         }
@@ -4010,7 +4073,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     {
                                         var isVatable = (record.CustomerOrderSlip?.VatType ?? SD.VatType_Vatable) ==
                                                         SD.VatType_Vatable;
-                                        var isTaxable = record.CustomerOrderSlip?.HasEWT ?? true;
                                         var freight = record.DeliveryReceipt?.FreightAmount;
                                         var grossAmount = record.Amount;
                                         var netOfVat = isVatable
@@ -4020,11 +4082,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                             ? VatAmountOrZero(netOfVat)
                                             : 0m;
                                         var vatPerLiter = DivideOrZero(vatAmount, record.Quantity);
-                                        var ewtAmount = isTaxable
-                                            ? EwtAmountOrZero(netOfVat, record.DeliveryReceipt?.CwtPercent ?? 0.0100m)
-                                            : 0m;
-                                        var isEwtAmountPaid = record.IsTaxAndVatPaid ? ewtAmount : 0m;
-                                        var ewtBalance = RoundToFour(ewtAmount - isEwtAmountPaid);
+                                        var ewtAmount = RoundToFour(record.CwtAmountPaid + record.CwtBalance);
+                                        var isEwtAmountPaid = RoundToFour(record.CwtAmountPaid);
+                                        var ewtBalance = RoundToFour(record.CwtBalance);
 
                                         table.Cell().Border(0.5f).Padding(3).Text(record.Customer?.CustomerCode);
                                         table.Cell().Border(0.5f).Padding(3).Text(record.CustomerOrderSlip?.CustomerName ?? record.Customer?.CustomerName);
@@ -4067,7 +4127,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                     var subTotalQuantity = groupByCustomer.Sum(x => x.Quantity);
 
                                     var isVatableSub = groupByCustomer.Select(x => x.CustomerOrderSlip?.VatType).FirstOrDefault();
-                                    var isTaxableSub = groupByCustomer.Select(x => x.CustomerOrderSlip?.HasEWT).FirstOrDefault();
                                     var subTotalFreight = groupByCustomer.Sum(x => x.DeliveryReceipt?.FreightAmount) ?? 0m;
                                     var subTotalFreightPerLiter = subTotalFreight != 0m && subTotalQuantity != 0m ? DivideOrZero(subTotalFreight, subTotalQuantity) : 0m;
                                     var subTotalGrossAmount = groupByCustomer.Sum(x => x.Amount);
@@ -4079,11 +4138,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                         : 0m;
                                     var subTotalAmountPaid = groupByCustomer.Sum(x => x.AmountPaid);
                                     var subTotalVatPerLiter = DivideOrZero(subTotalVatAmount, subTotalQuantity);
-                                    var subTotalEwtAmount = isTaxableSub == true
-                                        ? EwtAmountOrZero(subTotalNetOfVat, groupByCustomer.Select(x => x.DeliveryReceipt != null ? x.DeliveryReceipt.CwtPercent : 0.0100m).FirstOrDefault())
-                                        : 0m;
-                                    var isEwtAmountPaidSub = groupByCustomer.Select(x => x.IsTaxAndVatPaid).FirstOrDefault() ? subTotalEwtAmount : 0m;
-                                    var subTotalEwtBalance = RoundToFour(subTotalEwtAmount - isEwtAmountPaidSub);
+                                    var subTotalEwtAmount = groupByCustomer.Sum(x => x.CwtAmountPaid + x.CwtBalance);
+                                    var isEwtAmountPaidSub = groupByCustomer.Sum(x => x.CwtAmountPaid);
+                                    var subTotalEwtBalance = groupByCustomer.Sum(x => x.CwtBalance);
                                     var subTotalUnitPrice = DivideOrZero(subTotalGrossAmount, subTotalQuantity);
                                     var subTotalBalance = groupByCustomer.Sum(x => x.Balance);
                                     var subTotalEwtAmountPaid = isEwtAmountPaidSub;
@@ -4302,8 +4359,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     foreach (var si in groupByCustomer)
                     {
                         var isVatable = (si.CustomerOrderSlip?.VatType ?? SD.VatType_Vatable) == SD.VatType_Vatable;
-                        var isTaxable = si.CustomerOrderSlip?.HasEWT ?? true;
-                        var hasCwVat = si.CustomerOrderSlip?.HasWVAT ?? true;
                         var freight = si.DeliveryReceipt?.FreightAmount;
                         var grossAmount = si.Amount;
                         var siAmountIncludingDmCmAmount = si.Amount + si.DebitAmount - si.CreditAmount;
@@ -4312,12 +4367,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             : siAmountIncludingDmCmAmount;
                         var vatAmount = isVatable ? VatAmountOrZero(netOfVat) : 0m;
                         var vatPerLiter = DivideOrZero(vatAmount, si.Quantity);
-                        var ewtAmount = isTaxable ? EwtAmountOrZero(netOfVat, si.DeliveryReceipt?.CwtPercent ?? 0.0100m) : 0m;
-                        var isEwtAmountPaid = si.IsTaxAndVatPaid ? ewtAmount : 0m;
-                        var ewtBalance = RoundToFour(ewtAmount - isEwtAmountPaid);
-                        var cwvatAmount = hasCwVat ? EwtAmountOrZero(netOfVat, si.DeliveryReceipt?.CwvPercent ?? 0.0500m) : 0m;
-                        var isCwvatAmountPaid = si.IsTaxAndVatPaid ? cwvatAmount : 0m;
-                        var cwvatBalance = RoundToFour(cwvatAmount - isCwvatAmountPaid);
+                        var ewtAmount = RoundToFour(si.CwtAmountPaid + si.CwtBalance);
+                        var isEwtAmountPaid = RoundToFour(si.CwtAmountPaid);
+                        var ewtBalance = RoundToFour(si.CwtBalance);
+                        var cwvatAmount = RoundToFour(si.CwVatAmountPaid + si.CwVatBalance);
+                        var isCwvatAmountPaid = RoundToFour(si.CwVatAmountPaid);
+                        var cwvatBalance = RoundToFour(si.CwVatBalance);
 
                         worksheet.Cells[row, 1].Value = si.Customer?.CustomerCode;
                         worksheet.Cells[row, 2].Value = si.CustomerOrderSlip?.CustomerName ?? si.Customer?.CustomerName;
@@ -4402,8 +4457,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var subTotalQuantity = groupByCustomer.Sum(x => x.Quantity);
 
                     var isVatableSub = groupByCustomer.Select(x => x.CustomerOrderSlip?.VatType).FirstOrDefault();
-                    var isTaxableSub = groupByCustomer.Select(x => x.CustomerOrderSlip?.HasEWT).FirstOrDefault();
-                    var hasCwVatSub = groupByCustomer.Select(x => x.CustomerOrderSlip?.HasWVAT).FirstOrDefault();
                     var subTotalFreight = groupByCustomer.Sum(x => x.DeliveryReceipt?.FreightAmount) ?? 0m;
                     var subTotalFreightPerLiter = subTotalFreight != 0m && subTotalQuantity != 0m ? DivideOrZero(subTotalFreight, subTotalQuantity) : 0m;
                     var subTotalGrossAmount = groupByCustomer.Sum(x => x.Amount);
@@ -4416,19 +4469,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         : 0m;
                     var subTotalAmountPaid = groupByCustomer.Sum(x => x.AmountPaid);
                     var subTotalVatPerLiter = DivideOrZero(subTotalVatAmount, subTotalQuantity);
-                    var subTotalEwtAmount = isTaxableSub == true
-                        ? EwtAmountOrZero(subTotalNetOfVat, groupByCustomer.Select(x => x.DeliveryReceipt != null ? x.DeliveryReceipt.CwtPercent : 0.0100m).FirstOrDefault())
-                        : 0m;
-                    var isEwtAmountPaidSub = groupByCustomer.Select(x => x.IsTaxAndVatPaid).FirstOrDefault() ? subTotalEwtAmount : 0m;
-                    var subTotalEwtBalance = RoundToFour(subTotalEwtAmount - isEwtAmountPaidSub);
+                    var subTotalEwtAmount = groupByCustomer.Sum(x => x.CwtAmountPaid + x.CwtBalance);
+                    var isEwtAmountPaidSub = groupByCustomer.Sum(x => x.CwtAmountPaid);
+                    var subTotalEwtBalance = groupByCustomer.Sum(x => x.CwtBalance);
                     var subTotalUnitPrice = DivideOrZero(subTotalBalanceIncludingDmCmAmount, subTotalQuantity);
                     var subTotalBalance = groupByCustomer.Sum(x => x.Balance);
                     var subTotalEwtAmountPaid = isEwtAmountPaidSub;
-                    var subTotalCwVatAmount = hasCwVatSub == true
-                        ? EwtAmountOrZero(subTotalNetOfVat, groupByCustomer.Select(x => x.DeliveryReceipt != null ? x.DeliveryReceipt.CwvPercent : 0.0500m).FirstOrDefault())
-                        : 0m;
-                    var isCwVatAmountPaidSub = groupByCustomer.Select(x => x.IsTaxAndVatPaid).FirstOrDefault() ? subTotalCwVatAmount : 0m;
-                    var subTotalCwVatBalance = RoundToFour(subTotalCwVatAmount - isCwVatAmountPaidSub);
+                    var subTotalCwVatAmount = groupByCustomer.Sum(x => x.CwVatAmountPaid + x.CwVatBalance);
+                    var isCwVatAmountPaidSub = groupByCustomer.Sum(x => x.CwVatAmountPaid);
+                    var subTotalCwVatBalance = groupByCustomer.Sum(x => x.CwVatBalance);
 
                     var subTotalDebitAmount = groupByCustomer.Sum(x => x.DebitAmount);
                     var subTotalCreditAmount = groupByCustomer.Sum(x => x.CreditAmount);
@@ -5993,4 +6042,3 @@ namespace IBSWeb.Areas.Filpride.Controllers
         #endregion
     }
 }
-

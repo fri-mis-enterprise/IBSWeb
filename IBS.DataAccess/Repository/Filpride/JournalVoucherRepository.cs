@@ -1,14 +1,15 @@
+using System.Linq.Expressions;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Filpride.IRepository;
+using IBS.DTOs;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsPayable;
 using IBS.Models.Filpride.Books;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Expressions;
 
 namespace IBS.DataAccess.Repository.Filpride
 {
-    public class JournalVoucherRepository : Repository<FilprideJournalVoucherHeader>, IJournalVoucherRepository
+    public class JournalVoucherRepository: Repository<FilprideJournalVoucherHeader>, IJournalVoucherRepository
     {
         private readonly ApplicationDbContext _db;
 
@@ -35,7 +36,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .OrderByDescending(x => x.JournalVoucherHeaderNo!.Length)
                 .ThenByDescending(x => x.JournalVoucherHeaderNo)
                 .FirstOrDefaultAsync(x =>
-                    
+
                     x.Type == nameof(DocumentType.Documented),
                     cancellationToken);
 
@@ -59,7 +60,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 .OrderByDescending(x => x.JournalVoucherHeaderNo!.Length)
                 .ThenByDescending(x => x.JournalVoucherHeaderNo)
                 .FirstOrDefaultAsync(x =>
-                        
+
                         x.Type == nameof(DocumentType.Undocumented),
                     cancellationToken);
 
@@ -116,11 +117,13 @@ namespace IBS.DataAccess.Repository.Filpride
 
         public async Task PostAsync(FilprideJournalVoucherHeader header,
             IEnumerable<FilprideJournalVoucherDetail> details,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            List<AccountTitleDto>? accountTitlesDto = null,
+            bool saveChanges = true)
         {
             #region --General Ledger Book Recording(GL)--
 
-            var accountTitlesDto = await GetListOfAccountTitleDto(cancellationToken);
+            accountTitlesDto ??= await GetListOfAccountTitleDto(cancellationToken);
             var ledgers = new List<FilprideGeneralLedgerBook>();
 
             foreach (var detail in details)
@@ -149,22 +152,30 @@ namespace IBS.DataAccess.Repository.Filpride
 
             if (header.CVId.HasValue)
             {
-                var counterparty = await _db.FilprideCheckVoucherHeaders
-                    .AsNoTracking()
-                    .Where(cv => cv.CheckVoucherHeaderId == header.CVId.Value)
-                    .Select(cv => new
-                    {
-                        cv.SupplierId,
-                        Name = cv.SupplierName ?? cv.Payee
-                    })
-                    .SingleOrDefaultAsync(cancellationToken);
+                var supplierId = header.CheckVoucherHeader?.SupplierId;
+                var supplierName = header.CheckVoucherHeader?.SupplierName ?? header.CheckVoucherHeader?.Payee;
 
-                if (counterparty?.SupplierId != null)
+                if (!supplierId.HasValue)
+                {
+                    var counterparty = await _db.FilprideCheckVoucherHeaders
+                        .AsNoTracking()
+                        .Where(checkVoucher => checkVoucher.CheckVoucherHeaderId == header.CVId.Value)
+                        .Select(checkVoucher => new
+                        {
+                            checkVoucher.SupplierId,
+                            Name = checkVoucher.SupplierName ?? checkVoucher.Payee
+                        })
+                        .SingleOrDefaultAsync(cancellationToken);
+                    supplierId = counterparty?.SupplierId;
+                    supplierName = counterparty?.Name;
+                }
+
+                if (supplierId.HasValue)
                 {
                     ledgers.SetCounterparty(
                         CounterpartyType.Supplier,
-                        counterparty.SupplierId,
-                        counterparty.Name);
+                        supplierId,
+                        supplierName);
                 }
             }
 
@@ -177,7 +188,10 @@ namespace IBS.DataAccess.Repository.Filpride
 
             #endregion --General Ledger Book Recording(GL)--
 
-            await _db.SaveChangesAsync(cancellationToken);
+            if (saveChanges)
+            {
+                await _db.SaveChangesAsync(cancellationToken);
+            }
         }
     }
 }

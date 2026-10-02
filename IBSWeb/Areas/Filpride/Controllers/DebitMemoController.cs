@@ -425,6 +425,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 await PostDebitMemoAsync(model, cancellationToken);
 
+                if (model.SalesInvoiceId.HasValue)
+                {
+                    await _unitOfWork.FilprideSalesInvoice
+                        .RecalculateTaxBalancesAsync(model.SalesInvoiceId.Value, cancellationToken);
+                }
+
+                if (model.ServiceInvoiceId.HasValue)
+                {
+                    await _unitOfWork.FilprideServiceInvoice
+                        .RecalculateTaxBalancesAsync(model.ServiceInvoiceId.Value, cancellationToken);
+                }
+
                 await _unitOfWork.SaveAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 TempData["success"] = "Debit Memo has been Posted.";
@@ -497,9 +509,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (model.ServiceInvoice != null)
                 {
                     model.ServiceInvoice.Balance -= model.DebitAmount;
+                    model.ServiceInvoice.DebitAmount -= model.DebitAmount;
                     model.ServiceInvoice.IsPaid = model.ServiceInvoice.Balance <= 0;
                     model.ServiceInvoice.PaymentStatus = model.ServiceInvoice.Balance < 0 ? "OverPaid"
                         : model.ServiceInvoice.Balance == 0 ? "Paid" : "Pending";
+                }
+
+                if (model.SalesInvoiceId.HasValue)
+                {
+                    await _unitOfWork.FilprideSalesInvoice
+                        .RecalculateTaxBalancesAsync(model.SalesInvoiceId.Value, cancellationToken);
+                }
+
+                if (model.ServiceInvoiceId.HasValue)
+                {
+                    await _unitOfWork.FilprideServiceInvoice
+                        .RecalculateTaxBalancesAsync(model.ServiceInvoiceId.Value, cancellationToken);
                 }
 
                 await _unitOfWork.GeneralLedger.ReverseEntries(model.DebitMemoNo, cancellationToken);
@@ -969,25 +994,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet2.Cells["I1"].Value = "AmountPaid";
                 worksheet2.Cells["J1"].Value = "Balance";
                 worksheet2.Cells["K1"].Value = "IsPaid";
-                worksheet2.Cells["L1"].Value = "IsTaxAndVatPaid";
-                worksheet2.Cells["M1"].Value = "DueDate";
-                worksheet2.Cells["N1"].Value = "CreatedBy";
-                worksheet2.Cells["O1"].Value = "CreatedDate";
-                worksheet2.Cells["P1"].Value = "CancellationRemarks";
-                worksheet2.Cells["Q1"].Value = "OriginalReceivingReportId";
-                worksheet2.Cells["R1"].Value = "OriginalCustomerId";
-                worksheet2.Cells["S1"].Value = "OriginalPOId";
-                worksheet2.Cells["T1"].Value = "OriginalProductId";
-                worksheet2.Cells["U1"].Value = "OriginalSeriesNumber";
-                worksheet2.Cells["V1"].Value = "OriginalDocumentId";
-                worksheet2.Cells["W1"].Value = "PostedBy";
-                worksheet2.Cells["X1"].Value = "PostedDate";
-                worksheet2.Cells["Y1"].Value = "EditedBy";
-                worksheet2.Cells["Z1"].Value = "EditedDate";
-                worksheet2.Cells["AA1"].Value = "CanceledBy";
-                worksheet2.Cells["AB1"].Value = "CanceledDate";
-                worksheet2.Cells["AC1"].Value = "VoidedBy";
-                worksheet2.Cells["AD1"].Value = "VoidedDate";
+                worksheet2.Cells["L1"].Value = "CwtBalance";
+                worksheet2.Cells["M1"].Value = "CwVatBalance";
+                worksheet2.Cells["N1"].Value = "CwtAmountPaid";
+                worksheet2.Cells["O1"].Value = "CwVatAmountPaid";
+                worksheet2.Cells["P1"].Value = "DueDate";
+                worksheet2.Cells["Q1"].Value = "CreatedBy";
+                worksheet2.Cells["R1"].Value = "CreatedDate";
+                worksheet2.Cells["S1"].Value = "CancellationRemarks";
+                worksheet2.Cells["T1"].Value = "OriginalReceivingReportId";
+                worksheet2.Cells["U1"].Value = "OriginalCustomerId";
+                worksheet2.Cells["V1"].Value = "OriginalPOId";
+                worksheet2.Cells["W1"].Value = "OriginalProductId";
+                worksheet2.Cells["X1"].Value = "OriginalSeriesNumber";
+                worksheet2.Cells["Y1"].Value = "OriginalDocumentId";
+                worksheet2.Cells["Z1"].Value = "PostedBy";
+                worksheet2.Cells["AA1"].Value = "PostedDate";
+                worksheet2.Cells["AB1"].Value = "EditedBy";
+                worksheet2.Cells["AC1"].Value = "EditedDate";
+                worksheet2.Cells["AD1"].Value = "CanceledBy";
+                worksheet2.Cells["AE1"].Value = "CanceledDate";
+                worksheet2.Cells["AF1"].Value = "VoidedBy";
+                worksheet2.Cells["AG1"].Value = "VoidedDate";
 
                 #endregion -- Sales Invoice Table Header --
 
@@ -1126,25 +1154,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet2.Cells[siRow, 9].Value = item.SalesInvoice.AmountPaid;
                     worksheet2.Cells[siRow, 10].Value = item.SalesInvoice.Balance;
                     worksheet2.Cells[siRow, 11].Value = item.SalesInvoice.IsPaid;
-                    worksheet2.Cells[siRow, 12].Value = item.SalesInvoice.IsTaxAndVatPaid;
-                    worksheet2.Cells[siRow, 13].Value = item.SalesInvoice.DueDate.ToString("yyyy-MM-dd");
-                    worksheet2.Cells[siRow, 14].Value = item.SalesInvoice.CreatedBy;
-                    worksheet2.Cells[siRow, 15].Value = item.SalesInvoice.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
-                    worksheet2.Cells[siRow, 16].Value = item.SalesInvoice.CancellationRemarks;
-                    worksheet2.Cells[siRow, 17].Value = item.SalesInvoice.ReceivingReportId;
-                    worksheet2.Cells[siRow, 18].Value = item.SalesInvoice.CustomerId;
-                    worksheet2.Cells[siRow, 19].Value = item.SalesInvoice.PurchaseOrderId;
-                    worksheet2.Cells[siRow, 20].Value = item.SalesInvoice.ProductId;
-                    worksheet2.Cells[siRow, 21].Value = item.SalesInvoice.SalesInvoiceNo;
-                    worksheet2.Cells[siRow, 22].Value = item.SalesInvoice.SalesInvoiceId;
-                    worksheet2.Cells[siRow, 23].Value = item.SalesInvoice.PostedBy;
-                    worksheet2.Cells[siRow, 24].Value = item.SalesInvoice.PostedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
-                    worksheet2.Cells[siRow, 25].Value = item.SalesInvoice.EditedBy;
-                    worksheet2.Cells[siRow, 26].Value = item.SalesInvoice.EditedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
-                    worksheet2.Cells[siRow, 27].Value = item.SalesInvoice.CanceledBy;
-                    worksheet2.Cells[siRow, 28].Value = item.SalesInvoice.CanceledDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
-                    worksheet2.Cells[siRow, 29].Value = item.SalesInvoice.VoidedBy;
-                    worksheet2.Cells[siRow, 30].Value = item.SalesInvoice.VoidedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                    worksheet2.Cells[siRow, 12].Value = item.SalesInvoice.CwtBalance;
+                    worksheet2.Cells[siRow, 13].Value = item.SalesInvoice.CwVatBalance;
+                    worksheet2.Cells[siRow, 14].Value = item.SalesInvoice.CwtAmountPaid;
+                    worksheet2.Cells[siRow, 15].Value = item.SalesInvoice.CwVatAmountPaid;
+                    worksheet2.Cells[siRow, 16].Value = item.SalesInvoice.DueDate.ToString("yyyy-MM-dd");
+                    worksheet2.Cells[siRow, 17].Value = item.SalesInvoice.CreatedBy;
+                    worksheet2.Cells[siRow, 18].Value = item.SalesInvoice.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
+                    worksheet2.Cells[siRow, 19].Value = item.SalesInvoice.CancellationRemarks;
+                    worksheet2.Cells[siRow, 20].Value = item.SalesInvoice.ReceivingReportId;
+                    worksheet2.Cells[siRow, 21].Value = item.SalesInvoice.CustomerId;
+                    worksheet2.Cells[siRow, 22].Value = item.SalesInvoice.PurchaseOrderId;
+                    worksheet2.Cells[siRow, 23].Value = item.SalesInvoice.ProductId;
+                    worksheet2.Cells[siRow, 24].Value = item.SalesInvoice.SalesInvoiceNo;
+                    worksheet2.Cells[siRow, 25].Value = item.SalesInvoice.SalesInvoiceId;
+                    worksheet2.Cells[siRow, 26].Value = item.SalesInvoice.PostedBy;
+                    worksheet2.Cells[siRow, 27].Value = item.SalesInvoice.PostedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                    worksheet2.Cells[siRow, 28].Value = item.SalesInvoice.EditedBy;
+                    worksheet2.Cells[siRow, 29].Value = item.SalesInvoice.EditedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                    worksheet2.Cells[siRow, 30].Value = item.SalesInvoice.CanceledBy;
+                    worksheet2.Cells[siRow, 31].Value = item.SalesInvoice.CanceledDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                    worksheet2.Cells[siRow, 32].Value = item.SalesInvoice.VoidedBy;
+                    worksheet2.Cells[siRow, 33].Value = item.SalesInvoice.VoidedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
 
                     siRow++;
                 }
@@ -1262,9 +1293,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (debitMemo.ServiceInvoice != null)
                 {
                     debitMemo.ServiceInvoice.Balance -= debitMemo.DebitAmount;
+                    debitMemo.ServiceInvoice.DebitAmount -= debitMemo.DebitAmount;
                     debitMemo.ServiceInvoice.IsPaid = debitMemo.ServiceInvoice.Balance <= 0;
                     debitMemo.ServiceInvoice.PaymentStatus = debitMemo.ServiceInvoice.Balance < 0 ? "OverPaid"
                         : debitMemo.ServiceInvoice.Balance == 0 ? "Paid" : "Pending";
+                }
+
+                if (debitMemo.SalesInvoiceId.HasValue)
+                {
+                    await _unitOfWork.FilprideSalesInvoice
+                        .RecalculateTaxBalancesAsync(debitMemo.SalesInvoiceId.Value, cancellationToken);
+                }
+
+                if (debitMemo.ServiceInvoiceId.HasValue)
+                {
+                    await _unitOfWork.FilprideServiceInvoice
+                        .RecalculateTaxBalancesAsync(debitMemo.ServiceInvoiceId.Value, cancellationToken);
                 }
 
                 debitMemo.PostedBy = null;
@@ -1343,6 +1387,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 await PostDebitMemoAsync(model, cancellationToken);
 
+                if (model.SalesInvoiceId.HasValue)
+                {
+                    await _unitOfWork.FilprideSalesInvoice
+                        .RecalculateTaxBalancesAsync(model.SalesInvoiceId.Value, cancellationToken);
+                }
+
+                if (model.ServiceInvoiceId.HasValue)
+                {
+                    await _unitOfWork.FilprideServiceInvoice
+                        .RecalculateTaxBalancesAsync(model.ServiceInvoiceId.Value, cancellationToken);
+                }
+
                 await _unitOfWork.SaveAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 TempData["success"] = "Debit Memo has been approved and posted.";
@@ -1402,6 +1458,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             if (model.ServiceInvoice != null)
             {
                 model.ServiceInvoice.Balance += model.DebitAmount;
+                model.ServiceInvoice.DebitAmount += model.DebitAmount;
                 model.ServiceInvoice.IsPaid = model.ServiceInvoice.Balance <= 0;
                 model.ServiceInvoice.PaymentStatus = model.ServiceInvoice.Balance < 0 ? "OverPaid"
                     : model.ServiceInvoice.Balance == 0 ? "Paid" : "Pending";

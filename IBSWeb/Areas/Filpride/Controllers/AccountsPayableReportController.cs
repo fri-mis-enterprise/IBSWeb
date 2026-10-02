@@ -2895,6 +2895,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         StringComparer.OrdinalIgnoreCase);
                     var totalOverallMetric = new GrossMarginSummaryMetric();
                     var totalProductMetrics = CreateGrossMarginSummaryMetricMap(grossMarginProductList);
+                    var faoOverallMetricsByCustomerType = customerTypeNames.ToDictionary(
+                        customerType => customerType,
+                        _ => new GrossMarginSummaryMetric(),
+                        StringComparer.OrdinalIgnoreCase);
+                    var faoProductMetricsByCustomerType = customerTypeNames.ToDictionary(
+                        customerType => customerType,
+                        _ => CreateGrossMarginSummaryMetricMap(grossMarginProductList),
+                        StringComparer.OrdinalIgnoreCase);
+                    var faoTotalOverallMetric = new GrossMarginSummaryMetric();
+                    var faoTotalProductMetrics = CreateGrossMarginSummaryMetricMap(grossMarginProductList);
 
                 #endregion
 
@@ -2993,6 +3003,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .Select(po => po.SupplierName)
                         .Where(value => !string.IsNullOrWhiteSpace(value))
                         .Distinct(StringComparer.OrdinalIgnoreCase));
+                    var isForTheAccount = supplierNames.Contains("FOR THE ACCOUNT", StringComparison.OrdinalIgnoreCase);
 
                     var terms = string.Join(", ", purchaseOrders
                         .Select(po => po.Terms)
@@ -3154,8 +3165,47 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     totalNetMarginPerLiter += netMarginPerLiter;
                     totalNetMarginAmount += netMarginAmount;
 
-                    if (supplierNames.Contains("FOR THE ACCOUNT", StringComparison.OrdinalIgnoreCase))
+                    if (isForTheAccount)
                     {
+                        var faoOverallMetric = faoOverallMetricsByCustomerType[customerType];
+                        faoOverallMetric.Quantity += volume;
+                        faoOverallMetric.NetOfSales += netSales;
+                        faoOverallMetric.NetOfPurchases += netPurchases;
+                        faoOverallMetric.GrossMargin += gmAmount;
+                        faoOverallMetric.NetOfFreight += freightChargeNet;
+                        faoOverallMetric.Commission += commissionAmount;
+                        faoOverallMetric.NetMargin += netMarginAmount;
+
+                        faoTotalOverallMetric.Quantity += volume;
+                        faoTotalOverallMetric.NetOfSales += netSales;
+                        faoTotalOverallMetric.NetOfPurchases += netPurchases;
+                        faoTotalOverallMetric.GrossMargin += gmAmount;
+                        faoTotalOverallMetric.NetOfFreight += freightChargeNet;
+                        faoTotalOverallMetric.Commission += commissionAmount;
+                        faoTotalOverallMetric.NetMargin += netMarginAmount;
+
+                        if (faoProductMetricsByCustomerType[customerType].TryGetValue(productName, out var faoProductMetric))
+                        {
+                            faoProductMetric.Quantity += volume;
+                            faoProductMetric.NetOfSales += netSales;
+                            faoProductMetric.NetOfPurchases += netPurchases;
+                            faoProductMetric.GrossMargin += gmAmount;
+                            faoProductMetric.NetOfFreight += freightChargeNet;
+                            faoProductMetric.Commission += commissionAmount;
+                            faoProductMetric.NetMargin += netMarginAmount;
+                        }
+
+                        if (faoTotalProductMetrics.TryGetValue(productName, out var faoTotalProductMetric))
+                        {
+                            faoTotalProductMetric.Quantity += volume;
+                            faoTotalProductMetric.NetOfSales += netSales;
+                            faoTotalProductMetric.NetOfPurchases += netPurchases;
+                            faoTotalProductMetric.GrossMargin += gmAmount;
+                            faoTotalProductMetric.NetOfFreight += freightChargeNet;
+                            faoTotalProductMetric.Commission += commissionAmount;
+                            faoTotalProductMetric.NetMargin += netMarginAmount;
+                        }
+
                         forTheAccountRows.Add(row);
                         forTheAccountVolume += volume;
                         forTheAccountCostAmount += costAmount;
@@ -3259,7 +3309,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 textStyleForSummary.Style.Font.Size = 16;
                 textStyleForSummary.Style.Font.Bold = true;
 
-                gmReportWorksheet.Cells[rowForSummary - 3, 2].Value = "Summary";
+                gmReportWorksheet.Cells[rowForSummary - 3, 2].Value = "Summary (Including FAO)";
                 gmReportWorksheet.Cells[rowForSummary - 1, 2].Value = "Segment";
                 gmReportWorksheet.Cells[rowForSummary - 1, 3].Value = "Volume";
                 gmReportWorksheet.Cells[rowForSummary - 1, 4].Value = "Sales N. VAT";
@@ -3542,6 +3592,99 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     actualGmRange.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(252, 228, 214));
                     actualGmRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
                     actualGmRange.Style.Border.Bottom.Style = ExcelBorderStyle.Double;
+
+                    var summaryTitleRow = rowForSummary - customerTypeNames.Count - 3;
+                    var netOfFaoSummaryTitleRow = actualGmRow + 3;
+                    var summaryEndColumn = grossMarginProductList.Count > 0
+                        ? productSummaryStartColumn
+                          + (grossMarginProductList.Count - 1) * (productSummaryWidth + productSummarySpacing)
+                          + productSummaryWidth - 1
+                        : 10;
+                    gmReportWorksheet.Cells[summaryTitleRow, 2, rowForSummary, summaryEndColumn]
+                        .Copy(gmReportWorksheet.Cells[netOfFaoSummaryTitleRow, 2]);
+                    gmReportWorksheet.Cells[netOfFaoSummaryTitleRow, 2].Value = "Summary (Excluding FAO)";
+
+                    var netOfFaoSummaryHeaderRow = netOfFaoSummaryTitleRow + 1;
+                    gmReportWorksheet.Cells[netOfFaoSummaryHeaderRow, 3, netOfFaoSummaryHeaderRow, 10].Merge = true;
+
+                    for (var index = 0; index < grossMarginProductList.Count; index++)
+                    {
+                        var sectionStartColumn = productSummaryStartColumn + index * (productSummaryWidth + productSummarySpacing);
+                        gmReportWorksheet.Cells[
+                            netOfFaoSummaryHeaderRow,
+                            sectionStartColumn,
+                            netOfFaoSummaryHeaderRow,
+                            sectionStartColumn + productSummaryWidth - 1].Merge = true;
+                    }
+
+                    var netOfFaoSummaryRow = netOfFaoSummaryTitleRow + 3;
+                    foreach (var customerType in customerTypeNames)
+                    {
+                        var overallMetric = overallMetricsByCustomerType[customerType];
+                        var faoOverallMetric = faoOverallMetricsByCustomerType[customerType];
+                        var actualQuantity = overallMetric.Quantity - faoOverallMetric.Quantity;
+                        var actualNetMargin = overallMetric.NetMargin - faoOverallMetric.NetMargin;
+
+                        gmReportWorksheet.Cells[netOfFaoSummaryRow, 3].Value = actualQuantity;
+                        gmReportWorksheet.Cells[netOfFaoSummaryRow, 4].Value = overallMetric.NetOfSales - faoOverallMetric.NetOfSales;
+                        gmReportWorksheet.Cells[netOfFaoSummaryRow, 5].Value = overallMetric.NetOfPurchases - faoOverallMetric.NetOfPurchases;
+                        gmReportWorksheet.Cells[netOfFaoSummaryRow, 6].Value = overallMetric.GrossMargin - faoOverallMetric.GrossMargin;
+                        gmReportWorksheet.Cells[netOfFaoSummaryRow, 7].Value = overallMetric.NetOfFreight - faoOverallMetric.NetOfFreight;
+                        gmReportWorksheet.Cells[netOfFaoSummaryRow, 8].Value = overallMetric.Commission - faoOverallMetric.Commission;
+                        gmReportWorksheet.Cells[netOfFaoSummaryRow, 9].Value = actualNetMargin;
+                        gmReportWorksheet.Cells[netOfFaoSummaryRow, 10].Value = ComputeAverage(actualNetMargin, actualQuantity);
+
+                        for (var index = 0; index < grossMarginProductList.Count; index++)
+                        {
+                            var productName = grossMarginProductList[index];
+                            var sectionStartColumn = productSummaryStartColumn + index * (productSummaryWidth + productSummarySpacing);
+                            var productMetric = productMetricsByCustomerType[customerType][productName];
+                            var faoProductMetric = faoProductMetricsByCustomerType[customerType][productName];
+                            var actualProductQuantity = productMetric.Quantity - faoProductMetric.Quantity;
+                            var actualProductNetMargin = productMetric.NetMargin - faoProductMetric.NetMargin;
+
+                            gmReportWorksheet.Cells[netOfFaoSummaryRow, sectionStartColumn].Value = actualProductQuantity;
+                            gmReportWorksheet.Cells[netOfFaoSummaryRow, sectionStartColumn + 1].Value = productMetric.NetOfSales - faoProductMetric.NetOfSales;
+                            gmReportWorksheet.Cells[netOfFaoSummaryRow, sectionStartColumn + 2].Value = productMetric.NetOfPurchases - faoProductMetric.NetOfPurchases;
+                            gmReportWorksheet.Cells[netOfFaoSummaryRow, sectionStartColumn + 3].Value = productMetric.GrossMargin - faoProductMetric.GrossMargin;
+                            gmReportWorksheet.Cells[netOfFaoSummaryRow, sectionStartColumn + 4].Value = productMetric.NetOfFreight - faoProductMetric.NetOfFreight;
+                            gmReportWorksheet.Cells[netOfFaoSummaryRow, sectionStartColumn + 5].Value = productMetric.Commission - faoProductMetric.Commission;
+                            gmReportWorksheet.Cells[netOfFaoSummaryRow, sectionStartColumn + 6].Value = actualProductNetMargin;
+                            gmReportWorksheet.Cells[netOfFaoSummaryRow, sectionStartColumn + 7].Value = ComputeAverage(actualProductNetMargin, actualProductQuantity);
+                        }
+
+                        netOfFaoSummaryRow++;
+                    }
+
+                    var actualTotalQuantity = totalOverallMetric.Quantity - faoTotalOverallMetric.Quantity;
+                    var actualTotalNetMargin = totalOverallMetric.NetMargin - faoTotalOverallMetric.NetMargin;
+                    gmReportWorksheet.Cells[netOfFaoSummaryRow, 3].Value = actualTotalQuantity;
+                    gmReportWorksheet.Cells[netOfFaoSummaryRow, 4].Value = totalOverallMetric.NetOfSales - faoTotalOverallMetric.NetOfSales;
+                    gmReportWorksheet.Cells[netOfFaoSummaryRow, 5].Value = totalOverallMetric.NetOfPurchases - faoTotalOverallMetric.NetOfPurchases;
+                    gmReportWorksheet.Cells[netOfFaoSummaryRow, 6].Value = totalOverallMetric.GrossMargin - faoTotalOverallMetric.GrossMargin;
+                    gmReportWorksheet.Cells[netOfFaoSummaryRow, 7].Value = totalOverallMetric.NetOfFreight - faoTotalOverallMetric.NetOfFreight;
+                    gmReportWorksheet.Cells[netOfFaoSummaryRow, 8].Value = totalOverallMetric.Commission - faoTotalOverallMetric.Commission;
+                    gmReportWorksheet.Cells[netOfFaoSummaryRow, 9].Value = actualTotalNetMargin;
+                    gmReportWorksheet.Cells[netOfFaoSummaryRow, 10].Value = ComputeAverage(actualTotalNetMargin, actualTotalQuantity);
+
+                    for (var index = 0; index < grossMarginProductList.Count; index++)
+                    {
+                        var productName = grossMarginProductList[index];
+                        var sectionStartColumn = productSummaryStartColumn + index * (productSummaryWidth + productSummarySpacing);
+                        var totalProductMetric = totalProductMetrics[productName];
+                        var faoTotalProductMetric = faoTotalProductMetrics[productName];
+                        var actualTotalProductQuantity = totalProductMetric.Quantity - faoTotalProductMetric.Quantity;
+                        var actualTotalProductNetMargin = totalProductMetric.NetMargin - faoTotalProductMetric.NetMargin;
+
+                        gmReportWorksheet.Cells[netOfFaoSummaryRow, sectionStartColumn].Value = actualTotalProductQuantity;
+                        gmReportWorksheet.Cells[netOfFaoSummaryRow, sectionStartColumn + 1].Value = totalProductMetric.NetOfSales - faoTotalProductMetric.NetOfSales;
+                        gmReportWorksheet.Cells[netOfFaoSummaryRow, sectionStartColumn + 2].Value = totalProductMetric.NetOfPurchases - faoTotalProductMetric.NetOfPurchases;
+                        gmReportWorksheet.Cells[netOfFaoSummaryRow, sectionStartColumn + 3].Value = totalProductMetric.GrossMargin - faoTotalProductMetric.GrossMargin;
+                        gmReportWorksheet.Cells[netOfFaoSummaryRow, sectionStartColumn + 4].Value = totalProductMetric.NetOfFreight - faoTotalProductMetric.NetOfFreight;
+                        gmReportWorksheet.Cells[netOfFaoSummaryRow, sectionStartColumn + 5].Value = totalProductMetric.Commission - faoTotalProductMetric.Commission;
+                        gmReportWorksheet.Cells[netOfFaoSummaryRow, sectionStartColumn + 6].Value = actualTotalProductNetMargin;
+                        gmReportWorksheet.Cells[netOfFaoSummaryRow, sectionStartColumn + 7].Value = ComputeAverage(actualTotalProductNetMargin, actualTotalProductQuantity);
+                    }
                 }
 
                 // Auto-fit columns for better readability

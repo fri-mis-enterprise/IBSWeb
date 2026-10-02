@@ -86,14 +86,32 @@ namespace IBS.DataAccess.Repository
                 .ToListAsync();
         }
 
-        public async Task MarkAsReadAsync(Guid userNotificationId)
+        public async Task<bool> MarkAsReadAsync(Guid userNotificationId, string userId)
         {
-            var userNotification = await _db.UserNotifications.FindAsync(userNotificationId);
-            if (userNotification != null)
+            var userNotification = await _db.UserNotifications
+                .FirstOrDefaultAsync(n => n.UserNotificationId == userNotificationId && n.UserId == userId && !n.IsArchived);
+            if (userNotification == null)
             {
-                userNotification.IsRead = true;
-                await _db.SaveChangesAsync();
+                return false;
             }
+
+            userNotification.IsRead = true;
+            await _db.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> MarkAsUnreadAsync(Guid userNotificationId, string userId)
+        {
+            var userNotification = await _db.UserNotifications
+                .FirstOrDefaultAsync(n => n.UserNotificationId == userNotificationId && n.UserId == userId && !n.IsArchived);
+            if (userNotification == null)
+            {
+                return false;
+            }
+
+            userNotification.IsRead = false;
+            await _db.SaveChangesAsync();
+            return true;
         }
 
         public async Task MarkAllAsReadAsync(string userId, CancellationToken cancellation = default)

@@ -246,6 +246,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                     await _unitOfWork.FilprideSalesInvoice.AddAsync(model, cancellationToken);
                     await _unitOfWork.SaveAsync(cancellationToken);
+                    await _unitOfWork.FilprideSalesInvoice.RecalculateTaxBalancesAsync(model.SalesInvoiceId, cancellationToken);
+                    await _unitOfWork.SaveAsync(cancellationToken);
                     await transaction.CommitAsync(cancellationToken);
                     TempData["success"] = $"Sales invoice #{model.SalesInvoiceNo} created successfully";
                     return RedirectToAction(nameof(Index));
@@ -444,6 +446,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #endregion --Audit Trail Recording
 
+                await _unitOfWork.SaveAsync(cancellationToken);
+                await _unitOfWork.FilprideSalesInvoice.RecalculateTaxBalancesAsync(existingRecord.SalesInvoiceId, cancellationToken);
                 await _unitOfWork.SaveAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 TempData["success"] = "Sales invoice updated successfully";
@@ -894,25 +898,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
             worksheet.Cells["I1"].Value = "AmountPaid";
             worksheet.Cells["J1"].Value = "Balance";
             worksheet.Cells["K1"].Value = "IsPaid";
-            worksheet.Cells["L1"].Value = "IsTaxAndVatPaid";
-            worksheet.Cells["M1"].Value = "DueDate";
-            worksheet.Cells["N1"].Value = "CreatedBy";
-            worksheet.Cells["O1"].Value = "CreatedDate";
-            worksheet.Cells["P1"].Value = "CancellationRemarks";
-            worksheet.Cells["Q1"].Value = "OriginalReceivingReportId";
-            worksheet.Cells["R1"].Value = "OriginalCustomerId";
-            worksheet.Cells["S1"].Value = "OriginalPOId";
-            worksheet.Cells["T1"].Value = "OriginalProductId";
-            worksheet.Cells["U1"].Value = "OriginalSeriesNumber";
-            worksheet.Cells["V1"].Value = "OriginalDocumentId";
-            worksheet.Cells["W1"].Value = "PostedBy";
-            worksheet.Cells["X1"].Value = "PostedDate";
-            worksheet.Cells["Y1"].Value = "EditedBy";
-            worksheet.Cells["Z1"].Value = "EditedDate";
-            worksheet.Cells["AA1"].Value = "CanceledBy";
-            worksheet.Cells["AB1"].Value = "CanceledDate";
-            worksheet.Cells["AC1"].Value = "VoidedBy";
-            worksheet.Cells["AD1"].Value = "VoidedDate";
+            worksheet.Cells["L1"].Value = "CwtBalance";
+            worksheet.Cells["M1"].Value = "CwVatBalance";
+            worksheet.Cells["N1"].Value = "CwtAmountPaid";
+            worksheet.Cells["O1"].Value = "CwVatAmountPaid";
+            worksheet.Cells["P1"].Value = "DueDate";
+            worksheet.Cells["Q1"].Value = "CreatedBy";
+            worksheet.Cells["R1"].Value = "CreatedDate";
+            worksheet.Cells["S1"].Value = "CancellationRemarks";
+            worksheet.Cells["T1"].Value = "OriginalReceivingReportId";
+            worksheet.Cells["U1"].Value = "OriginalCustomerId";
+            worksheet.Cells["V1"].Value = "OriginalPOId";
+            worksheet.Cells["W1"].Value = "OriginalProductId";
+            worksheet.Cells["X1"].Value = "OriginalSeriesNumber";
+            worksheet.Cells["Y1"].Value = "OriginalDocumentId";
+            worksheet.Cells["Z1"].Value = "PostedBy";
+            worksheet.Cells["AA1"].Value = "PostedDate";
+            worksheet.Cells["AB1"].Value = "EditedBy";
+            worksheet.Cells["AC1"].Value = "EditedDate";
+            worksheet.Cells["AD1"].Value = "CanceledBy";
+            worksheet.Cells["AE1"].Value = "CanceledDate";
+            worksheet.Cells["AF1"].Value = "VoidedBy";
+            worksheet.Cells["AG1"].Value = "VoidedDate";
 
             int row = 2;
 
@@ -929,25 +936,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 9].Value = item.AmountPaid;
                 worksheet.Cells[row, 10].Value = item.Balance;
                 worksheet.Cells[row, 11].Value = item.IsPaid;
-                worksheet.Cells[row, 12].Value = item.IsTaxAndVatPaid;
-                worksheet.Cells[row, 13].Value = item.DueDate.ToString("yyyy-MM-dd");
-                worksheet.Cells[row, 14].Value = item.CreatedBy;
-                worksheet.Cells[row, 15].Value = item.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
-                worksheet.Cells[row, 16].Value = item.CancellationRemarks;
-                worksheet.Cells[row, 17].Value = item.ReceivingReportId;
-                worksheet.Cells[row, 18].Value = item.CustomerId;
-                worksheet.Cells[row, 19].Value = item.PurchaseOrderId;
-                worksheet.Cells[row, 20].Value = item.ProductId;
-                worksheet.Cells[row, 21].Value = item.SalesInvoiceNo;
-                worksheet.Cells[row, 22].Value = item.SalesInvoiceId;
-                worksheet.Cells[row, 23].Value = item.PostedBy;
-                worksheet.Cells[row, 24].Value = item.PostedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
-                worksheet.Cells[row, 25].Value = item.EditedBy;
-                worksheet.Cells[row, 26].Value = item.EditedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
-                worksheet.Cells[row, 27].Value = item.CanceledBy;
-                worksheet.Cells[row, 28].Value = item.CanceledDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
-                worksheet.Cells[row, 29].Value = item.VoidedBy;
-                worksheet.Cells[row, 30].Value = item.VoidedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                worksheet.Cells[row, 12].Value = item.CwtBalance;
+                worksheet.Cells[row, 13].Value = item.CwVatBalance;
+                worksheet.Cells[row, 14].Value = item.CwtAmountPaid;
+                worksheet.Cells[row, 15].Value = item.CwVatAmountPaid;
+                worksheet.Cells[row, 16].Value = item.DueDate.ToString("yyyy-MM-dd");
+                worksheet.Cells[row, 17].Value = item.CreatedBy;
+                worksheet.Cells[row, 18].Value = item.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
+                worksheet.Cells[row, 19].Value = item.CancellationRemarks;
+                worksheet.Cells[row, 20].Value = item.ReceivingReportId;
+                worksheet.Cells[row, 21].Value = item.CustomerId;
+                worksheet.Cells[row, 22].Value = item.PurchaseOrderId;
+                worksheet.Cells[row, 23].Value = item.ProductId;
+                worksheet.Cells[row, 24].Value = item.SalesInvoiceNo;
+                worksheet.Cells[row, 25].Value = item.SalesInvoiceId;
+                worksheet.Cells[row, 26].Value = item.PostedBy;
+                worksheet.Cells[row, 27].Value = item.PostedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                worksheet.Cells[row, 28].Value = item.EditedBy;
+                worksheet.Cells[row, 29].Value = item.EditedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                worksheet.Cells[row, 30].Value = item.CanceledBy;
+                worksheet.Cells[row, 31].Value = item.CanceledDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                worksheet.Cells[row, 32].Value = item.VoidedBy;
+                worksheet.Cells[row, 33].Value = item.VoidedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
 
                 row++;
             }

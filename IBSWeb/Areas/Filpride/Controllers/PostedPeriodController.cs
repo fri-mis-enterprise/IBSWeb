@@ -1,14 +1,17 @@
 using System.Security.Claims;
 using IBS.DataAccess.Data;
+using IBS.DataAccess.Repository.IRepository;
+using IBS.Models;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.ViewModels;
-using IBS.Models;
 using IBS.Services;
 using IBS.Utility.Helpers;
+using IBSWeb.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace IBSWeb.Areas.Filpride.Controllers
@@ -25,15 +28,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private readonly ICacheService _cacheService;
 
+        private readonly IUnitOfWork _unitOfWork;
+
+        private readonly IHubContext<NotificationHub> _hubContext;
+
         public PostedPeriodController(ApplicationDbContext dbContext,
             UserManager<ApplicationUser> userManager,
             ILogger<PostedPeriodController> logger,
-            ICacheService cacheService)
+            ICacheService cacheService,
+            IUnitOfWork unitOfWork,
+            IHubContext<NotificationHub> hubContext)
         {
             _dbContext = dbContext;
             _userManager = userManager;
             _logger = logger;
             _cacheService = cacheService;
+            _unitOfWork = unitOfWork;
+            _hubContext = hubContext;
         }
 
         private string GetUserFullName()
@@ -136,6 +147,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 await _dbContext.FilprideAuditTrails.AddAsync(auditTrailBook, cancellationToken);
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
+
+                await NotifyAdminAsync(
+                    $"{GetUserFullName()} posted {modulesPosted} for {request.Month:00}/{request.Year}.",
+                    cancellationToken);
+
                 await _cacheService.RemoveAsync("coa", cancellationToken);
 
                 TempData["SuccessMessage"] = $"Successfully posted {postedPeriods.Count} module(s) for period {request.Month}/{request.Year}.";
@@ -190,6 +206,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 await _dbContext.FilprideAuditTrails.AddAsync(auditTrailBook, cancellationToken);
                 _dbContext.PostedPeriods.RemoveRange(postedPeriods);
                 await _dbContext.SaveChangesAsync(cancellationToken);
+
+                await NotifyAdminAsync($"{GetUserFullName()} unposted {modules}.", cancellationToken);
+
                 await _cacheService.RemoveAsync("coa", cancellationToken);
 
                 TempData["SuccessMessage"] = $"Successfully unposted {postedPeriods.Count} period(s).";
@@ -197,7 +216,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             catch (Exception ex)
             {
                 TempData["ErrorMessage"] = $"Error unposting periods: {ex.Message}";
-                _logger.LogError(ex, "Failed to unpost selected periods.");
+                _logger.LogError(ex, "Failed to unpost selected periods");
             }
 
             return RedirectToAction(nameof(Index));
@@ -227,6 +246,38 @@ namespace IBSWeb.Areas.Filpride.Controllers
             catch (Exception ex)
             {
                 return Json(new { error = ex.Message });
+            }
+        }
+
+        private async Task NotifyAdminAsync(string message, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var adminName = "azh";
+                var recipient = await _userManager.FindByNameAsync(adminName);
+
+                if (recipient == null || !recipient.IsActive)
+                {
+                    _logger.LogWarning("Posting activity notification recipient {AdminName} was not found or is inactive", adminName);
+                    return;
+                }
+
+                await _unitOfWork.Notifications.AddNotificationAsync(recipient.Id, message);
+
+                var connectionIds = await _dbContext.HubConnections
+                    .Where(connection => connection.UserName == recipient.UserName)
+                    .Select(connection => connection.ConnectionId)
+                    .ToListAsync(cancellationToken);
+
+                foreach (var connectionId in connectionIds)
+                {
+                    await _hubContext.Clients.Client(connectionId)
+                        .SendAsync("ReceivedNotification", "You have a new message.", cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to deliver posting activity notification to azh");
             }
         }
     }

@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Filpride.IRepository;
+using IBS.DTOs;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsPayable;
 using IBS.Models.Filpride.Books;
@@ -9,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IBS.DataAccess.Repository.Filpride
 {
-    public class CheckVoucherRepository : Repository<FilprideCheckVoucherHeader>, ICheckVoucherRepository
+    public class CheckVoucherRepository: Repository<FilprideCheckVoucherHeader>, ICheckVoucherRepository
     {
         private readonly ApplicationDbContext _db;
 
@@ -280,31 +281,100 @@ namespace IBS.DataAccess.Repository.Filpride
 
             #region --General Ledger Book Recording(CV)--
 
-            var accountTitlesDto = await GetListOfAccountTitleDto(cancellationToken);
+            var accountTitlesByNumber = (await GetListOfAccountTitleDto(cancellationToken))
+                .ToDictionary(account => account.AccountNumber);
+            var ledgers = BuildGeneralLedgerEntries(header, details, accountTitlesByNumber);
+
+            await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken);
+
+            #endregion --General Ledger Book Recording(CV)--
+        }
+
+        public async Task<int> RebuildGeneralLedgerAsync(
+            DateOnly startDate,
+            DateOnly endDate,
+            CancellationToken cancellationToken = default)
+        {
+            var checkVouchers = await _db.FilprideCheckVoucherHeaders
+                .AsNoTracking()
+                .Include(checkVoucher => checkVoucher.Details)
+                .Include(checkVoucher => checkVoucher.Supplier)
+                .Where(checkVoucher =>
+                    checkVoucher.PostedBy != null &&
+                    checkVoucher.Date >= startDate &&
+                    checkVoucher.Date < endDate)
+                .OrderBy(checkVoucher => checkVoucher.Date)
+                .ToListAsync(cancellationToken);
+
+            if (checkVouchers.Count == 0)
+            {
+                return 0;
+            }
+
+            var accountTitlesByNumber = (await GetListOfAccountTitleDto(cancellationToken))
+                .ToDictionary(account => account.AccountNumber);
             var ledgers = new List<FilprideGeneralLedgerBook>();
+
+            foreach (var checkVoucher in checkVouchers)
+            {
+                if (ShouldSkipGeneralLedgerEntries(checkVoucher))
+                {
+                    continue;
+                }
+
+                var details = checkVoucher.Details!
+                    .Where(detail => !detail.IsDisplayEntry);
+                ledgers.AddRange(BuildGeneralLedgerEntries(checkVoucher, details, accountTitlesByNumber));
+            }
+
+            var references = checkVouchers
+                .Select(checkVoucher => checkVoucher.CheckVoucherHeaderNo!)
+                .Distinct()
+                .ToList();
+
+            await _db.FilprideGeneralLedgerBooks
+                .Where(ledger => references.Contains(ledger.Reference))
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken);
+
+            return checkVouchers.Count;
+        }
+
+        private List<FilprideGeneralLedgerBook> BuildGeneralLedgerEntries(
+            FilprideCheckVoucherHeader header,
+            IEnumerable<FilprideCheckVoucherDetail> details,
+            IReadOnlyDictionary<string, AccountTitleDto> accountTitlesByNumber)
+        {
+            var ledgers = new List<FilprideGeneralLedgerBook>();
+
             foreach (var detail in details)
             {
-                var account = accountTitlesDto.Find(c => c.AccountNumber == detail.AccountNo)
-                              ?? throw new ArgumentException($"Account title '{detail.AccountNo}' not found.");
+                if (!accountTitlesByNumber.TryGetValue(detail.AccountNo, out var account))
+                {
+                    throw new ArgumentException($"Account title '{detail.AccountNo}' not found.");
+                }
+
                 ledgers.Add(
-                        new FilprideGeneralLedgerBook
-                        {
-                            Date = header.Date,
-                            Reference = header.CheckVoucherHeaderNo!,
-                            Description = header.Particulars!,
-                            AccountId = account.AccountId,
-                            AccountNo = account.AccountNumber,
-                            AccountTitle = account.AccountName,
-                            Debit = detail.Debit,
-                            Credit = detail.Credit,
-                            CreatedBy = header.PostedBy!,
-                            CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
-                            SubAccountType = detail.SubAccountType,
-                            SubAccountId = detail.SubAccountId,
-                            SubAccountName = detail.SubAccountName,
-                            ModuleType = nameof(ModuleType.Disbursement)
-                        }
-                    );
+                    new FilprideGeneralLedgerBook
+                    {
+                        Date = header.Date,
+                        Reference = header.CheckVoucherHeaderNo!,
+                        Description = header.Particulars!,
+                        AccountId = account.AccountId,
+                        AccountNo = account.AccountNumber,
+                        AccountTitle = account.AccountName,
+                        Debit = detail.Debit,
+                        Credit = detail.Credit,
+                        CreatedBy = header.PostedBy!,
+                        CreatedDate = DateTimeHelper.GetCurrentPhilippineTime(),
+                        SubAccountType = detail.SubAccountType,
+                        SubAccountId = detail.SubAccountId,
+                        SubAccountName = detail.SubAccountName,
+                        ModuleType = nameof(ModuleType.Disbursement)
+                    });
             }
 
             if (header.SupplierId.HasValue)
@@ -320,10 +390,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 throw new ArgumentException("Debit and Credit is not equal, check your entries.");
             }
 
-            await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
-            await _db.SaveChangesAsync(cancellationToken);
-
-            #endregion --General Ledger Book Recording(CV)--
+            return ledgers;
         }
 
         private async Task<bool> ShouldSkipGeneralLedgerEntriesAsync(
@@ -343,6 +410,17 @@ namespace IBS.DataAccess.Repository.Filpride
 
             supplierName ??= header.SupplierName ?? header.Payee;
 
+            return ShouldSkipGeneralLedgerEntries(supplierName);
+        }
+
+        private static bool ShouldSkipGeneralLedgerEntries(FilprideCheckVoucherHeader header)
+        {
+            var supplierName = header.Supplier?.SupplierName ?? header.SupplierName ?? header.Payee;
+            return ShouldSkipGeneralLedgerEntries(supplierName);
+        }
+
+        private static bool ShouldSkipGeneralLedgerEntries(string? supplierName)
+        {
             return supplierName?.StartsWith("MNVP", StringComparison.OrdinalIgnoreCase) == true;
         }
     }

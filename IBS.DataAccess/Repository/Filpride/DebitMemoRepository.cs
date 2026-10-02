@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.Filpride.IRepository;
+using IBS.DTOs;
 using IBS.Models.Enums;
 using IBS.Models.Filpride.AccountsReceivable;
 using IBS.Models.Filpride.Books;
@@ -10,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IBS.DataAccess.Repository.Filpride
 {
-    public class DebitMemoRepository : Repository<FilprideDebitMemo>, IDebitMemoRepository
+    public class DebitMemoRepository: Repository<FilprideDebitMemo>, IDebitMemoRepository
     {
         private readonly ApplicationDbContext _db;
 
@@ -77,9 +78,12 @@ namespace IBS.DataAccess.Repository.Filpride
             return lastSeries.Substring(0, 3) + incrementedNumber.ToString("D9");
         }
 
-        public async Task PostAsync(FilprideDebitMemo model, CancellationToken cancellationToken = default)
+        public async Task PostAsync(FilprideDebitMemo model,
+            CancellationToken cancellationToken = default,
+            List<AccountTitleDto>? accountTitlesDto = null,
+            bool saveChanges = true)
         {
-            var accountTitlesDto = await GetListOfAccountTitleDto(cancellationToken);
+            accountTitlesDto ??= await GetListOfAccountTitleDto(cancellationToken);
             var arTradeReceivableTitle = accountTitlesDto.Find(c => c.AccountNumber == "101020100") ?? throw new ArgumentException("Account title '101020100' not found.");
             var arNonTradeTitle = accountTitlesDto.Find(c => c.AccountNumber == "101020500") ?? throw new ArgumentException("Account title '101020500' not found.");
             var arTradeCwt = accountTitlesDto.Find(c => c.AccountNumber == "101020200") ?? throw new ArgumentException("Account title '101020200' not found.");
@@ -347,7 +351,10 @@ namespace IBS.DataAccess.Repository.Filpride
                 await _db.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers, cancellationToken);
             }
 
-            await _db.SaveChangesAsync(cancellationToken);
+            if (saveChanges)
+            {
+                await _db.SaveChangesAsync(cancellationToken);
+            }
         }
 
         public override async Task<FilprideDebitMemo?> GetAsync(Expression<Func<FilprideDebitMemo, bool>> filter, CancellationToken cancellationToken = default)
@@ -403,6 +410,8 @@ namespace IBS.DataAccess.Repository.Filpride
                 .ThenInclude(s => s!.Customer)
                 .Include(c => c.SalesInvoice)
                 .ThenInclude(s => s!.CustomerOrderSlip)
+                .Include(c => c.SalesInvoice)
+                .ThenInclude(s => s!.DeliveryReceipt)
                 .Include(c => c.ServiceInvoice)
                 .ThenInclude(sv => sv!.Customer)
                 .Include(c => c.ServiceInvoice)
