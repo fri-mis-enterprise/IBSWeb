@@ -1050,3 +1050,8 @@ body.loading {
     font-size: 0.7rem;
     padding: 0.25em 0.4em;
 }
+
+.actions-dropdown .dropdown-menu {
+    position: fixed !important;
+    z-index: 99999 !important;
+}

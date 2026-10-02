@@ -1,4 +1,4 @@
-@model List<IBS.Models.Filpride.MasterFile.FilprideCollectionCategory>
+﻿@model List<IBS.Models.Filpride.MasterFile.FilprideCollectionCategory>
 @{
     ViewData["Title"] = "Collection Categories";
 }
@@ -59,7 +59,8 @@
     <script>
         $(function () {
             $('#paginatedTable').DataTable({
-                scrollY: '70vh',
+                scrollY: '45vh',
+                scrollCollapse: true,
                 order: [[0, 'asc']],
                 columnDefs: [{ orderable: false, searchable: false, targets: 5 }],
                 language: { emptyTable: 'No collection categories available.' }

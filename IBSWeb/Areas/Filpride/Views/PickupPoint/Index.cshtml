@@ -1,4 +1,4 @@
-@model IEnumerable<FilpridePickUpPoint>
+﻿@model IEnumerable<FilpridePickUpPoint>
 
 @{
     ViewData["Title"] = "Pickup Point";
@@ -43,7 +43,8 @@
                 "processing": true,
                 "serverSide": true,
                 "stateDuration": 86400,
-                "scrollY": '70vh',
+                "scrollY": '45vh',
+                "scrollCollapse": true,
                 "language": {
                     "processing": `<div class="d-flex justify-content-center">
                                     <div class="spinner-border text-primary" role="status">

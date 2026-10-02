@@ -1,4 +1,4 @@
-@model PostedPeriodViewModel
+﻿@model PostedPeriodViewModel
 @{
     ViewData["Title"] = "Post Periods";
 }
@@ -295,7 +295,8 @@
 
         const selectedPeriodIds = new Set();
         const table = $('#postedPeriodsTable').DataTable({
-            scrollY: '70vh',
+            scrollY: '45vh',
+            scrollCollapse: true,
             responsive: true,
             pageLength: 10,
             order: [[4, 'desc']],
