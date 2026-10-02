@@ -614,6 +614,8 @@ namespace IBS.Services
                 await dbContext.FilprideGeneralLedgerBooks
                     .Where(entry =>
                         deliveryReceiptReferences.Contains(entry.Reference) &&
+                        entry.Date >= startDate &&
+                        entry.Date < endDate &&
                         entry.Description.StartsWith("Cost of money from late deposit"))
                     .ExecuteDeleteAsync(cancellationToken);
             }

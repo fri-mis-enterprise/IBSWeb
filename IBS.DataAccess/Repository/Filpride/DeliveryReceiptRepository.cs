@@ -121,6 +121,9 @@ namespace IBS.DataAccess.Repository.Filpride
                 .Include(dr => dr.PurchaseOrder).ThenInclude(po => po!.Product)
                 .Include(dr => dr.AuthorityToLoad)
                 .Include(dr => dr.Details).ThenInclude(d => d.CustomerOrderSlip).ThenInclude(cos => cos!.Product)
+                .Include(dr => dr.Details).ThenInclude(d => d.CustomerOrderSlip).ThenInclude(cos => cos!.PickUpPoint)
+                .Include(dr => dr.Details).ThenInclude(d => d.CustomerOrderSlip).ThenInclude(cos => cos!.Commissionee)
+                .Include(dr => dr.Details).ThenInclude(d => d.CustomerOrderSlip).ThenInclude(cos => cos!.Product)
                 .Include(dr => dr.Details).ThenInclude(d => d.PurchaseOrder).ThenInclude(po => po!.Supplier)
                 .Include(dr => dr.Details).ThenInclude(d => d.PurchaseOrder).ThenInclude(po => po!.Product)
                 .Include(dr => dr.Details).ThenInclude(d => d.AuthorityToLoad)
@@ -303,37 +306,6 @@ namespace IBS.DataAccess.Repository.Filpride
                             AuthorityToLoad = deliveryReceipt.AuthorityToLoad
                         }
                     };
-
-                var missingCosIds = detailLines
-                    .Where(d => d.CustomerOrderSlip == null)
-                    .Select(d => d.CustomerOrderSlipId)
-                    .Distinct()
-                    .ToList();
-
-                var missingPoIds = detailLines
-                    .Where(d => d.PurchaseOrder == null)
-                    .Select(d => d.PurchaseOrderId)
-                    .Distinct()
-                    .ToList();
-
-                var cosLookup = missingCosIds.Count == 0
-                    ? new Dictionary<int, FilprideCustomerOrderSlip>()
-                    : await _db.FilprideCustomerOrderSlips
-                        .Include(c => c.Product)
-                        .Include(c => c.Customer)
-                        .Include(c => c.Commissionee)
-                        .Include(c => c.PickUpPoint)
-                        .Where(c => missingCosIds.Contains(c.CustomerOrderSlipId))
-                        .ToDictionaryAsync(c => c.CustomerOrderSlipId, cancellationToken);
-
-                var poLookup = missingPoIds.Count == 0
-                    ? new Dictionary<int, FilpridePurchaseOrder>()
-                    : await _db.FilpridePurchaseOrders
-                        .Include(p => p.Product)
-                        .Include(p => p.Supplier)
-                        .Include(p => p.ActualPrices)
-                        .Where(p => missingPoIds.Contains(p.PurchaseOrderId))
-                        .ToDictionaryAsync(p => p.PurchaseOrderId, cancellationToken);
 
                 decimal AllocateByQuantity(decimal unitAmount, decimal lineQuantity, bool isLastLine, ref decimal allocatedGrossAmount)
                 {
