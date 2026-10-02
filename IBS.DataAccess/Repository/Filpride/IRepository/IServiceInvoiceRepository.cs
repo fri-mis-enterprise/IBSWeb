@@ -12,6 +12,10 @@ namespace IBS.DataAccess.Repository.Filpride.IRepository
             int? excludedCollectionReceiptId = null,
             CancellationToken cancellationToken = default);
 
+        Task<List<ServiceInvoiceCollectionDetailsDto>> GetCollectionDetailsAsync(int[] serviceInvoiceIds,
+            int? excludedCollectionReceiptId = null,
+            CancellationToken cancellationToken = default);
+
         Task RecalculateTaxBalancesAsync(int serviceInvoiceId, CancellationToken cancellationToken = default);
 
         Task PostAsync(FilprideServiceInvoice model, CancellationToken cancellationToken = default,
