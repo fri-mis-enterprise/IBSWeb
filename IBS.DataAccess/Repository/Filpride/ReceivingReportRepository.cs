@@ -325,11 +325,6 @@ namespace IBS.DataAccess.Repository.Filpride
                 ? ComputeEwtAmount(netOfVatAmount, model.TaxPercentage)
                 : 0m;
 
-            if (model.PurchaseOrder.Terms == SD.Terms_Cod || model.PurchaseOrder.Terms == SD.Terms_Prepaid)
-            {
-                ewtAmount = await ApplyAdvanceEwtOffsetAsync(model, ewtAmount, isReversal: false, cancellationToken);
-            }
-
             var netOfEwtAmount = model.PurchaseOrder!.TaxType == SD.TaxType_WithTax
                 ? ComputeNetOfEwt(model.Amount, ewtAmount)
                 : model.Amount;
@@ -463,19 +458,6 @@ namespace IBS.DataAccess.Repository.Filpride
             model.Status = nameof(Status.Voided);
             model.PostedBy = null;
 
-            if (model.PurchaseOrder != null &&
-                (model.PurchaseOrder.Terms == SD.Terms_Cod || model.PurchaseOrder.Terms == SD.Terms_Prepaid))
-            {
-                var netOfVatAmount = model.PurchaseOrder.VatType == SD.VatType_Vatable
-                    ? ComputeNetOfVat(model.Amount)
-                    : model.Amount;
-                var ewtAmount = model.PurchaseOrder.TaxType == SD.TaxType_WithTax
-                    ? ComputeEwtAmount(netOfVatAmount, model.TaxPercentage)
-                    : 0m;
-
-                await ApplyAdvanceEwtOffsetAsync(model, ewtAmount, isReversal: true, cancellationToken);
-            }
-
             var unitOfWork = new UnitOfWork(_db);
             await unitOfWork.GeneralLedger.ReverseEntries(model.ReceivingReportNo, cancellationToken);
 
@@ -501,66 +483,6 @@ namespace IBS.DataAccess.Repository.Filpride
             #endregion --Audit Trail Recording
 
             await _db.SaveChangesAsync(cancellationToken);
-        }
-
-        private async Task<decimal> ApplyAdvanceEwtOffsetAsync(
-            FilprideReceivingReport model,
-            decimal ewtAmount,
-            bool isReversal,
-            CancellationToken cancellationToken)
-        {
-            if (ewtAmount <= 0 || model.PurchaseOrder?.SupplierId == null)
-            {
-                return ewtAmount;
-            }
-
-            var advancesVouchers = await _db.FilprideCheckVoucherDetails
-                .Include(cv => cv.CheckVoucherHeader)
-                .Where(cv =>
-                    cv.CheckVoucherHeader!.SupplierId == model.PurchaseOrder.SupplierId &&
-                    cv.CheckVoucherHeader.IsAdvances &&
-                    cv.CheckVoucherHeader.Status == nameof(CheckVoucherPaymentStatus.Posted) &&
-                    cv.AccountName.Contains("Expanded Withholding Tax") &&
-                    (isReversal ? cv.AmountPaid > 0 : cv.Credit > cv.AmountPaid))
-                .OrderBy(cv => cv.CheckVoucherHeader!.Date)
-                .ThenBy(cv => cv.CheckVoucherHeaderId)
-                .ThenBy(cv => cv.CheckVoucherDetailId)
-                .ToListAsync(cancellationToken);
-
-            if (advancesVouchers.Count == 0)
-            {
-                return ewtAmount;
-            }
-
-            var remainingEwt = ewtAmount;
-
-            if (remainingEwt <= 0)
-            {
-                return ewtAmount;
-            }
-
-            foreach (var advancesVoucher in advancesVouchers)
-            {
-                if (remainingEwt <= 0)
-                {
-                    break;
-                }
-
-                var availableAmount = isReversal
-                    ? advancesVoucher.AmountPaid
-                    : advancesVoucher.Credit - advancesVoucher.AmountPaid;
-
-                if (availableAmount <= 0)
-                {
-                    continue;
-                }
-
-                var affectedEwt = Math.Min(availableAmount, remainingEwt);
-                advancesVoucher.AmountPaid += isReversal ? -affectedEwt : affectedEwt;
-                remainingEwt -= affectedEwt;
-            }
-
-            return isReversal ? ewtAmount : remainingEwt;
         }
 
         public async Task CreateEntriesForUpdatingCost(FilprideReceivingReport model, decimal difference, string userName, CancellationToken cancellationToken = default)
@@ -589,19 +511,6 @@ namespace IBS.DataAccess.Repository.Filpride
             var ewtAmount = model.PurchaseOrder!.TaxType == SD.TaxType_WithTax
                 ? ComputeEwtAmount(netOfVatAmount, model.TaxPercentage)
                 : 0m;
-
-
-            if (model.PurchaseOrder.Terms == SD.Terms_Cod || model.PurchaseOrder.Terms == SD.Terms_Prepaid)
-            {
-                if (isIncremental)
-                {
-                    ewtAmount = await ApplyAdvanceEwtOffsetAsync(model, ewtAmount, isReversal: false, cancellationToken);
-                }
-                else
-                {
-                    await ApplyAdvanceEwtOffsetAsync(model, ewtAmount, isReversal: true, cancellationToken);
-                }
-            }
 
             var netOfEwtAmount = model.PurchaseOrder!.TaxType == SD.TaxType_WithTax
                 ? ComputeNetOfEwt(difference, ewtAmount)
