@@ -633,13 +633,28 @@ namespace IBS.DataAccess.Repository.Filpride
             CancellationToken cancellationToken = default,
             List<AccountTitleDto>? accountTitlesDto = null,
             bool saveChanges = true,
-            bool checkExistingEntry = true)
+            bool checkExistingEntry = true,
+            int? sourceCollectionReceiptDetailId = null)
         {
-            if (checkExistingEntry && await _db.FilprideGeneralLedgerBooks.AnyAsync(entry =>
-                    entry.Reference == deliveryReceipt.DeliveryReceiptNo &&
-                    entry.Description.StartsWith("Cost of money from late deposit"), cancellationToken))
+            var sourceMarker = sourceCollectionReceiptDetailId.HasValue
+                ? $" Collection detail #{sourceCollectionReceiptDetailId.Value}."
+                : string.Empty;
+            var description = $"Cost of money from late deposit – {deliveryReceipt.CustomerOrderSlip!.DeliveryOption} by {deliveryReceipt.Hauler?.SupplierName ?? "Client"}.{sourceMarker}";
+
+            if (checkExistingEntry)
             {
-                return;
+                var existingEntries = _db.FilprideGeneralLedgerBooks.Where(entry =>
+                    entry.Reference == deliveryReceipt.DeliveryReceiptNo &&
+                    entry.Description.StartsWith("Cost of money from late deposit"));
+
+                var hasExistingCostOfMoneyEntry = sourceCollectionReceiptDetailId.HasValue
+                    ? await existingEntries.AnyAsync(entry => entry.Description.EndsWith(sourceMarker), cancellationToken)
+                    : await existingEntries.AnyAsync(cancellationToken);
+
+                if (hasExistingCostOfMoneyEntry)
+                {
+                    return;
+                }
             }
 
             deliveryReceipt.CommissionAmount -= costOfMoney;
@@ -670,7 +685,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 {
                     Date = depositedDate,
                     Reference = deliveryReceipt.DeliveryReceiptNo,
-                    Description = $"Cost of money from late deposit – {deliveryReceipt.CustomerOrderSlip.DeliveryOption} by {deliveryReceipt.Hauler?.SupplierName ?? "Client"}.",
+                    Description = description,
                     AccountId = apCommissionPayableTitle.AccountId,
                     AccountNo = apCommissionPayableTitle.AccountNumber,
                     AccountTitle = apCommissionPayableTitle.AccountName,
@@ -691,7 +706,7 @@ namespace IBS.DataAccess.Repository.Filpride
                 {
                     Date = depositedDate,
                     Reference = deliveryReceipt.DeliveryReceiptNo,
-                    Description = $"Cost of money from late deposit – {deliveryReceipt.CustomerOrderSlip.DeliveryOption} by {deliveryReceipt.Hauler?.SupplierName ?? "Client"}.",
+                    Description = description,
                     AccountId = ewtTitle!.AccountId,
                     AccountNo = ewtTitle.AccountNumber,
                     AccountTitle = ewtTitle.AccountName,
@@ -707,7 +722,7 @@ namespace IBS.DataAccess.Repository.Filpride
             {
                 Date = depositedDate,
                 Reference = deliveryReceipt.DeliveryReceiptNo,
-                Description = $"Cost of money from late deposit – {deliveryReceipt.CustomerOrderSlip.DeliveryOption} by {deliveryReceipt.Hauler?.SupplierName ?? "Client"}.",
+                Description = description,
                 AccountId = commissionTitle.AccountId,
                 AccountNo = commissionTitle.AccountNumber,
                 AccountTitle = commissionTitle.AccountName,

@@ -49,7 +49,8 @@ namespace IBS.DataAccess.Repository.Filpride.IRepository
             CancellationToken cancellationToken = default,
             List<AccountTitleDto>? accountTitlesDto = null,
             bool saveChanges = true,
-            bool checkExistingEntry = true);
+            bool checkExistingEntry = true,
+            int? sourceCollectionReceiptDetailId = null);
 
         Task BatchPostCollectionAsync(FilprideCollectionReceipt collectionReceipt, List<AccountTitleDto> accountTitlesDto, CancellationToken cancellationToken = default);
 

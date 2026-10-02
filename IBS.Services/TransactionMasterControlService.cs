@@ -602,26 +602,12 @@ namespace IBS.Services
                     record.DepositedDate.HasValue &&
                     record.ClearedDate.HasValue)
                 .ToList();
-            var salesInvoices = await GetCollectionSalesInvoicesAsync(costOfMoneyReceipts, cancellationToken);
-            var deliveryReceiptReferences = salesInvoices.Values
-                .Where(invoice => invoice.DeliveryReceipt != null)
-                .Select(invoice => invoice.DeliveryReceipt!.DeliveryReceiptNo)
+            var affectedSalesInvoices = await GetCollectionSalesInvoicesAsync(costOfMoneyReceipts, cancellationToken);
+            var affectedDeliveryReceiptIds = affectedSalesInvoices.Values
+                .Where(invoice => invoice.DeliveryReceiptId.HasValue)
+                .Select(invoice => invoice.DeliveryReceiptId!.Value)
                 .Distinct()
                 .ToList();
-
-            if (deliveryReceiptReferences.Count != 0)
-            {
-                await dbContext.FilprideGeneralLedgerBooks
-                    .Where(entry =>
-                        deliveryReceiptReferences.Contains(entry.Reference) &&
-                        entry.Date >= startDate &&
-                        entry.Date < endDate &&
-                        entry.Description.StartsWith("Cost of money from late deposit"))
-                    .ExecuteDeleteAsync(cancellationToken);
-            }
-
-            var nonWorkingDays = await GetCollectionNonWorkingDaysAsync(costOfMoneyReceipts, salesInvoices);
-            var processedCostOfMoneyReferences = new HashSet<string>();
 
             foreach (var record in records)
             {
@@ -639,19 +625,13 @@ namespace IBS.Services
                         cancellationToken,
                         accountTitlesDto,
                         saveChanges: false);
-                    if (IsSalesCollection(record))
-                    {
-                        await ReApplyCollectionCostOfMoneyAsync(
-                            record,
-                            salesInvoices,
-                            nonWorkingDays,
-                            processedCostOfMoneyReferences,
-                            accountTitlesDto,
-                            cancellationToken);
-                    }
                 }
             }
 
+            await RebuildCollectionCostOfMoneyAsync(
+                affectedDeliveryReceiptIds,
+                accountTitlesDto,
+                cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
 
             return records.Count;
@@ -672,74 +652,135 @@ namespace IBS.Services
                 .RebuildGeneralLedgerAsync(startDate, endDate, cancellationToken);
         }
 
-        private async Task ReApplyCollectionCostOfMoneyAsync(
-            FilprideCollectionReceipt collectionReceipt,
-            IReadOnlyDictionary<string, FilprideSalesInvoice> salesInvoices,
-            IReadOnlySet<DateOnly> nonWorkingDays,
-            ISet<string> processedReferences,
+        private async Task RebuildCollectionCostOfMoneyAsync(
+            IReadOnlyCollection<int> deliveryReceiptIds,
             List<AccountTitleDto> accountTitlesDto,
             CancellationToken cancellationToken)
         {
-            if (collectionReceipt.DepositedDate == null)
+            if (deliveryReceiptIds.Count == 0)
             {
                 return;
             }
 
-            foreach (var receipt in collectionReceipt.ReceiptDetails!)
+            var salesInvoices = await dbContext.FilprideSalesInvoices
+                .Include(invoice => invoice.DeliveryReceipt)
+                .ThenInclude(deliveryReceipt => deliveryReceipt!.Hauler)
+                .Include(invoice => invoice.DeliveryReceipt)
+                .ThenInclude(deliveryReceipt => deliveryReceipt!.Commissionee)
+                .Include(invoice => invoice.DeliveryReceipt)
+                .ThenInclude(deliveryReceipt => deliveryReceipt!.CustomerOrderSlip)
+                .ThenInclude(customerOrderSlip => customerOrderSlip!.Product)
+                .Where(invoice =>
+                    invoice.DeliveryReceiptId.HasValue &&
+                    deliveryReceiptIds.Contains(invoice.DeliveryReceiptId.Value))
+                .AsSplitQuery()
+                .ToListAsync(cancellationToken);
+
+            var salesInvoicesByNumber = salesInvoices
+                .Where(invoice => invoice.SalesInvoiceNo != null)
+                .GroupBy(invoice => invoice.SalesInvoiceNo!)
+                .ToDictionary(group => group.Key, group => group.First());
+            var invoiceNumbers = salesInvoicesByNumber.Keys.ToList();
+
+            var collectionDetails = await dbContext.FilprideCollectionReceiptDetails
+                .AsNoTracking()
+                .Include(detail => detail.FilprideCollectionReceipt)
+                .Where(detail =>
+                    invoiceNumbers.Contains(detail.InvoiceNo) &&
+                    detail.FilprideCollectionReceipt!.PostedBy != null &&
+                    detail.FilprideCollectionReceipt.Status != nameof(CollectionReceiptStatus.Voided) &&
+                    detail.FilprideCollectionReceipt.Status != nameof(CollectionReceiptStatus.Canceled) &&
+                    detail.FilprideCollectionReceipt.DepositedDate.HasValue &&
+                    detail.FilprideCollectionReceipt.ClearedDate.HasValue)
+                .OrderBy(detail => detail.FilprideCollectionReceipt!.DepositedDate)
+                .ThenBy(detail => detail.CollectionReceiptId)
+                .ThenBy(detail => detail.Id)
+                .ToListAsync(cancellationToken);
+
+            var deliveryReceipts = salesInvoices
+                .Where(invoice => invoice.DeliveryReceipt != null)
+                .Select(invoice => invoice.DeliveryReceipt!)
+                .GroupBy(deliveryReceipt => deliveryReceipt.DeliveryReceiptId)
+                .ToDictionary(group => group.Key, group => group.First());
+            var deliveryReceiptReferences = deliveryReceipts.Values
+                .Select(deliveryReceipt => deliveryReceipt.DeliveryReceiptNo)
+                .Distinct()
+                .ToList();
+
+            await dbContext.FilprideGeneralLedgerBooks
+                .Where(entry =>
+                    deliveryReceiptReferences.Contains(entry.Reference) &&
+                    entry.Description.StartsWith("Cost of money from late deposit"))
+                .ExecuteDeleteAsync(cancellationToken);
+
+            var eligibleDeliveryReceiptIds = new HashSet<int>();
+            foreach (var deliveryReceipt in deliveryReceipts.Values)
             {
-                if (!salesInvoices.TryGetValue(receipt.InvoiceNo, out var salesInvoice) ||
-                    salesInvoice.DeliveryReceipt == null ||
-                    salesInvoice.CustomerOrderSlip == null)
+                deliveryReceipt.CommissionAmount = DecimalRoundingHelper.ComputeAmountFromUnitPrice(
+                    deliveryReceipt.Quantity,
+                    deliveryReceipt.CommissionRate);
+
+                if (deliveryReceipt.CommissionAmount > 0)
+                {
+                    eligibleDeliveryReceiptIds.Add(deliveryReceipt.DeliveryReceiptId);
+                }
+            }
+
+            var costRanges = collectionDetails
+                .Where(detail => salesInvoicesByNumber.ContainsKey(detail.InvoiceNo))
+                .Select(detail => new
+                {
+                    salesInvoicesByNumber[detail.InvoiceNo].DueDate,
+                    DepositedDate = detail.FilprideCollectionReceipt!.DepositedDate!.Value
+                })
+                .Where(range => range.DueDate <= range.DepositedDate)
+                .ToList();
+            HashSet<DateOnly> nonWorkingDays = costRanges.Count == 0
+                ? []
+                : (await DateTimeHelper.GetNonWorkingDays(
+                    costRanges.Min(range => range.DueDate),
+                    costRanges.Max(range => range.DepositedDate))).ToHashSet();
+
+            foreach (var detail in collectionDetails)
+            {
+                if (!salesInvoicesByNumber.TryGetValue(detail.InvoiceNo, out var salesInvoice) ||
+                    !salesInvoice.DeliveryReceiptId.HasValue ||
+                    !deliveryReceipts.TryGetValue(salesInvoice.DeliveryReceiptId.Value, out var deliveryReceipt) ||
+                    deliveryReceipt.CustomerOrderSlip == null)
                 {
                     continue;
                 }
 
-                var hasWvat = salesInvoice.CustomerOrderSlip.HasWVAT;
-                var hasWtax = salesInvoice.CustomerOrderSlip.HasEWT;
-                var isVatable = salesInvoice.CustomerOrderSlip.VatType == SD.VatType_Vatable;
-                var dr = salesInvoice.DeliveryReceipt;
-                var commissionAmount = DecimalRoundingHelper.ComputeAmountFromUnitPrice(dr.Quantity, dr.CommissionRate);
-
+                var depositedDate = detail.FilprideCollectionReceipt!.DepositedDate!.Value;
                 var nonWorkingDayCount = nonWorkingDays.Count(day =>
                     day >= salesInvoice.DueDate &&
-                    day <= collectionReceipt.DepositedDate.Value);
-                var daysDelayed = collectionReceipt.DepositedDate.Value.DayNumber -
+                    day <= depositedDate);
+                var daysDelayed = depositedDate.DayNumber -
                                   salesInvoice.DueDate.DayNumber -
                                   nonWorkingDayCount;
 
-                if (daysDelayed <= 0 || commissionAmount <= 0)
-                {
-                    dr.CommissionAmount = commissionAmount;
-                    continue;
-                }
-
-                if (!processedReferences.Add(dr.DeliveryReceiptNo))
+                if (daysDelayed <= 0 ||
+                    !eligibleDeliveryReceiptIds.Contains(deliveryReceipt.DeliveryReceiptId))
                 {
                     continue;
                 }
 
-                dr.CommissionAmount = commissionAmount;
-
-                var netOfVat = isVatable
-                    ? unitOfWork.FilprideCollectionReceipt.ComputeNetOfVat(receipt.Amount)
-                    : receipt.Amount;
-                var wvatAmount = hasWvat
-                    ? unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, salesInvoice.DeliveryReceipt?.CwvPercent ?? 0.0500m)
-                    : 0m;
-                var wtaxAmount = hasWtax
-                    ? unitOfWork.FilprideCollectionReceipt.ComputeEwtAmount(netOfVat, salesInvoice.DeliveryReceipt?.CwtPercent ?? 0.0100m)
-                    : 0m;
-                var paymentAmount = receipt.Amount - wvatAmount - wtaxAmount;
+                var paymentAmount = detail.Amount - detail.EWT - detail.WVAT;
+                if (paymentAmount <= 0)
+                {
+                    continue;
+                }
 
                 var costOfMoney = paymentAmount * .03m * daysDelayed / 360m;
 
-                await unitOfWork.FilprideCollectionReceipt.ApplyCostOfMoney(dr, costOfMoney,
+                await unitOfWork.FilprideCollectionReceipt.ApplyCostOfMoney(deliveryReceipt, costOfMoney,
                     "SYSTEM GENERATED",
-                    collectionReceipt.DepositedDate.Value,
+                    depositedDate,
                     cancellationToken,
                     accountTitlesDto,
                     saveChanges: false,
-                    checkExistingEntry: false);
+                    checkExistingEntry: false,
+                    sourceCollectionReceiptDetailId: detail.Id);
             }
         }
 
@@ -779,34 +820,6 @@ namespace IBS.Services
             return salesInvoices
                 .GroupBy(invoice => invoice.SalesInvoiceNo!)
                 .ToDictionary(group => group.Key, group => group.First());
-        }
-
-        private static async Task<HashSet<DateOnly>> GetCollectionNonWorkingDaysAsync(
-            IEnumerable<FilprideCollectionReceipt> collectionReceipts,
-            IReadOnlyDictionary<string, FilprideSalesInvoice> salesInvoices)
-        {
-            var dateRanges = collectionReceipts
-                .Where(receipt => receipt.DepositedDate.HasValue)
-                .SelectMany(receipt => (receipt.ReceiptDetails ?? [])
-                    .Where(detail => salesInvoices.ContainsKey(detail.InvoiceNo))
-                    .Select(detail => new
-                    {
-                        salesInvoices[detail.InvoiceNo].DueDate,
-                        DepositedDate = receipt.DepositedDate!.Value
-                    }))
-                .Where(range => range.DueDate <= range.DepositedDate)
-                .ToList();
-
-            if (dateRanges.Count == 0)
-            {
-                return [];
-            }
-
-            var nonWorkingDays = await DateTimeHelper.GetNonWorkingDays(
-                dateRanges.Min(range => range.DueDate),
-                dateRanges.Max(range => range.DepositedDate));
-
-            return nonWorkingDays.ToHashSet();
         }
 
         private async Task<int> ReJournalDebitMemoAsync(int month, int year, CancellationToken cancellationToken)
