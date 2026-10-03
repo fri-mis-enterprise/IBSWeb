@@ -3420,104 +3420,38 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
         }
 
-        public async Task<IActionResult> MultipleInvoiceBalance(int siNo, int? collectionReceiptId, CancellationToken cancellationToken)
+        public async Task<IActionResult> MultipleInvoiceBalances(int[] siNos, int? collectionReceiptId, CancellationToken cancellationToken)
         {
             try
             {
-                var salesInvoice = await _unitOfWork.FilprideSalesInvoice
-                    .GetAsync(si => si.SalesInvoiceId == siNo, cancellationToken);
-
-                if (salesInvoice == null)
-                {
-                    return Json(null);
-                }
-
-                var amount = salesInvoice.Amount;
-                var receiptAmount = collectionReceiptId.HasValue
-                    ? await _dbContext.FilprideCollectionReceiptDetails
-                        .Where(detail => detail.CollectionReceiptId == collectionReceiptId.Value &&
-                                         detail.InvoiceNo == salesInvoice.SalesInvoiceNo)
-                        .SumAsync(detail => detail.Amount, cancellationToken)
-                    : 0m;
-                var amountPaid = salesInvoice.AmountPaid - receiptAmount;
-                var balance = salesInvoice.Balance + receiptAmount;
-                var adjustedGrossAmount = salesInvoice.Amount - salesInvoice.Discount + salesInvoice.DebitAmount - salesInvoice.CreditAmount;
-                var netOfVatAmount = (salesInvoice.CustomerOrderSlip?.VatType ?? salesInvoice.Customer?.VatType) == SD.VatType_Vatable
-                    ? DecimalRoundingHelper.ComputeNetOfVat(adjustedGrossAmount)
-                    : DecimalRoundingHelper.RoundToFour(adjustedGrossAmount);
-                var vatAmount = (salesInvoice.CustomerOrderSlip?.VatType ?? salesInvoice.Customer?.VatType) == SD.VatType_Vatable
-                    ? _unitOfWork.FilprideCollectionReceipt.ComputeVatAmount(netOfVatAmount)
-                    : 0m;
-                var taxBalance = await _unitOfWork.FilprideSalesInvoice
-                    .GetTaxBalanceAsync(salesInvoice.SalesInvoiceId, collectionReceiptId, cancellationToken)
-                    ?? throw new InvalidOperationException("Sales invoice tax balance not found.");
-
-                return Json(new
-                {
-                    Amount = amount,
-                    AmountPaid = amountPaid,
-                    NetAmount = netOfVatAmount,
-                    VatAmount = vatAmount,
-                    EwtAmount = taxBalance.CwtBalance,
-                    WvatAmount = taxBalance.CwVatBalance,
-                    CwtAmount = taxBalance.CwtAmount,
-                    CwVatAmount = taxBalance.CwVatAmount,
-                    CwtAmountPaid = taxBalance.CwtAmountPaid,
-                    CwVatAmountPaid = taxBalance.CwVatAmountPaid,
-                    CwtBalance = taxBalance.CwtBalance,
-                    CwVatBalance = taxBalance.CwVatBalance,
-                    Balance = balance,
-                    Debit = salesInvoice.DebitAmount,
-                    Credit = salesInvoice.CreditAmount
-                });
+                var details = await _unitOfWork.FilprideSalesInvoice
+                    .GetCollectionDetailsAsync(siNos, collectionReceiptId, cancellationToken);
+                return Json(details);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to get multiple invoice balance. Error: {ErrorMessage}, Stack: {StackTrace}.",
+                _logger.LogError(ex, "Failed to get multiple invoice balances. Error: {ErrorMessage}, Stack: {StackTrace}.",
                     ex.Message, ex.StackTrace);
-                return StatusCode(StatusCodes.Status500InternalServerError, "Unable to retrieve the invoice balance.");
+                return StatusCode(StatusCodes.Status500InternalServerError, "Unable to retrieve the invoice balances.");
             }
         }
 
         [HttpGet]
-        public async Task<IActionResult> MultipleServiceInvoiceBalance(int siNo, int? collectionReceiptId,
+        public async Task<IActionResult> MultipleServiceInvoiceBalances(int[] siNos, int? collectionReceiptId,
             CancellationToken cancellationToken)
         {
-            var invoice = await _unitOfWork.FilprideServiceInvoice
-                .GetAsync(sv => sv.ServiceInvoiceId == siNo, cancellationToken);
-            if (invoice == null)
+            try
             {
-                return Json(null);
+                var details = await _unitOfWork.FilprideServiceInvoice
+                    .GetCollectionDetailsAsync(siNos, collectionReceiptId, cancellationToken);
+                return Json(details);
             }
-
-            var receiptAmount = collectionReceiptId.HasValue
-                ? await _dbContext.FilprideCollectionReceiptDetails
-                    .Where(detail => detail.CollectionReceiptId == collectionReceiptId.Value &&
-                                     detail.InvoiceNo == invoice.ServiceInvoiceNo)
-                    .SumAsync(detail => detail.Amount, cancellationToken)
-                : 0m;
-            var taxBalance = await _unitOfWork.FilprideServiceInvoice
-                .GetTaxBalanceAsync(invoice.ServiceInvoiceId, collectionReceiptId, cancellationToken);
-            if (taxBalance == null)
+            catch (Exception ex)
             {
-                return Json(null);
+                _logger.LogError(ex, "Failed to get multiple service invoice balances. Error: {ErrorMessage}, Stack: {StackTrace}.",
+                    ex.Message, ex.StackTrace);
+                return StatusCode(StatusCodes.Status500InternalServerError, "Unable to retrieve the service invoice balances.");
             }
-
-            var adjustedGross = invoice.Total - invoice.Discount + invoice.DebitAmount - invoice.CreditAmount;
-            var netAmount = invoice.VatType == SD.VatType_Vatable
-                ? DecimalRoundingHelper.ComputeNetOfVat(adjustedGross)
-                : DecimalRoundingHelper.RoundToFour(adjustedGross);
-            return Json(new
-            {
-                Amount = invoice.Total,
-                NetAmount = netAmount,
-                AmountPaid = invoice.AmountPaid - receiptAmount,
-                Balance = invoice.Balance + receiptAmount,
-                CwtBalance = taxBalance.CwtBalance,
-                CwVatBalance = taxBalance.CwVatBalance,
-                Debit = invoice.DebitAmount,
-                Credit = invoice.CreditAmount
-            });
         }
 
         [Authorize(Policy = nameof(CollectionReceipt.CollectionReceiptMultipleCollectionPreview))]
