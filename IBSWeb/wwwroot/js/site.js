@@ -142,7 +142,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
 $(document).ready(function () {
     $('#dataTable').DataTable({
+        "scrollX": true,
         stateSave: true,
         processing: true
+    });
+});
+
+document
+.querySelectorAll('.actions-dropdown .dropdown-toggle')
+.forEach(toggleElement => {
+    new bootstrap.Dropdown(toggleElement, {
+        popperConfig(defaultConfig) {
+            return {
+                ...defaultConfig,
+                strategy: 'fixed'
+            };
+        }
     });
 });
