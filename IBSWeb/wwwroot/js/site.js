@@ -140,23 +140,26 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 
-$(document).ready(function () {
-    $('#dataTable').DataTable({
-        "scrollX": true,
-        stateSave: true,
-        processing: true
-    });
+function initializeActionDropdowns(container) {
+    container
+        .querySelectorAll('.actions-dropdown .dropdown-toggle')
+        .forEach(toggleElement => {
+            bootstrap.Dropdown.getOrCreateInstance(toggleElement, {
+                popperConfig(defaultConfig) {
+                    return {
+                        ...defaultConfig,
+                        strategy: 'fixed'
+                    };
+                }
+            });
+        });
+}
+
+$(function () {
+    initializeActionDropdowns(document);
 });
 
-document
-.querySelectorAll('.actions-dropdown .dropdown-toggle')
-.forEach(toggleElement => {
-    new bootstrap.Dropdown(toggleElement, {
-        popperConfig(defaultConfig) {
-            return {
-                ...defaultConfig,
-                strategy: 'fixed'
-            };
-        }
-    });
+$(document).on('draw.dt', function (event) {
+    const container = event.target.closest('.dt-container') ?? document;
+    initializeActionDropdowns(container);
 });
