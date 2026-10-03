@@ -18,6 +18,8 @@ namespace IBS.DataAccess.Repository.Filpride.IRepository
 
         Task RecalculateTaxBalancesAsync(int serviceInvoiceId, CancellationToken cancellationToken = default);
 
+        Task RecalculateTaxBalancesAsync(int[] serviceInvoiceIds, CancellationToken cancellationToken = default);
+
         Task PostAsync(FilprideServiceInvoice model, CancellationToken cancellationToken = default,
             List<AccountTitleDto>? accountTitlesDto = null);
     }

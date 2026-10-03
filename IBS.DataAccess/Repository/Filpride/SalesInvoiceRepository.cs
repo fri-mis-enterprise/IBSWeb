@@ -91,20 +91,6 @@ namespace IBS.DataAccess.Repository.Filpride
                 return null;
             }
 
-            var isVatable = (salesInvoice.CustomerOrderSlip?.VatType ?? salesInvoice.Customer?.VatType) == SD.VatType_Vatable;
-            var hasEwt = salesInvoice.CustomerOrderSlip?.HasEWT ?? salesInvoice.Customer?.WithHoldingTax ?? false;
-            var hasWvat = salesInvoice.CustomerOrderSlip?.HasWVAT ?? salesInvoice.Customer?.WithHoldingVat ?? false;
-            var adjustedGrossAmount = salesInvoice.Amount - salesInvoice.Discount + salesInvoice.DebitAmount - salesInvoice.CreditAmount;
-            var netOfVatAmount = isVatable
-                ? DecimalRoundingHelper.ComputeNetOfVat(adjustedGrossAmount)
-                : DecimalRoundingHelper.RoundToFour(adjustedGrossAmount);
-            var cwtAmount = hasEwt
-                ? DecimalRoundingHelper.ComputeEwtAmount(netOfVatAmount, salesInvoice.CwtPercent)
-                : 0m;
-            var cwVatAmount = hasWvat
-                ? DecimalRoundingHelper.ComputeEwtAmount(netOfVatAmount, salesInvoice.CwVatPercent)
-                : 0m;
-
             var activeDetails = _db.FilprideCollectionReceiptDetails
                 .Where(detail => detail.InvoiceNo == salesInvoice.SalesInvoiceNo &&
                                  detail.FilprideCollectionReceipt != null &&
@@ -130,6 +116,26 @@ namespace IBS.DataAccess.Repository.Filpride
 
             var cwtAmountPaid = DecimalRoundingHelper.RoundToFour(paidAmounts?.CwtAmountPaid ?? 0m);
             var cwVatAmountPaid = DecimalRoundingHelper.RoundToFour(paidAmounts?.CwVatAmountPaid ?? 0m);
+
+            return BuildTaxBalance(salesInvoice, cwtAmountPaid, cwVatAmountPaid);
+        }
+
+        private static SalesInvoiceTaxBalanceDto BuildTaxBalance(FilprideSalesInvoice salesInvoice,
+            decimal cwtAmountPaid, decimal cwVatAmountPaid)
+        {
+            var isVatable = (salesInvoice.CustomerOrderSlip?.VatType ?? salesInvoice.Customer?.VatType) == SD.VatType_Vatable;
+            var hasEwt = salesInvoice.CustomerOrderSlip?.HasEWT ?? salesInvoice.Customer?.WithHoldingTax ?? false;
+            var hasWvat = salesInvoice.CustomerOrderSlip?.HasWVAT ?? salesInvoice.Customer?.WithHoldingVat ?? false;
+            var adjustedGrossAmount = salesInvoice.Amount - salesInvoice.Discount + salesInvoice.DebitAmount - salesInvoice.CreditAmount;
+            var netOfVatAmount = isVatable
+                ? DecimalRoundingHelper.ComputeNetOfVat(adjustedGrossAmount)
+                : DecimalRoundingHelper.RoundToFour(adjustedGrossAmount);
+            var cwtAmount = hasEwt
+                ? DecimalRoundingHelper.ComputeEwtAmount(netOfVatAmount, salesInvoice.CwtPercent)
+                : 0m;
+            var cwVatAmount = hasWvat
+                ? DecimalRoundingHelper.ComputeEwtAmount(netOfVatAmount, salesInvoice.CwVatPercent)
+                : 0m;
 
             return new SalesInvoiceTaxBalanceDto
             {
@@ -259,6 +265,59 @@ namespace IBS.DataAccess.Repository.Filpride
             salesInvoice.CwtBalance = taxBalance.CwtBalance;
             salesInvoice.CwVatAmountPaid = taxBalance.CwVatAmountPaid;
             salesInvoice.CwVatBalance = taxBalance.CwVatBalance;
+        }
+
+        public async Task RecalculateTaxBalancesAsync(int[] salesInvoiceIds,
+            CancellationToken cancellationToken = default)
+        {
+            var invoiceIds = salesInvoiceIds.Distinct().ToArray();
+            if (invoiceIds.Length == 0)
+            {
+                return;
+            }
+
+            var salesInvoices = await _db.FilprideSalesInvoices
+                .Include(si => si.Customer)
+                .Include(si => si.CustomerOrderSlip)
+                .Where(si => invoiceIds.Contains(si.SalesInvoiceId))
+                .ToListAsync(cancellationToken);
+            if (salesInvoices.Count != invoiceIds.Length)
+            {
+                throw new InvalidOperationException("One or more sales invoices were not found.");
+            }
+
+            var invoiceNumbers = salesInvoices
+                .Select(si => si.SalesInvoiceNo ?? string.Empty)
+                .ToArray();
+            var paidAmounts = await _db.FilprideCollectionReceiptDetails
+                .Where(detail => invoiceNumbers.Contains(detail.InvoiceNo) &&
+                                 detail.FilprideCollectionReceipt != null &&
+                                 (detail.FilprideCollectionReceipt.SalesInvoiceId != null ||
+                                  detail.FilprideCollectionReceipt.MultipleSIId != null) &&
+                                 detail.FilprideCollectionReceipt.Status != nameof(CollectionReceiptStatus.Canceled) &&
+                                 detail.FilprideCollectionReceipt.Status != nameof(CollectionReceiptStatus.Voided))
+                .GroupBy(detail => detail.InvoiceNo)
+                .Select(group => new
+                {
+                    InvoiceNo = group.Key,
+                    CwtAmountPaid = group.Sum(detail => detail.EWT),
+                    CwVatAmountPaid = group.Sum(detail => detail.WVAT)
+                })
+                .ToListAsync(cancellationToken);
+            var paidAmountsByInvoice = paidAmounts.ToDictionary(amount => amount.InvoiceNo);
+
+            foreach (var salesInvoice in salesInvoices)
+            {
+                paidAmountsByInvoice.TryGetValue(salesInvoice.SalesInvoiceNo ?? string.Empty, out var paidAmount);
+                var cwtAmountPaid = DecimalRoundingHelper.RoundToFour(paidAmount?.CwtAmountPaid ?? 0m);
+                var cwVatAmountPaid = DecimalRoundingHelper.RoundToFour(paidAmount?.CwVatAmountPaid ?? 0m);
+                var taxBalance = BuildTaxBalance(salesInvoice, cwtAmountPaid, cwVatAmountPaid);
+
+                salesInvoice.CwtAmountPaid = taxBalance.CwtAmountPaid;
+                salesInvoice.CwtBalance = taxBalance.CwtBalance;
+                salesInvoice.CwVatAmountPaid = taxBalance.CwVatAmountPaid;
+                salesInvoice.CwVatBalance = taxBalance.CwVatBalance;
+            }
         }
 
         public override async Task<FilprideSalesInvoice?> GetAsync(Expression<Func<FilprideSalesInvoice, bool>> filter, CancellationToken cancellationToken = default)
