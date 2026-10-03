@@ -1,4 +1,4 @@
-﻿@model IEnumerable<FilprideCustomer>
+@model IEnumerable<FilprideCustomer>
 
 @{
     ViewData["Title"] = "Customer - Export";
@@ -35,7 +35,7 @@
             </div>
         </div>
 
-        <table class="table table-bordered table-hover" id="customerTable">
+        <table class="table table-bordered table-hover text-nowrap" id="customerTable">
             <thead class="table-secondary">
             <tr class="text-primary">
                 <th></th>
@@ -70,7 +70,6 @@
                 serverSide: true,      // ENABLE SERVER-SIDE PROCESSING
                 stateSave: true,
                 stateDuration: 86400,  // 24 hours
-                "scrollX": true,
                 scrollY: '45vh',
                 scrollCollapse: true,
                 lengthMenu: [ [10, 25, 50, 100, -1], [10, 25, 50, 100, "All"] ],

@@ -1,4 +1,4 @@
-﻿@model IEnumerable<FilprideCreditMemo>
+@model IEnumerable<FilprideCreditMemo>
 @using IBS.Utility.Constants
 @{
     ViewData["Title"] = "Credit Memo - Export";
@@ -36,7 +36,7 @@
             </div>
         </div>
 
-        <table class="table table-bordered table-hover" id="creditMemoTable">
+        <table class="table table-bordered table-hover text-nowrap" id="creditMemoTable">
             <thead class="table-secondary">
             <tr>
                 <th></th>
@@ -71,7 +71,6 @@
                 serverSide: true,      // ENABLE SERVER-SIDE PROCESSING
                 stateSave: true,
                 stateDuration: 86400,  // 24 hours
-                "scrollX": true,
                 scrollY: '45vh',
                 scrollCollapse: true,
                 lengthMenu: [ [10, 25, 50, 100, -1], [10, 25, 50, 100, "All"] ],

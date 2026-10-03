@@ -1,4 +1,4 @@
-﻿@model PostedPeriodViewModel
+@model PostedPeriodViewModel
 @{
     ViewData["Title"] = "Post Periods";
 }
@@ -121,7 +121,7 @@
                             <form asp-action="UnpostPeriods" method="post" id="unpostPeriodsForm">
                                 @Html.AntiForgeryToken()
                             </form>
-                            <table id="postedPeriodsTable" class="table table-striped table-hover table-bordered nowrap" style="width:100%">
+                            <table id="postedPeriodsTable" class="table table-striped table-hover table-bordered nowrap text-nowrap" style="width:100%">
                                 <thead class="table-dark">
                                     <tr>
                                         <th class="text-center">
@@ -295,7 +295,6 @@
 
         const selectedPeriodIds = new Set();
         const table = $('#postedPeriodsTable').DataTable({
-            "scrollX": true,
             scrollY: '45vh',
             scrollCollapse: true,
             responsive: true,

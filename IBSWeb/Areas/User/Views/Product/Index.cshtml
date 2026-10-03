@@ -1,4 +1,4 @@
-﻿@model IEnumerable<Product>
+@model IEnumerable<Product>
 
 @{
     ViewData["Title"] = "Product";
@@ -58,7 +58,7 @@
 
     <div class="card shadow border-0 mt-3">
         <div class="card-body p-3">
-            <table class="table table-hover mb-0" id="paginatedTable">
+            <table class="table table-hover mb-0 text-nowrap" id="paginatedTable">
                 <thead class="bg-light">
                 <tr>
                     <th class="text-start">Product Code</th>
@@ -88,7 +88,6 @@
                 "processing": true,
                 "serverSide": true,
                 "stateDuration": 86400,
-                "scrollX": true,
                 "scrollY": '45vh',
                 "scrollCollapse": true,
                 "language": {

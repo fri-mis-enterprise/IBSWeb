@@ -1,4 +1,4 @@
-﻿@using IBS.Models.Enums
+@using IBS.Models.Enums
 @model IEnumerable<FilprideSalesInvoice>
 
 @{
@@ -21,7 +21,7 @@
                 <label class="fw-semibold small text-muted mb-1">Filter by Date</label>
                 <input type="date" id="inputDate" class="form-control rounded-3 shadow-sm" style="width:150px;">
             </div>
-            <table class="table table-hover mb-0" id="paginatedTable">
+            <table class="table table-hover mb-0 text-nowrap" id="paginatedTable">
                 <thead class="bg-light">
                 <tr>
                     <th class="text-start">SI#</th>
@@ -141,7 +141,6 @@
                 "serverSide": true, // Enable server-side processing
                 "stateSave" : true,
                 "stateDuration": 86400,
-                "scrollX": true,
                 "scrollY": '45vh',
                 "scrollCollapse": true,
                 "language": {
