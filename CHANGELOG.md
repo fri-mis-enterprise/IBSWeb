@@ -6,6 +6,152 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v4.0.0] - 2026-10-03
+
+Changes are grouped by the date they reached `master`.
+
+### 2026-10-03
+- Fixed transient failures when posting collection receipts and non-trade check vouchers by using focused invoice balance updates.
+- Updated data tables across administration, master-file, and transaction pages to support horizontal scrolling and action-menu popovers on smaller screens.
+- Updated local file storage so uploads use the application `wwwroot/files` directory without initializing Google Cloud credentials, while preserving cloud storage behavior outside local development.
+
+### 2026-10-02
+- Optimized batch re-journal processing with set-based cleanup operations, supporting indexes, and reduced repeated database work across supported transaction types.
+- Fixed multiple-invoice collection receipt balance loading and updates to reduce transient database failures.
+- Updated re-journal calculations to include delivery receipts in debit and credit memo processing and revised the cost-of-money calculation.
+
+### 2026-09-30
+- Added an administration page for activating and deactivating maintenance mode.
+
+### 2026-09-26
+- Added multiple-service-invoice collection receipt create, edit, print, posting, and reporting support.
+- Redesigned notification retrieval and display to reduce repeated queries and improve notification handling.
+- Added net-of-FAO summaries to the accounts payable gross margin report.
+- Kept journal voucher amortization particulars editable while removing automatic particulars generation during creation.
+
+### 2026-09-25
+- Added remaining EWT and CWV balances to sales and service invoices so collection receipts can apply withholding certificates incrementally.
+- Added collection receipt certificate reference fields and aligned service-invoice payment handling with sales-invoice collection flows.
+- Updated collection receipt calculations and outputs to use four-decimal precision consistently.
+- Added sub-account type information to general ledger and subsidiary ledger reports.
+- Fixed multiple-invoice collection receipt layouts and edit validation.
+
+### 2026-09-19
+- Added separate FAO supplier reporting to the gross margin report.
+- Updated check voucher posting to exclude the MNVP supplier from the affected posting flow.
+- Updated journal voucher amortization account selection and validation across create and edit flows.
+- Updated trade check voucher models so supplier, commission, and hauler payments use the revised check-number validation.
+- Added company selection when resolving AR rediscounting sub-accounts.
+
+### 2026-09-18
+- Added counterparty names to general ledger entries and exposed them in general ledger reporting.
+- Added check voucher documentation fields that retain whether an undocumented type was documented under another company name.
+- Fixed accrued-account selection in journal voucher accrual create and edit flows.
+- Fixed sales-entry generation and notification polling behavior.
+
+### 2026-09-17
+- Updated receiving report and sales invoice lists to use retained customer, supplier, and product names when related master records are unavailable or have changed.
+- Simplified the gross margin report breakdown while preserving its calculated totals.
+
+### 2026-09-16
+- Added month-to-date and year-to-date profit-and-loss calculations.
+- Added customer BIR document uploads and aligned customer and supplier document storage behavior.
+- Fixed delivery receipt general ledger updates to match both the sub-account identifier and sub-account type.
+
+### 2026-09-14
+- Updated service invoice posting to recognize unearned income and reject attempts to post an already posted invoice.
+- Fixed check voucher invoice editing to reindex journal entries correctly.
+- Fixed the account title stored for trade check voucher advances.
+- Removed employee-specific tagging from the non-trade check voucher invoice flow in favor of supplier-backed employee records.
+- Updated profit-and-loss exports to hide zero-value figures.
+
+### 2026-09-12
+- Removed company claims and the remaining unused placement, freight, offsetting, and company-scoped structures from the single-company application flow.
+- Completed provisional receipt posting with selectable credit accounts and the required general ledger posting behavior.
+- Added antiforgery validation to the affected state-changing action.
+
+### 2026-09-11
+- Added a downloadable chart-of-accounts list.
+- Added validation that prevents posting future-dated checks.
+- Fixed payroll invoice sub-account type persistence.
+- Hardened debit memo and credit memo processing against invalid or incomplete state.
+
+### 2026-09-09
+- Separated journal voucher material-advance approvals from the other dashboard approval queues.
+
+### 2026-09-08
+- Added the revised provisional receipt create, edit, post, print, and credit-account selection workflow.
+- Fixed delivery receipt details so approved purchase order price changes are reflected correctly.
+- Fixed trade check voucher calculations.
+- Updated session-cookie behavior and unposting audit data to retain the username.
+
+### 2026-09-05
+- Updated collection receipt editing to restore invoice balances before applying revised allocations and to use the appropriate journal-entry date.
+- Fixed purchase journal VAT calculations.
+- Added a dedicated service for storing user claims consistently.
+- Improved responsive navbar grouping, department resolution, mobile drawer behavior, and print styling.
+
+### 2026-09-04
+- Added required columns to the AAS export.
+- Updated check-number duplicate validation to include the bank account.
+- Updated maintenance mode so active non-admin users are signed out after activation.
+- Redesigned the main navigation with accessible mega menus and responsive user and department display.
+
+### 2026-09-03
+- Centralized company branding details for report headings, layouts, and login pages.
+- Redesigned login behavior and presentation, including remember-me session duration and username display.
+- Updated posted-period handling to use the refactored single-company flow.
+
+### 2026-09-02
+- Added user-selectable date filtering to the posted collection report.
+- Added state guards to prevent repeated or invalid transaction actions.
+- Added bank-account activation and deactivation controls.
+
+### 2026-09-01
+- Fixed the GASSO FUEL TRADING 14-day expiration rule so it is not overwritten by the standard 7-day rule.
+- Added a two-month selection option to journal voucher amortization.
+- Fixed notification handling when a request returns an unauthorized response.
+- Corrected the configured company portal link.
+
+### 2026-08-28
+- Removed company references, company master-file flags, and company-scoped filters from the single-company data model and application workflows.
+- Fixed journal voucher accrual submission and transaction-form submission through the logout form.
+
+### 2026-08-27
+- Enhanced subsidiary ledger opening and running balance handling and its Excel output.
+- Updated purchase order price changes to avoid writing adjustments when the entered price is unchanged.
+- Fixed journal voucher accrual recalculation and allowed amortization debit amounts to be edited.
+- Added withholding-rate guidance to the sales invoice printout.
+
+### 2026-08-25
+- Added account password management and fixed login and maintenance-mode redirect behavior.
+- Fixed multiple-invoice collection receipt validation to compare rounded centavos and reject malformed allocations.
+- Fixed subsidiary ledger report filtering, opening balances, running balances, and Excel generation.
+
+### 2026-08-24
+- Redesigned the inventory report.
+- Updated AP monitoring so closed purchase orders report zero unlifted quantities for the prior and current month.
+- Fixed receiving report cost updates and allowed administrators to bypass maintenance middleware.
+
+### 2026-08-22
+- Added default next-month auto-reversal for journal voucher accrual entries.
+- Added journal voucher accrual line removal and editable debit amounts in create and edit flows.
+- Removed EWT entries from non-trade supplier advances and updated monthly closure for the revised journal voucher behavior.
+
+### 2026-08-21
+- Moved stored CWT and CWV rates from customer order slips to delivery receipts and updated the related invoice, collection, memo, report, and re-journal flows.
+- Updated journal voucher amortization to show all eligible OPEX accounts.
+- Updated customer order slip actions for records awaiting marketing approval.
+- Revised inventory and commission calculations and retained the posting username during re-journal processing.
+
+### 2026-08-20
+- Added configurable CWT and CWV rates to customers, customer order slips, and sales invoices and updated related calculations and print output.
+
+### Removed
+- Removed obsolete company claims, company flags, company-scoped fields, and unused tables as part of the single-company architecture cleanup.
+
+---
+
 ## [v3.2.1] - 2026-08-20
 
 ### Changed
