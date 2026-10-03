@@ -1,4 +1,4 @@
-﻿@model List<IBS.Models.Filpride.MasterFile.FilprideCollectionCategory>
+@model List<IBS.Models.Filpride.MasterFile.FilprideCollectionCategory>
 @{
     ViewData["Title"] = "Collection Categories";
 }
@@ -18,7 +18,7 @@
             {
                 <div class="alert alert-info">Add an active collection category before creating provisional receipts.</div>
             }
-            <table class="table table-hover mb-0" id="paginatedTable">
+            <table class="table table-hover mb-0 text-nowrap" id="paginatedTable">
                 <thead class="bg-light">
                     <tr>
                         <th>Name</th>
@@ -59,7 +59,6 @@
     <script>
         $(function () {
             $('#paginatedTable').DataTable({
-                "scrollX": true,
                 scrollY: '45vh',
                 scrollCollapse: true,
                 order: [[0, 'asc']],

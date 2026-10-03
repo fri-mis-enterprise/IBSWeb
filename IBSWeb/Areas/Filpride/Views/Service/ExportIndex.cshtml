@@ -1,4 +1,4 @@
-﻿@model IEnumerable<FilprideService>
+@model IEnumerable<FilprideService>
 
 @{
     ViewData["Title"] = "Service - Export";
@@ -35,7 +35,7 @@
             </div>
         </div>
 
-        <table class="table table-bordered table-hover" id="serviceTable">
+        <table class="table table-bordered table-hover text-nowrap" id="serviceTable">
             <thead class="table-secondary">
             <tr>
                 <th>
@@ -70,7 +70,6 @@
                 processing: true,
                 serverSide: false,
                 stateSave: true,
-                "scrollX": true,
                 scrollY: '45vh',
                 scrollCollapse: true,
                 ajax: {

@@ -1,4 +1,4 @@
-﻿@model IEnumerable<Product>
+@model IEnumerable<Product>
 
 @{
     ViewData["Title"] = "Sales Invoice - Export";
@@ -77,7 +77,7 @@
             </div>
         </div>
 
-        <table class="table table-bordered table-hover" id="productTable">
+        <table class="table table-bordered table-hover text-nowrap" id="productTable">
             <thead class="table-secondary">
             <tr>
                 <th>
@@ -112,7 +112,6 @@
                 processing: true,
                 serverSide: false,
                 stateSave: true,
-                "scrollX": true,
                 scrollY: '45vh',
                 scrollCollapse: true,
                 ajax: {

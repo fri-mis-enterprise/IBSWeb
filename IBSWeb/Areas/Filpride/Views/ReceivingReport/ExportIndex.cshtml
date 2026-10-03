@@ -1,4 +1,4 @@
-﻿@model IEnumerable<FilprideReceivingReport>
+@model IEnumerable<FilprideReceivingReport>
 @{
     ViewData["Title"] = "Receiving Report - Export";
 }
@@ -34,7 +34,7 @@
             </div>
         </div>
 
-        <table class="table table-bordered table-hover" id="receivingReportTable">
+        <table class="table table-bordered table-hover text-nowrap" id="receivingReportTable">
             <thead class="table-secondary">
             <tr>
                 <th></th>
@@ -69,7 +69,6 @@
                 serverSide: true,      // ENABLE SERVER-SIDE PROCESSING
                 stateSave: true,
                 stateDuration: 86400,  // 24 hours
-                "scrollX": true,
                 scrollY: '45vh',
                 scrollCollapse: true,
                 lengthMenu: [ [10, 25, 50, 100, -1], [10, 25, 50, 100, "All"] ],
