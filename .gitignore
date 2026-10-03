@@ -485,4 +485,5 @@ $RECYCLE.BIN/
 
 /IBSWeb/wwwroot/documents/
 /IBSWeb/Files/*
-!/IBSWeb/Files/.gitkeep
+/IBSWeb/wwwroot/files/*
+!/IBSWeb/wwwroot/files/.gitkeep

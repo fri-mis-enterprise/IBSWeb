@@ -24,6 +24,7 @@ namespace IBS.Services
 
     public class CloudStorageService : ICloudStorageService
     {
+        private const string _localFilesDirectoryName = "files";
         private readonly GCSConfigOptions _options;
         private readonly ILogger<CloudStorageService> _logger;
         private readonly IHostEnvironment _environment;
@@ -79,6 +80,12 @@ namespace IBS.Services
 
         public async Task DeleteFileAsync(string fileNameToDelete)
         {
+            if (_environment.IsDevelopment())
+            {
+                File.Delete(GetLocalFilePath(fileNameToDelete));
+                return;
+            }
+
             try
             {
                 await _storageClient.DeleteObjectAsync(_options.GoogleCloudStorageBucketName, fileNameToDelete);
@@ -92,6 +99,12 @@ namespace IBS.Services
 
         public async Task<string> GetSignedUrlAsync(string fileNameToRead, int timeOutInMinutes = 30)
         {
+            if (_environment.IsDevelopment())
+            {
+                var fileName = GetLocalFileName(fileNameToRead);
+                return $"/{_localFilesDirectoryName}/{Uri.EscapeDataString(fileName)}";
+            }
+
             try
             {
                 var bucketName = _options.GoogleCloudStorageBucketName;
@@ -124,14 +137,14 @@ namespace IBS.Services
                     throw new ArgumentException("File name must not contain a path.", nameof(fileNameToSave));
                 }
 
-                var filesDirectory = Path.Combine(_environment.ContentRootPath, "Files");
+                var filesDirectory = Path.Combine(_environment.ContentRootPath, "wwwroot", _localFilesDirectoryName);
                 Directory.CreateDirectory(filesDirectory);
 
-                var filePath = Path.Combine(filesDirectory, fileNameToSave);
+                var filePath = GetLocalFilePath(fileNameToSave);
                 await using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
                 await fileToUpload.CopyToAsync(fileStream);
 
-                return Path.Combine("Files", fileNameToSave).Replace('\\', '/');
+                return Path.Combine(_localFilesDirectoryName, fileNameToSave).Replace('\\', '/');
             }
 
             try
@@ -159,6 +172,11 @@ namespace IBS.Services
 
         public async Task<Stream> DownloadFileAsync(string fileNameToDownload)
         {
+            if (_environment.IsDevelopment())
+            {
+                return new FileStream(GetLocalFilePath(fileNameToDownload), FileMode.Open, FileAccess.Read, FileShare.Read);
+            }
+
             try
             {
                 using (var storageClient = StorageClient.Create(_googleCredential))
@@ -175,6 +193,30 @@ namespace IBS.Services
                 _logger.LogError(ex, $"Error occurred while downloading file: {ex.Message}");
                 throw;
             }
+        }
+
+        private string GetLocalFilePath(string fileName)
+        {
+            return Path.Combine(_environment.ContentRootPath, "wwwroot", _localFilesDirectoryName, GetLocalFileName(fileName));
+        }
+
+        private static string GetLocalFileName(string fileName)
+        {
+            var normalizedPath = fileName.Replace('\\', '/').TrimStart('/');
+            var localDirectoryPrefix = $"{_localFilesDirectoryName}/";
+
+            if (normalizedPath.StartsWith(localDirectoryPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                normalizedPath = normalizedPath[localDirectoryPrefix.Length..];
+            }
+
+            if (string.IsNullOrWhiteSpace(normalizedPath)
+                || !string.Equals(normalizedPath, Path.GetFileName(normalizedPath), StringComparison.Ordinal))
+            {
+                throw new ArgumentException("File name must not contain a path.", nameof(fileName));
+            }
+
+            return normalizedPath;
         }
 
         public async Task<IFormFile?> GetFileAsFormFile(string fileName)
