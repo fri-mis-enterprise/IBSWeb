@@ -24,27 +24,38 @@ namespace IBS.Services
 
     public class CloudStorageService : ICloudStorageService
     {
+        private const string _localFilesDirectoryName = "files";
         private readonly GCSConfigOptions _options;
         private readonly ILogger<CloudStorageService> _logger;
-        private readonly GoogleCredential _googleCredential;
-        private readonly StorageClient _storageClient;
+        private readonly IHostEnvironment _environment;
+        private readonly GoogleCredential _googleCredential = null!;
+        private readonly StorageClient _storageClient = null!;
 
-        public CloudStorageService(IOptions<GCSConfigOptions> options, ILogger<CloudStorageService> logger)
+        public CloudStorageService(
+            IOptions<GCSConfigOptions> options,
+            ILogger<CloudStorageService> logger,
+            IHostEnvironment environment)
         {
             _options = options.Value;
             _logger = logger;
+            _environment = environment;
+
+            if (_environment.IsDevelopment())
+            {
+                return;
+            }
 
             try
             {
-                var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-                if (environment == Environments.Production)
+                var environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+                if (environmentName == Environments.Production)
                 {
                     _googleCredential = GoogleCredential.GetApplicationDefault();
                 }
                 else
                 {
                     // Log for debugging purposes
-                    _logger.LogInformation($"Environment: {environment}, Auth File: {_options.GCPStorageAuthFile}");
+                    _logger.LogInformation($"Environment: {environmentName}, Auth File: {_options.GCPStorageAuthFile}");
 
                     if (!File.Exists(_options.GCPStorageAuthFile))
                     {
@@ -69,6 +80,12 @@ namespace IBS.Services
 
         public async Task DeleteFileAsync(string fileNameToDelete)
         {
+            if (_environment.IsDevelopment())
+            {
+                File.Delete(GetLocalFilePath(fileNameToDelete));
+                return;
+            }
+
             try
             {
                 await _storageClient.DeleteObjectAsync(_options.GoogleCloudStorageBucketName, fileNameToDelete);
@@ -82,6 +99,12 @@ namespace IBS.Services
 
         public async Task<string> GetSignedUrlAsync(string fileNameToRead, int timeOutInMinutes = 30)
         {
+            if (_environment.IsDevelopment())
+            {
+                var fileName = GetLocalFileName(fileNameToRead);
+                return $"/{_localFilesDirectoryName}/{Uri.EscapeDataString(fileName)}";
+            }
+
             try
             {
                 var bucketName = _options.GoogleCloudStorageBucketName;
@@ -105,6 +128,23 @@ namespace IBS.Services
             {
                 _logger.LogError("File upload failed: No file provided or file is empty.");
                 throw new ArgumentException("File is either null or empty.", nameof(fileToUpload));
+            }
+
+            if (_environment.IsDevelopment())
+            {
+                if (!string.Equals(fileNameToSave, Path.GetFileName(fileNameToSave), StringComparison.Ordinal))
+                {
+                    throw new ArgumentException("File name must not contain a path.", nameof(fileNameToSave));
+                }
+
+                var filesDirectory = Path.Combine(_environment.ContentRootPath, "wwwroot", _localFilesDirectoryName);
+                Directory.CreateDirectory(filesDirectory);
+
+                var filePath = GetLocalFilePath(fileNameToSave);
+                await using var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None);
+                await fileToUpload.CopyToAsync(fileStream);
+
+                return Path.Combine(_localFilesDirectoryName, fileNameToSave).Replace('\\', '/');
             }
 
             try
@@ -132,6 +172,11 @@ namespace IBS.Services
 
         public async Task<Stream> DownloadFileAsync(string fileNameToDownload)
         {
+            if (_environment.IsDevelopment())
+            {
+                return new FileStream(GetLocalFilePath(fileNameToDownload), FileMode.Open, FileAccess.Read, FileShare.Read);
+            }
+
             try
             {
                 using (var storageClient = StorageClient.Create(_googleCredential))
@@ -148,6 +193,30 @@ namespace IBS.Services
                 _logger.LogError(ex, $"Error occurred while downloading file: {ex.Message}");
                 throw;
             }
+        }
+
+        private string GetLocalFilePath(string fileName)
+        {
+            return Path.Combine(_environment.ContentRootPath, "wwwroot", _localFilesDirectoryName, GetLocalFileName(fileName));
+        }
+
+        private static string GetLocalFileName(string fileName)
+        {
+            var normalizedPath = fileName.Replace('\\', '/').TrimStart('/');
+            var localDirectoryPrefix = $"{_localFilesDirectoryName}/";
+
+            if (normalizedPath.StartsWith(localDirectoryPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                normalizedPath = normalizedPath[localDirectoryPrefix.Length..];
+            }
+
+            if (string.IsNullOrWhiteSpace(normalizedPath)
+                || !string.Equals(normalizedPath, Path.GetFileName(normalizedPath), StringComparison.Ordinal))
+            {
+                throw new ArgumentException("File name must not contain a path.", nameof(fileName));
+            }
+
+            return normalizedPath;
         }
 
         public async Task<IFormFile?> GetFileAsFormFile(string fileName)
