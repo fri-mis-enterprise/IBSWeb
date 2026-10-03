@@ -1051,11 +1051,7 @@ body.loading {
     padding: 0.25em 0.4em;
 }
 
-.dt-input {
-    margin-right: .5rem;
-}
-
-.dt-layout-table {
-    height: 55vh !important;
-    overflow-y: scroll;
+.actions-dropdown .dropdown-menu {
+    position: fixed !important;
+    z-index: 99999 !important;
 }
