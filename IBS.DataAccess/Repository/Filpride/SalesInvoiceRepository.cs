@@ -144,6 +144,108 @@ namespace IBS.DataAccess.Repository.Filpride
             };
         }
 
+        public async Task<List<SalesInvoiceCollectionDetailsDto>> GetCollectionDetailsAsync(int[] salesInvoiceIds,
+            int? excludedCollectionReceiptId = null,
+            CancellationToken cancellationToken = default)
+        {
+            var invoiceIds = salesInvoiceIds.Distinct().ToArray();
+            if (invoiceIds.Length == 0)
+            {
+                return [];
+            }
+
+            var invoices = await _db.FilprideSalesInvoices
+                .AsNoTracking()
+                .Where(si => invoiceIds.Contains(si.SalesInvoiceId))
+                .Select(si => new
+                {
+                    si.SalesInvoiceId,
+                    si.SalesInvoiceNo,
+                    si.Amount,
+                    si.AmountPaid,
+                    si.Balance,
+                    si.Discount,
+                    si.DebitAmount,
+                    si.CreditAmount,
+                    si.CwtPercent,
+                    si.CwVatPercent,
+                    VatType = si.CustomerOrderSlip != null ? si.CustomerOrderSlip.VatType : si.Customer!.VatType,
+                    HasEwt = si.CustomerOrderSlip != null ? si.CustomerOrderSlip.HasEWT : si.Customer!.WithHoldingTax,
+                    HasWvat = si.CustomerOrderSlip != null ? si.CustomerOrderSlip.HasWVAT : si.Customer!.WithHoldingVat
+                })
+                .ToListAsync(cancellationToken);
+
+            var invoiceNumbers = invoices
+                .Select(invoice => invoice.SalesInvoiceNo!)
+                .ToArray();
+            var allocations = await _db.FilprideCollectionReceiptDetails
+                .AsNoTracking()
+                .Where(detail => invoiceNumbers.Contains(detail.InvoiceNo) &&
+                                 detail.FilprideCollectionReceipt != null &&
+                                 (detail.FilprideCollectionReceipt.SalesInvoiceId != null ||
+                                  detail.FilprideCollectionReceipt.MultipleSIId != null) &&
+                                 detail.FilprideCollectionReceipt.Status != nameof(CollectionReceiptStatus.Canceled) &&
+                                 detail.FilprideCollectionReceipt.Status != nameof(CollectionReceiptStatus.Voided))
+                .Select(detail => new
+                {
+                    detail.InvoiceNo,
+                    detail.CollectionReceiptId,
+                    detail.Amount,
+                    detail.EWT,
+                    detail.WVAT
+                })
+                .ToListAsync(cancellationToken);
+
+            var allocationsByInvoice = allocations
+                .GroupBy(allocation => allocation.InvoiceNo, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, StringComparer.OrdinalIgnoreCase);
+            var invoicesById = invoices.ToDictionary(invoice => invoice.SalesInvoiceId);
+
+            return invoiceIds
+                .Where(invoicesById.ContainsKey)
+                .Select(invoiceId =>
+                {
+                    var invoice = invoicesById[invoiceId];
+                    allocationsByInvoice.TryGetValue(invoice.SalesInvoiceNo!, out var invoiceAllocations);
+                    var receiptAmount = excludedCollectionReceiptId.HasValue
+                        ? invoiceAllocations?.Where(allocation => allocation.CollectionReceiptId == excludedCollectionReceiptId.Value)
+                            .Sum(allocation => allocation.Amount) ?? 0m
+                        : 0m;
+                    var cwtAmountPaid = DecimalRoundingHelper.RoundToFour(invoiceAllocations?
+                        .Where(allocation => allocation.CollectionReceiptId != excludedCollectionReceiptId)
+                        .Sum(allocation => allocation.EWT) ?? 0m);
+                    var cwVatAmountPaid = DecimalRoundingHelper.RoundToFour(invoiceAllocations?
+                        .Where(allocation => allocation.CollectionReceiptId != excludedCollectionReceiptId)
+                        .Sum(allocation => allocation.WVAT) ?? 0m);
+                    var adjustedGrossAmount = invoice.Amount - invoice.Discount + invoice.DebitAmount - invoice.CreditAmount;
+                    var isVatable = invoice.VatType == SD.VatType_Vatable;
+                    var netOfVatAmount = isVatable
+                        ? DecimalRoundingHelper.ComputeNetOfVat(adjustedGrossAmount)
+                        : DecimalRoundingHelper.RoundToFour(adjustedGrossAmount);
+                    var cwtAmount = invoice.HasEwt
+                        ? DecimalRoundingHelper.ComputeEwtAmount(netOfVatAmount, invoice.CwtPercent)
+                        : 0m;
+                    var cwVatAmount = invoice.HasWvat
+                        ? DecimalRoundingHelper.ComputeEwtAmount(netOfVatAmount, invoice.CwVatPercent)
+                        : 0m;
+
+                    return new SalesInvoiceCollectionDetailsDto
+                    {
+                        InvoiceId = invoice.SalesInvoiceId,
+                        Amount = invoice.Amount,
+                        AmountPaid = invoice.AmountPaid - receiptAmount,
+                        NetAmount = netOfVatAmount,
+                        VatAmount = isVatable ? DecimalRoundingHelper.ComputeVatAmount(netOfVatAmount) : 0m,
+                        CwtBalance = DecimalRoundingHelper.RoundToFour(cwtAmount - cwtAmountPaid),
+                        CwVatBalance = DecimalRoundingHelper.RoundToFour(cwVatAmount - cwVatAmountPaid),
+                        Balance = invoice.Balance + receiptAmount,
+                        Debit = invoice.DebitAmount,
+                        Credit = invoice.CreditAmount
+                    };
+                })
+                .ToList();
+        }
+
         public async Task RecalculateTaxBalancesAsync(int salesInvoiceId, CancellationToken cancellationToken = default)
         {
             var taxBalance = await GetTaxBalanceAsync(salesInvoiceId, cancellationToken: cancellationToken)

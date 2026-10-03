@@ -304,6 +304,7 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
         const $invoices = $("#invoices");
         const $siList = $(".siList");
         const $siAmount = $(".siAmount");
+        let invoiceDetailsRequest = null;
 
         // this function updates the second table that contains SI List and Amount
         $invoices.change(function () {
@@ -330,12 +331,9 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
 
                 appendSIListRow(siNo, siText);
                 appendSIAmountRow(siNo, siText);
-
-                if (siNo) {
-                    fetchInvoiceBalance(siNo);
-                }
             });
 
+            fetchInvoiceBalances(selectedInvoices);
             calculateGrandTotalInvoiceAmount();
             updateTaxTotals();
         });
@@ -377,56 +375,62 @@ await Html.RenderPartialAsync("_ValidationScriptsPartial");
                     </tr>`);
         }
 
-        function fetchInvoiceBalance(siNo) {
-            $.ajax({
-                url: '@Url.Action("MultipleInvoiceBalance", "CollectionReceipt", new { area = "Filpride" })',
+        function fetchInvoiceBalances(siNos) {
+            if (invoiceDetailsRequest) {
+                invoiceDetailsRequest.abort();
+            }
+
+            if (siNos.length === 0) {
+                return;
+            }
+
+            invoiceDetailsRequest = $.ajax({
+                url: '@Url.Action("MultipleInvoiceBalances", "CollectionReceipt", new { area = "Filpride" })',
                 method: "GET",
-                data: { siNo, collectionReceiptId },
+                data: { siNos, collectionReceiptId },
+                traditional: true,
                 success: function (data) {
-                    if (!data) return;
+                    data.forEach(invoice => {
+                        const siNo = invoice.invoiceId;
+                        const gross = invoice.amount;
+                        const vatAmount = invoice.cwVatBalance;
+                        const ewtAmount = invoice.cwtBalance;
+                        const netOfEWT = gross - (vatAmount + ewtAmount);
 
-                    const gross = data.amount;
-                    const netAmount = gross / 1.12;
-                    const vatAmount = data.cwVatBalance;
-                    const ewtAmount = data.cwtBalance;
-                    const netOfEWT = gross - (vatAmount + ewtAmount);
-                    const amountPaid = data.amountPaid;
-                    const balance = data.balance;
-                    const debit = data.debit;
-                    const credit = data.credit;
+                        $(`#amount_${siNo}`).text(formatNumberToFour(gross));
+                        $(`#vatAmount_${siNo}`).text(formatNumberToFour(vatAmount));
+                        $(`#ewtAmount_${siNo}`).text(formatNumberToFour(ewtAmount));
+                        $(`.ewtAmount_${siNo}`).attr("max", invoice.cwtBalance);
+                        $(`.wvatAmount_${siNo}`).attr("max", invoice.cwVatBalance);
+                        $(`#siAmountNetOfEWT_${siNo}`).text(formatNumberToFour(netOfEWT));
+                        $(`#amountPaid_${siNo}`).text(formatNumberToFour(invoice.amountPaid));
+                        $(`#debit_${siNo}`).text(formatNumberToFour(invoice.debit));
+                        $(`#credit_${siNo}`).text(formatNumberToFour(invoice.credit));
+                        $(`#balance_${siNo}`).text(formatNumberToFour(invoice.balance));
 
-                    $(`#amount_${siNo}`).text(formatNumberToFour(gross));
-                    $(`#netAmount_${siNo}`).text(formatNumberToFour(netAmount));
-                    $(`#vatAmount_${siNo}`).text(formatNumberToFour(vatAmount));
-                    $(`#ewtAmount_${siNo}`).text(formatNumberToFour(ewtAmount));
-                    $(`.ewtAmount_${siNo}`).attr("max", data.cwtBalance);
-                    $(`.wvatAmount_${siNo}`).attr("max", data.cwVatBalance);
-                    $(`#siAmountNetOfEWT_${siNo}`).text(formatNumberToFour(netOfEWT));
-                    $(`#amountPaid_${siNo}`).text(formatNumberToFour(amountPaid));
-                    $(`#debit_${siNo}`).text(formatNumberToFour(debit));
-                    $(`#credit_${siNo}`).text(formatNumberToFour(credit));
-                    $(`#balance_${siNo}`).text(formatNumberToFour(balance));
-
-                    // Only set balance if no existing amount
-                    const existingPayment = InvoicePayments.find(item => item.invoiceId === parseInt(siNo));
-                    if (existingPayment) {
-                        $(`.paymentAmount_${siNo}`).val(formatNumberToFour(existingPayment.paymentAmount)).attr("data-max", balance);
-                    }
-                    else{
-                        InvoicePayments.push({
-                            invoiceId: parseInt(siNo),
-                            invoiceNumber: $invoices.find(`option[value='${siNo}']`).text(),
-                            paymentAmount: balance
-                        });
-                        $(`.paymentAmount_${siNo}`).val(formatNumberToFour(balance)).attr("data-max", balance);
-                    }
+                        const existingPayment = InvoicePayments.find(item => item.invoiceId === siNo);
+                        if (existingPayment) {
+                            $(`.paymentAmount_${siNo}`).val(formatNumberToFour(existingPayment.paymentAmount)).attr("data-max", invoice.balance);
+                        }
+                        else{
+                            InvoicePayments.push({
+                                invoiceId: siNo,
+                                invoiceNumber: $invoices.find(`option[value='${siNo}']`).text(),
+                                paymentAmount: invoice.balance
+                            });
+                            $(`.paymentAmount_${siNo}`).val(formatNumberToFour(invoice.balance)).attr("data-max", invoice.balance);
+                        }
+                    });
 
                     calculateGrandTotalInvoiceAmount();
-
                     updateTotal2();
                 },
                 error: function (xhr, status, error) {
+                    if (status === "abort") return;
                     console.error('Error fetching balance:', error);
+                },
+                complete: function () {
+                    invoiceDetailsRequest = null;
                 }
             });
         }
