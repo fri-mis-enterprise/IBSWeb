@@ -5,6 +5,8 @@
     var model = new FilprideCollectionReceipt();
 }
 
+@Html.AntiForgeryToken()
+
 <link rel="stylesheet" href="~/css/index-style.css">
 
 <div class="container-fluid mt-4">
@@ -32,10 +34,6 @@
 
     <div class="card shadow border-0 mt-3">
         <div class="card-body p-3">
-            <div class="me-2">
-                <label class="fw-semibold small text-muted mb-1">Filter by Date</label>
-                <input type="date" id="inputDate" class="form-control rounded-3 shadow-sm" style="width:150px;">
-            </div>
             <table class="table table-hover mb-0 text-nowrap" id="paginatedTable">
                 <thead class="bg-light">
                 <tr>
@@ -402,204 +400,199 @@
         }
     </script>
     <script>
-        $(document).ready(function () {
-            let filterValue = localStorage.getItem('filterDate') || "";
-            $('#inputDate').val(filterValue);
-
-            let table = $('#paginatedTable').DataTable({
-                "processing": true,
-                "serverSide": true,
-                "stateSave": true,
-                "stateDuration": 86400,
-                "scrollY": '45vh',
-                "scrollCollapse": true,
-                "language": {
-                    "processing": `<div class="d-flex justify-content-center">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Loading...</span>
-                                    </div>
-                                 </div>`
+        let table = $('#paginatedTable').DataTable({
+            "searchDelay": 500,
+            "deferRender": true,
+            "columnControl": ['order', ['searchList']],
+            "ordering": { indicators: false },
+            "processing": true,
+            "serverSide": true,
+            "stateSave": true,
+            "stateDuration": 86400,
+            "scrollY": '45vh',
+            "scrollCollapse": true,
+            "language": {
+                "processing": `<div class="d-flex justify-content-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                             </div>`
+            },
+            "ajax": {
+                "url": "@Url.Action("GetCollectionReceipts", "CollectionReceipt", new { area = "Filpride" })",
+                "type": "POST",
+                "data": function (d) {
+                    return $.extend({}, d, {
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val(),
+                        invoiceType: "Sales"
+                    });
                 },
-                "ajax": {
-                    "url": "@Url.Action("GetCollectionReceipts", "CollectionReceipt", new { area = "Filpride" })",
-                    "type": "POST",
-                    "data": function (d) {
-                        return $.extend({}, d, {
-                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val(),
-                            invoiceType: "Sales",
-                            filterDate: filterValue
+                "error": function (xhr, error, thrown) {
+                    console.error('DataTables error:', error);
+                    alert('An error occurred while loading the data');
+                }
+            },
+            "preDrawCallback": function(settings) {
+                $('#paginatedTable').addClass('table-loading');
+            },
+            "drawCallback": function(settings) {
+                $('#paginatedTable').removeClass('table-loading');
+
+                // Initialize all tooltips
+                $('[data-bs-toggle="tooltip"]').tooltip();
+            },
+            "columns": [
+                { "data": "collectionReceiptNo" },
+                {
+                    "data": "transactionDate",
+                    "name": "transactionDate",
+                    "render": function (data, type, row) {
+                        var date = new Date(data);
+                        return date.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: '2-digit'
                         });
-                    },
-                    "error": function (xhr, error, thrown) {
-                        console.error('DataTables error:', error);
-                        alert('An error occurred while loading the data');
                     }
                 },
-                "preDrawCallback": function(settings) {
-                    $('#paginatedTable').addClass('table-loading');
+                {
+                    "data": "depositedDate",
+                    "name": "depositedDate",
+                    "render": function (data, type, row) {
+                        if (!data) return '';
+                        var date = new Date(data);
+                        return date.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: '2-digit'
+                        });
+                    }
                 },
-                "drawCallback": function(settings) {
-                    $('#paginatedTable').removeClass('table-loading');
-
-                    // Initialize all tooltips
-                    $('[data-bs-toggle="tooltip"]').tooltip();
+                {
+                    "data": "clearedDate",
+                    "name": "clearedDate",
+                    "render": function (data, type, row) {
+                        if (!data) return '';
+                        var date = new Date(data);
+                        return date.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: '2-digit'
+                        });
+                    }
                 },
-                "columns": [
-                    { "data": "collectionReceiptNo" },
-                    {
-                        "data": "transactionDate",
-                        "name": "transactionDate",
-                        "render": function (data, type, row) {
-                            var date = new Date(data);
-                            return date.toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: '2-digit'
-                            });
+                {
+                    "data": "invoices",
+                    "orderable": false,
+                    "columnControl": [],
+                    "render": function (data, type, row) {
+                        if (row.invoices.length === 1){
+                            return `<span>${row.invoices[0]}</span>`;
                         }
-                    },
-                    {
-                        "data": "depositedDate",
-                        "name": "depositedDate",
-                        "render": function (data, type, row) {
-                            if (!data) return '';
-                            var date = new Date(data);
-                            return date.toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: '2-digit'
-                            });
-                        }
-                    },
-                    {
-                        "data": "clearedDate",
-                        "name": "clearedDate",
-                        "render": function (data, type, row) {
-                            if (!data) return '';
-                            var date = new Date(data);
-                            return date.toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: '2-digit'
-                            });
-                        }
-                    },
-                    {
-                        "data": "invoices",
-                        "orderable": false,
-                        "render": function (data, type, row) {
-                            if (row.invoices.length === 1){
-                                return `<span>${row.invoices[0]}</span>`;
-                            }
 
-                            return `<span data-bs-toggle="tooltip" title="${row.invoices.join(', ')}">
-                                        ${row.invoices.length} Invoices
-                                    </span>`;
+                        return `<span data-bs-toggle="tooltip" title="${row.invoices.join(', ')}">
+                                    ${row.invoices.length} Invoices
+                                </span>`;
 
-                        }
-                    },
-                    { "data": "customerName" },
-                    {
-                        "data": "paymentAmount",
-                        "render": function (data, type, row) {
-                            var amount = $.fn.dataTable.render.number(',', '.', 2).display(data);
-                            return `<span class="d-block fw-medium">${amount}</span>`;
-                        }
-                    },
-                    {
-                        "data": "total",
-                        "render": function (data, type, row) {
-                            var amount = $.fn.dataTable.render.number(',', '.', 2).display(data);
-                            return `<span class="d-block fw-medium">${amount}</span>`;
-                        }
-                    },
-                    { "data": "createdBy" },
-                    {
-                        "data": "status",
-                        "render": function(data, type, row) {
-                            var statusClass = row.status === "@nameof(CollectionReceiptStatus.Posted)"
-                            || row.status === "@nameof(CollectionReceiptStatus.Deposited)"
-                            || row.status === "@nameof(CollectionReceiptStatus.Redeposited)"
-                                ? "bg-info"
-                                : row.status === "@nameof(CollectionReceiptStatus.Cleared)"
-                                    ? "bg-success"
-                                    : row.status === "@nameof(CollectionReceiptStatus.Voided)"
-                                    || row.status === "@nameof(CollectionReceiptStatus.Returned)"
-                                        ? "bg-danger"
-                                        : row.status === "@nameof(CollectionReceiptStatus.Canceled)"
-                                            ? "bg-warning"
-                                            : "";
+                    }
+                },
+                { "data": "customerName" },
+                {
+                    "data": "paymentAmount",
+                    "render": function (data, type, row) {
+                        var amount = $.fn.dataTable.render.number(',', '.', 2).display(data);
+                        return `<span class="d-block fw-medium">${amount}</span>`;
+                    }
+                },
+                {
+                    "data": "total",
+                    "render": function (data, type, row) {
+                        var amount = $.fn.dataTable.render.number(',', '.', 2).display(data);
+                        return `<span class="d-block fw-medium">${amount}</span>`;
+                    }
+                },
+                { "data": "createdBy" },
+                {
+                    "data": "status",
+                    "render": function(data, type, row) {
+                        var statusClass = row.status === "@nameof(CollectionReceiptStatus.Posted)"
+                        || row.status === "@nameof(CollectionReceiptStatus.Deposited)"
+                        || row.status === "@nameof(CollectionReceiptStatus.Redeposited)"
+                            ? "bg-info"
+                            : row.status === "@nameof(CollectionReceiptStatus.Cleared)"
+                                ? "bg-success"
+                                : row.status === "@nameof(CollectionReceiptStatus.Voided)"
+                                || row.status === "@nameof(CollectionReceiptStatus.Returned)"
+                                    ? "bg-danger"
+                                    : row.status === "@nameof(CollectionReceiptStatus.Canceled)"
+                                        ? "bg-warning"
+                                        : "";
 
-                            return `<span class="badge rounded-pill ${statusClass}">${row.status}</span>`;
-                        }
-                    },
-                    {
-                        "data": null,
-                        "orderable": false,
-                        "render": function (data, type, row) {
-                            let dropdownHtml = `
-                                    <div class="dropdown actions-dropdown" style="${row.voidedBy != null || row.canceledBy != null ? 'display:none;' : ''}">
-                                        <button class="btn btn-light btn-sm dropdown-toggle w-100"
-                                                        type="button"
-                                                        data-bs-toggle="dropdown"
-                                                        aria-expanded="false">
-                                                    <i class="bi bi-three-dots"></i>
-                                        </button>
-                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">`;
+                        return `<span class="badge rounded-pill ${statusClass}">${row.status}</span>`;
+                    }
+                },
+                {
+                    "data": null,
+                    "orderable": false,
+                    "columnControl": [],
+                    "render": function (data, type, row) {
+                        let dropdownHtml = `
+                                <div class="dropdown actions-dropdown" style="${row.voidedBy != null || row.canceledBy != null ? 'display:none;' : ''}">
+                                    <button class="btn btn-light btn-sm dropdown-toggle w-100"
+                                                    type="button"
+                                                    data-bs-toggle="dropdown"
+                                                    aria-expanded="false">
+                                                <i class="bi bi-three-dots"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">`;
 
-                            if (row.postedBy == null) {
-                                if (row.multipleSIId != null) {
-                                    dropdownHtml += `
-                                        <li><a href="@Url.Action("MultipleCollectionEdit", "CollectionReceipt", new { area = "Filpride" })/${row.collectionReceiptId}" class="dropdown-item">Edit</a></li>
-                                        <li><a href="@Url.Action("MultipleCollectionPrint", "CollectionReceipt", new { area = "Filpride" })/${row.collectionReceiptId}" class="dropdown-item">Preview</a></li>`;
-                                } else {
-                                    dropdownHtml += `
-                                        <li><a href="@Url.Action("EditForSales", "CollectionReceipt", new { area = "Filpride" })/${row.collectionReceiptId}" class="dropdown-item">Edit</a></li>
-                                        <li><a href="@Url.Action("Print", "CollectionReceipt", new { area = "Filpride" })/${row.collectionReceiptId}" class="dropdown-item">Preview</a></li>`;
-                                }
-                                dropdownHtml += `<li><a class="dropdown-item" onclick="confirmCancel(${row.collectionReceiptId})">Cancel</a></li>`;
+                        if (row.postedBy == null) {
+                            if (row.multipleSIId != null) {
+                                dropdownHtml += `
+                                    <li><a href="@Url.Action("MultipleCollectionEdit", "CollectionReceipt", new { area = "Filpride" })/${row.collectionReceiptId}" class="dropdown-item">Edit</a></li>
+                                    <li><a href="@Url.Action("MultipleCollectionPrint", "CollectionReceipt", new { area = "Filpride" })/${row.collectionReceiptId}" class="dropdown-item">Preview</a></li>`;
                             } else {
+                                dropdownHtml += `
+                                    <li><a href="@Url.Action("EditForSales", "CollectionReceipt", new { area = "Filpride" })/${row.collectionReceiptId}" class="dropdown-item">Edit</a></li>
+                                    <li><a href="@Url.Action("Print", "CollectionReceipt", new { area = "Filpride" })/${row.collectionReceiptId}" class="dropdown-item">Preview</a></li>`;
+                            }
+                            dropdownHtml += `<li><a class="dropdown-item" onclick="confirmCancel(${row.collectionReceiptId})">Cancel</a></li>`;
+                        } else {
 
-                                const depositedStatus = "@nameof(CollectionReceiptStatus.Deposited)";
-                                const postedStatus = "@nameof(CollectionReceiptStatus.Posted)";
-                                const redepositedStatus = "@nameof(CollectionReceiptStatus.Redeposited)";
-                                const returnedStatus = "@nameof(CollectionReceiptStatus.Returned)";
+                            const depositedStatus = "@nameof(CollectionReceiptStatus.Deposited)";
+                            const postedStatus = "@nameof(CollectionReceiptStatus.Posted)";
+                            const redepositedStatus = "@nameof(CollectionReceiptStatus.Redeposited)";
+                            const returnedStatus = "@nameof(CollectionReceiptStatus.Returned)";
 
-                                if (row.status === postedStatus) {
-                                    dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="addDepositInfo(${row.collectionReceiptId})">Add Deposit Info</a></li>`;
-                                }
-
-                                if (row.status === depositedStatus || row.status === redepositedStatus) {
-                                    dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="applyClearingDate(${row.collectionReceiptId})">Apply Clearing Date</a></li>`;
-                                    dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="returnCheck(${row.collectionReceiptId})">Return Check</a></li>`;
-                                }
-
-                                if (row.status === returnedStatus) {
-                                    dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="redeposit(${row.collectionReceiptId}, ${row.bankId})">Redeposit</a></li>`;
-                                }
-
-                                if (row.multipleSIId != null) {
-                                    dropdownHtml += `<li><a href="@Url.Action("MultipleCollectionPrint", "CollectionReceipt", new { area = "Filpride" })/${row.collectionReceiptId}" class="dropdown-item">Preview</a></li>`;
-                                } else {
-                                    dropdownHtml += `<li><a href="@Url.Action("Print", "CollectionReceipt", new { area = "Filpride" })/${row.collectionReceiptId}" class="dropdown-item">Preview</a></li>`;
-                                }
-
-                                dropdownHtml += `<li><a class="dropdown-item" onclick="confirmVoid(${row.collectionReceiptId})">Void</a></li>`;
+                            if (row.status === postedStatus) {
+                                dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="addDepositInfo(${row.collectionReceiptId})">Add Deposit Info</a></li>`;
                             }
 
-                            dropdownHtml += `</ul></div>`;
-                            return dropdownHtml;
+                            if (row.status === depositedStatus || row.status === redepositedStatus) {
+                                dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="applyClearingDate(${row.collectionReceiptId})">Apply Clearing Date</a></li>`;
+                                dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="returnCheck(${row.collectionReceiptId})">Return Check</a></li>`;
+                            }
+
+                            if (row.status === returnedStatus) {
+                                dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="redeposit(${row.collectionReceiptId}, ${row.bankId})">Redeposit</a></li>`;
+                            }
+
+                            if (row.multipleSIId != null) {
+                                dropdownHtml += `<li><a href="@Url.Action("MultipleCollectionPrint", "CollectionReceipt", new { area = "Filpride" })/${row.collectionReceiptId}" class="dropdown-item">Preview</a></li>`;
+                            } else {
+                                dropdownHtml += `<li><a href="@Url.Action("Print", "CollectionReceipt", new { area = "Filpride" })/${row.collectionReceiptId}" class="dropdown-item">Preview</a></li>`;
+                            }
+
+                            dropdownHtml += `<li><a class="dropdown-item" onclick="confirmVoid(${row.collectionReceiptId})">Void</a></li>`;
                         }
+
+                        dropdownHtml += `</ul></div>`;
+                        return dropdownHtml;
                     }
+                }
 
-                ]
-            });
-
-            $('#inputDate').on('change', function() {
-                filterValue = $(this).val();
-                localStorage.setItem('filterDate', filterValue); // persist the date
-                table.ajax.reload();
-            });
+            ]
         });
+
     </script>
 }

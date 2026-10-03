@@ -4,6 +4,8 @@
     ViewData["Title"] = "Supplier";
 }
 
+@Html.AntiForgeryToken()
+
 <link rel="stylesheet" href="~/css/index-style.css">
 
 <div class="container-fluid mt-4">
@@ -42,6 +44,10 @@
             const activateUrl = '@Url.Action("Activate", "Supplier", new { area = "Filpride" })';
 
             var table = $('#paginatedTable').DataTable({
+                "searchDelay": 500,
+                "deferRender": true,
+                "columnControl": ['order', ['searchList']],
+                "ordering": { indicators: false },
                 "order": [[0, 'asc']],
                 "columnDefs": [
                     { "orderable": false, "targets": [6] }
@@ -102,6 +108,7 @@
                     {
                         "data": "null",
                         "orderable": false,
+                        "columnControl": [],
                         "render": function(data, type, row) {
                             let actions = `<div class="w-100 btn-group" role="group">`;
 

@@ -4,6 +4,8 @@
     ViewData["Title"] = "Purchase Order";
 }
 
+@Html.AntiForgeryToken()
+
 <link rel="stylesheet" href="~/css/index-style.css">
 
 <div class="container-fluid mt-4">
@@ -16,10 +18,6 @@
 
     <div class="card shadow border-0 mt-3">
         <div class="card-body p-3">
-            <div class="me-2">
-                <label class="fw-semibold small text-muted mb-1">Filter by Date</label>
-                <input type="date" id="inputDate" class="form-control rounded-3 shadow-sm" style="width:150px;">
-            </div>
             <table class="table table-hover mb-0 text-nowrap" id="paginatedTable">
                 <thead class="bg-light">
                 <tr>
@@ -200,19 +198,13 @@
         }
     </script>
     <script>
-    $(document).ready(function() {
         let filterType = '@ViewBag.FilterType';
 
-        let filterValue = "";
-        if (filterType && filterType !== "") {
-            localStorage.removeItem('filterDate');
-            $('#inputDate').val('');
-        } else {
-            filterValue = localStorage.getItem('filterDate') || "";
-            $('#inputDate').val(filterValue);
-        }
-
         let table = $('#paginatedTable').DataTable({
+            "searchDelay": 500,
+            "deferRender": true,
+            "columnControl": ['order', ['searchList']],
+            "ordering": { indicators: false },
             "processing": true, // Enable processing indicator
             "serverSide": true, // Enable server-side processing
             "stateSave" : true,
@@ -237,10 +229,7 @@
                 "type": "POST",
                 "data": function (d) {
                     return $.extend({}, d, {
-                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val(),
-
-                        // NEW PARAMETER FOR DATE — this goes to controller
-                        filterDate: filterValue
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
                     });
                 },
                 "error": function (xhr, error, thrown) {
@@ -372,6 +361,7 @@
                     "data": "purchaseOrderId",
                     "name": "purchaseOrderId",
                     "orderable": false,
+                    "columnControl": [],
                     "render": function (data, type, row) {
                         var dropdownContent = '';
                         const isAdmin = @User.IsInRole("Admin").ToString().ToLower();
@@ -448,12 +438,6 @@
             "pageLength": 10 // Default number of rows per page
         });
 
-        $('#inputDate').on('change', function() {
-            filterValue = $(this).val();
-            localStorage.setItem('filterDate', filterValue); // persist the date
-            table.ajax.reload();
-        });
-    });
     </script>
     <script>
         function showUpdatePriceModal(purchaseOrderId, unTriggeredQuantity) {

@@ -114,12 +114,57 @@ namespace IBSWeb.Areas.User.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> GetCompanyList([FromForm] DataTablesParameters parameters, CancellationToken cancellationToken)
         {
             try
             {
                 var queried = await _unitOfWork.Company
                     .GetAllAsync(null, cancellationToken);
+
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "companyCode":
+                            queried = queried.Where(x =>
+                                values.Contains(x.CompanyCode!)).ToList();
+                            break;
+
+                        case "companyName":
+                            queried = queried.Where(x =>
+                                values.Contains(x.CompanyName!)).ToList();
+                            break;
+
+                        case "companyAddress":
+                            queried = queried.Where(x =>
+                                values.Contains(x.CompanyAddress!)).ToList();
+                            break;
+
+                        case "companyTin":
+                            queried = queried.Where(x =>
+                                values.Contains(x.CompanyTin!)).ToList();
+                            break;
+                    }
+                }
 
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search?.Value))
@@ -152,12 +197,29 @@ namespace IBSWeb.Areas.User.Controllers
                     .Take(parameters.Length)
                     .ToList();
 
+                var columnControlOptionList = queried
+                    .Select(x => new
+                    {
+                        CompanyCode = x.CompanyCode,
+                        CompanyName = x.CompanyName,
+                        CompanyAddress = x.CompanyAddress,
+                        CompanyTin = x.CompanyTin
+                    })
+                    .ToList();
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["companyCode"] = columnControlOptionList.Select(x => x.CompanyCode).Where(value => value != null).Distinct(),
+                        ["companyName"] = columnControlOptionList.Select(x => x.CompanyName).Where(value => value != null).Distinct(),
+                        ["companyAddress"] = columnControlOptionList.Select(x => x.CompanyAddress).Where(value => value != null).Distinct(),
+                        ["companyTin"] = columnControlOptionList.Select(x => x.CompanyTin).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)

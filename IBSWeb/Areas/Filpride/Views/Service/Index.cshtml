@@ -5,6 +5,8 @@
     ViewData["Title"] = "Service";
 }
 
+@Html.AntiForgeryToken()
+
 <link rel="stylesheet" href="~/css/index-style.css">
 
 <div class="container-fluid mt-4">
@@ -40,6 +42,10 @@
             const editUrl = '@Url.Action("Edit", "Service", new { area = "Filpride" })';
 
             var table = $('#paginatedTable').DataTable({
+                "searchDelay": 500,
+                "deferRender": true,
+                "columnControl": ['order', ['searchList']],
+                "ordering": { indicators: false },
                 "order": [[0, 'asc']],
                 "columnDefs": [
                     { "orderable": false, "targets": [5] }
@@ -105,6 +111,7 @@
                     {
                         "data": "null",
                         "orderable": false,
+                        "columnControl": [],
                         "render": function(data, type, row) {
                             let actions = `<div class="d-flex justify-content-center"><div style="width:150px;">`;
 

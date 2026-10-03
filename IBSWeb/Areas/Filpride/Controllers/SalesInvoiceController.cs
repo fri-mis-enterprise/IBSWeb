@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
@@ -54,7 +55,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> GetSalesInvoices([FromForm] DataTablesParameters parameters, DateOnly filterDate, CancellationToken cancellationToken)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GetSalesInvoices([FromForm] DataTablesParameters parameters, CancellationToken cancellationToken)
         {
             try
             {
@@ -63,6 +65,97 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .GetAllQuery(x => true);
 
                 var totalRecords = await salesInvoices.CountAsync(cancellationToken);
+
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "salesInvoiceNo":
+                            salesInvoices = salesInvoices.Where(x =>
+                                values.Contains(x.SalesInvoiceNo!));
+                            break;
+
+                        case "deliveryReceiptNo":
+                            salesInvoices = salesInvoices.Where(x =>
+                                x.DeliveryReceipt != null &&
+                                values.Contains(x.DeliveryReceipt.DeliveryReceiptNo));
+                            break;
+
+                        case "transactionDate":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            salesInvoices = salesInvoices.Where(x =>
+                                dates.Contains(x.TransactionDate));
+
+                            break;
+                        }
+
+                        case "customerName":
+                            salesInvoices = salesInvoices.Where(x =>
+                                values.Contains(
+                                    x.CustomerOrderSlip != null
+                                        ? x.CustomerOrderSlip.CustomerName
+                                        : x.Customer!.CustomerName));
+                            break;
+
+                        case "terms":
+                            salesInvoices = salesInvoices.Where(x =>
+                                values.Contains(x.Terms));
+                            break;
+
+                        case "productName":
+                            salesInvoices = salesInvoices.Where(x =>
+                                values.Contains(x.Product!.ProductName));
+                            break;
+
+                        case "amount":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            salesInvoices = salesInvoices.Where(x =>
+                                amounts.Contains(x.Amount));
+
+                            break;
+                        }
+
+                        case "createdBy":
+                            salesInvoices = salesInvoices.Where(x =>
+                                values.Contains(x.CreatedBy!));
+                            break;
+
+                        case "status":
+                            salesInvoices = salesInvoices.Where(x =>
+                                values.Contains(x.Status));
+                            break;
+                    }
+                }
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
@@ -86,10 +179,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             (s.DeliveryReceipt != null &&
                             s.DeliveryReceipt.DeliveryReceiptNo.ToLower().Contains(searchValue) == true)
                             );
-                }
-                if (filterDate != DateOnly.MinValue && filterDate != default)
-                {
-                    salesInvoices = salesInvoices.Where(s => s.TransactionDate == filterDate);
                 }
 
                 // Sorting
@@ -140,12 +229,47 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToListAsync(cancellationToken);
 
+                var columnControlOptionList = await salesInvoices
+                    .Select(si => new
+                    {
+                        si.Amount,
+                        si.SalesInvoiceNo,
+                        DeliveryReceiptNo = si.DeliveryReceipt != null ? si.DeliveryReceipt.DeliveryReceiptNo : "",
+                        si.TransactionDate,
+                        CustomerName = si.CustomerOrderSlip != null ? si.CustomerOrderSlip.CustomerName : si.Customer!.CustomerName,
+                        si.Terms,
+                        si.Product!.ProductName,
+                        si.CreatedBy,
+                        si.Status,
+                        si.SalesInvoiceId,
+                        si.PostedBy,
+                        si.AmountPaid,
+                        si.VoidedBy,
+                        si.CanceledBy,
+                        si.PaymentStatus,
+                    })
+                    .OrderByDescending(x => x.SalesInvoiceNo)
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalFilteredRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["salesInvoiceNo"] = columnControlOptionList.Select(si => si.SalesInvoiceNo).Where(value => value != null).Distinct(),
+                        ["deliveryReceipt.deliveryReceiptNo"] = columnControlOptionList.Select(si => si.DeliveryReceiptNo).Where(value => value != null).Distinct(),
+                        ["transactionDate"] = columnControlOptionList.Select(si => si.TransactionDate).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["customerName"] = columnControlOptionList.Select(si => si.CustomerName).Where(value => value != null).Distinct(),
+                        ["terms"] = columnControlOptionList.Select(si => si.Terms).Where(value => value != null).Distinct(),
+                        ["productName"] = columnControlOptionList.Select(si => si.ProductName).Where(value => value != null).Distinct(),
+                        ["amount"] = columnControlOptionList.Select(si => si.Amount).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["createdBy"] = columnControlOptionList.Select(si => si.CreatedBy).Where(value => value != null).Distinct(),
+                        ["status"] = columnControlOptionList.Select(si => si.Status).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)
@@ -770,6 +894,83 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .ToList();
                 }
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "salesInvoiceNo":
+                            salesInvoices = salesInvoices.Where(x =>
+                                values.Contains(x.SalesInvoiceNo!)).ToList();
+                            break;
+
+                        case "customerName":
+                            salesInvoices = salesInvoices.Where(x =>
+                                values.Contains(x.CustomerOrderSlip != null
+                            ? x.CustomerOrderSlip.CustomerName
+                            : x.Customer!.CustomerName!)).ToList();
+                            break;
+
+                        case "transactionDate":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            salesInvoices = salesInvoices.Where(x =>
+                                dates.Contains(x.TransactionDate)).ToList();
+                            break;
+                        }
+
+                        case "terms":
+                            salesInvoices = salesInvoices.Where(x =>
+                                values.Contains(x.Terms!)).ToList();
+                            break;
+
+                        case "amount":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            salesInvoices = salesInvoices.Where(x =>
+                                amounts.Contains(x.Amount)).ToList();
+                            break;
+                        }
+
+                        case "createdBy":
+                            salesInvoices = salesInvoices.Where(x =>
+                                values.Contains(x.CreatedBy!)).ToList();
+                            break;
+
+                        case "isPosted":
+                            salesInvoices = salesInvoices.Where(x =>
+                                values.Contains(x.Status!)).ToList();
+                            break;
+                    }
+                }
+
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -848,12 +1049,37 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToList();
 
+                var columnControlOptionList = salesInvoices
+                    .Select(x => new
+                    {
+                        SalesInvoiceNo = x.SalesInvoiceNo,
+                        CustomerName = x.CustomerOrderSlip != null
+                            ? x.CustomerOrderSlip.CustomerName
+                            : x.Customer!.CustomerName,
+                        TransactionDate = x.TransactionDate,
+                        Terms = x.Terms,
+                        Amount = x.Amount,
+                        CreatedBy = x.CreatedBy,
+                        Status = x.Status
+                    })
+                    .ToList();
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["salesInvoiceNo"] = columnControlOptionList.Select(x => x.SalesInvoiceNo).Where(value => value != null).Distinct(),
+                        ["customerName"] = columnControlOptionList.Select(x => x.CustomerName).Where(value => value != null).Distinct(),
+                        ["transactionDate"] = columnControlOptionList.Select(x => x.TransactionDate).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["terms"] = columnControlOptionList.Select(x => x.Terms).Where(value => value != null).Distinct(),
+                        ["amount"] = columnControlOptionList.Select(x => x.Amount).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["createdBy"] = columnControlOptionList.Select(x => x.CreatedBy).Where(value => value != null).Distinct(),
+                        ["status"] = columnControlOptionList.Select(x => x.Status).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)

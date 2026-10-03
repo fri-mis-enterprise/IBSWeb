@@ -3,6 +3,8 @@
 @{
     ViewData["Title"] = "Sales Invoice - Export";
 }
+@Html.AntiForgeryToken()
+
 <style>
     .container {
         max-width: 100% !important;
@@ -109,6 +111,10 @@
         let selectedRecords = new Set();
         $(document).ready(function () {
             let table = $('#productTable').DataTable({
+                "searchDelay": 500,
+                "deferRender": true,
+                "columnControl": ['order', ['searchList']],
+                "ordering": { indicators: false },
                 processing: true,
                 serverSide: false,
                 stateSave: true,
@@ -127,7 +133,7 @@
                     }
                 },
                 columns: [
-                    {data: 'productId', orderable: false, searchable: false, render: DataTable.render.select()},
+                    {data: 'productId', orderable: false, "columnControl": [], searchable: false, render: DataTable.render.select()},
                     { data: 'productCode' },
                     { data: 'productName' },
                     { data: 'productUnit' },

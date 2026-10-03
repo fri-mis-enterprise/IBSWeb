@@ -17,6 +17,8 @@ namespace IBS.Models
         public bool Searchable { get; set; }
         public bool Orderable { get; set; }
         public DataTablesSearch Search { get; set; } = null!;
+
+        public ColumnControl? ColumnControl { get; set; }
     }
 
     public class DataTablesOrder
@@ -35,5 +37,10 @@ namespace IBS.Models
             set => _value = value?.Trim().ToLower() ?? string.Empty;
         }
         public bool Regex { get; set; }
+    }
+
+    public class ColumnControl
+    {
+        public List<string>? List { get; set; }
     }
 }

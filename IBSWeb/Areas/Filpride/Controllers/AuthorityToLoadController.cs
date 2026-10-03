@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
@@ -81,7 +82,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> GetAuthorityToLoads([FromForm] DataTablesParameters parameters, DateOnly filterDate, CancellationToken cancellationToken)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GetAuthorityToLoads([FromForm] DataTablesParameters parameters, CancellationToken cancellationToken)
         {
             try
             {
@@ -89,6 +91,66 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var atlList = _unitOfWork.FilprideAuthorityToLoad.GetAllQuery();
 
                 var totalRecords = await atlList.CountAsync(cancellationToken);
+
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "authorityToLoadNo":
+                            atlList = atlList.Where(x =>
+                                values.Contains(x.AuthorityToLoadNo!));
+                            break;
+
+                        case "dateBooked":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            atlList = atlList.Where(x =>
+                                dates.Contains(x.DateBooked));
+                            break;
+                        }
+
+                        case "validUntil":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            atlList = atlList.Where(x =>
+                                dates.Contains(x.ValidUntil));
+                            break;
+                        }
+
+                        case "remarks":
+                            atlList = atlList.Where(x =>
+                                values.Contains(x.Remarks!));
+                            break;
+                    }
+                }
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search?.Value))
@@ -109,10 +171,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             d.CustomerOrderSlip!.CustomerOrderSlipNo.ToLower().Contains(searchValue)) ||
                         s.Remarks.ToLower().Contains(searchValue)
                         );
-                }
-                if (filterDate != DateOnly.MinValue && filterDate != default)
-                {
-                    atlList = atlList.Where(s => s.DateBooked == filterDate);
                 }
 
                 // Sorting
@@ -145,12 +203,30 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToListAsync(cancellationToken);
 
+                var columnControlOptionList = await atlList
+                    .Select(x => new
+                    {
+                        AuthorityToLoadNo = x.AuthorityToLoadNo,
+                        DateBooked = x.DateBooked,
+                        ValidUntil = x.ValidUntil,
+                        Remarks = x.Remarks
+                    })
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalFilteredRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["authorityToLoadNo"] = columnControlOptionList.Select(x => x.AuthorityToLoadNo).Where(value => value != null).Distinct(),
+                        ["dateBooked"] = columnControlOptionList.Select(x => x.DateBooked).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["validUntil"] = columnControlOptionList.Select(x => x.ValidUntil).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["remarks"] = columnControlOptionList.Select(x => x.Remarks).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)
