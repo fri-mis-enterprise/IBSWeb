@@ -67,6 +67,10 @@
         let selectedRecords = new Set();
         $(document).ready(function () {
             let table = $('#serviceTable').DataTable({
+                "searchDelay": 500,
+                "deferRender": true,
+                "columnControl": ['order', ['searchList']],
+                "ordering": { indicators: false },
                 processing: true,
                 serverSide: false,
                 stateSave: true,
@@ -85,7 +89,7 @@
                     }
                 },
                 columns: [
-                    {data: 'serviceId', orderable: false, searchable: false, render: DataTable.render.select()},
+                    {data: 'serviceId', orderable: false, "columnControl": [], searchable: false, render: DataTable.render.select()},
                     { data: 'serviceNo' },
                     { data: 'name' },
                     {

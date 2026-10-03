@@ -175,6 +175,50 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 var totalRecords = await query.CountAsync(cancellationToken);
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "customerName":
+                            query = query.Where(x =>
+                                x.Customer != null && values.Contains(x.Customer!.CustomerName!));
+                            break;
+
+                        case "branchName":
+                            query = query.Where(x =>
+                                values.Contains(x.BranchName!));
+                            break;
+
+                        case "branchAddress":
+                            query = query.Where(x =>
+                                values.Contains(x.BranchAddress!));
+                            break;
+
+                        case "branchTin":
+                            query = query.Where(x =>
+                                values.Contains(x.BranchTin!));
+                            break;
+                    }
+                }
+
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -213,12 +257,30 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToListAsync(cancellationToken);
 
+                var columnControlOptionList = await query
+                    .Select(x => new
+                    {
+                        CustomerName = x.Customer != null ? x.Customer.CustomerName : null,
+                        BranchName = x.BranchName,
+                        BranchAddress = x.BranchAddress,
+                        BranchTin = x.BranchTin
+                    })
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalFilteredRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["Customer.CustomerName"] = columnControlOptionList.Select(x => x.CustomerName).Where(value => value != null).Distinct(),
+                        ["BranchName"] = columnControlOptionList.Select(x => x.BranchName).Where(value => value != null).Distinct(),
+                        ["BranchAddress"] = columnControlOptionList.Select(x => x.BranchAddress).Where(value => value != null).Distinct(),
+                        ["BranchTin"] = columnControlOptionList.Select(x => x.BranchTin).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)

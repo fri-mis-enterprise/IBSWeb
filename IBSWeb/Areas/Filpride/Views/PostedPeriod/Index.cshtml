@@ -1,4 +1,4 @@
-@model PostedPeriodViewModel
+﻿@model PostedPeriodViewModel
 @{
     ViewData["Title"] = "Post Periods";
 }
@@ -295,13 +295,17 @@
 
         const selectedPeriodIds = new Set();
         const table = $('#postedPeriodsTable').DataTable({
+            "searchDelay": 500,
+            "deferRender": true,
+            "columnControl": ['order', ['searchList']],
+            "ordering": { indicators: false },
             scrollY: '45vh',
             scrollCollapse: true,
             responsive: true,
             pageLength: 10,
             order: [[4, 'desc']],
             columnDefs: [
-                { targets: 0, orderable: false, searchable: false }
+                { targets: 0, orderable: false, searchable: false, columnControl: [] }
             ]
         });
 

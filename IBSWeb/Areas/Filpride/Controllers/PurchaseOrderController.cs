@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
@@ -91,7 +92,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> GetPurchaseOrders([FromForm] DataTablesParameters parameters, DateOnly filterDate, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetPurchaseOrders([FromForm] DataTablesParameters parameters, CancellationToken cancellationToken)
         {
             try
             {
@@ -121,6 +122,135 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     }
                 }
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "purchaseOrderNo":
+                            purchaseOrders = purchaseOrders.Where(x =>
+                                values.Contains(x.PurchaseOrderNo!));
+                            break;
+
+                        case "date":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            purchaseOrders = purchaseOrders.Where(x =>
+                                dates.Contains(x.Date));
+                            break;
+                        }
+
+                        case "supplierName":
+                            purchaseOrders = purchaseOrders.Where(x =>
+                                values.Contains(x.SupplierName!));
+                            break;
+
+                        case "terms":
+                            purchaseOrders = purchaseOrders.Where(x =>
+                                values.Contains(x.Terms!));
+                            break;
+
+                        case "typeOfPurchase":
+                            purchaseOrders = purchaseOrders.Where(x =>
+                                values.Contains(x.TypeOfPurchase.ToUpper()!));
+                            break;
+
+                        case "depot":
+                            purchaseOrders = purchaseOrders.Where(x =>
+                                values.Contains(x.PickUpPoint != null ? x.PickUpPoint.Depot : string.Empty!));
+                            break;
+
+                        case "productName":
+                            purchaseOrders = purchaseOrders.Where(x =>
+                                values.Contains(x.ProductName!));
+                            break;
+
+                        case "quantity":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            purchaseOrders = purchaseOrders.Where(x =>
+                                amounts.Contains(x.Quantity));
+                            break;
+                        }
+
+                        case "finalPrice":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            purchaseOrders = purchaseOrders.Where(x =>
+                                amounts.Contains(x.FinalPrice));
+                            break;
+                        }
+
+                        case "quantityReceived":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            purchaseOrders = purchaseOrders.Where(x =>
+                                amounts.Contains(x.QuantityReceived));
+                            break;
+                        }
+
+                        case "amount":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            purchaseOrders = purchaseOrders.Where(x =>
+                                amounts.Contains(x.Amount));
+                            break;
+                        }
+
+                        case "createdBy":
+                            purchaseOrders = purchaseOrders.Where(x =>
+                                values.Contains(x.CreatedBy!));
+                            break;
+
+                        case "status":
+                            purchaseOrders = purchaseOrders.Where(x =>
+                                values.Contains(x.Status!));
+                            break;
+                    }
+                }
+
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -141,10 +271,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         s.Status!.ToLower().Contains(searchValue) ||
                         (s.SubPoSeries != null && s.SubPoSeries.ToLower().Contains(searchValue))
                         );
-                }
-                if (filterDate != DateOnly.MinValue && filterDate != default)
-                {
-                    purchaseOrders = purchaseOrders.Where(s => s.Date == filterDate);
                 }
 
                 // Sorting
@@ -191,12 +317,48 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToListAsync(cancellationToken);
 
+                var columnControlOptionList = await purchaseOrders
+                    .Select(x => new
+                    {
+                        PurchaseOrderNo = x.PurchaseOrderNo,
+                        Date = x.Date,
+                        SupplierName = x.SupplierName,
+                        Terms = x.Terms,
+                        TypeOfPurchase = x.TypeOfPurchase.ToUpper(),
+                        Depot = x.PickUpPoint != null ? x.PickUpPoint.Depot : string.Empty,
+                        ProductName = x.ProductName,
+                        Quantity = x.Quantity,
+                        FinalPrice = x.FinalPrice,
+                        QuantityReceived = x.QuantityReceived,
+                        Amount = x.Amount,
+                        CreatedBy = x.CreatedBy,
+                        Status = x.Status
+                    })
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalFilteredRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["purchaseOrderNo"] = columnControlOptionList.Select(x => x.PurchaseOrderNo).Where(value => value != null).Distinct(),
+                        ["date"] = columnControlOptionList.Select(x => x.Date).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["supplierName"] = columnControlOptionList.Select(x => x.SupplierName).Where(value => value != null).Distinct(),
+                        ["terms"] = columnControlOptionList.Select(x => x.Terms).Where(value => value != null).Distinct(),
+                        ["typeOfPurchase"] = columnControlOptionList.Select(x => x.TypeOfPurchase).Where(value => value != null).Distinct(),
+                        ["pickUpPoint.depot"] = columnControlOptionList.Select(x => x.Depot).Where(value => value != null).Distinct(),
+                        ["productName"] = columnControlOptionList.Select(x => x.ProductName).Where(value => value != null).Distinct(),
+                        ["quantity"] = columnControlOptionList.Select(x => x.Quantity).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["finalPrice"] = columnControlOptionList.Select(x => x.FinalPrice).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["quantityReceived"] = columnControlOptionList.Select(x => x.QuantityReceived).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["amount"] = columnControlOptionList.Select(x => x.Amount).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["createdBy"] = columnControlOptionList.Select(x => x.CreatedBy).Where(value => value != null).Distinct(),
+                        ["status"] = columnControlOptionList.Select(x => x.Status).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)
@@ -1080,6 +1242,81 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .ToList();
                 }
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "purchaseOrderNo":
+                            purchaseOrders = purchaseOrders.Where(x =>
+                                values.Contains(x.PurchaseOrderNo!)).ToList();
+                            break;
+
+                        case "date":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            purchaseOrders = purchaseOrders.Where(x =>
+                                dates.Contains(x.Date)).ToList();
+                            break;
+                        }
+
+                        case "supplierName":
+                            purchaseOrders = purchaseOrders.Where(x =>
+                                values.Contains(x.SupplierName!)).ToList();
+                            break;
+
+                        case "productName":
+                            purchaseOrders = purchaseOrders.Where(x =>
+                                values.Contains(x.ProductName!)).ToList();
+                            break;
+
+                        case "amount":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            purchaseOrders = purchaseOrders.Where(x =>
+                                amounts.Contains(x.Amount)).ToList();
+                            break;
+                        }
+
+                        case "createdBy":
+                            purchaseOrders = purchaseOrders.Where(x =>
+                                values.Contains(x.CreatedBy!)).ToList();
+                            break;
+
+                        case "isPosted":
+                            purchaseOrders = purchaseOrders.Where(x =>
+                                values.Contains(x.Status!)).ToList();
+                            break;
+                    }
+                }
+
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -1147,12 +1384,35 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToList();
 
+                var columnControlOptionList = purchaseOrders
+                    .Select(x => new
+                    {
+                        PurchaseOrderNo = x.PurchaseOrderNo,
+                        Date = x.Date,
+                        SupplierName = x.SupplierName,
+                        ProductName = x.ProductName,
+                        Amount = x.Amount,
+                        CreatedBy = x.CreatedBy,
+                        Status = x.Status
+                    })
+                    .ToList();
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["purchaseOrderNo"] = columnControlOptionList.Select(x => x.PurchaseOrderNo).Where(value => value != null).Distinct(),
+                        ["date"] = columnControlOptionList.Select(x => x.Date).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["supplierName"] = columnControlOptionList.Select(x => x.SupplierName).Where(value => value != null).Distinct(),
+                        ["productName"] = columnControlOptionList.Select(x => x.ProductName).Where(value => value != null).Distinct(),
+                        ["amount"] = columnControlOptionList.Select(x => x.Amount).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["createdBy"] = columnControlOptionList.Select(x => x.CreatedBy).Where(value => value != null).Distinct(),
+                        ["status"] = columnControlOptionList.Select(x => x.Status).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)

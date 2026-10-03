@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DTOs;
@@ -112,7 +113,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> GetInvoiceCheckVouchers([FromForm] DataTablesParameters parameters, DateOnly filterDate, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetInvoiceCheckVouchers([FromForm] DataTablesParameters parameters, CancellationToken cancellationToken)
         {
             try
             {
@@ -131,6 +132,84 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (!string.IsNullOrEmpty(filterTypeClaim) && filterTypeClaim == "ForApproval")
                 {
                     checkVoucher = checkVoucher.Where(cv => cv.Status == nameof(CheckVoucherInvoiceStatus.ForApproval));
+                }
+
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "checkVoucherHeaderNo":
+                            checkVoucher = checkVoucher.Where(x =>
+                                values.Contains(x.CheckVoucherHeaderNo!));
+                            break;
+
+                        case "date":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            checkVoucher = checkVoucher.Where(x =>
+                                dates.Contains(x.Date));
+                            break;
+                        }
+
+                        case "payee":
+                            checkVoucher = checkVoucher.Where(x =>
+                                values.Contains(x.Payee!));
+                            break;
+
+                        case "invoiceAmount":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            checkVoucher = checkVoucher.Where(x =>
+                                amounts.Contains(x.InvoiceAmount));
+                            break;
+                        }
+
+                        case "amountPaid":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            checkVoucher = checkVoucher.Where(x =>
+                                amounts.Contains(x.AmountPaid));
+                            break;
+                        }
+
+                        case "status":
+                            checkVoucher = checkVoucher.Where(x =>
+                                values.Contains(x.Status!));
+                            break;
+                    }
                 }
 
                 // Search filter
@@ -154,10 +233,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         );
                 }
 
-                if (filterDate != DateOnly.MinValue && filterDate != default)
-                {
-                    checkVoucher = checkVoucher.Where(s => s.Date == filterDate);
-                }
 
                 // Sorting
                 if (parameters.Order?.Count > 0)
@@ -192,12 +267,34 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToListAsync(cancellationToken);
 
+                var columnControlOptionList = await checkVoucher
+                    .Select(x => new
+                    {
+                        CheckVoucherHeaderNo = x.CheckVoucherHeaderNo,
+                        Date = x.Date,
+                        Payee = x.Payee,
+                        InvoiceAmount = x.InvoiceAmount,
+                        AmountPaid = x.AmountPaid,
+                        Status = x.Status
+                    })
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalFilteredRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["checkVoucherHeaderNo"] = columnControlOptionList.Select(x => x.CheckVoucherHeaderNo).Where(value => value != null).Distinct(),
+                        ["date"] = columnControlOptionList.Select(x => x.Date).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["payee"] = columnControlOptionList.Select(x => x.Payee).Where(value => value != null).Distinct(),
+                        ["invoiceAmount"] = columnControlOptionList.Select(x => x.InvoiceAmount).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["amountPaid"] = columnControlOptionList.Select(x => x.AmountPaid).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["status"] = columnControlOptionList.Select(x => x.Status).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)

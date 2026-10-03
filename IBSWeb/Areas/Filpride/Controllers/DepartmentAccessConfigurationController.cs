@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
@@ -61,6 +62,81 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 var totalRecords = await department.CountAsync(cancellationToken);
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "department":
+                            department = department.Where(x =>
+                                x.Department.Any(value => values.Contains(value)));
+                            break;
+
+                        case "module":
+                            department = department.Where(x =>
+                                values.Contains(x.Module!));
+                            break;
+
+                        case "action":
+                            department = department.Where(x =>
+                                values.Contains(x.Action!));
+                            break;
+
+                        case "createdBy":
+                            department = department.Where(x =>
+                                values.Contains(x.CreatedBy!));
+                            break;
+
+                        case "createdDate":
+                        {
+                            List<DateTime> dates = values
+                                .Select(x => DateTime.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            department = department.Where(x =>
+                                dates.Contains(x.CreatedDate.Date));
+                            break;
+                        }
+
+                        case "editedBy":
+                            department = department.Where(x =>
+                                values.Contains(x.EditedBy!));
+                            break;
+
+                        case "editedDate":
+                        {
+                            List<DateTime> dates = values
+                                .Select(x => DateTime.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            department = department.Where(x =>
+                                x.EditedDate.HasValue && dates.Contains(x.EditedDate.Value.Date));
+                            break;
+                        }
+                    }
+                }
+
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -104,12 +180,36 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToListAsync(cancellationToken);
 
+                var columnControlOptionList = await department
+                    .Select(x => new
+                    {
+                        Department = x.Department,
+                        Module = x.Module,
+                        Action = x.Action,
+                        CreatedBy = x.CreatedBy,
+                        CreatedDate = x.CreatedDate,
+                        EditedBy = x.EditedBy,
+                        EditedDate = x.EditedDate
+                    })
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalFilteredRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["department"] = columnControlOptionList.SelectMany(x => x.Department).Where(value => value != null).Distinct(),
+                        ["module"] = columnControlOptionList.Select(x => x.Module).Where(value => value != null).Distinct(),
+                        ["action"] = columnControlOptionList.Select(x => x.Action).Where(value => value != null).Distinct(),
+                        ["createdBy"] = columnControlOptionList.Select(x => x.CreatedBy).Where(value => value != null).Distinct(),
+                        ["createdDate"] = columnControlOptionList.Select(x => x.CreatedDate).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["editedBy"] = columnControlOptionList.Select(x => x.EditedBy).Where(value => value != null).Distinct(),
+                        ["editedDate"] = columnControlOptionList.Select(x => x.EditedDate).Select(x => x?.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)

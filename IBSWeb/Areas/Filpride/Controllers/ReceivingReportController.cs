@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
@@ -103,7 +104,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> GetReceivingReports([FromForm] DataTablesParameters parameters, DateOnly filterDate, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetReceivingReports([FromForm] DataTablesParameters parameters, CancellationToken cancellationToken)
         {
             try
             {
@@ -134,6 +135,96 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     }
                 }
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "receivingReportNo":
+                            receivingReports = receivingReports.Where(x =>
+                                values.Contains(x.ReceivingReportNo!));
+                            break;
+
+                        case "date":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            receivingReports = receivingReports.Where(x =>
+                                dates.Contains(x.Date));
+                            break;
+                        }
+
+                        case "purchaseOrderNo":
+                            receivingReports = receivingReports.Where(x =>
+                                x.PurchaseOrder != null && values.Contains(x.PurchaseOrder!.PurchaseOrderNo!));
+                            break;
+
+                        case "oldRRNo":
+                            receivingReports = receivingReports.Where(x =>
+                                values.Contains(x.OldRRNo!));
+                            break;
+
+                        case "deliveryReceiptNo":
+                            receivingReports = receivingReports.Where(x =>
+                                x.DeliveryReceipt != null && values.Contains(x.DeliveryReceipt!.DeliveryReceiptNo!));
+                            break;
+
+                        case "customerName":
+                            receivingReports = receivingReports.Where(x =>
+                                x.DeliveryReceipt != null && x.DeliveryReceipt.Customer != null && values.Contains(x.DeliveryReceipt!.Customer!.CustomerName!));
+                            break;
+
+                        case "productName":
+                            receivingReports = receivingReports.Where(x =>
+                                x.PurchaseOrder != null && x.PurchaseOrder.Product != null && values.Contains(x.PurchaseOrder!.Product!.ProductName!));
+                            break;
+
+                        case "quantityReceived":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            receivingReports = receivingReports.Where(x =>
+                                amounts.Contains(x.QuantityReceived));
+                            break;
+                        }
+
+                        case "createdBy":
+                            receivingReports = receivingReports.Where(x =>
+                                values.Contains(x.CreatedBy!));
+                            break;
+
+                        case "status":
+                            receivingReports = receivingReports.Where(x =>
+                                values.Contains(x.Status!));
+                            break;
+                    }
+                }
+
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -151,10 +242,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         s.CreatedBy!.ToLower().Contains(searchValue) ||
                         s.Remarks.ToLower().Contains(searchValue)
                         );
-                }
-                if (filterDate != DateOnly.MinValue && filterDate != default)
-                {
-                    receivingReports = receivingReports.Where(s => s.Date == filterDate);
                 }
 
                 // Sorting
@@ -194,12 +281,42 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToListAsync(cancellationToken);
 
+                var columnControlOptionList = await receivingReports
+                    .Select(x => new
+                    {
+                        ReceivingReportNo = x.ReceivingReportNo,
+                        Date = x.Date,
+                        PurchaseOrderNo = x.PurchaseOrder != null ? x.PurchaseOrder.PurchaseOrderNo : null,
+                        OldRRNo = x.OldRRNo,
+                        DeliveryReceiptNo = x.DeliveryReceipt != null ? x.DeliveryReceipt.DeliveryReceiptNo : null,
+                        CustomerName = x.DeliveryReceipt != null && x.DeliveryReceipt.Customer != null ? x.DeliveryReceipt.Customer.CustomerName : null,
+                        ProductName = x.PurchaseOrder != null && x.PurchaseOrder.Product != null ? x.PurchaseOrder.Product.ProductName : null,
+                        QuantityReceived = x.QuantityReceived,
+                        CreatedBy = x.CreatedBy,
+                        Status = x.Status
+                    })
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalFilteredRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["receivingReportNo"] = columnControlOptionList.Select(x => x.ReceivingReportNo).Where(value => value != null).Distinct(),
+                        ["date"] = columnControlOptionList.Select(x => x.Date).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["purchaseOrder.purchaseOrderNo"] = columnControlOptionList.Select(x => x.PurchaseOrderNo).Where(value => value != null).Distinct(),
+                        ["oldRRNo"] = columnControlOptionList.Select(x => x.OldRRNo).Where(value => value != null).Distinct(),
+                        ["deliveryReceipt.deliveryReceiptNo"] = columnControlOptionList.Select(x => x.DeliveryReceiptNo).Where(value => value != null).Distinct(),
+                        ["deliveryReceipt.customerOrderSlip.customerName"] = columnControlOptionList.Select(x => x.CustomerName).Where(value => value != null).Distinct(),
+                        ["purchaseOrder.productName"] = columnControlOptionList.Select(x => x.ProductName).Where(value => value != null).Distinct(),
+                        ["quantityReceived"] = columnControlOptionList.Select(x => x.QuantityReceived).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["createdBy"] = columnControlOptionList.Select(x => x.CreatedBy).Where(value => value != null).Distinct(),
+                        ["status"] = columnControlOptionList.Select(x => x.Status).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)
@@ -757,6 +874,89 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .ToList();
                 }
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "receivingReportNo":
+                            receivingReports = receivingReports.Where(x =>
+                                values.Contains(x.ReceivingReportNo!)).ToList();
+                            break;
+
+                        case "date":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            receivingReports = receivingReports.Where(x =>
+                                dates.Contains(x.Date)).ToList();
+                            break;
+                        }
+
+                        case "purchaseOrderNo":
+                            receivingReports = receivingReports.Where(x =>
+                                x.PurchaseOrder != null && values.Contains(x.PurchaseOrder!.PurchaseOrderNo!)).ToList();
+                            break;
+
+                        case "quantityDelivered":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            receivingReports = receivingReports.Where(x =>
+                                amounts.Contains(x.QuantityDelivered)).ToList();
+                            break;
+                        }
+
+                        case "quantityReceived":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            receivingReports = receivingReports.Where(x =>
+                                amounts.Contains(x.QuantityReceived)).ToList();
+                            break;
+                        }
+
+                        case "createdBy":
+                            receivingReports = receivingReports.Where(x =>
+                                values.Contains(x.CreatedBy!)).ToList();
+                            break;
+
+                        case "isPosted":
+                            receivingReports = receivingReports.Where(x =>
+                                values.Contains(x.Status!)).ToList();
+                            break;
+                    }
+                }
+
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -824,12 +1024,35 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToList();
 
+                var columnControlOptionList = receivingReports
+                    .Select(x => new
+                    {
+                        ReceivingReportNo = x.ReceivingReportNo,
+                        Date = x.Date,
+                        PurchaseOrderNo = x.PurchaseOrder != null ? x.PurchaseOrder.PurchaseOrderNo : null,
+                        QuantityDelivered = x.QuantityDelivered,
+                        QuantityReceived = x.QuantityReceived,
+                        CreatedBy = x.CreatedBy,
+                        Status = x.Status
+                    })
+                    .ToList();
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["receivingReportNo"] = columnControlOptionList.Select(x => x.ReceivingReportNo).Where(value => value != null).Distinct(),
+                        ["date"] = columnControlOptionList.Select(x => x.Date).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["purchaseOrder.purchaseOrderNo"] = columnControlOptionList.Select(x => x.PurchaseOrderNo).Where(value => value != null).Distinct(),
+                        ["quantityDelivered"] = columnControlOptionList.Select(x => x.QuantityDelivered).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["quantityReceived"] = columnControlOptionList.Select(x => x.QuantityReceived).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["createdBy"] = columnControlOptionList.Select(x => x.CreatedBy).Where(value => value != null).Distinct(),
+                        ["status"] = columnControlOptionList.Select(x => x.Status).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)

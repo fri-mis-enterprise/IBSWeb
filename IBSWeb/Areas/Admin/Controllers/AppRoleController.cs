@@ -49,6 +49,35 @@ namespace IBSWeb.Areas.Admin.Controllers
             {
                 var queried = _roleManager.Roles;
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "name":
+                            queried = queried.Where(x =>
+                                values.Contains(x.Name!));
+                            break;
+                    }
+                }
+
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -81,12 +110,23 @@ namespace IBSWeb.Areas.Admin.Controllers
                     .Take(parameters.Length)
                     .ToList();
 
+                var columnControlOptionList = queried
+                    .Select(x => new
+                    {
+                        Name = x.Name
+                    })
+                    .ToList();
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["Name"] = columnControlOptionList.Select(x => x.Name).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)

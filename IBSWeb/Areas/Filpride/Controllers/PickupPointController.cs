@@ -110,6 +110,40 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 var totalRecords = await query.CountAsync(cancellationToken);
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "depot":
+                            query = query.Where(x =>
+                                values.Contains(x.Depot!));
+                            break;
+
+                        case "supplierName":
+                            query = query.Where(x =>
+                                x.Supplier != null && values.Contains(x.Supplier!.SupplierName!));
+                            break;
+                    }
+                }
+
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -145,12 +179,26 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToListAsync(cancellationToken);
 
+                var columnControlOptionList = await query
+                    .Select(x => new
+                    {
+                        Depot = x.Depot,
+                        SupplierName = x.Supplier != null ? x.Supplier.SupplierName : null
+                    })
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalFilteredRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["Depot"] = columnControlOptionList.Select(x => x.Depot).Where(value => value != null).Distinct(),
+                        ["Supplier.SupplierName"] = columnControlOptionList.Select(x => x.SupplierName).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)

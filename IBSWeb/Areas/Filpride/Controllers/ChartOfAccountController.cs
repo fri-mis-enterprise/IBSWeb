@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
@@ -249,6 +250,88 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .Where(s => s.CreatedDate < dateToInclusive);
                 }
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "accountNumber":
+                            chartOfAccounts = chartOfAccounts.Where(x =>
+                                values.Contains(x.AccountNumber!));
+                            break;
+
+                        case "accountName":
+                            chartOfAccounts = chartOfAccounts.Where(x =>
+                                values.Contains(x.AccountName!));
+                            break;
+
+                        case "accountType":
+                            chartOfAccounts = chartOfAccounts.Where(x =>
+                                values.Contains(x.AccountType!));
+                            break;
+
+                        case "normalBalance":
+                            chartOfAccounts = chartOfAccounts.Where(x =>
+                                values.Contains(x.NormalBalance!));
+                            break;
+
+                        case "isHidden":
+                        {
+                            List<bool> selectedValues = values
+                                .Select(x => bool.Parse(
+                                    x))
+                                .ToList();
+
+                            chartOfAccounts = chartOfAccounts.Where(x =>
+                                selectedValues.Contains(x.IsHidden));
+                            break;
+                        }
+
+                        case "level":
+                        {
+                            List<int> selectedValues = values
+                                .Select(x => int.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            chartOfAccounts = chartOfAccounts.Where(x =>
+                                selectedValues.Contains(x.Level));
+                            break;
+                        }
+
+                        case "createdDate":
+                        {
+                            List<DateTime> dates = values
+                                .Select(x => DateTime.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            chartOfAccounts = chartOfAccounts.Where(x =>
+                                dates.Contains(x.CreatedDate.Date));
+                            break;
+                        }
+                    }
+                }
+
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -310,12 +393,36 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToListAsync(cancellationToken);
 
+                var columnControlOptionList = await chartOfAccounts
+                    .Select(x => new
+                    {
+                        AccountNumber = x.AccountNumber,
+                        AccountName = x.AccountName,
+                        AccountType = x.AccountType,
+                        NormalBalance = x.NormalBalance,
+                        IsHidden = x.IsHidden,
+                        Level = x.Level,
+                        CreatedDate = x.CreatedDate
+                    })
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalFilteredRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["accountNumber"] = columnControlOptionList.Select(x => x.AccountNumber).Where(value => value != null).Distinct(),
+                        ["accountName"] = columnControlOptionList.Select(x => x.AccountName).Where(value => value != null).Distinct(),
+                        ["accountType"] = columnControlOptionList.Select(x => x.AccountType).Where(value => value != null).Distinct(),
+                        ["normalBalance"] = columnControlOptionList.Select(x => x.NormalBalance).Where(value => value != null).Distinct(),
+                        ["isHidden"] = columnControlOptionList.Select(x => x.IsHidden).Select(x => x.ToString()).Distinct(),
+                        ["level"] = columnControlOptionList.Select(x => x.Level).Select(x => x.ToString(CultureInfo.InvariantCulture)).Distinct(),
+                        ["createdDate"] = columnControlOptionList.Select(x => x.CreatedDate).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct()
+                    }
                 });
             }
             catch (Exception ex)

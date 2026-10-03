@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using System.Text.Json;
@@ -100,7 +101,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> GetCustomerOrderSlips([FromForm] DataTablesParameters parameters, DateOnly filterDate, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetCustomerOrderSlips([FromForm] DataTablesParameters parameters, CancellationToken cancellationToken)
         {
             try
             {
@@ -153,6 +154,125 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     }
                 }
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "customerOrderSlipNo":
+                            query = query.Where(x =>
+                                values.Contains(x.CustomerOrderSlipNo!));
+                            break;
+
+                        case "deliveryOption":
+                            query = query.Where(x =>
+                                values.Contains(x.DeliveryOption!));
+                            break;
+
+                        case "depot":
+                            query = query.Where(x =>
+                                values.Contains(x.Depot!));
+                            break;
+
+                        case "date":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            query = query.Where(x =>
+                                dates.Contains(x.Date));
+                            break;
+                        }
+
+                        case "customerName":
+                            query = query.Where(x =>
+                                values.Contains(x.CustomerName!));
+                            break;
+
+                        case "productName":
+                            query = query.Where(x =>
+                                values.Contains(x.ProductName!));
+                            break;
+
+                        case "deliveredPrice":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            query = query.Where(x =>
+                                amounts.Contains(x.DeliveredPrice));
+                            break;
+                        }
+
+                        case "quantity":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            query = query.Where(x =>
+                                amounts.Contains(x.Quantity));
+                            break;
+                        }
+
+                        case "balanceQuantity":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            query = query.Where(x =>
+                                amounts.Contains(x.BalanceQuantity));
+                            break;
+                        }
+
+                        case "totalAmount":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            query = query.Where(x =>
+                                amounts.Contains(x.TotalAmount));
+                            break;
+                        }
+
+                        case "status":
+                            query = query.Where(x =>
+                                values.Contains(x.Status!));
+                            break;
+                    }
+                }
+
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -175,10 +295,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         s.Quantity.ToString().Contains(searchValue) ||
                         s.TotalAmount.ToString().Contains(searchValue) ||
                         s.Status.ToLower().Contains(searchValue));
-                }
-                if (filterDate != DateOnly.MinValue && filterDate != default)
-                {
-                    query = query.Where(x => x.Date == filterDate);
                 }
 
                 // Sorting
@@ -226,12 +342,44 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToListAsync(cancellationToken);
 
+                var columnControlOptionList = await query
+                    .Select(x => new
+                    {
+                        CustomerOrderSlipNo = x.CustomerOrderSlipNo,
+                        DeliveryOption = x.DeliveryOption,
+                        Depot = x.Depot,
+                        Date = x.Date,
+                        CustomerName = x.CustomerName,
+                        ProductName = x.ProductName,
+                        DeliveredPrice = x.DeliveredPrice,
+                        Quantity = x.Quantity,
+                        BalanceQuantity = x.BalanceQuantity,
+                        TotalAmount = x.TotalAmount,
+                        Status = x.Status
+                    })
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalFilteredRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["CustomerOrderSlipNo"] = columnControlOptionList.Select(x => x.CustomerOrderSlipNo).Where(value => value != null).Distinct(),
+                        ["deliveryOption"] = columnControlOptionList.Select(x => x.DeliveryOption).Where(value => value != null).Distinct(),
+                        ["Depot"] = columnControlOptionList.Select(x => x.Depot).Where(value => value != null).Distinct(),
+                        ["Date"] = columnControlOptionList.Select(x => x.Date).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["CustomerName"] = columnControlOptionList.Select(x => x.CustomerName).Where(value => value != null).Distinct(),
+                        ["ProductName"] = columnControlOptionList.Select(x => x.ProductName).Where(value => value != null).Distinct(),
+                        ["DeliveredPrice"] = columnControlOptionList.Select(x => x.DeliveredPrice).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["Quantity"] = columnControlOptionList.Select(x => x.Quantity).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["BalanceQuantity"] = columnControlOptionList.Select(x => x.BalanceQuantity).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["TotalAmount"] = columnControlOptionList.Select(x => x.TotalAmount).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["Status"] = columnControlOptionList.Select(x => x.Status).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)

@@ -71,6 +71,10 @@
         let selectedRecords = new Set();
         $(document).ready(function () {
             let table = $('#bankAccountTable').DataTable({
+                "searchDelay": 500,
+                "deferRender": true,
+                "columnControl": ['order', ['searchList']],
+                "ordering": { indicators: false },
                 processing: true,
                 serverSide: false,
                 stateSave: true,
@@ -89,7 +93,7 @@
                     }
                 },
                 columns: [
-                    {data: 'bankAccountId', orderable: false, searchable: false, render: DataTable.render.select()},
+                    {data: 'bankAccountId', orderable: false, "columnControl": [], searchable: false, render: DataTable.render.select()},
                     { data: 'accountNo' },
                     { data: 'accountName' },
                     { data: 'bank' },

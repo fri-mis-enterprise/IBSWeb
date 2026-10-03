@@ -65,6 +65,10 @@
             $('#dateTo').val(dateToValue);
 
             let table = $('#journalVoucherTable').DataTable({
+                "searchDelay": 500,
+                "deferRender": true,
+                "columnControl": ['order', ['searchList']],
+                "ordering": { indicators: false },
                 processing: true,
                 serverSide: true,      // ENABLE SERVER-SIDE PROCESSING
                 stateSave: true,
@@ -99,6 +103,7 @@
                     {
                         data: 'journalVoucherHeaderId',
                         orderable: false,
+                        "columnControl": [],
                         searchable: false,
                         name: 'journalVoucherHeaderId',
                         render: DataTable.render.select()

@@ -65,6 +65,10 @@
             $('#dateTo').val(dateToValue);
 
             let table = $('#debitMemoTable').DataTable({
+                "searchDelay": 500,
+                "deferRender": true,
+                "columnControl": ['order', ['searchList']],
+                "ordering": { indicators: false },
                 processing: true,
                 serverSide: true,      // ENABLE SERVER-SIDE PROCESSING
                 stateSave: true,
@@ -99,6 +103,7 @@
                     {
                         data: 'debitMemoId',
                         orderable: false,
+                        "columnControl": [],
                         searchable: false,
                         name: 'debitMemoId',
                         render: DataTable.render.select()
@@ -122,6 +127,7 @@
                     {
                         data: "debitMemoId",
                         orderable: false,
+                        "columnControl": [],
                         name: 'invoiceNo',
                         render: function (data, type, row) {
                             if (row.salesInvoiceId) {

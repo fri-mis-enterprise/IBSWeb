@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
@@ -52,6 +53,61 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 var totalRecords = await queried.CountAsync(cancellationToken);
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "termsCode":
+                            queried = queried.Where(x =>
+                                values.Contains(x.TermsCode!));
+                            break;
+
+                        case "numberOfDays":
+                        {
+                            List<int> selectedValues = values
+                                .Select(x => int.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            queried = queried.Where(x =>
+                                selectedValues.Contains(x.NumberOfDays));
+                            break;
+                        }
+
+                        case "numberOfMonths":
+                        {
+                            List<int> selectedValues = values
+                                .Select(x => int.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            queried = queried.Where(x =>
+                                selectedValues.Contains(x.NumberOfMonths));
+                            break;
+                        }
+                    }
+                }
+
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -82,12 +138,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Take(parameters.Length)
                     .ToListAsync(cancellationToken);
 
+                var columnControlOptionList = await queried
+                    .Select(x => new
+                    {
+                        TermsCode = x.TermsCode,
+                        NumberOfDays = x.NumberOfDays,
+                        NumberOfMonths = x.NumberOfMonths
+                    })
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalFilteredRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["termsCode"] = columnControlOptionList.Select(x => x.TermsCode).Where(value => value != null).Distinct(),
+                        ["numberOfDays"] = columnControlOptionList.Select(x => x.NumberOfDays).Select(x => x.ToString(CultureInfo.InvariantCulture)).Distinct(),
+                        ["numberOfMonths"] = columnControlOptionList.Select(x => x.NumberOfMonths).Select(x => x.ToString(CultureInfo.InvariantCulture)).Distinct()
+                    }
                 });
             }
             catch (Exception ex)

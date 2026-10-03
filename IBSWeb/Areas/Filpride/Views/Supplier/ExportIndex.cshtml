@@ -67,6 +67,10 @@
             $('#dateTo').val(dateToValue);
 
             let table = $('#supplierTable').DataTable({
+                "searchDelay": 500,
+                "deferRender": true,
+                "columnControl": ['order', ['searchList']],
+                "ordering": { indicators: false },
                 processing: true,
                 serverSide: true,      // ENABLE SERVER-SIDE PROCESSING
                 stateSave: true,
@@ -101,6 +105,7 @@
                     {
                         data: 'supplierId',
                         orderable: false,
+                        "columnControl": [],
                         searchable: false,
                         name: 'supplierId',
                         render: DataTable.render.select()

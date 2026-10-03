@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DTOs;
@@ -187,7 +188,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> GetJournalVouchers([FromForm] DataTablesParameters parameters, DateOnly filterDate, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetJournalVouchers([FromForm] DataTablesParameters parameters, CancellationToken cancellationToken)
         {
             try
             {
@@ -217,6 +218,73 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     }
                 }
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "journalVoucherHeaderNo":
+                            journalVoucherHeader = journalVoucherHeader.Where(x =>
+                                values.Contains(x.JournalVoucherHeaderNo!));
+                            break;
+
+                        case "date":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            journalVoucherHeader = journalVoucherHeader.Where(x =>
+                                dates.Contains(x.Date));
+                            break;
+                        }
+
+                        case "checkVoucherHeader.checkVoucherHeaderNo":
+                            journalVoucherHeader = journalVoucherHeader.Where(x =>
+                                x.CheckVoucherHeader != null && values.Contains(x.CheckVoucherHeader.CheckVoucherHeaderNo!));
+                            break;
+
+                        case "jvType":
+                            journalVoucherHeader = journalVoucherHeader.Where(x =>
+                                values.Contains(x.JvType!));
+                            break;
+
+                        case "jvReason":
+                            journalVoucherHeader = journalVoucherHeader.Where(x =>
+                                values.Contains(x.JVReason!));
+                            break;
+
+                        case "createdBy":
+                            journalVoucherHeader = journalVoucherHeader.Where(x =>
+                                values.Contains(x.CreatedBy!));
+                            break;
+
+                        case "status":
+                            journalVoucherHeader = journalVoucherHeader.Where(x =>
+                                values.Contains(x.Status!));
+                            break;
+                    }
+                }
+
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -234,10 +302,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         s.JVReason.ToLower().Contains(searchValue) ||
                         s.CreatedBy!.ToLower().Contains(searchValue)
                         );
-                }
-                if (filterDate != DateOnly.MinValue && filterDate != default)
-                {
-                    journalVoucherHeader = journalVoucherHeader.Where(s => s.Date == filterDate);
                 }
 
                 // Sorting
@@ -258,12 +322,36 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Take(parameters.Length)
                     .ToListAsync(cancellationToken);
 
+                var columnControlOptionList = await journalVoucherHeader
+                    .Select(x => new
+                    {
+                        JournalVoucherHeaderNo = x.JournalVoucherHeaderNo,
+                        Date = x.Date,
+                        CheckVoucherHeaderNo = x.CheckVoucherHeader != null ? x.CheckVoucherHeader.CheckVoucherHeaderNo : null,
+                        JvType = x.JvType,
+                        JvReason = x.JVReason,
+                        CreatedBy = x.CreatedBy,
+                        Status = x.Status
+                    })
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalFilteredRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["journalVoucherHeaderNo"] = columnControlOptionList.Select(x => x.JournalVoucherHeaderNo).Where(value => value != null).Distinct(),
+                        ["date"] = columnControlOptionList.Select(x => x.Date).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["checkVoucherHeader.checkVoucherHeaderNo"] = columnControlOptionList.Select(x => x.CheckVoucherHeaderNo).Where(value => value != null).Distinct(),
+                        ["jvType"] = columnControlOptionList.Select(x => x.JvType).Where(value => value != null).Distinct(),
+                        ["jvReason"] = columnControlOptionList.Select(x => x.JvReason).Where(value => value != null).Distinct(),
+                        ["createdBy"] = columnControlOptionList.Select(x => x.CreatedBy).Where(value => value != null).Distinct(),
+                        ["status"] = columnControlOptionList.Select(x => x.Status).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)
@@ -890,6 +978,73 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .ToList();
                 }
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "journalVoucherHeaderNo":
+                            journalVoucherHeaders = journalVoucherHeaders.Where(x =>
+                                values.Contains(x.JournalVoucherHeaderNo!)).ToList();
+                            break;
+
+                        case "date":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            journalVoucherHeaders = journalVoucherHeaders.Where(x =>
+                                dates.Contains(x.Date)).ToList();
+                            break;
+                        }
+
+                        case "checkVoucherHeaderNo":
+                            journalVoucherHeaders = journalVoucherHeaders.Where(x =>
+                                x.CheckVoucherHeader != null && values.Contains(x.CheckVoucherHeader.CheckVoucherHeaderNo!)).ToList();
+                            break;
+
+                        case "crNo":
+                            journalVoucherHeaders = journalVoucherHeaders.Where(x =>
+                                values.Contains(x.CRNo!)).ToList();
+                            break;
+
+                        case "jvReason":
+                            journalVoucherHeaders = journalVoucherHeaders.Where(x =>
+                                values.Contains(x.JVReason!)).ToList();
+                            break;
+
+                        case "createdBy":
+                            journalVoucherHeaders = journalVoucherHeaders.Where(x =>
+                                values.Contains(x.CreatedBy!)).ToList();
+                            break;
+
+                        case "isPosted":
+                            journalVoucherHeaders = journalVoucherHeaders.Where(x =>
+                                values.Contains(x.Status!)).ToList();
+                            break;
+                    }
+                }
+
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -974,12 +1129,35 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToList();
 
+                var columnControlOptionList = journalVoucherHeaders
+                    .Select(x => new
+                    {
+                        JournalVoucherHeaderNo = x.JournalVoucherHeaderNo,
+                        Date = x.Date,
+                        CheckVoucherHeaderNo = x.CheckVoucherHeader != null ? x.CheckVoucherHeader.CheckVoucherHeaderNo : null,
+                        CrNo = x.CRNo,
+                        JvReason = x.JVReason,
+                        CreatedBy = x.CreatedBy,
+                        Status = x.Status
+                    })
+                    .ToList();
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["journalVoucherHeaderNo"] = columnControlOptionList.Select(x => x.JournalVoucherHeaderNo).Where(value => value != null).Distinct(),
+                        ["date"] = columnControlOptionList.Select(x => x.Date).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["checkVoucherHeader.checkVoucherHeaderNo"] = columnControlOptionList.Select(x => x.CheckVoucherHeaderNo).Where(value => value != null).Distinct(),
+                        ["crNo"] = columnControlOptionList.Select(x => x.CrNo).Where(value => value != null).Distinct(),
+                        ["jvReason"] = columnControlOptionList.Select(x => x.JvReason).Where(value => value != null).Distinct(),
+                        ["createdBy"] = columnControlOptionList.Select(x => x.CreatedBy).Where(value => value != null).Distinct(),
+                        ["status"] = columnControlOptionList.Select(x => x.Status).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)

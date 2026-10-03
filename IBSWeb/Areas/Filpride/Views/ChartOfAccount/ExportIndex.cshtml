@@ -67,6 +67,10 @@
             $('#dateTo').val(dateToValue);
 
             let table = $('#chartOfAccountTable').DataTable({
+                "searchDelay": 500,
+                "deferRender": true,
+                "columnControl": ['order', ['searchList']],
+                "ordering": { indicators: false },
                 processing: true,
                 serverSide: true,      // ENABLE SERVER-SIDE PROCESSING
                 stateSave: true,
@@ -101,6 +105,7 @@
                     {
                         data: 'accountId',
                         orderable: false,
+                        "columnControl": [],
                         searchable: false,
                         name: 'accountId',
                         render: DataTable.render.select()

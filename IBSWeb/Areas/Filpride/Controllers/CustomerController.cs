@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
@@ -267,6 +268,50 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 var totalRecords = await query.CountAsync(cancellationToken);
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "customerCode":
+                            query = query.Where(x =>
+                                values.Contains(x.CustomerCode!));
+                            break;
+
+                        case "customerName":
+                            query = query.Where(x =>
+                                values.Contains(x.CustomerName!));
+                            break;
+
+                        case "customerTerms":
+                            query = query.Where(x =>
+                                values.Contains(x.CustomerTerms!));
+                            break;
+
+                        case "vatType":
+                            query = query.Where(x =>
+                                values.Contains(x.VatType!));
+                            break;
+                    }
+                }
+
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -297,12 +342,30 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Take(parameters.Length)
                     .ToListAsync(cancellationToken);
 
+                var columnControlOptionList = await query
+                    .Select(x => new
+                    {
+                        CustomerCode = x.CustomerCode,
+                        CustomerName = x.CustomerName,
+                        CustomerTerms = x.CustomerTerms,
+                        VatType = x.VatType
+                    })
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalFilteredRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["customerCode"] = columnControlOptionList.Select(x => x.CustomerCode).Where(value => value != null).Distinct(),
+                        ["customerName"] = columnControlOptionList.Select(x => x.CustomerName).Where(value => value != null).Distinct(),
+                        ["customerTerms"] = columnControlOptionList.Select(x => x.CustomerTerms).Where(value => value != null).Distinct(),
+                        ["vatType"] = columnControlOptionList.Select(x => x.VatType).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)
@@ -572,6 +635,73 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .ToList();
                 }
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "customerCode":
+                            customers = customers.Where(x =>
+                                values.Contains(x.CustomerCode!)).ToList();
+                            break;
+
+                        case "customerName":
+                            customers = customers.Where(x =>
+                                values.Contains(x.CustomerName!)).ToList();
+                            break;
+
+                        case "customerTin":
+                            customers = customers.Where(x =>
+                                values.Contains(x.CustomerTin!)).ToList();
+                            break;
+
+                        case "businessStyle":
+                            customers = customers.Where(x =>
+                                values.Contains(x.BusinessStyle!)).ToList();
+                            break;
+
+                        case "customerTerms":
+                            customers = customers.Where(x =>
+                                values.Contains(x.CustomerTerms!)).ToList();
+                            break;
+
+                        case "customerType":
+                            customers = customers.Where(x =>
+                                values.Contains(x.CustomerType!)).ToList();
+                            break;
+
+                        case "createdDate":
+                        {
+                            List<DateTime> dates = values
+                                .Select(x => DateTime.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            customers = customers.Where(x =>
+                                dates.Contains(x.CreatedDate.Date)).ToList();
+                            break;
+                        }
+                    }
+                }
+
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -652,12 +782,35 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToList();
 
+                var columnControlOptionList = customers
+                    .Select(x => new
+                    {
+                        CustomerCode = x.CustomerCode,
+                        CustomerName = x.CustomerName,
+                        CustomerTin = x.CustomerTin,
+                        BusinessStyle = x.BusinessStyle,
+                        CustomerTerms = x.CustomerTerms,
+                        CustomerType = x.CustomerType,
+                        CreatedDate = x.CreatedDate
+                    })
+                    .ToList();
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["customerCode"] = columnControlOptionList.Select(x => x.CustomerCode).Where(value => value != null).Distinct(),
+                        ["customerName"] = columnControlOptionList.Select(x => x.CustomerName).Where(value => value != null).Distinct(),
+                        ["customerTin"] = columnControlOptionList.Select(x => x.CustomerTin).Where(value => value != null).Distinct(),
+                        ["businessStyle"] = columnControlOptionList.Select(x => x.BusinessStyle).Where(value => value != null).Distinct(),
+                        ["customerTerms"] = columnControlOptionList.Select(x => x.CustomerTerms).Where(value => value != null).Distinct(),
+                        ["customerType"] = columnControlOptionList.Select(x => x.CustomerType).Where(value => value != null).Distinct(),
+                        ["createdDate"] = columnControlOptionList.Select(x => x.CreatedDate).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct()
+                    }
                 });
             }
             catch (Exception ex)

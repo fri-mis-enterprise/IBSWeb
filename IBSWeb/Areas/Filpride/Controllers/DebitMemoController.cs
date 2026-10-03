@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
@@ -123,7 +124,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> GetDebitMemos([FromForm] DataTablesParameters parameters, DateOnly filterDate, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetDebitMemos([FromForm] DataTablesParameters parameters, CancellationToken cancellationToken)
         {
             try
             {
@@ -145,6 +146,76 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 var totalRecords = await debitMemos.CountAsync(cancellationToken);
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "debitMemoNo":
+                            debitMemos = debitMemos.Where(x =>
+                                values.Contains(x.DebitMemoNo!));
+                            break;
+
+                        case "transactionDate":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            debitMemos = debitMemos.Where(x =>
+                                dates.Contains(x.TransactionDate));
+                            break;
+                        }
+
+                        case "source":
+                            debitMemos = debitMemos.Where(x =>
+                                values.Contains(x.Source!));
+                            break;
+
+                        case "debitAmount":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            debitMemos = debitMemos.Where(x =>
+                                amounts.Contains(x.DebitAmount));
+                            break;
+                        }
+
+                        case "createdBy":
+                            debitMemos = debitMemos.Where(x =>
+                                values.Contains(x.CreatedBy!));
+                            break;
+
+                        case "status":
+                            debitMemos = debitMemos.Where(x =>
+                                values.Contains(x.Status!));
+                            break;
+                    }
+                }
+
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -162,10 +233,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             s.Description.ToLower().Contains(searchValue) ||
                             s.CreatedBy!.ToLower().Contains(searchValue)
                             );
-                }
-                if (filterDate != DateOnly.MinValue && filterDate != default)
-                {
-                    debitMemos = debitMemos.Where(s => s.TransactionDate == filterDate);
                 }
 
                 // Sorting
@@ -186,12 +253,34 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Take(parameters.Length)
                     .ToListAsync(cancellationToken);
 
+                var columnControlOptionList = await debitMemos
+                    .Select(x => new
+                    {
+                        DebitMemoNo = x.DebitMemoNo,
+                        TransactionDate = x.TransactionDate,
+                        Source = x.Source,
+                        DebitAmount = x.DebitAmount,
+                        CreatedBy = x.CreatedBy,
+                        Status = x.Status
+                    })
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalFilteredRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["debitMemoNo"] = columnControlOptionList.Select(x => x.DebitMemoNo).Where(value => value != null).Distinct(),
+                        ["transactionDate"] = columnControlOptionList.Select(x => x.TransactionDate).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["source"] = columnControlOptionList.Select(x => x.Source).Where(value => value != null).Distinct(),
+                        ["debitAmount"] = columnControlOptionList.Select(x => x.DebitAmount).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["createdBy"] = columnControlOptionList.Select(x => x.CreatedBy).Where(value => value != null).Distinct(),
+                        ["status"] = columnControlOptionList.Select(x => x.Status).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)
@@ -866,6 +955,76 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .ToList();
                 }
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "debitMemoNo":
+                            debitMemos = debitMemos.Where(x =>
+                                values.Contains(x.DebitMemoNo!)).ToList();
+                            break;
+
+                        case "transactionDate":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            debitMemos = debitMemos.Where(x =>
+                                dates.Contains(x.TransactionDate)).ToList();
+                            break;
+                        }
+
+                        case "source":
+                            debitMemos = debitMemos.Where(x =>
+                                values.Contains(x.Source!)).ToList();
+                            break;
+
+                        case "debitAmount":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            debitMemos = debitMemos.Where(x =>
+                                amounts.Contains(x.DebitAmount)).ToList();
+                            break;
+                        }
+
+                        case "createdBy":
+                            debitMemos = debitMemos.Where(x =>
+                                values.Contains(x.CreatedBy!)).ToList();
+                            break;
+
+                        case "isPosted":
+                            debitMemos = debitMemos.Where(x =>
+                                values.Contains(x.Status!)).ToList();
+                            break;
+                    }
+                }
+
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -936,12 +1095,33 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToList();
 
+                var columnControlOptionList = debitMemos
+                    .Select(x => new
+                    {
+                        DebitMemoNo = x.DebitMemoNo,
+                        TransactionDate = x.TransactionDate,
+                        Source = x.Source,
+                        DebitAmount = x.DebitAmount,
+                        CreatedBy = x.CreatedBy,
+                        Status = x.Status
+                    })
+                    .ToList();
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["debitMemoNo"] = columnControlOptionList.Select(x => x.DebitMemoNo).Where(value => value != null).Distinct(),
+                        ["transactionDate"] = columnControlOptionList.Select(x => x.TransactionDate).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["source"] = columnControlOptionList.Select(x => x.Source).Where(value => value != null).Distinct(),
+                        ["debitAmount"] = columnControlOptionList.Select(x => x.DebitAmount).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["createdBy"] = columnControlOptionList.Select(x => x.CreatedBy).Where(value => value != null).Distinct(),
+                        ["status"] = columnControlOptionList.Select(x => x.Status).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)

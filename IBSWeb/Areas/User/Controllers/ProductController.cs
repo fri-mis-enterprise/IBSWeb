@@ -117,6 +117,45 @@ namespace IBSWeb.Areas.User.Controllers
                 var queried = await _unitOfWork.Product
                     .GetAllAsync(null, cancellationToken);
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "productCode":
+                            queried = queried.Where(x =>
+                                values.Contains(x.ProductCode!)).ToList();
+                            break;
+
+                        case "productName":
+                            queried = queried.Where(x =>
+                                values.Contains(x.ProductName!)).ToList();
+                            break;
+
+                        case "productUnit":
+                            queried = queried.Where(x =>
+                                values.Contains(x.ProductUnit!)).ToList();
+                            break;
+                    }
+                }
+
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search?.Value))
                 {
@@ -147,12 +186,27 @@ namespace IBSWeb.Areas.User.Controllers
                     .Take(parameters.Length)
                     .ToList();
 
+                var columnControlOptionList = queried
+                    .Select(x => new
+                    {
+                        ProductCode = x.ProductCode,
+                        ProductName = x.ProductName,
+                        ProductUnit = x.ProductUnit
+                    })
+                    .ToList();
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["productCode"] = columnControlOptionList.Select(x => x.ProductCode).Where(value => value != null).Distinct(),
+                        ["productName"] = columnControlOptionList.Select(x => x.ProductName).Where(value => value != null).Distinct(),
+                        ["productUnit"] = columnControlOptionList.Select(x => x.ProductUnit).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)

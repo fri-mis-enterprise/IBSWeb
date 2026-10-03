@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
@@ -314,7 +315,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> GetCheckVouchers([FromForm] DataTablesParameters parameters, DateOnly filterDate, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetCheckVouchers([FromForm] DataTablesParameters parameters, CancellationToken cancellationToken)
         {
             try
             {
@@ -323,6 +324,81 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .GetAllQuery(cv => cv.Category == "Trade");
 
                 var totalRecords = await checkVoucherHeaders.CountAsync(cancellationToken);
+
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "checkVoucherHeaderNo":
+                            checkVoucherHeaders = checkVoucherHeaders.Where(x =>
+                                values.Contains(x.CheckVoucherHeaderNo!));
+                            break;
+
+                        case "date":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            checkVoucherHeaders = checkVoucherHeaders.Where(x =>
+                                dates.Contains(x.Date));
+                            break;
+                        }
+
+                        case "supplier.supplierName":
+                            checkVoucherHeaders = checkVoucherHeaders.Where(x =>
+                                x.Supplier != null && values.Contains(x.Supplier.SupplierName!));
+                            break;
+
+                        case "checkNo":
+                            checkVoucherHeaders = checkVoucherHeaders.Where(x =>
+                                values.Contains(x.CheckNo!));
+                            break;
+
+                        case "total":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            checkVoucherHeaders = checkVoucherHeaders.Where(x =>
+                                amounts.Contains(x.Total));
+                            break;
+                        }
+
+                        case "createdBy":
+                            checkVoucherHeaders = checkVoucherHeaders.Where(x =>
+                                values.Contains(x.CreatedBy!));
+                            break;
+
+                        case "status":
+                            checkVoucherHeaders = checkVoucherHeaders.Where(x =>
+                                values.Contains(x.Status!));
+                            break;
+                    }
+                }
 
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
@@ -344,10 +420,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             s.CheckNo!.ToLower().Contains(searchValue) == true
                         );
                 }
-                if (filterDate != DateOnly.MinValue && filterDate != default)
-                {
-                    checkVoucherHeaders = checkVoucherHeaders.Where(s => s.Date == filterDate);
-                }
 
                 // Sorting
                 if (parameters.Order?.Count > 0)
@@ -367,12 +439,36 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Take(parameters.Length)
                     .ToListAsync(cancellationToken);
 
+                var columnControlOptionList = await checkVoucherHeaders
+                    .Select(x => new
+                    {
+                        CheckVoucherHeaderNo = x.CheckVoucherHeaderNo,
+                        Date = x.Date,
+                        SupplierName = x.Supplier != null ? x.Supplier.SupplierName : null,
+                        CheckNo = x.CheckNo,
+                        Total = x.Total,
+                        CreatedBy = x.CreatedBy,
+                        Status = x.Status
+                    })
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalFilteredRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["checkVoucherHeaderNo"] = columnControlOptionList.Select(x => x.CheckVoucherHeaderNo).Where(value => value != null).Distinct(),
+                        ["date"] = columnControlOptionList.Select(x => x.Date).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["supplier.supplierName"] = columnControlOptionList.Select(x => x.SupplierName).Where(value => value != null).Distinct(),
+                        ["checkNo"] = columnControlOptionList.Select(x => x.CheckNo).Where(value => value != null).Distinct(),
+                        ["total"] = columnControlOptionList.Select(x => x.Total).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["createdBy"] = columnControlOptionList.Select(x => x.CreatedBy).Where(value => value != null).Distinct(),
+                        ["status"] = columnControlOptionList.Select(x => x.Status).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)
@@ -4558,6 +4654,68 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .ToList();
                 }
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "checkVoucherHeaderNo":
+                            checkVoucherHeaders = checkVoucherHeaders.Where(x =>
+                                values.Contains(x.CheckVoucherHeaderNo!)).ToList();
+                            break;
+
+                        case "date":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            checkVoucherHeaders = checkVoucherHeaders.Where(x =>
+                                dates.Contains(x.Date)).ToList();
+                            break;
+                        }
+
+                        case "supplierName":
+                            checkVoucherHeaders = checkVoucherHeaders.Where(x =>
+                                values.Contains(x.SupplierName!)).ToList();
+                            break;
+
+                        case "cvType":
+                            checkVoucherHeaders = checkVoucherHeaders.Where(x =>
+                                values.Contains(x.CvType!)).ToList();
+                            break;
+
+                        case "createdBy":
+                            checkVoucherHeaders = checkVoucherHeaders.Where(x =>
+                                values.Contains(x.CreatedBy!)).ToList();
+                            break;
+
+                        case "isPosted":
+                            checkVoucherHeaders = checkVoucherHeaders.Where(x =>
+                                values.Contains(x.Status!)).ToList();
+                            break;
+                    }
+                }
+
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -4623,12 +4781,33 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToList();
 
+                var columnControlOptionList = checkVoucherHeaders
+                    .Select(x => new
+                    {
+                        CheckVoucherHeaderNo = x.CheckVoucherHeaderNo,
+                        Date = x.Date,
+                        SupplierName = x.SupplierName,
+                        CvType = x.CvType,
+                        CreatedBy = x.CreatedBy,
+                        Status = x.Status
+                    })
+                    .ToList();
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["checkVoucherHeaderNo"] = columnControlOptionList.Select(x => x.CheckVoucherHeaderNo).Where(value => value != null).Distinct(),
+                        ["date"] = columnControlOptionList.Select(x => x.Date).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["supplierName"] = columnControlOptionList.Select(x => x.SupplierName).Where(value => value != null).Distinct(),
+                        ["cvType"] = columnControlOptionList.Select(x => x.CvType).Where(value => value != null).Distinct(),
+                        ["createdBy"] = columnControlOptionList.Select(x => x.CreatedBy).Where(value => value != null).Distinct(),
+                        ["status"] = columnControlOptionList.Select(x => x.Status).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)

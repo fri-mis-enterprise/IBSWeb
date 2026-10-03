@@ -52,6 +52,10 @@
     <script>
         $(document).ready(function() {
             var table = $('#paginatedTable').DataTable({
+                "searchDelay": 500,
+                "deferRender": true,
+                "columnControl": ['order', ['searchList']],
+                "ordering": { indicators: false },
                 "processing": true,
                 "serverSide": true,
                 "stateSave": true,
@@ -144,6 +148,7 @@
                     {
                         "data": "checkVoucherHeaderId",
                         "orderable": false,
+                        "columnControl": [],
                         "render": function(data, type, row) {
                             let actions = `<div class="dropdown actions-dropdown"
                                             @*TODO ask what is the hint for the system to make this action hidden*@

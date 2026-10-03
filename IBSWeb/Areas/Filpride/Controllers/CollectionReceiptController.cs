@@ -321,7 +321,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> GetCollectionReceipts([FromForm] DataTablesParameters parameters, DateOnly filterDate, string invoiceType, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetCollectionReceipts([FromForm] DataTablesParameters parameters, string invoiceType, CancellationToken cancellationToken)
         {
             try
             {
@@ -344,6 +344,115 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         break;
                 }
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "collectionReceiptNo":
+                            collectionReceipts = collectionReceipts.Where(x =>
+                                values.Contains(x.CollectionReceiptNo!));
+                            break;
+
+                        case "transactionDate":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            collectionReceipts = collectionReceipts.Where(x =>
+                                dates.Contains(x.TransactionDate));
+                            break;
+                        }
+
+                        case "depositedDate":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            collectionReceipts = collectionReceipts.Where(x =>
+                                x.DepositedDate.HasValue && dates.Contains(x.DepositedDate.Value));
+                            break;
+                        }
+
+                        case "clearedDate":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            collectionReceipts = collectionReceipts.Where(x =>
+                                x.ClearedDate.HasValue && dates.Contains(x.ClearedDate.Value));
+                            break;
+                        }
+
+                        case "customerName":
+                            collectionReceipts = collectionReceipts.Where(x =>
+                                x.Customer != null && values.Contains(x.Customer!.CustomerName!));
+                            break;
+
+                        case "paymentAmount":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            collectionReceipts = collectionReceipts.Where(x =>
+                                amounts.Contains(x.CheckAmount + x.CashAmount + x.ManagersCheckAmount));
+                            break;
+                        }
+
+                        case "total":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            collectionReceipts = collectionReceipts.Where(x =>
+                                amounts.Contains(x.Total));
+                            break;
+                        }
+
+                        case "createdBy":
+                            collectionReceipts = collectionReceipts.Where(x =>
+                                values.Contains(x.CreatedBy!));
+                            break;
+
+                        case "status":
+                            collectionReceipts = collectionReceipts.Where(x =>
+                                values.Contains(x.Status!));
+                            break;
+                    }
+                }
+
                 // Search filter
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -360,10 +469,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             s.CreatedBy!.ToLower().Contains(searchValue) ||
                             s.Status.ToLower().Contains(searchValue)
                             );
-                }
-                if (filterDate != DateOnly.MinValue && filterDate != default)
-                {
-                    collectionReceipts = collectionReceipts.Where(s => s.TransactionDate == filterDate);
                 }
 
                 // Sorting
@@ -406,12 +511,40 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToListAsync(cancellationToken);
 
+                var columnControlOptionList = await collectionReceipts
+                    .Select(x => new
+                    {
+                        CollectionReceiptNo = x.CollectionReceiptNo,
+                        TransactionDate = x.TransactionDate,
+                        DepositedDate = x.DepositedDate,
+                        ClearedDate = x.ClearedDate,
+                        CustomerName = x.Customer != null ? x.Customer.CustomerName : null,
+                        PaymentAmount = x.CheckAmount + x.CashAmount + x.ManagersCheckAmount,
+                        Total = x.Total,
+                        CreatedBy = x.CreatedBy,
+                        Status = x.Status
+                    })
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalFilteredRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["collectionReceiptNo"] = columnControlOptionList.Select(x => x.CollectionReceiptNo).Where(value => value != null).Distinct(),
+                        ["transactionDate"] = columnControlOptionList.Select(x => x.TransactionDate).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["depositedDate"] = columnControlOptionList.Select(x => x.DepositedDate).Select(x => x?.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Where(value => value != null).Distinct(),
+                        ["clearedDate"] = columnControlOptionList.Select(x => x.ClearedDate).Select(x => x?.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Where(value => value != null).Distinct(),
+                        ["customerName"] = columnControlOptionList.Select(x => x.CustomerName).Where(value => value != null).Distinct(),
+                        ["paymentAmount"] = columnControlOptionList.Select(x => x.PaymentAmount).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["total"] = columnControlOptionList.Select(x => x.Total).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["createdBy"] = columnControlOptionList.Select(x => x.CreatedBy).Where(value => value != null).Distinct(),
+                        ["status"] = columnControlOptionList.Select(x => x.Status).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)
@@ -4228,6 +4361,76 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .ToList();
                 }
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "collectionReceiptNo":
+                            collectionReceipts = collectionReceipts.Where(x =>
+                                values.Contains(x.CollectionReceiptNo!)).ToList();
+                            break;
+
+                        case "transactionDate":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            collectionReceipts = collectionReceipts.Where(x =>
+                                dates.Contains(x.TransactionDate)).ToList();
+                            break;
+                        }
+
+                        case "customerName":
+                            collectionReceipts = collectionReceipts.Where(x =>
+                                x.Customer != null && values.Contains(x.Customer!.CustomerName!)).ToList();
+                            break;
+
+                        case "total":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            collectionReceipts = collectionReceipts.Where(x =>
+                                amounts.Contains(x.Total)).ToList();
+                            break;
+                        }
+
+                        case "createdBy":
+                            collectionReceipts = collectionReceipts.Where(x =>
+                                values.Contains(x.CreatedBy!)).ToList();
+                            break;
+
+                        case "isPosted":
+                            collectionReceipts = collectionReceipts.Where(x =>
+                                values.Contains(x.Status!)).ToList();
+                            break;
+                    }
+                }
+
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -4299,12 +4502,33 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToList();
 
+                var columnControlOptionList = collectionReceipts
+                    .Select(x => new
+                    {
+                        CollectionReceiptNo = x.CollectionReceiptNo,
+                        TransactionDate = x.TransactionDate,
+                        CustomerName = x.Customer != null ? x.Customer.CustomerName : null,
+                        Total = x.Total,
+                        CreatedBy = x.CreatedBy,
+                        Status = x.Status
+                    })
+                    .ToList();
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["collectionReceiptNo"] = columnControlOptionList.Select(x => x.CollectionReceiptNo).Where(value => value != null).Distinct(),
+                        ["transactionDate"] = columnControlOptionList.Select(x => x.TransactionDate).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["customer.customerName"] = columnControlOptionList.Select(x => x.CustomerName).Where(value => value != null).Distinct(),
+                        ["total"] = columnControlOptionList.Select(x => x.Total).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["createdBy"] = columnControlOptionList.Select(x => x.CreatedBy).Where(value => value != null).Distinct(),
+                        ["status"] = columnControlOptionList.Select(x => x.Status).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)

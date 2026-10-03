@@ -37,6 +37,10 @@
             const editUrl = '@Url.Action("Edit", "PaymentTerm", new { area = "Filpride" })';
 
             var table = $('#paginatedTable').DataTable({
+                "searchDelay": 500,
+                "deferRender": true,
+                "columnControl": ['order', ['searchList']],
+                "ordering": { indicators: false },
                 "order": [[0, 'asc']],
                 "columnDefs": [
                     { "orderable": false, "targets": [3] }
@@ -88,6 +92,7 @@
                     {
                         "data": "null",
                         "orderable": false,
+                        "columnControl": [],
                         "render": function(data, type, row) {
                             let actions = `<div class="w-100 btn-group" role="group">`;
 

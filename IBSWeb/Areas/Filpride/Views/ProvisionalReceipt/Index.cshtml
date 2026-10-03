@@ -1,4 +1,4 @@
-@using IBS.Models.Enums
+﻿@using IBS.Models.Enums
 @{
     ViewData["Title"] = "Provisional Receipt";
 }
@@ -16,10 +16,6 @@
 
     <div class="card shadow border-0 mt-3">
         <div class="card-body p-3">
-            <div class="me-2">
-                <label class="fw-semibold small text-muted mb-1">Filter by Date</label>
-                <input type="date" id="inputDate" class="form-control rounded-3 shadow-sm" style="width:150px;">
-            </div>
             <table class="table table-hover mb-0 text-nowrap" id="paginatedTable">
                 <thead class="bg-light">
                 <tr>
@@ -330,160 +326,154 @@
             });
         }
 
-        $(document).ready(function () {
-            const pendingStatus = "@nameof(CollectionReceiptStatus.Pending)";
-            const postedStatus = "@nameof(CollectionReceiptStatus.Posted)";
-            const depositedStatus = "@nameof(CollectionReceiptStatus.Deposited)";
-            const redepositedStatus = "@nameof(CollectionReceiptStatus.Redeposited)";
-            const returnedStatus = "@nameof(CollectionReceiptStatus.Returned)";
-            const activePostedStatuses = [postedStatus, depositedStatus, returnedStatus, redepositedStatus, "@nameof(CollectionReceiptStatus.Cleared)"];
-            let filterValue = localStorage.getItem('provisionalReceiptFilterDate') || "";
-            $('#inputDate').val(filterValue);
-
-            let table = $('#paginatedTable').DataTable({
-                processing: true,
-                serverSide: true,
-                stateSave: true,
-                stateDuration: 86400,
-                scrollY: '45vh',
-                scrollCollapse: true,
-                language: {
-                    processing: `<div class="d-flex justify-content-center">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Loading...</span>
-                                    </div>
-                                 </div>`
+        const pendingStatus = "@nameof(CollectionReceiptStatus.Pending)";
+        const postedStatus = "@nameof(CollectionReceiptStatus.Posted)";
+        const depositedStatus = "@nameof(CollectionReceiptStatus.Deposited)";
+        const redepositedStatus = "@nameof(CollectionReceiptStatus.Redeposited)";
+        const returnedStatus = "@nameof(CollectionReceiptStatus.Returned)";
+        const activePostedStatuses = [postedStatus, depositedStatus, returnedStatus, redepositedStatus, "@nameof(CollectionReceiptStatus.Cleared)"];
+        let table = $('#paginatedTable').DataTable({
+            "searchDelay": 500,
+            "deferRender": true,
+            "columnControl": ['order', ['searchList']],
+            "ordering": { indicators: false },
+            processing: true,
+            serverSide: true,
+            stateSave: true,
+            stateDuration: 86400,
+            scrollY: '45vh',
+            scrollCollapse: true,
+            language: {
+                processing: `<div class="d-flex justify-content-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                             </div>`
+            },
+            ajax: {
+                url: "@Url.Action("GetProvisionalReceipts", "ProvisionalReceipt", new { area = "Filpride" })",
+                type: "POST",
+                data: function (d) {
+                    return $.extend({}, d, {
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    });
                 },
-                ajax: {
-                    url: "@Url.Action("GetProvisionalReceipts", "ProvisionalReceipt", new { area = "Filpride" })",
-                    type: "POST",
-                    data: function (d) {
-                        return $.extend({}, d, {
-                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val(),
-                            filterDate: filterValue
-                        });
-                    },
-                    error: function (xhr, error, thrown) {
-                        console.error('DataTables error:', error);
-                        alert('An error occurred while loading the data');
+                error: function (xhr, error, thrown) {
+                    console.error('DataTables error:', error);
+                    alert('An error occurred while loading the data');
+                }
+            },
+            preDrawCallback: function() {
+                $('#paginatedTable').addClass('table-loading');
+            },
+            drawCallback: function() {
+                $('#paginatedTable').removeClass('table-loading');
+                $('[data-bs-toggle="tooltip"]').tooltip();
+            },
+            columns: [
+                { data: "seriesNumber", name: "seriesNumber" },
+                {
+                    data: "transactionDate",
+                    name: "transactionDate",
+                    render: formatDate
+                },
+                {
+                    data: "depositedDate",
+                    name: "depositedDate",
+                    render: formatDate
+                },
+                {
+                    data: "clearedDate",
+                    name: "clearedDate",
+                    render: formatDate
+                },
+                { data: "payerName", name: "payerName", render: $.fn.dataTable.render.text() },
+                { data: "categoryName", name: "categoryName", render: $.fn.dataTable.render.text() },
+                { data: "referenceNo", name: "referenceNo", render: $.fn.dataTable.render.text() },
+                {
+                    data: "total",
+                    name: "total",
+                    render: function (data) {
+                        return $.fn.dataTable.render.number(',', '.', 2).display(data);
                     }
                 },
-                preDrawCallback: function() {
-                    $('#paginatedTable').addClass('table-loading');
+                { data: "createdBy", name: "createdBy", render: $.fn.dataTable.render.text() },
+                {
+                    data: "status",
+                    name: "status",
+                    render: function(data, type, row) {
+                        var statusClass = row.status === postedStatus
+                            || row.status === depositedStatus
+                            || row.status === redepositedStatus
+                            ? "bg-info"
+                            : row.status === "@nameof(CollectionReceiptStatus.Cleared)"
+                                ? "bg-success"
+                                : row.status === "@nameof(CollectionReceiptStatus.Voided)"
+                                || row.status === returnedStatus
+                                    ? "bg-danger"
+                                    : row.status === "@nameof(CollectionReceiptStatus.Canceled)"
+                                        ? "bg-warning"
+                                        : "";
+
+                        return `<span class="badge rounded-pill ${statusClass}">${row.status}</span>`;
+                    }
                 },
-                drawCallback: function() {
-                    $('#paginatedTable').removeClass('table-loading');
-                    $('[data-bs-toggle="tooltip"]').tooltip();
-                },
-                columns: [
-                    { data: "seriesNumber", name: "seriesNumber" },
-                    {
-                        data: "transactionDate",
-                        name: "transactionDate",
-                        render: formatDate
-                    },
-                    {
-                        data: "depositedDate",
-                        name: "depositedDate",
-                        render: formatDate
-                    },
-                    {
-                        data: "clearedDate",
-                        name: "clearedDate",
-                        render: formatDate
-                    },
-                    { data: "payerName", name: "payerName", render: $.fn.dataTable.render.text() },
-                    { data: "categoryName", name: "categoryName", render: $.fn.dataTable.render.text() },
-                    { data: "referenceNo", name: "referenceNo", render: $.fn.dataTable.render.text() },
-                    {
-                        data: "total",
-                        name: "total",
-                        render: function (data) {
-                            return $.fn.dataTable.render.number(',', '.', 2).display(data);
-                        }
-                    },
-                    { data: "createdBy", name: "createdBy", render: $.fn.dataTable.render.text() },
-                    {
-                        data: "status",
-                        name: "status",
-                        render: function(data, type, row) {
-                            var statusClass = row.status === postedStatus
-                                || row.status === depositedStatus
-                                || row.status === redepositedStatus
-                                ? "bg-info"
-                                : row.status === "@nameof(CollectionReceiptStatus.Cleared)"
-                                    ? "bg-success"
-                                    : row.status === "@nameof(CollectionReceiptStatus.Voided)"
-                                    || row.status === returnedStatus
-                                        ? "bg-danger"
-                                        : row.status === "@nameof(CollectionReceiptStatus.Canceled)"
-                                            ? "bg-warning"
-                                            : "";
+                {
+                    data: null,
+                    orderable: false,
+                    "columnControl": [],
+                    render: function (data, type, row) {
+                        let dropdownHtml = `
+                            <div class="dropdown actions-dropdown" style="${row.voidedBy != null || row.canceledBy != null ? 'display:none;' : ''}">
+                                <button class="btn btn-light btn-sm dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-three-dots"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm">`;
+                        const canEdit = row.status === pendingStatus && row.postedBy == null && row.canceledBy == null && row.voidedBy == null;
+                        const canManagePosted = activePostedStatuses.includes(row.status) && row.postedBy != null && row.canceledBy == null && row.voidedBy == null;
 
-                            return `<span class="badge rounded-pill ${statusClass}">${row.status}</span>`;
-                        }
-                    },
-                    {
-                        data: null,
-                        orderable: false,
-                        render: function (data, type, row) {
-                            let dropdownHtml = `
-                                <div class="dropdown actions-dropdown" style="${row.voidedBy != null || row.canceledBy != null ? 'display:none;' : ''}">
-                                    <button class="btn btn-light btn-sm dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="bi bi-three-dots"></i>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">`;
-                            const canEdit = row.status === pendingStatus && row.postedBy == null && row.canceledBy == null && row.voidedBy == null;
-                            const canManagePosted = activePostedStatuses.includes(row.status) && row.postedBy != null && row.canceledBy == null && row.voidedBy == null;
-
-                            if (canEdit) {
-                                dropdownHtml += `<li><a href="@Url.Action("Edit", "ProvisionalReceipt", new { area = "Filpride" })/${row.id}" class="dropdown-item">Edit</a></li>`;
-                                dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="confirmCancel(${row.id})">Cancel</a></li>`;
-                                dropdownHtml += `<li><a href="@Url.Action("Print", "ProvisionalReceipt", new { area = "Filpride" })/${row.id}" class="dropdown-item">Preview</a></li>`;
-                            } else if (canManagePosted) {
-                                if (row.status === postedStatus) {
-                                    dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="addDepositInfo(${row.id})">Add Deposit Info</a></li>`;
-                                }
-
-                                if (row.status === depositedStatus || row.status === redepositedStatus) {
-                                    dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="applyClearingDate(${row.id})">Apply Clearing Date</a></li>`;
-                                    dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="returnCheck(${row.id})">Return Check</a></li>`;
-                                }
-
-                                if (row.status === returnedStatus) {
-                                    dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="redeposit(${row.id}, ${row.bankId})">Redeposit</a></li>`;
-                                }
-
-                                dropdownHtml += `<li><a href="@Url.Action("Print", "ProvisionalReceipt", new { area = "Filpride" })/${row.id}" class="dropdown-item">Preview</a></li>`;
-                                dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="confirmVoid(${row.id})">Void</a></li>`;
-                            } else {
-                                dropdownHtml += `<li><a href="@Url.Action("Print", "ProvisionalReceipt", new { area = "Filpride" })/${row.id}" class="dropdown-item">Preview</a></li>`;
+                        if (canEdit) {
+                            dropdownHtml += `<li><a href="@Url.Action("Edit", "ProvisionalReceipt", new { area = "Filpride" })/${row.id}" class="dropdown-item">Edit</a></li>`;
+                            dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="confirmCancel(${row.id})">Cancel</a></li>`;
+                            dropdownHtml += `<li><a href="@Url.Action("Print", "ProvisionalReceipt", new { area = "Filpride" })/${row.id}" class="dropdown-item">Preview</a></li>`;
+                        } else if (canManagePosted) {
+                            if (row.status === postedStatus) {
+                                dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="addDepositInfo(${row.id})">Add Deposit Info</a></li>`;
                             }
 
-                            dropdownHtml += `</ul></div>`;
-                            return dropdownHtml;
+                            if (row.status === depositedStatus || row.status === redepositedStatus) {
+                                dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="applyClearingDate(${row.id})">Apply Clearing Date</a></li>`;
+                                dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="returnCheck(${row.id})">Return Check</a></li>`;
+                            }
+
+                            if (row.status === returnedStatus) {
+                                dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="redeposit(${row.id}, ${row.bankId})">Redeposit</a></li>`;
+                            }
+
+                            dropdownHtml += `<li><a href="@Url.Action("Print", "ProvisionalReceipt", new { area = "Filpride" })/${row.id}" class="dropdown-item">Preview</a></li>`;
+                            dropdownHtml += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="confirmVoid(${row.id})">Void</a></li>`;
+                        } else {
+                            dropdownHtml += `<li><a href="@Url.Action("Print", "ProvisionalReceipt", new { area = "Filpride" })/${row.id}" class="dropdown-item">Preview</a></li>`;
                         }
+
+                        dropdownHtml += `</ul></div>`;
+                        return dropdownHtml;
                     }
-                ]
-            });
-
-            $('#inputDate').on('change', function() {
-                filterValue = $(this).val();
-                localStorage.setItem('provisionalReceiptFilterDate', filterValue);
-                table.ajax.reload();
-            });
-
-            function formatDate(data) {
-                if (!data) {
-                    return '';
                 }
-
-                return new Date(data).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: '2-digit'
-                });
-            }
+            ]
         });
+
+
+        function formatDate(data) {
+            if (!data) {
+                return '';
+            }
+
+            return new Date(data).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit'
+            });
+        }
     </script>
 }

@@ -65,6 +65,10 @@
             $('#dateTo').val(dateToValue);
 
             let table = $('#serviceInvoiceTable').DataTable({
+                "searchDelay": 500,
+                "deferRender": true,
+                "columnControl": ['order', ['searchList']],
+                "ordering": { indicators: false },
                 processing: true,
                 serverSide: true,      // ENABLE SERVER-SIDE PROCESSING
                 stateSave: true,
@@ -99,6 +103,7 @@
                     {
                         data: 'serviceInvoiceId',
                         orderable: false,
+                        "columnControl": [],
                         searchable: false,
                         name: 'serviceInvoiceId',
                         render: DataTable.render.select()
