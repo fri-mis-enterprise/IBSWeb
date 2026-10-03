@@ -1,8 +1,10 @@
 using IBS.DataAccess.Repository.IRepository;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace IBSWeb.Hubs
 {
+    [Authorize]
     public class NotificationHub : Hub
     {
         private readonly IHubConnectionRepository _hubConnectionRepository;

@@ -83,8 +83,6 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script><!--select 2 scripts-->
     <script src="https://cdn.datatables.net/2.0.1/js/dataTables.js"></script><!--data tables scripts-->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script><!--sweet alert scripts-->
-    <script src="~/lib/microsoft/signalr/dist/browser/signalr.js"></script>
-    <script src="~/js/notification.js"></script>
     <script src="~/js/spinner.js"></script>
     <script src="https://cdn.datatables.net/select/3.1.3/js/dataTables.select.js"></script>
     <script src="https://cdn.datatables.net/select/3.1.3/js/select.dataTables.js"></script>
@@ -106,6 +104,8 @@
 
     $(document).ready(function () {
         if ($('#hfUsername').length && $('#hfUsername').val() !== "") {
+            const notificationCountRefreshInterval = 5 * 60 * 1000;
+            const notificationCountStorageKey = `unreadNotificationCount:${$('#hfUsername').val()}`;
             let notificationCountRequest = null;
 
             window.updateNotificationCount = function () {
@@ -118,7 +118,24 @@
                     type: 'GET',
                     headers: { 'X-Requested-With': 'XMLHttpRequest' },
                     success: function (count) {
-                        $('#notificationCount').text(count);
+                        const unreadCount = Number(count) || 0;
+                        const previousCount = Number(window.sessionStorage.getItem(notificationCountStorageKey)) || 0;
+
+                        $('#notificationCount').text(unreadCount);
+
+                        if (unreadCount > previousCount) {
+                            Swal.fire({
+                                toast: true,
+                                position: 'top-end',
+                                icon: 'info',
+                                title: `You have ${unreadCount} unread notification${unreadCount === 1 ? '' : 's'}.`,
+                                showConfirmButton: false,
+                                timer: 5000,
+                                timerProgressBar: true
+                            });
+                        }
+
+                        window.sessionStorage.setItem(notificationCountStorageKey, unreadCount.toString());
                     },
                     error: function () {
                         console.error("Error fetching notification count");
@@ -136,6 +153,12 @@
                     window.updateNotificationCount();
                 }
             });
+
+            window.setInterval(function () {
+                if (document.visibilityState === 'visible') {
+                    window.updateNotificationCount();
+                }
+            }, notificationCountRefreshInterval);
         }
     });
     </script>

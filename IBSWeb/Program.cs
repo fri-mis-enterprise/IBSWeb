@@ -9,7 +9,6 @@ using IBS.Services;
 using IBS.Services.Attributes;
 using IBS.Utility;
 using IBS.Utility.Helpers;
-using IBSWeb.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
@@ -167,9 +166,6 @@ app.MapRazorPages();
 app.MapControllerRoute(
     name: "default",
     pattern: "{area=User}/{controller=Home}/{action=Index}/{id?}");
-
-// SignalR
-app.MapHub<NotificationHub>("/notificationHub");
 
 // Initialize the IConfiguration to get the calendarific_api_key
 DateTimeHelper.Initialize(app.Configuration);
