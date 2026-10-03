@@ -1,4 +1,4 @@
-@using IBS.Models.Enums
+﻿@using IBS.Models.Enums
 @model IEnumerable<FilprideCollectionReceipt>
 @{
     ViewData["Title"] = "Collection Receipt for Service Invoice";
@@ -38,22 +38,20 @@
                 <label class="fw-semibold small text-muted mb-1">Filter by Date</label>
                 <input type="date" id="inputDate" class="form-control rounded-3 shadow-sm" style="width:150px;">
             </div>
-            <div class="table-responsive" style="max-height: 70vh">
-                <table class="table table-hover mb-0" id="paginatedTable">
-                    <thead class="bg-light">
-                    <tr class="text-start">
-                        <th>CR#</th>
-                        <th>Date</th>
-                        <th>Invoice#</th>
-                        <th>Customer</th>
-                        <th>Total</th>
-                        <th>Created By</th>
-                        <th>Status</th>
-                        <th class="text-center" style="width: 100px;">Actions</th>
-                    </tr>
-                    </thead>
-                </table>
-            </div>
+            <table class="table table-hover mb-0" id="paginatedTable">
+                <thead class="bg-light">
+                <tr class="text-start">
+                    <th>CR#</th>
+                    <th>Date</th>
+                    <th>Invoice#</th>
+                    <th>Customer</th>
+                    <th>Total</th>
+                    <th>Created By</th>
+                    <th>Status</th>
+                    <th class="text-center" style="width: 100px;">Actions</th>
+                </tr>
+                </thead>
+            </table>
         </div>
     </div>
 </div>
@@ -382,6 +380,9 @@
                 "serverSide": true,
                 "stateSave": true,
                 "stateDuration": 86400,
+                "scrollX": true,
+                "scrollY": '45vh',
+                "scrollCollapse": true,
                 "language": {
                     "processing": `<div class="d-flex justify-content-center">
                                     <div class="spinner-border text-primary" role="status">

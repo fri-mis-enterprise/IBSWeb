@@ -140,9 +140,26 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 
-$(document).ready(function () {
-    $('#dataTable').DataTable({
-        stateSave: true,
-        processing: true
-    });
+function initializeActionDropdowns(container) {
+    container
+        .querySelectorAll('.actions-dropdown .dropdown-toggle')
+        .forEach(toggleElement => {
+            bootstrap.Dropdown.getOrCreateInstance(toggleElement, {
+                popperConfig(defaultConfig) {
+                    return {
+                        ...defaultConfig,
+                        strategy: 'fixed'
+                    };
+                }
+            });
+        });
+}
+
+$(function () {
+    initializeActionDropdowns(document);
+});
+
+$(document).on('draw.dt', function (event) {
+    const container = event.target.closest('.dt-container') ?? document;
+    initializeActionDropdowns(container);
 });
