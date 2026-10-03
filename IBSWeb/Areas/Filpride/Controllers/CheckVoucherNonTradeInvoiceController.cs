@@ -1638,6 +1638,48 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = nameof(CheckVoucherNonTradeInvoice.CheckVoucherNonTradeInvoiceEdit))]
+        public async Task<IActionResult> GetMasterFileDetails(int[]? bankIds, int[]? companyIds,
+            int[]? customerIds, int[]? supplierIds, CancellationToken cancellationToken)
+        {
+            bankIds = bankIds?.Distinct().ToArray() ?? [];
+            companyIds = companyIds?.Distinct().ToArray() ?? [];
+            customerIds = customerIds?.Distinct().ToArray() ?? [];
+            supplierIds = supplierIds?.Distinct().ToArray() ?? [];
+
+            Dictionary<int, string> bankAccounts = bankIds.Length == 0
+                ? []
+                : await _dbContext.FilprideBankAccounts
+                    .AsNoTracking()
+                    .Where(bank => bankIds.Contains(bank.BankAccountId))
+                    .ToDictionaryAsync(bank => bank.BankAccountId,
+                        bank => $"{bank.AccountNo} - {bank.AccountName}", cancellationToken);
+            Dictionary<int, string> companies = companyIds.Length == 0
+                ? []
+                : await _dbContext.Companies
+                    .AsNoTracking()
+                    .Where(company => companyIds.Contains(company.CompanyId))
+                    .ToDictionaryAsync(company => company.CompanyId,
+                        company => $"{company.CompanyCode} - {company.CompanyName}", cancellationToken);
+            Dictionary<int, string> customers = customerIds.Length == 0
+                ? []
+                : await _dbContext.FilprideCustomers
+                    .AsNoTracking()
+                    .Where(customer => customerIds.Contains(customer.CustomerId))
+                    .ToDictionaryAsync(customer => customer.CustomerId,
+                        customer => $"{customer.CustomerCode} - {customer.CustomerName}", cancellationToken);
+            Dictionary<int, string> suppliers = supplierIds.Length == 0
+                ? []
+                : await _dbContext.FilprideSuppliers
+                    .AsNoTracking()
+                    .Where(supplier => supplierIds.Contains(supplier.SupplierId))
+                    .ToDictionaryAsync(supplier => supplier.SupplierId,
+                        supplier => $"{supplier.SupplierCode} - {supplier.SupplierName}", cancellationToken);
+
+            return Json(new { bankAccounts, companies, customers, suppliers });
+        }
+
+        [HttpGet]
         public async Task<IActionResult> GetBankAccountById(int bankId)
         {
 

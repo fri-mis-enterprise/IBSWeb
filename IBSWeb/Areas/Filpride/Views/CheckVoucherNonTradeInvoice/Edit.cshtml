@@ -536,8 +536,8 @@
                 }
             });
 
-            // Initialize bank account display for edit mode
-            initializeBankAccountDisplay();
+            // Initialize master file display for edit mode
+            initializeMasterFileDisplay();
 
             // Initialize calculations for existing rows
             recalculateAllRows();
@@ -690,88 +690,74 @@
         });
     </script>
     <script>
-        // Add this function to handle initial loading of bank details for edit mode
-        function initializeBankAccountDisplay() {
-            // Find rows with bank master file IDs
+        function initializeMasterFileDisplay() {
+            const mappings = [
+                { selector: '.bank-master-file-id', collection: 'bankAccounts', parameter: 'bankIds' },
+                { selector: '.company-master-file-id', collection: 'companies', parameter: 'companyIds' },
+                { selector: '.customer-master-file-id', collection: 'customers', parameter: 'customerIds' },
+                { selector: '.supplier-master-file-id', collection: 'suppliers', parameter: 'supplierIds' }
+            ];
+            const requests = [];
+            const requestData = {
+                bankIds: [],
+                companyIds: [],
+                customerIds: [],
+                supplierIds: []
+            };
+
             document.querySelectorAll('#accountTable tbody tr').forEach(row => {
-                const masterFileIds = {
-                    bankId: row.querySelector('.bank-master-file-id')?.value,
-                    companyId: row.querySelector('.company-master-file-id')?.value,
-                    customerId: row.querySelector('.customer-master-file-id')?.value,
-                    supplierId: row.querySelector('.supplier-master-file-id')?.value,
-                };
-
                 const accountSelect = row.querySelector('.chart-of-accounts');
-                if (!accountSelect) return;
-
-                // Mapping of accounts to their respective API endpoints
-                const accountMappings = [
-                    { key: 'bankId', accounts: ['101010100 Cash in Bank', '101020500 AR-Non Trade Receivable'], url: 'GetBankAccountById' },
-                    { key: 'companyId', accounts: ['101010400 Fund Transfer', '101020600 AR-Exchange Check', '101020500 AR-Non Trade Receivable'], url: 'GetCompanyById' },
-                    { key: 'customerId', accounts: ['101020500 AR-Non Trade Receivable'], url: 'GetCustomerById' },
-                    { key: 'supplierId', accounts: ['101020500 AR-Non Trade Receivable'], url: 'GetSupplierById' }
-                ];
-
-                for (const { key, accounts, url } of accountMappings) {
-                    if (masterFileIds[key] && accounts.includes(accountSelect.value)) {
-                        fetchAccountDetails(url, key, masterFileIds[key], accountSelect);
-                        break; // Exit loop once a match is found
-                    }
+                if (!accountSelect) {
+                    return;
                 }
-            });
-        }
 
-        function fetchAccountDetails(action, paramKey, paramValue, accountSelect) {
-            let url = '@Url.Action("PLACEHOLDER", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })';
-            url = url.replace("PLACEHOLDER", action);
+                const mapping = mappings.find(item => row.querySelector(item.selector)?.value);
+                if (!mapping) {
+                    return;
+                }
+
+                const id = row.querySelector(mapping.selector).value;
+                requestData[mapping.parameter].push(id);
+                requests.push({ accountSelect, collection: mapping.collection, id });
+            });
+
+            if (requests.length === 0) {
+                return;
+            }
+
+            Object.keys(requestData).forEach(key => {
+                requestData[key] = [...new Set(requestData[key])];
+            });
 
             $.ajax({
-                url: url,
+                url: '@Url.Action("GetMasterFileDetails", "CheckVoucherNonTradeInvoice", new { area = "Filpride" })',
                 type: 'GET',
-                data: { [paramKey]: paramValue },
+                traditional: true,
+                data: requestData,
                 success: function(data) {
-                    if (data && data.accountName) {
-                        const currentText = accountSelect.options[accountSelect.selectedIndex].text;
-                        const getBaseAccountText = (text) => {
-                            if (!text) {
-                                return '';
-                            }
-
-                            let baseText = text.trim();
-                            const suffixPattern = /\s+\([^()]+ - [^()]+\)$/;
-
-                            while (suffixPattern.test(baseText)) {
-                                baseText = baseText.replace(suffixPattern, '').trim();
-                            }
-
-                            return baseText;
-                        };
-
-                        // Store original text if not already stored
-                        if (!$(accountSelect).data('original-text')) {
-                            $(accountSelect).data('original-text', getBaseAccountText(currentText));
+                    requests.forEach(request => {
+                        const displayText = data[request.collection]?.[request.id];
+                        if (!displayText) {
+                            return;
                         }
 
-                        // Get the original text and extract account info after the AccountType prefix
-                        const originalText = $(accountSelect).data('original-text');
-                        const firstParenIndex = originalText.indexOf(')');
-                        let updatedText;
-
-                        if (firstParenIndex !== -1) {
-                            const accountType = originalText.substring(0, firstParenIndex + 1);
-                            const accountInfo = originalText.substring(firstParenIndex + 1).trim();
-                            updatedText = `${accountType} ${accountInfo} (${data.accountNumber} - ${data.accountName})`;
-                        } else {
-                            updatedText = `${originalText} (${data.accountNumber} - ${data.accountName})`;
+                        const currentText = request.accountSelect.options[request.accountSelect.selectedIndex]?.text;
+                        if (!currentText) {
+                            return;
                         }
 
-                        accountSelect.options[accountSelect.selectedIndex].text = updatedText;
+                        const accountSelect = $(request.accountSelect);
+                        if (!accountSelect.data('original-text')) {
+                            accountSelect.data('original-text', currentText.trim());
+                        }
 
-                        recalculateAllRows();
-                    }
+                        const originalText = accountSelect.data('original-text');
+                        request.accountSelect.options[request.accountSelect.selectedIndex].text =
+                            `${originalText} (${displayText})`;
+                    });
                 },
                 error: function() {
-                    console.error(`Error loading details for ${paramKey}`);
+                    console.error('Error loading master file details.');
                 }
             });
         }

@@ -17,5 +17,7 @@ namespace IBS.DataAccess.Repository.Filpride.IRepository
             CancellationToken cancellationToken = default);
 
         Task RecalculateTaxBalancesAsync(int salesInvoiceId, CancellationToken cancellationToken = default);
+
+        Task RecalculateTaxBalancesAsync(int[] salesInvoiceIds, CancellationToken cancellationToken = default);
     }
 }
