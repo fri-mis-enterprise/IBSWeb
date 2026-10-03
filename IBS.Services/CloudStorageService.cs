@@ -27,8 +27,8 @@ namespace IBS.Services
         private readonly GCSConfigOptions _options;
         private readonly ILogger<CloudStorageService> _logger;
         private readonly IHostEnvironment _environment;
-        private readonly GoogleCredential _googleCredential;
-        private readonly StorageClient _storageClient;
+        private readonly GoogleCredential _googleCredential = null!;
+        private readonly StorageClient _storageClient = null!;
 
         public CloudStorageService(
             IOptions<GCSConfigOptions> options,
@@ -38,6 +38,11 @@ namespace IBS.Services
             _options = options.Value;
             _logger = logger;
             _environment = environment;
+
+            if (_environment.IsDevelopment())
+            {
+                return;
+            }
 
             try
             {
