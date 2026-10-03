@@ -1,8 +1,10 @@
-﻿@using IBS.Models.Enums
+@using IBS.Models.Enums
 @model IEnumerable<FilprideReceivingReport>
 @{
     ViewData["Title"] = "Receiving Report";
 }
+
+@Html.AntiForgeryToken()
 
 <link rel="stylesheet" href="~/css/index-style.css">
 

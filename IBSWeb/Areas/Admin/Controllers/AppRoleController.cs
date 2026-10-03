@@ -43,6 +43,7 @@ namespace IBSWeb.Areas.Admin.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult GetRolesList([FromForm] DataTablesParameters parameters, CancellationToken cancellationToken)
         {
             try

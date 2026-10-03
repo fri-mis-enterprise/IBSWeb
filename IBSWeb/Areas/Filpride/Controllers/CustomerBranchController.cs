@@ -166,6 +166,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> GetCustomerBranchesList([FromForm] DataTablesParameters parameters, CancellationToken cancellationToken)
         {
             try
