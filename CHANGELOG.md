@@ -6,6 +6,13 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v4.0.1] - 2026-10-05
+
+### Fixed
+- Corrected gross margin report purchase costs and net purchases to use delivery receipt purchase-order details and their VAT treatment.
+
+---
+
 ## [v4.0.0] - 2026-10-03
 
 Changes are grouped by the date they reached `master`.
