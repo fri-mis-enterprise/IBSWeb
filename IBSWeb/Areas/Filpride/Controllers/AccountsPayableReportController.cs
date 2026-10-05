@@ -3029,31 +3029,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     var netSales = isCustomerVatable
                         ? NetOfVatOrZero(salesAmount)
                         : salesAmount;
-                    var costAmount = relatedReceivingReports.Count > 0
-                        ? relatedReceivingReports.Sum(rr => rr.Amount)
-                        : purchaseOrders.Count > 0
-                            ? dr.Details
-                                .Where(detail => detail.PurchaseOrder != null)
-                                .Sum(detail => RoundToFour(detail.Quantity * detail.PurchaseOrder!.FinalPrice))
-                            : RoundToFour(dr.PurchaseOrder!.FinalPrice * volume); // purchase total
-                    var costPerLiter = DivideOrZero(costAmount, volume); // purchase per liter
-                    var netPurchases = relatedReceivingReports.Count > 0
-                        ? relatedReceivingReports.Sum(rr => rr.PurchaseOrder?.VatType == SD.VatType_Vatable && rr.Amount != 0m
-                            ? NetOfVatOrZero(rr.Amount)
-                            : rr.Amount)
-                        : purchaseOrders.Count > 0
-                            ? dr.Details
-                                .Where(detail => detail.PurchaseOrder != null)
-                                .Sum(detail =>
-                                {
-                                    var detailCostAmount = RoundToFour(detail.Quantity * detail.PurchaseOrder!.FinalPrice);
-                                    return detail.PurchaseOrder.VatType == SD.VatType_Vatable
-                                        ? NetOfVatOrZero(detailCostAmount)
-                                        : detailCostAmount;
-                                })
-                            : dr.PurchaseOrder!.VatType == SD.VatType_Vatable
-                                ? NetOfVatOrZero(costAmount)
-                                : costAmount; // purchase total net
+                    var hasPurchaseOrderDetails = dr.Details.Any(detail => detail.PurchaseOrder != null);
+                    var costAmount = hasPurchaseOrderDetails
+                        ? dr.Details
+                            .Where(detail => detail.PurchaseOrder != null)
+                            .Sum(detail => RoundToFour(detail.Quantity * detail.PurchaseOrder!.FinalPrice))
+                        : RoundToFour(volume * (dr.PurchaseOrder?.FinalPrice ?? 0m));
+                    var costPerLiter = DivideOrZero(costAmount, volume);
+                    var netPurchases = hasPurchaseOrderDetails
+                        ? dr.Details
+                            .Where(detail => detail.PurchaseOrder != null)
+                            .Sum(detail =>
+                            {
+                                var detailCostAmount = RoundToFour(detail.Quantity * detail.PurchaseOrder!.FinalPrice);
+                                return NetOfVatByVatType(detailCostAmount, detail.PurchaseOrder.VatType);
+                            })
+                        : NetOfVatByVatType(costAmount, dr.PurchaseOrder?.VatType);
                     var gmAmount = RoundToFour(netSales - netPurchases); // gross margin total
                     var gmPerLiter = DivideOrZero(gmAmount, volume); // gross margin per liter
                     var freightCharge = RoundToFour(dr.Freight + dr.ECC); // freight charge per liter
