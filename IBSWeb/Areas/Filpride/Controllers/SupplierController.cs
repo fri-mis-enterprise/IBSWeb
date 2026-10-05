@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
@@ -190,6 +191,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> GetSuppliersList([FromForm] DataTablesParameters parameters, CancellationToken cancellationToken)
         {
             try
@@ -198,6 +200,60 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .GetAllQuery();
 
                 var totalRecords = await queried.CountAsync(cancellationToken);
+
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "supplierCode":
+                            queried = queried.Where(x =>
+                                values.Contains(x.SupplierCode!));
+                            break;
+
+                        case "supplierName":
+                            queried = queried.Where(x =>
+                                values.Contains(x.SupplierName!));
+                            break;
+
+                        case "supplierAddress":
+                            queried = queried.Where(x =>
+                                values.Contains(x.SupplierAddress!));
+                            break;
+
+                        case "supplierTin":
+                            queried = queried.Where(x =>
+                                values.Contains(x.SupplierTin!));
+                            break;
+
+                        case "supplierTerms":
+                            queried = queried.Where(x =>
+                                values.Contains(x.SupplierTerms!));
+                            break;
+
+                        case "category":
+                            queried = queried.Where(x =>
+                                values.Contains(x.Category!));
+                            break;
+                    }
+                }
 
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
@@ -232,12 +288,34 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Take(parameters.Length)
                     .ToListAsync(cancellationToken);
 
+                var columnControlOptionList = await queried
+                    .Select(x => new
+                    {
+                        SupplierCode = x.SupplierCode,
+                        SupplierName = x.SupplierName,
+                        SupplierAddress = x.SupplierAddress,
+                        SupplierTin = x.SupplierTin,
+                        SupplierTerms = x.SupplierTerms,
+                        Category = x.Category
+                    })
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalFilteredRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["supplierCode"] = columnControlOptionList.Select(x => x.SupplierCode).Where(value => value != null).Distinct(),
+                        ["supplierName"] = columnControlOptionList.Select(x => x.SupplierName).Where(value => value != null).Distinct(),
+                        ["supplierAddress"] = columnControlOptionList.Select(x => x.SupplierAddress).Where(value => value != null).Distinct(),
+                        ["supplierTin"] = columnControlOptionList.Select(x => x.SupplierTin).Where(value => value != null).Distinct(),
+                        ["supplierTerms"] = columnControlOptionList.Select(x => x.SupplierTerms).Where(value => value != null).Distinct(),
+                        ["category"] = columnControlOptionList.Select(x => x.Category).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)
@@ -549,6 +627,78 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .ToList();
                 }
 
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "supplierCode":
+                            suppliers = suppliers.Where(x =>
+                                values.Contains(x.SupplierCode!)).ToList();
+                            break;
+
+                        case "supplierName":
+                            suppliers = suppliers.Where(x =>
+                                values.Contains(x.SupplierName!)).ToList();
+                            break;
+
+                        case "supplierAddress":
+                            suppliers = suppliers.Where(x =>
+                                values.Contains(x.SupplierAddress!)).ToList();
+                            break;
+
+                        case "supplierTin":
+                            suppliers = suppliers.Where(x =>
+                                values.Contains(x.SupplierTin!)).ToList();
+                            break;
+
+                        case "supplierTerms":
+                            suppliers = suppliers.Where(x =>
+                                values.Contains(x.SupplierTerms!)).ToList();
+                            break;
+
+                        case "vatType":
+                            suppliers = suppliers.Where(x =>
+                                values.Contains(x.VatType!)).ToList();
+                            break;
+
+                        case "category":
+                            suppliers = suppliers.Where(x =>
+                                values.Contains(x.Category!)).ToList();
+                            break;
+
+                        case "createdDate":
+                        {
+                            List<DateTime> dates = values
+                                .Select(x => DateTime.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            suppliers = suppliers.Where(x =>
+                                dates.Contains(x.CreatedDate.Date)).ToList();
+                            break;
+                        }
+                    }
+                }
+
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
                 {
@@ -632,12 +782,37 @@ namespace IBSWeb.Areas.Filpride.Controllers
             })
             .ToList();
 
+                var columnControlOptionList = suppliers
+                    .Select(x => new
+                    {
+                        SupplierCode = x.SupplierCode,
+                        SupplierName = x.SupplierName,
+                        SupplierAddress = x.SupplierAddress,
+                        SupplierTin = x.SupplierTin,
+                        SupplierTerms = x.SupplierTerms,
+                        VatType = x.VatType,
+                        Category = x.Category,
+                        CreatedDate = x.CreatedDate
+                    })
+                    .ToList();
+
         return Json(new
         {
             draw = parameters.Draw,
             recordsTotal = totalRecords,
             recordsFiltered = totalRecords,
-            data = pagedData
+            data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["supplierCode"] = columnControlOptionList.Select(x => x.SupplierCode).Where(value => value != null).Distinct(),
+                        ["supplierName"] = columnControlOptionList.Select(x => x.SupplierName).Where(value => value != null).Distinct(),
+                        ["supplierAddress"] = columnControlOptionList.Select(x => x.SupplierAddress).Where(value => value != null).Distinct(),
+                        ["supplierTin"] = columnControlOptionList.Select(x => x.SupplierTin).Where(value => value != null).Distinct(),
+                        ["supplierTerms"] = columnControlOptionList.Select(x => x.SupplierTerms).Where(value => value != null).Distinct(),
+                        ["vatType"] = columnControlOptionList.Select(x => x.VatType).Where(value => value != null).Distinct(),
+                        ["category"] = columnControlOptionList.Select(x => x.Category).Where(value => value != null).Distinct(),
+                        ["createdDate"] = columnControlOptionList.Select(x => x.CreatedDate).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct()
+                    }
         });
     }
     catch (Exception ex)

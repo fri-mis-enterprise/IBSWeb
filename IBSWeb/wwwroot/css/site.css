@@ -1055,3 +1055,16 @@ body.loading {
     position: fixed !important;
     z-index: 99999 !important;
 }
+
+table.dataTable :is(.dt-type-numeric, .dt-type-date, .text-end) {
+    text-align: start !important;
+}
+
+table.dataTable thead :is(th, td) .dt-column-header {
+    flex-direction: row !important;
+}
+
+table.dataTable thead .dt-column-header .dt-column-title:empty + .dtcc {
+    margin-left: auto !important;
+    margin-right: 0 !important;
+}

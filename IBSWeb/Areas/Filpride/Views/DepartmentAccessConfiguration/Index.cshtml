@@ -4,6 +4,8 @@
     ViewData["Title"] = "Department Access Configuration";
 }
 
+@Html.AntiForgeryToken()
+
 <link rel="stylesheet" href="~/css/index-style.css">
 
 <div class="container-fluid mt-4">
@@ -38,6 +40,10 @@
     <script>
         $(document).ready(function() {
             let table = $('#paginatedTable').DataTable({
+                "searchDelay": 500,
+                "deferRender": true,
+                "columnControl": ['order', ['searchList']],
+                "ordering": { indicators: false },
                 "processing": true, // Enable processing indicator
                 "serverSide": true, // Enable server-side processing
                 "stateSave" : true,
@@ -106,6 +112,7 @@
                         "data": "id",
                         "name": "id",
                         "orderable": false,
+                        "columnControl": [],
                         "render": function (data, type, row) {
                             console.log(data)
                             return `<a class="btn btn-light" href="@Url.Action("Edit", "DepartmentAccessConfiguration", new { area = "Filpride" })/${data}">Edit</a>`;

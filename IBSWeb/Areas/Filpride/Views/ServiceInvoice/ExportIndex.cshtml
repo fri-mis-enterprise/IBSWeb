@@ -2,6 +2,8 @@
 @{
     ViewData["Title"] = "Service Invoice - Export";
 }
+@Html.AntiForgeryToken()
+
 <link rel="stylesheet" href="~/css/index-style.css">
 <div class="card shadow border-0 mt-4">
     <div class="card-header bg-secondary bg-gradient ml-0 py-3">
@@ -65,6 +67,10 @@
             $('#dateTo').val(dateToValue);
 
             let table = $('#serviceInvoiceTable').DataTable({
+                "searchDelay": 500,
+                "deferRender": true,
+                "columnControl": ['order', ['searchList']],
+                "ordering": { indicators: false },
                 processing: true,
                 serverSide: true,      // ENABLE SERVER-SIDE PROCESSING
                 stateSave: true,
@@ -99,6 +105,7 @@
                     {
                         data: 'serviceInvoiceId',
                         orderable: false,
+                        "columnControl": [],
                         searchable: false,
                         name: 'serviceInvoiceId',
                         render: DataTable.render.select()

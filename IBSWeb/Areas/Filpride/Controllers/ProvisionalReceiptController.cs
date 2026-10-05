@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
 using IBS.DataAccess.Repository.IRepository;
@@ -199,7 +200,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> GetProvisionalReceipts([FromForm] DataTablesParameters parameters, DateOnly filterDate, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetProvisionalReceipts([FromForm] DataTablesParameters parameters, CancellationToken cancellationToken)
         {
             try
             {
@@ -208,6 +209,112 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .GetAllQuery(pr => true);
 
                 var totalRecords = await query.CountAsync(cancellationToken);
+
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "seriesNumber":
+                            query = query.Where(x =>
+                                values.Contains(x.SeriesNumber!));
+                            break;
+
+                        case "transactionDate":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            query = query.Where(x =>
+                                dates.Contains(x.TransactionDate));
+                            break;
+                        }
+
+                        case "depositedDate":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            query = query.Where(x =>
+                                x.DepositedDate.HasValue && dates.Contains(x.DepositedDate.Value));
+                            break;
+                        }
+
+                        case "clearedDate":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            query = query.Where(x =>
+                                x.ClearedDate.HasValue && dates.Contains(x.ClearedDate.Value));
+                            break;
+                        }
+
+                        case "payerName":
+                            query = query.Where(x =>
+                                values.Contains(x.PayerName!));
+                            break;
+
+                        case "categoryName":
+                            query = query.Where(x =>
+                                x.CollectionCategory != null && values.Contains(x.CollectionCategory.Name!));
+                            break;
+
+                        case "referenceNo":
+                            query = query.Where(x =>
+                                values.Contains(x.ReferenceNo!));
+                            break;
+
+                        case "total":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            query = query.Where(x =>
+                                amounts.Contains(x.Total));
+                            break;
+                        }
+
+                        case "createdBy":
+                            query = query.Where(x =>
+                                values.Contains(x.CreatedBy!));
+                            break;
+
+                        case "status":
+                            query = query.Where(x =>
+                                values.Contains(x.Status!));
+                            break;
+                    }
+                }
 
                 if (!string.IsNullOrWhiteSpace(parameters.Search.Value))
                 {
@@ -225,10 +332,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         (hasTransactionDate && pr.TransactionDate == transactionDate));
                 }
 
-                if (filterDate != DateOnly.MinValue && filterDate != default)
-                {
-                    query = query.Where(pr => pr.TransactionDate == filterDate);
-                }
 
                 if (parameters.Order?.Count > 0)
                 {
@@ -300,12 +403,42 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     })
                     .ToListAsync(cancellationToken);
 
+                var columnControlOptionList = await query
+                    .Select(x => new
+                    {
+                        SeriesNumber = x.SeriesNumber,
+                        TransactionDate = x.TransactionDate,
+                        DepositedDate = x.DepositedDate,
+                        ClearedDate = x.ClearedDate,
+                        PayerName = x.PayerName,
+                        CategoryName = x.CollectionCategory != null ? x.CollectionCategory.Name : null,
+                        ReferenceNo = x.ReferenceNo,
+                        Total = x.Total,
+                        CreatedBy = x.CreatedBy,
+                        Status = x.Status
+                    })
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalFilteredRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["seriesNumber"] = columnControlOptionList.Select(x => x.SeriesNumber).Where(value => value != null).Distinct(),
+                        ["transactionDate"] = columnControlOptionList.Select(x => x.TransactionDate).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["depositedDate"] = columnControlOptionList.Select(x => x.DepositedDate).Select(x => x?.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Where(value => value != null).Distinct(),
+                        ["clearedDate"] = columnControlOptionList.Select(x => x.ClearedDate).Select(x => x?.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Where(value => value != null).Distinct(),
+                        ["payerName"] = columnControlOptionList.Select(x => x.PayerName).Where(value => value != null).Distinct(),
+                        ["categoryName"] = columnControlOptionList.Select(x => x.CategoryName).Where(value => value != null).Distinct(),
+                        ["referenceNo"] = columnControlOptionList.Select(x => x.ReferenceNo).Where(value => value != null).Distinct(),
+                        ["total"] = columnControlOptionList.Select(x => x.Total).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["createdBy"] = columnControlOptionList.Select(x => x.CreatedBy).Where(value => value != null).Distinct(),
+                        ["status"] = columnControlOptionList.Select(x => x.Status).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)

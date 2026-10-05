@@ -4,6 +4,8 @@
     ViewData["Title"] = "Application Role";
 }
 
+@Html.AntiForgeryToken()
+
 <style>
     .container {
         max-width: 100% !important;
@@ -74,6 +76,10 @@
         // Event listeners
         $(document).ready(function () {
             var table = $('#paginatedTable').DataTable({
+                "searchDelay": 500,
+                "deferRender": true,
+                "columnControl": ['order', ['searchList']],
+                "ordering": { indicators: false },
                 "order": [[0, 'asc']],
                 "processing": true,
                 "serverSide": true,

@@ -243,6 +243,10 @@
         initializeSelect2();
 
         userTable = $('#userTable').DataTable({
+            "searchDelay": 500,
+            "deferRender": true,
+            "columnControl": ['order', ['searchList']],
+            "ordering": { indicators: false },
             "order": [[5, 'desc']],
             "columnDefs": [
                 {"orderable": false, "targets": [7]}
@@ -293,6 +297,7 @@
                 },
                 {data: 'createdDate'},
                 {
+                    "columnControl": [],
                     data: null,
                     render: function (data) {
                         return data.modifiedDate !== 'N/A'
@@ -303,6 +308,7 @@
                 {
                     data: null,
                     orderable: false,
+                    "columnControl": [],
                     render: function (data) {
                         return `
                                 <button class="btn btn-sm btn-info btn-edit-user" data-user-id="${escapeHtml(data.id)}" title="Edit">

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
@@ -49,6 +50,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> GetDisbursements([FromForm] DataTablesParameters parameters, CancellationToken cancellationToken)
         {
             try
@@ -60,6 +62,102 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                      true) ;
 
                 var totalRecords = await disbursements.CountAsync(cancellationToken);
+
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "checkVoucherHeaderNo":
+                            disbursements = disbursements.Where(x =>
+                                values.Contains(x.CheckVoucherHeaderNo!));
+                            break;
+
+                        case "date":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            disbursements = disbursements.Where(x =>
+                                dates.Contains(x.Date));
+                            break;
+                        }
+
+                        case "payee":
+                            disbursements = disbursements.Where(x =>
+                                values.Contains(x.Payee!));
+                            break;
+
+                        case "reference":
+                            disbursements = disbursements.Where(x =>
+                                values.Contains(x.Reference!));
+                            break;
+
+                        case "checkNo":
+                            disbursements = disbursements.Where(x =>
+                                values.Contains(x.CheckNo!));
+                            break;
+
+                        case "total":
+                        {
+                            List<decimal> amounts = values
+                                .Select(x => decimal.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            disbursements = disbursements.Where(x =>
+                                amounts.Contains(x.Total));
+                            break;
+                        }
+
+                        case "dcpDate":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            disbursements = disbursements.Where(x =>
+                                x.DcpDate.HasValue && dates.Contains(x.DcpDate.Value));
+                            break;
+                        }
+
+                        case "dcrDate":
+                        {
+                            List<DateOnly> dates = values
+                                .Select(x => DateOnly.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            disbursements = disbursements.Where(x =>
+                                x.DcrDate.HasValue && dates.Contains(x.DcrDate.Value));
+                            break;
+                        }
+                    }
+                }
 
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
@@ -124,12 +222,38 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Take(parameters.Length)
                     .ToListAsync(cancellationToken);
 
+                var columnControlOptionList = await disbursements
+                    .Select(x => new
+                    {
+                        CheckVoucherHeaderNo = x.CheckVoucherHeaderNo,
+                        Date = x.Date,
+                        Payee = x.Payee,
+                        Reference = x.Reference,
+                        CheckNo = x.CheckNo,
+                        Total = x.Total,
+                        DcpDate = x.DcpDate,
+                        DcrDate = x.DcrDate
+                    })
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalFilteredRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["checkVoucherHeaderNo"] = columnControlOptionList.Select(x => x.CheckVoucherHeaderNo).Where(value => value != null).Distinct(),
+                        ["date"] = columnControlOptionList.Select(x => x.Date).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct(),
+                        ["payee"] = columnControlOptionList.Select(x => x.Payee).Where(value => value != null).Distinct(),
+                        ["reference"] = columnControlOptionList.Select(x => x.Reference).Where(value => value != null).Distinct(),
+                        ["checkNo"] = columnControlOptionList.Select(x => x.CheckNo).Where(value => value != null).Distinct(),
+                        ["total"] = columnControlOptionList.Select(x => x.Total).Select(x => x.ToString("N4", CultureInfo.InvariantCulture)).Distinct(),
+                        ["dcpDate"] = columnControlOptionList.Select(x => x.DcpDate).Select(x => x?.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Where(value => value != null).Distinct(),
+                        ["dcrDate"] = columnControlOptionList.Select(x => x.DcrDate).Select(x => x?.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Where(value => value != null).Distinct()
+                    }
                 });
             }
             catch (Exception ex)

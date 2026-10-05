@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Dynamic.Core;
 using System.Security.Claims;
 using IBS.DataAccess.Data;
@@ -155,6 +156,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> GetServicesList([FromForm] DataTablesParameters parameters, CancellationToken cancellationToken)
         {
             try
@@ -163,6 +165,71 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .GetAllQuery();
 
                 var totalRecords = await query.CountAsync(cancellationToken);
+
+                foreach (DataTablesColumn column in parameters.Columns)
+                {
+                    List<string>? values = column.ColumnControl?.List;
+
+                    if (values == null || values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    values = values
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToList();
+
+                    if (values.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string columnName = column.Data;
+
+                    switch (columnName)
+                    {
+                        case "serviceNo":
+                            query = query.Where(x =>
+                                values.Contains(x.ServiceNo!));
+                            break;
+
+                        case "name":
+                            query = query.Where(x =>
+                                values.Contains(x.Name!));
+                            break;
+
+                        case "percent":
+                        {
+                            List<int> selectedValues = values
+                                .Select(x => int.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            query = query.Where(x =>
+                                selectedValues.Contains(x.Percent));
+                            break;
+                        }
+
+                        case "createdBy":
+                            query = query.Where(x =>
+                                values.Contains(x.CreatedBy!));
+                            break;
+
+                        case "createdDate":
+                        {
+                            List<DateTime> dates = values
+                                .Select(x => DateTime.Parse(
+                                    x,
+                                    CultureInfo.InvariantCulture))
+                                .ToList();
+
+                            query = query.Where(x =>
+                                dates.Contains(x.CreatedDate.Date));
+                            break;
+                        }
+                    }
+                }
 
                 // Global search
                 if (!string.IsNullOrEmpty(parameters.Search.Value))
@@ -197,12 +264,32 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Take(parameters.Length)
                     .ToListAsync(cancellationToken);
 
+                var columnControlOptionList = await query
+                    .Select(x => new
+                    {
+                        ServiceNo = x.ServiceNo,
+                        Name = x.Name,
+                        Percent = x.Percent,
+                        CreatedBy = x.CreatedBy,
+                        CreatedDate = x.CreatedDate
+                    })
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
                 return Json(new
                 {
                     draw = parameters.Draw,
                     recordsTotal = totalRecords,
                     recordsFiltered = totalFilteredRecords,
-                    data = pagedData
+                    data = pagedData,
+                    columnControl = new Dictionary<string, object>
+                    {
+                        ["serviceNo"] = columnControlOptionList.Select(x => x.ServiceNo).Where(value => value != null).Distinct(),
+                        ["name"] = columnControlOptionList.Select(x => x.Name).Where(value => value != null).Distinct(),
+                        ["percent"] = columnControlOptionList.Select(x => x.Percent).Select(x => x.ToString(CultureInfo.InvariantCulture)).Distinct(),
+                        ["createdBy"] = columnControlOptionList.Select(x => x.CreatedBy).Where(value => value != null).Distinct(),
+                        ["createdDate"] = columnControlOptionList.Select(x => x.CreatedDate).Select(x => x.ToString("MMM dd, yyyy", CultureInfo.InvariantCulture)).Distinct()
+                    }
                 });
             }
             catch (Exception ex)
