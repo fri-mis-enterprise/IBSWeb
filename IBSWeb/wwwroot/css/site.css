@@ -1055,3 +1055,8 @@ body.loading {
     position: fixed !important;
     z-index: 99999 !important;
 }
+
+/* Hide the duplicate footer inside the scrollable table body */
+#paginatedTable_wrapper .dt-scroll-body > table > tfoot {
+    display: none;
+}
