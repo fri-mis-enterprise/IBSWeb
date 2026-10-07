@@ -365,6 +365,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var pagedData = await checkVoucherHeaders
                     .Skip(parameters.Start)
                     .Take(parameters.Length)
+                    .Select(x => new
+                    {
+                        x.CheckVoucherHeaderId,
+                        x.CheckVoucherHeaderNo,
+                        x.Date,
+                        x.SupplierName,
+                        x.CheckNo,
+                        x.Total,
+                        x.Status,
+                        x.CreatedBy,
+                        DocumentType = string.IsNullOrWhiteSpace(x.DocumentedByCompanyName)
+                            ? x.Type
+                            : x.Type + " - " + x.DocumentedByCompanyName
+                    })
                     .ToListAsync(cancellationToken);
 
                 return Json(new

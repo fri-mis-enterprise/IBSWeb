@@ -235,16 +235,10 @@
                 "columns": [
                     { "data": "checkVoucherHeaderNo" },
                     {
-                        "data": "type",
-                        "name": "type",
+                        "data": "documentType",
+                        "name": "documentType",
                         "render": function (data, type, row) {
-                            let documentType = row.type;
-
-                            if (row.documentedByCompanyName) {
-                                documentType += ' - ' + row.documentedByCompanyName;
-                            }
-
-                            return `<span>${documentType}</span>`;
+                            return `<span>${row.documentType}</span>`;
                         }
                     },
                     {

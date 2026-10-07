@@ -188,8 +188,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         x.CheckVoucherHeader!.PostedBy,
                         x.CheckVoucherHeader!.IsPaid,
                         x.CheckVoucherHeaderId,
-                        x.CheckVoucherHeader.Type,
-                        x.CheckVoucherHeader.DocumentedByCompanyName
+                        DocumentType = string.IsNullOrWhiteSpace(x.CheckVoucherHeader.DocumentedByCompanyName)
+                            ? x.CheckVoucherHeader.Type
+                            : x.CheckVoucherHeader.Type + " - " + x.CheckVoucherHeader.DocumentedByCompanyName
                     })
                     .ToListAsync(cancellationToken);
 

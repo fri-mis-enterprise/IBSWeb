@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.EntityFrameworkCore;
+using Quartz.Util;
 
 namespace IBSWeb.Areas.Filpride.Controllers
 {
@@ -189,8 +190,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         x.PostedBy,
                         x.IsPaid,
                         x.CheckVoucherHeaderId,
-                        x.Type,
-                        x.DocumentedByCompanyName
+
+                        DocumentType = string.IsNullOrWhiteSpace(x.DocumentedByCompanyName)
+                            ? x.Type
+                            : x.Type + " - " + x.DocumentedByCompanyName
                     })
                     .ToListAsync(cancellationToken);
 
