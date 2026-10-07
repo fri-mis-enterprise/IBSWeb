@@ -229,7 +229,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         x.PostedBy,
                         x.IsAdvances,
                         x.SupplierId,
-                        x.IsEmployeeAdvance
+                        x.IsEmployeeAdvance,
+                        x.Type,
+                        x.DocumentedByCompanyName
                     })
                     .ToListAsync(cancellationToken);
 

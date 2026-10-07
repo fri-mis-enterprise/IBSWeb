@@ -188,7 +188,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         x.CanceledBy,
                         x.PostedBy,
                         x.IsPaid,
-                        x.CheckVoucherHeaderId
+                        x.CheckVoucherHeaderId,
+                        x.Type,
+                        x.DocumentedByCompanyName
                     })
                     .ToListAsync(cancellationToken);
 

@@ -27,6 +27,7 @@
                 <thead class="bg-light">
                 <tr class="text-nowrap">
                     <th class="text-start">CV#</th>
+                    <th class="text-start">Document Type</th>
                     <th class="text-start">Date</th>
                     <th class="text-start">Supplier</th>
                     <th class="text-start">Check#</th>
@@ -177,6 +178,19 @@
             },
             "columns": [
                 { "data": "checkVoucherHeaderNo" },
+                {
+                    "data": "type",
+                    "name": "type",
+                    "render": function (data, type, row) {
+                        let documentType = row.type;
+
+                        if (row.documentedByCompanyName) {
+                            documentType += ' - ' + row.documentedByCompanyName;
+                        }
+
+                        return `<span>${documentType}</span>`;
+                    }
+                },
                 {
                     "data": "date",
                     "name": "date",

@@ -1,4 +1,4 @@
-@model IEnumerable<FilprideCheckVoucherDetail>
+﻿@model IEnumerable<FilprideCheckVoucherDetail>
 @using IBS.Models.Enums
 @using IBS.Utility.Constants
 @{
@@ -42,6 +42,7 @@
                 <thead class="bg-light">
                 <tr class="text-nowrap">
                     <th class="text-start">CVN#</th>
+                    <th class="text-start">Document Type</th>
                     <th class="text-start">Date</th>
                     <th class="text-start">Payee</th>
                     <th class="text-start">INV#</th>
@@ -53,6 +54,7 @@
                 </thead>
                 <tfoot>
                 <tr class="bg-secondary text-white fw-bold">
+                    <td class="py-3"></td>
                     <td class="py-3"></td>
                     <td class="py-3"></td>
                     <td class="py-3"></td>
@@ -233,6 +235,19 @@
                 "columns": [
                     { "data": "checkVoucherHeaderNo" },
                     {
+                        "data": "type",
+                        "name": "type",
+                        "render": function (data, type, row) {
+                            let documentType = row.type;
+
+                            if (row.documentedByCompanyName) {
+                                documentType += ' - ' + row.documentedByCompanyName;
+                            }
+
+                            return `<span>${documentType}</span>`;
+                        }
+                    },
+                    {
                         "data": "date",
                         "name": "date",
                         "render": function (data, type, row) {
@@ -339,7 +354,7 @@
                     });
 
                     // Update footer with totals
-                    $(this.api().column(5).footer()).html(formatNumber(totalAmount));
+                    $(this.api().column(6).footer()).html(formatNumber(totalAmount));
                 }
             });
 
