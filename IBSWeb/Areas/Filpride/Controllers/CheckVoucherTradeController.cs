@@ -375,6 +375,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         x.Total,
                         x.Status,
                         x.CreatedBy,
+                        x.PostedBy,
+                        x.VoidedBy,
+                        x.CanceledBy,
+                        x.CvType,
+                        x.AmountPaid,
                         DocumentType = string.IsNullOrWhiteSpace(x.DocumentedByCompanyName)
                             ? x.Type
                             : x.Type + " - " + x.DocumentedByCompanyName
