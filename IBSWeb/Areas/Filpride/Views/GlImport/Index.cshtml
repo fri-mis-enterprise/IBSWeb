@@ -1,0 +1,113 @@
+@using IBS.DTOs
+@using IBS.Services
+@model IBSWeb.Areas.Filpride.Models.GlImportViewModel
+@{
+    ViewData["Title"] = "Import General Ledger";
+}
+
+<div class="card shadow border-0 mt-4">
+    <div class="card-header">
+        <h2>@ViewData["Title"]</h2>
+    </div>
+    <div class="card-body">
+        <p>Upload journal entries to generate financial reports. Each journal must balance by date and reference.</p>
+        <a asp-action="Template" class="btn btn-outline-secondary mb-3">Download CSV template</a>
+        <div asp-validation-summary="All" class="text-danger"></div>
+        <form asp-action="Preview" method="post" enctype="multipart/form-data">
+            <label for="file" class="form-label">CSV file (up to 10 MB and 50,000 lines)</label>
+            <input id="file" name="file" type="file" accept=".csv" class="form-control" required />
+            <button type="submit" class="btn btn-primary mt-3">Preview upload</button>
+        </form>
+        <p class="mt-3">Use yyyy-MM-dd dates and amounts without thousands separators. Enter zero on the unused debit or credit side. Preserve leading zeros in account codes.</p>
+        <p>AccountNo must match an existing posting account. AccountName must exactly match that account's name, including capitalization. Leading and trailing spaces in the CSV are trimmed.</p>
+
+        @if (Model.Preview is { } preview)
+        {
+            <hr />
+            <h3>Preview: @preview.FileName</h3>
+            <dl class="row">
+                <dt class="col-sm-3">Valid lines</dt><dd class="col-sm-9">@preview.Rows.Count.ToString("N0")</dd>
+                <dt class="col-sm-3">Journals</dt><dd class="col-sm-9">@preview.JournalCount.ToString("N0")</dd>
+                <dt class="col-sm-3">Total debit</dt><dd class="col-sm-9">@preview.TotalDebit.ToString("N4")</dd>
+                <dt class="col-sm-3">Total credit</dt><dd class="col-sm-9">@preview.TotalCredit.ToString("N4")</dd>
+            </dl>
+            @if (preview.Errors.Count > 0)
+            {
+                <div class="alert alert-danger">
+                    <strong>This file cannot be imported. Correct the errors and upload again.</strong>
+                    <ul>
+                        @foreach (string error in preview.Errors)
+                        {
+                            <li>@error</li>
+                        }
+                    </ul>
+                    @if (preview.Errors.Count == GlImportService.MaximumErrors)
+                    {
+                        <p>Showing the first @GlImportService.MaximumErrors errors.</p>
+                    }
+                </div>
+            }
+            <p>Showing the first 100 valid lines. Validation covers the entire file.</p>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Row</th><th>Date</th><th>Reference</th><th>Description</th>
+                            <th>AccountNo</th><th>AccountName</th>
+                            <th class="text-end">Debit</th><th class="text-end">Credit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (GlImportRow row in preview.Rows.Take(100))
+                        {
+                            <tr>
+                                <td>@row.RowNumber</td><td>@row.Date.ToString("yyyy-MM-dd")</td>
+                                <td>@row.Reference</td><td>@row.Description</td>
+                                <td>@row.AccountNo</td><td>@row.AccountName</td>
+                                <td class="text-end">@row.Debit.ToString("N4")</td>
+                                <td class="text-end">@row.Credit.ToString("N4")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (preview.CanImport && Model.PreviewToken != null)
+            {
+                <form asp-action="Import" method="post">
+                    <input type="hidden" name="previewToken" value="@Model.PreviewToken" />
+                    <p>The preview expires after 15 minutes. Confirmation posts every line in this file.</p>
+                    <button type="submit" class="btn btn-success">Confirm GL import</button>
+                </form>
+            }
+        }
+
+        <hr />
+        <h3>Import history</h3>
+        <p>Latest 50 batches. After importing all entries, lock and close the months in order to prepare reports that use closed balances.</p>
+        <div class="table-responsive">
+            <table class="table table-sm table-striped">
+                <thead>
+                    <tr>
+                        <th>Batch</th><th>File</th><th>Imported by</th><th>Imported at</th><th>Period</th>
+                        <th class="text-end">Lines</th><th class="text-end">Journals</th>
+                        <th class="text-end">Debit</th><th class="text-end">Credit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (FilprideGlImportBatch batch in Model.History)
+                    {
+                        <tr>
+                            <td>@batch.Id</td><td>@batch.FileName</td><td>@batch.ImportedBy</td>
+                            <td>@batch.ImportedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>@batch.DateFrom.ToString("yyyy-MM-dd") to @batch.DateTo.ToString("yyyy-MM-dd")</td>
+                            <td class="text-end">@batch.RowCount.ToString("N0")</td>
+                            <td class="text-end">@batch.JournalCount.ToString("N0")</td>
+                            <td class="text-end">@batch.TotalDebit.ToString("N4")</td>
+                            <td class="text-end">@batch.TotalCredit.ToString("N4")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

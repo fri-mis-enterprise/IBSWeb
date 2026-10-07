@@ -124,6 +124,7 @@ namespace IBS.DataAccess.Data
         #region Books
 
         public DbSet<FilprideGeneralLedgerBook> FilprideGeneralLedgerBooks { get; set; }
+        public DbSet<FilprideGlImportBatch> FilprideGlImportBatches { get; set; }
         public DbSet<FilprideInventory> FilprideInventories { get; set; }
         public DbSet<FilprideAuditTrail> FilprideAuditTrails { get; set; }
 
@@ -701,6 +702,16 @@ namespace IBS.DataAccess.Data
                     .OnDelete(DeleteBehavior.Restrict);
 
                 gl.HasIndex(gl => gl.Reference);
+
+                gl.HasOne(gl => gl.ImportBatch)
+                    .WithMany()
+                    .HasForeignKey(gl => gl.ImportBatchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<FilprideGlImportBatch>(batch =>
+            {
+                batch.HasIndex(batch => batch.FileHash).IsUnique();
             });
 
             builder.Entity<FilprideInventory>(inventory =>

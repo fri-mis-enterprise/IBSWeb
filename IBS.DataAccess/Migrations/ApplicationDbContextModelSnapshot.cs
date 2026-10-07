@@ -2683,6 +2683,10 @@ namespace IBS.DataAccess.Migrations
                         .HasColumnType("text")
                         .HasColumnName("description");
 
+                    b.Property<Guid?>("ImportBatchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("import_batch_id");
+
                     b.Property<bool>("IsPosted")
                         .HasColumnType("boolean")
                         .HasColumnName("is_posted");
@@ -2715,10 +2719,76 @@ namespace IBS.DataAccess.Migrations
                     b.HasIndex("AccountId")
                         .HasDatabaseName("ix_filpride_general_ledger_books_account_id");
 
+                    b.HasIndex("ImportBatchId")
+                        .HasDatabaseName("ix_filpride_general_ledger_books_import_batch_id");
+
                     b.HasIndex("Reference")
                         .HasDatabaseName("ix_filpride_general_ledger_books_reference");
 
                     b.ToTable("filpride_general_ledger_books", (string)null);
+                });
+
+            modelBuilder.Entity("IBS.Models.Filpride.Books.FilprideGlImportBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly>("DateFrom")
+                        .HasColumnType("date")
+                        .HasColumnName("date_from");
+
+                    b.Property<DateOnly>("DateTo")
+                        .HasColumnType("date")
+                        .HasColumnName("date_to");
+
+                    b.Property<string>("FileHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("file_hash");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("file_name");
+
+                    b.Property<DateTime>("ImportedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("imported_at");
+
+                    b.Property<string>("ImportedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("imported_by");
+
+                    b.Property<int>("JournalCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("journal_count");
+
+                    b.Property<int>("RowCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("row_count");
+
+                    b.Property<decimal>("TotalCredit")
+                        .HasColumnType("numeric(28,4)")
+                        .HasColumnName("total_credit");
+
+                    b.Property<decimal>("TotalDebit")
+                        .HasColumnType("numeric(28,4)")
+                        .HasColumnName("total_debit");
+
+                    b.HasKey("Id")
+                        .HasName("pk_filpride_gl_import_batches");
+
+                    b.HasIndex("FileHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_filpride_gl_import_batches_file_hash");
+
+                    b.ToTable("filpride_gl_import_batches", (string)null);
                 });
 
             modelBuilder.Entity("IBS.Models.Filpride.Books.FilprideInventory", b =>
@@ -5692,7 +5762,15 @@ namespace IBS.DataAccess.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_filpride_general_ledger_books_filpride_chart_of_accounts_ac");
 
+                    b.HasOne("IBS.Models.Filpride.Books.FilprideGlImportBatch", "ImportBatch")
+                        .WithMany()
+                        .HasForeignKey("ImportBatchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_filpride_general_ledger_books_filpride_gl_import_batches_im");
+
                     b.Navigation("Account");
+
+                    b.Navigation("ImportBatch");
                 });
 
             modelBuilder.Entity("IBS.Models.Filpride.Books.FilprideInventory", b =>

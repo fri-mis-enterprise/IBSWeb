@@ -49,6 +49,11 @@ namespace IBS.Models.Filpride.Books
         [Column(TypeName = "varchar(50)")]
         public string ModuleType { get; set; } = string.Empty;
 
+        public Guid? ImportBatchId { get; set; }
+
+        [ForeignKey(nameof(ImportBatchId))]
+        public FilprideGlImportBatch? ImportBatch { get; set; }
+
         #region Chart Of Account Properties
 
         public int AccountId { get; set; }
