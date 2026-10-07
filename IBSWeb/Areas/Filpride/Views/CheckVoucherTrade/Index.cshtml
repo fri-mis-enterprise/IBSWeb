@@ -182,7 +182,10 @@
                     "data": "documentType",
                     "name": "documentType",
                     "render": function (data, type, row) {
-                        return `<span>${row.documentType}</span>`;
+                        if (type !== 'display'){
+                            return data
+                        }
+                        return `<span>${$.fn.dataTable.render.text().display(data)}</span>`;
                     }
                 },
                 {
