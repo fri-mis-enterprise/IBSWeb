@@ -229,7 +229,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         x.PostedBy,
                         x.IsAdvances,
                         x.SupplierId,
-                        x.IsEmployeeAdvance
+                        x.IsEmployeeAdvance,
+                        DocumentType = string.IsNullOrWhiteSpace(x.DocumentedByCompanyName)
+                            ? x.Type
+                            : x.Type + " - " + x.DocumentedByCompanyName
                     })
                     .ToListAsync(cancellationToken);
 
