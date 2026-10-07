@@ -439,9 +439,6 @@
                         <!-- Col 2: General Ledger Reports -->
                         <div class="mnav-col" data-col-level="2" data-col-id="rep-gl" data-parent-col="rep-root" style="display:none;">
                             <div class="mnav-col-header">General Ledger</div>
-                            <a class="mnav-col-item" asp-area="Filpride" asp-controller="GlImport" asp-action="Index" role="menuitem">
-                                <div class="mnav-col-item-content"><span class="material-symbols-outlined">upload_file</span><div class="mnav-col-item-text"><div class="mnav-col-item-title">GL Import</div></div></div>
-                            </a>
                             <a class="mnav-col-item" asp-area="Filpride" asp-controller="GeneralLedgerReport" asp-action="GeneralLedgerBook" role="menuitem">
                                 <div class="mnav-col-item-content"><span class="material-symbols-outlined">list</span><div class="mnav-col-item-text"><div class="mnav-col-item-title">General Ledger by Transaction</div></div></div>
                             </a>
@@ -684,6 +681,9 @@
                         <div class="mnav-column-deck" role="menu">
                             <div class="mnav-col" data-col-level="1" data-col-id="util-root">
                                 <div class="mnav-col-header">Utility Operations</div>
+                                <a class="mnav-col-item" asp-area="Filpride" asp-controller="GlImport" asp-action="Index" role="menuitem">
+                                    <div class="mnav-col-item-content"><span class="material-symbols-outlined">upload_file</span><div class="mnav-col-item-text"><div class="mnav-col-item-title">GL Import</div></div></div>
+                                </a>
                                 <a class="mnav-col-item" asp-area="Filpride" asp-controller="TransactionMasterControl" asp-action="Index" role="menuitem">
                                     <div class="mnav-col-item-content">
                                         <span class="material-symbols-outlined">tune</span>

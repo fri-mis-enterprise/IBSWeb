@@ -2,7 +2,7 @@
 
 Load users, company details, and the chart of accounts before importing. Imports can append journal entries to an empty or populated GL. The importer never clears existing data or updates operational balances.
 
-Open **Reports > General Ledger > GL Import**. Download the template, preview the file, correct any errors, then confirm the complete batch.
+Sign in as an Admin and open **Utility > GL Import**. Download the template, preview the file, correct any errors, then confirm the complete batch.
 
 ## File format
 

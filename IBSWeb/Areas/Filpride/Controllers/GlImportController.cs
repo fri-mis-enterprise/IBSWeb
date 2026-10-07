@@ -10,7 +10,7 @@ using Microsoft.Extensions.Caching.Memory;
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public class GlImportController : Controller
     {
         private readonly GlImportService _service;
