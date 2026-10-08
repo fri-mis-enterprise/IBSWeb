@@ -6,6 +6,13 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v4.1.1] - 2026-10-08
+
+### Fixed
+- Updated index and export tables across administration, master-file, and transaction pages to use full-width styling and horizontal scrolling, with automatic column-width calculation disabled to reduce layout shifts during searches.
+
+---
+
 ## [v4.1.0] - 2026-10-08
 
 ### 2026-10-08
