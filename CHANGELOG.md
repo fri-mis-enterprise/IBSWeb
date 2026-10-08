@@ -6,6 +6,21 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v4.1.0] - 2026-10-08
+
+### 2026-10-08
+- Fixed automatic journal voucher reversals to process only posted vouchers marked for reversal and date the reversal entries to the first day of the month following the voucher transaction date.
+
+### 2026-10-07
+- Added document type and documenting company name to trade and non-trade check voucher lists, including invoice, payment, and payroll invoice pages.
+- Improved table layouts across administration, master-file, and transaction pages by allowing cell text to wrap while keeping column headings on one line, and hiding duplicate totals footers in scrollable tables.
+- Updated the trade check voucher list to display the retained supplier name.
+
+### 2026-10-05
+- Added MMSI to the company portal links.
+
+---
+
 ## [v4.0.1] - 2026-10-05
 
 ### Fixed
