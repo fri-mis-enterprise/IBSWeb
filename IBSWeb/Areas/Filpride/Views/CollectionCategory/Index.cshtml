@@ -59,6 +59,8 @@
     <script>
         $(function () {
             $('#paginatedTable').DataTable({
+                autoWidth: false,
+                scrollX: true,
                 scrollY: '45vh',
                 scrollCollapse: true,
                 order: [[0, 'asc']],

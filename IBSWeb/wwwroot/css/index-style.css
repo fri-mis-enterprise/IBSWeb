@@ -4,6 +4,10 @@
 }
 
 /* Custom styles for professional look */
+.table {
+    width: 100%;
+}
+
 .table th {
     font-weight: 600;
     color: #374151;
