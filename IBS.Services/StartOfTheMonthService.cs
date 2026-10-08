@@ -218,67 +218,67 @@ namespace IBS.Services
         private async Task ReverseTheJvEntries()
         {
             var currentDateTime = DateTimeHelper.GetCurrentPhilippineTime();
-                var currentDate = DateOnly.FromDateTime(currentDateTime);
+            var journalVouchers = await _dbContext.FilprideJournalVoucherHeaders
+                                       .Include(x => x.Details)
+                                       .Include(x => x.CheckVoucherHeader)
+                                       .Where(x => x.PostedBy != null && x.AutoReverseNextMonth)
+                                      .ToListAsync()
+                                  ?? throw new InvalidOperationException("Journal voucher auto reverse next month not found.");
 
-                var journalVouchers = await _dbContext.FilprideJournalVoucherHeaders
-                                           .Include(x => x.Details)
-                                           .Include(x => x.CheckVoucherHeader)
-                                           .Where(x => x.AutoReverseNextMonth)
-                                          .ToListAsync()
-                                      ?? throw new InvalidOperationException("Journal voucher auto reverse next month not found.");
+            var accountTitlesDto = await _unitOfWork.FilprideJournalVoucher.GetListOfAccountTitleDto();
+            var ledgers = new List<FilprideGeneralLedgerBook>();
 
-                var accountTitlesDto = await _unitOfWork.FilprideJournalVoucher.GetListOfAccountTitleDto();
-                var ledgers = new List<FilprideGeneralLedgerBook>();
-
-                foreach (var journalVoucherHeaders in journalVouchers)
+            foreach (var journalVoucherHeader in journalVouchers)
+            {
+                var reversalEntryStart = ledgers.Count;
+                var postedDate = new DateOnly(journalVoucherHeader.Date.Year, journalVoucherHeader.Date.Month, 1)
+                    .AddMonths(1);
+                foreach (var detail in journalVoucherHeader.Details!)
                 {
-                    var reversalEntryStart = ledgers.Count;
-                    foreach (var detail in journalVoucherHeaders.Details!)
-                    {
-                        var account = accountTitlesDto.Find(c => c.AccountNumber == detail.AccountNo)
-                                      ?? throw new ArgumentException($"Account title '{detail.AccountNo}' not found.");
+                    var account = accountTitlesDto.Find(c => c.AccountNumber == detail.AccountNo)
+                                  ?? throw new ArgumentException($"Account title '{detail.AccountNo}' not found.");
 
-                        ledgers.Add(
-                            new FilprideGeneralLedgerBook
-                            {
-                                Date = currentDate,
-                                Reference = journalVoucherHeaders.JournalVoucherHeaderNo!,
-                                Description = $"Reversal of {journalVoucherHeaders.Particulars}",
-                                AccountId = account.AccountId,
-                                AccountNo = account.AccountNumber,
-                                AccountTitle = account.AccountName,
-                                Debit = detail.Credit,
-                                Credit = detail.Debit,
-                                CreatedBy = journalVoucherHeaders.CreatedBy!,
-                                CreatedDate = currentDateTime,
-                                SubAccountType = detail.SubAccountType,
-                                SubAccountId = detail.SubAccountId,
-                                SubAccountName = detail.SubAccountName,
-                                ModuleType = nameof(ModuleType.Journal)
-                            }
-                        );
-                    }
-
-                    if (journalVoucherHeaders.CheckVoucherHeader?.SupplierId != null)
-                    {
-                        ledgers
-                            .Skip(reversalEntryStart)
-                            .SetCounterparty(
-                                CounterpartyType.Supplier,
-                                journalVoucherHeaders.CheckVoucherHeader.SupplierId,
-                                journalVoucherHeaders.CheckVoucherHeader.SupplierName
-                                    ?? journalVoucherHeaders.CheckVoucherHeader.Payee);
-                    }
-
-                    if (!_unitOfWork.FilprideJournalVoucher.IsJournalEntriesBalanced(ledgers))
-                    {
-                        throw new ArgumentException("Debit and Credit is not equal, check your entries.");
-                    }
-
-                    journalVoucherHeaders.AutoReverseNextMonth = false;
+                    ledgers.Add(
+                        new FilprideGeneralLedgerBook
+                        {
+                            Date = postedDate,
+                            Reference = journalVoucherHeader.JournalVoucherHeaderNo!,
+                            Description = $"Reversal of {journalVoucherHeader.Particulars}",
+                            AccountId = account.AccountId,
+                            AccountNo = account.AccountNumber,
+                            AccountTitle = account.AccountName,
+                            Debit = detail.Credit,
+                            Credit = detail.Debit,
+                            CreatedBy = journalVoucherHeader.CreatedBy!,
+                            CreatedDate = currentDateTime,
+                            SubAccountType = detail.SubAccountType,
+                            SubAccountId = detail.SubAccountId,
+                            SubAccountName = detail.SubAccountName,
+                            ModuleType = nameof(ModuleType.Journal)
+                        }
+                    );
                 }
-                await _dbContext.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers);
-                await _dbContext.SaveChangesAsync();
+
+                if (journalVoucherHeader.CheckVoucherHeader?.SupplierId != null)
+                {
+                    ledgers
+                        .Skip(reversalEntryStart)
+                        .SetCounterparty(
+                            CounterpartyType.Supplier,
+                            journalVoucherHeader.CheckVoucherHeader.SupplierId,
+                            journalVoucherHeader.CheckVoucherHeader.SupplierName
+                                ?? journalVoucherHeader.CheckVoucherHeader.Payee);
+                }
+
+                if (!_unitOfWork.FilprideJournalVoucher.IsJournalEntriesBalanced(ledgers))
+                {
+                    throw new ArgumentException("Debit and Credit is not equal, check your entries.");
+                }
+
+                journalVoucherHeader.AutoReverseNextMonth = false;
+            }
+            await _dbContext.FilprideGeneralLedgerBooks.AddRangeAsync(ledgers);
+            await _dbContext.SaveChangesAsync();
         }
     }
 }
