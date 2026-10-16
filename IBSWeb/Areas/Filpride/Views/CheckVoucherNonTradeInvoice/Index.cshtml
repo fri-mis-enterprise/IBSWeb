@@ -23,10 +23,11 @@
                 <label class="fw-semibold small text-muted mb-1">Filter by Date</label>
                 <input type="date" id="inputDate" class="form-control rounded-3 shadow-sm" style="width:150px;">
             </div>
-            <table class="table table-hover mb-0 text-nowrap" id="paginatedTable">
+            <table class="table table-hover mb-0" id="paginatedTable">
                 <thead class="bg-light">
-                    <tr>
+                    <tr class="text-nowrap">
                         <th class="text-start">Invoice#</th>
+                        <th class="text-start">Document Type</th>
                         <th class="text-start">Date</th>
                         <th class="text-start">Payee</th>
                         <th class="text-start">Payable Amount</th>
@@ -38,6 +39,7 @@
                 </thead>
                 <tfoot>
                     <tr class="bg-secondary text-white fw-bold">
+                        <td class="py-3"></td>
                         <td class="py-3"></td>
                         <td class="py-3"></td>
                         <td class="text-end py-3">
@@ -162,6 +164,8 @@
                 "serverSide": true,
                 "stateSave": true,
                 "stateDuration": 86400,
+                "autoWidth": false,
+                "scrollX": true,
                 "scrollY": '45vh',
                 "scrollCollapse": true,
                 stateLoadParams: function (settings, data) {
@@ -207,6 +211,17 @@
                     {
                         "data": "checkVoucherHeaderNo",
                         "name": "checkVoucherHeaderNo"
+                    },
+                    {
+                        "data": "documentType",
+                        "name": "documentType",
+                        "orderable": false,
+                        "render": function (data, type, row) {
+                            if (type !== 'display'){
+                                return data
+                            }
+                            return `<span>${$.fn.dataTable.render.text().display(data)}</span>`;
+                        }
                     },
                     {
                         "data": "date",
@@ -313,9 +328,9 @@
                     });
 
                     // Update footer with totals
-                    $(this.api().column(3).footer()).html(formatNumber(totalAmount));
-                    $(this.api().column(4).footer()).html(formatNumber(totalAmountPaid));
-                    $(this.api().column(5).footer()).html(formatNumber(totalBalance));
+                    $(this.api().column(4).footer()).html(formatNumber(totalAmount));
+                    $(this.api().column(5).footer()).html(formatNumber(totalAmountPaid));
+                    $(this.api().column(6).footer()).html(formatNumber(totalBalance));
                 }
             });
 

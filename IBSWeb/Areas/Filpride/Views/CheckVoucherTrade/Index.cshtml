@@ -23,13 +23,15 @@
                 <label class="fw-semibold small text-muted mb-1">Filter by Date</label>
                 <input type="date" id="inputDate" class="form-control rounded-3 shadow-sm" style="width:150px;">
             </div>
-            <table class="table table-hover mb-0 text-nowrap" id="paginatedTable">
+            <table class="table table-hover mb-0" id="paginatedTable">
                 <thead class="bg-light">
-                <tr>
+                <tr class="text-nowrap">
                     <th class="text-start">CV#</th>
+                    <th class="text-start">Document Type</th>
                     <th class="text-start">Date</th>
                     <th class="text-start">Supplier</th>
                     <th class="text-start">Check#</th>
+                    <th class="text-start">Check Amount</th>
                     <th class="text-start">Total</th>
                     <th class="text-start">Created By</th>
                     <th class="text-start">Status</th>
@@ -141,6 +143,8 @@
             "serverSide": true, // Enable server-side processing
             "stateSave" : true,
             "stateDuration": 86400,
+            "autoWidth": false,
+            "scrollX": true,
             "scrollY": '45vh',
             "scrollCollapse": true,
             "language": {
@@ -178,6 +182,17 @@
             "columns": [
                 { "data": "checkVoucherHeaderNo" },
                 {
+                    "data": "documentType",
+                    "name": "documentType",
+                    "orderable": false,
+                    "render": function (data, type, row) {
+                        if (type !== 'display'){
+                            return data
+                        }
+                        return `<span>${$.fn.dataTable.render.text().display(data)}</span>`;
+                    }
+                },
+                {
                     "data": "date",
                     "name": "date",
                     "render": function (data, type, row) {
@@ -190,8 +205,15 @@
                         });
                     }
                 },
-                { "data": "supplier.supplierName" },
+                { "data": "supplierName" },
                 { "data": "checkNo" },
+                {
+                    "data": "checkAmount",
+                    "render": function (data, type, row) {
+                        var amount = $.fn.dataTable.render.number(',', '.', 2).display(data);
+                        return `<span class="d-block fw-medium">${amount}</span>`;
+                    }
+                },
                 {
                     "data": "total",
                     "render": function (data, type, row) {

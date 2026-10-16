@@ -295,6 +295,8 @@
 
         const selectedPeriodIds = new Set();
         const table = $('#postedPeriodsTable').DataTable({
+            autoWidth: false,
+            scrollX: true,
             scrollY: '45vh',
             scrollCollapse: true,
             responsive: true,

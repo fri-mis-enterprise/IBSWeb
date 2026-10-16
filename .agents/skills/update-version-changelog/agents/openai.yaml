@@ -1,0 +1,4 @@
+interface:
+  display_name: "Update Version and Changelog"
+  short_description: "Update IBSWeb version and release notes from Git"
+  default_prompt: "Use $update-version-changelog to update the application version and CHANGELOG.md from changes not yet documented in this repository."

@@ -106,6 +106,7 @@ Apply these principles to new and changed code within the requested scope. Use t
 * Do not duplicate `.editorconfig` settings here so future configuration changes remain authoritative.
 * Apply configured style preferences to new and changed code, including preferences with suggestion or silent severity. Severity controls diagnostics, not whether the preference applies.
 * Use existing conventions and the simplicity guidelines below where `.editorconfig` does not specify a preference.
+* Always use `var` for local declarations, including `foreach`, `using`, and `out` variables, wherever C# permits type inference. Keep explicit types where C# requires them.
 * Use clear names and shallow control flow.
 * Prefer guard clauses and early returns.
 * Keep methods focused.

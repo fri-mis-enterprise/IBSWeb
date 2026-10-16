@@ -6,12 +6,10 @@ using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Quartz;
 
 namespace IBS.Services
 {
-    [DisallowConcurrentExecution]
-    public class DailyService : IJob
+    public class DailyService
     {
         private readonly ApplicationDbContext _dbContext;
 
@@ -30,26 +28,27 @@ namespace IBS.Services
             _unitOfWork = unitOfWork;
         }
 
-        public async Task Execute(IJobExecutionContext context)
+        public async Task ExecuteAsync(CancellationToken cancellationToken = default)
         {
-            await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             try
             {
                 var today = DateOnly.FromDateTime(DateTimeHelper.GetCurrentPhilippineTime());
 
-                await CosExpiration(today);
+                await CosExpiration(today, cancellationToken);
 
-                await transaction.CommitAsync();
+                await transaction.CommitAsync(cancellationToken);
             }
             catch (Exception ex)
             {
-                await transaction.RollbackAsync();
+                await transaction.RollbackAsync(cancellationToken);
                 _logger.LogError(ex, ex.Message);
+                throw;
             }
         }
 
-        private async Task CosExpiration(DateOnly today)
+        private async Task CosExpiration(DateOnly today, CancellationToken cancellationToken)
         {
             var cosList = await _dbContext.FilprideCustomerOrderSlips
                 .Where(cos => cos.ExpirationDate <= today
@@ -57,7 +56,7 @@ namespace IBS.Services
                               && cos.Status != nameof(CosStatus.Expired)
                               && cos.Status != nameof(CosStatus.Closed)
                               && cos.Status != nameof(CosStatus.Disapproved))
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             if (cosList.Count == 0)
             {
@@ -76,7 +75,7 @@ namespace IBS.Services
                 cos.Remarks = $"Previous status: [{previousStatus}] updated to Expired on {today}. {cos.Remarks}";
             }
 
-            await _dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync(cancellationToken);
         }
     }
 }
