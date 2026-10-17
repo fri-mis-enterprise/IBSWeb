@@ -36,4 +36,13 @@
     <ProjectReference Include="..\IBS.Utility\IBS.Utility.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="Scripts\MockData\03-march-seven-columns.csv" />
+    <None Remove="Scripts\MockData\invalid\02-missing-master-ids.csv" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Scripts\MockData\invalid\" />
+  </ItemGroup>
+
 </Project>

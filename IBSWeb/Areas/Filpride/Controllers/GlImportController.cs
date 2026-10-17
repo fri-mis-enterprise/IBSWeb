@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Text;
 using IBS.DTOs;
 using IBS.Services;
 using IBSWeb.Areas.Filpride.Models;
@@ -31,11 +30,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpGet]
-        public IActionResult Template(bool includeSubAccounts = false)
+        public async Task<IActionResult> Template(CancellationToken cancellationToken)
         {
-            var header = includeSubAccounts ? GlImportService.SubAccountCsvHeader : GlImportService.CsvHeader;
-            var fileName = includeSubAccounts ? "gl-subaccounts-template.csv" : "gl-template.csv";
-            return File(Encoding.UTF8.GetBytes(header + "\n"), "text/csv", fileName);
+            var contents = await _service.CreateTemplateAsync(cancellationToken);
+            return File(contents, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "gl-template.xlsx");
         }
 
         [HttpPost]

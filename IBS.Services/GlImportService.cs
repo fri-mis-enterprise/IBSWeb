@@ -1,3 +1,4 @@
+using System.Drawing;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -10,6 +11,8 @@ using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.MasterFile;
 using IBS.Utility.Helpers;
 using Microsoft.EntityFrameworkCore;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
 
 namespace IBS.Services
 {
@@ -27,6 +30,119 @@ namespace IBS.Services
         {
             _dbContext = dbContext;
             _subAccountResolver = subAccountResolver;
+        }
+
+        public async Task<byte[]> CreateTemplateAsync(CancellationToken cancellationToken = default)
+        {
+            var accounts = await _dbContext.FilprideChartOfAccounts.AsNoTracking()
+                .Where(account => !account.HasChildren)
+                .OrderBy(account => account.AccountNumber)
+                .Select(account => new { account.AccountNumber, account.AccountName })
+                .ToListAsync(cancellationToken);
+            var customers = await _dbContext.FilprideCustomers.AsNoTracking()
+                .Where(customer => customer.IsActive)
+                .OrderBy(customer => customer.CustomerName).ThenBy(customer => customer.CustomerId)
+                .Select(customer => new { customer.CustomerId, customer.CustomerCode, customer.CustomerName })
+                .ToListAsync(cancellationToken);
+            var suppliers = await _dbContext.FilprideSuppliers.AsNoTracking()
+                .Where(supplier => supplier.IsActive)
+                .OrderBy(supplier => supplier.SupplierName).ThenBy(supplier => supplier.SupplierId)
+                .Select(supplier => new { supplier.SupplierId, supplier.SupplierCode, supplier.SupplierName })
+                .ToListAsync(cancellationToken);
+
+            using var package = new ExcelPackage();
+            var upload = CreateTemplateSheet(package.Workbook, "GL Upload", SubAccountCsvHeader.Split(','));
+            upload.Column(1).Style.Numberformat.Format = "yyyy-MM-dd";
+            upload.Column(2).Style.Numberformat.Format = "@";
+            upload.Column(3).Width = 55;
+            upload.Column(4).Style.Numberformat.Format = "@";
+            upload.Column(5).Width = 55;
+            upload.Column(6).Style.Numberformat.Format = "0.0000";
+            upload.Column(7).Style.Numberformat.Format = "0.0000";
+            upload.Column(9).Style.Numberformat.Format = "0";
+            var types = upload.DataValidations.AddListValidation($"H2:H{MaximumRows + 1}");
+            types.Formula.Values.Add(nameof(SubAccountType.Supplier));
+            types.Formula.Values.Add(nameof(SubAccountType.Customer));
+            types.AllowBlank = true;
+            types.ShowErrorMessage = true;
+            types.ErrorTitle = "Invalid sub-account type";
+            types.Error = "Select Supplier or Customer, or leave both sub-account fields blank.";
+
+            var accountSheet = CreateTemplateSheet(package.Workbook, "Chart of Accounts", ["AccountNo", "AccountName"]);
+            accountSheet.Column(1).Style.Numberformat.Format = "@";
+            accountSheet.Column(2).Width = 70;
+            if (accounts.Count > 0)
+            {
+                accountSheet.Cells[2, 1].LoadFromArrays(accounts.Select(account => new object[]
+                {
+                    account.AccountNumber, account.AccountName
+                }));
+            }
+
+            var customerSheet = CreateTemplateSheet(package.Workbook, "Customers",
+                ["SubAccountType", "SubAccountId", "CustomerCode", "CustomerName"]);
+            customerSheet.Column(3).Style.Numberformat.Format = "@";
+            customerSheet.Column(4).Width = 70;
+            if (customers.Count > 0)
+            {
+                customerSheet.Cells[2, 1].LoadFromArrays(customers.Select(customer => new object[]
+                {
+                    nameof(SubAccountType.Customer), customer.CustomerId, customer.CustomerCode ?? string.Empty, customer.CustomerName
+                }));
+            }
+
+            var supplierSheet = CreateTemplateSheet(package.Workbook, "Suppliers",
+                ["SubAccountType", "SubAccountId", "SupplierCode", "SupplierName"]);
+            supplierSheet.Column(3).Style.Numberformat.Format = "@";
+            supplierSheet.Column(4).Width = 70;
+            if (suppliers.Count > 0)
+            {
+                supplierSheet.Cells[2, 1].LoadFromArrays(suppliers.Select(supplier => new object[]
+                {
+                    nameof(SubAccountType.Supplier), supplier.SupplierId, supplier.SupplierCode ?? string.Empty, supplier.SupplierName
+                }));
+            }
+
+            foreach (var reference in new[] { accountSheet, customerSheet, supplierSheet })
+            {
+                reference.Cells[reference.Dimension.Address].AutoFilter = true;
+            }
+
+            var instructions = CreateTemplateSheet(package.Workbook, "Instructions", ["Step", "Instructions"]);
+            instructions.Column(1).Width = 8;
+            instructions.Column(2).Width = 110;
+            instructions.Column(2).Style.WrapText = true;
+            instructions.Cells[2, 1].LoadFromArrays(new object[][]
+            {
+                [1, "Fill GL Upload starting at row 2. Keep the nine headers in row 1 unchanged; each date/reference journal must balance."],
+                [2, "Copy AccountNo and the exact AccountName from Chart of Accounts. Account numbers and customer/supplier codes are text to preserve leading zeros."],
+                [3, "For sub-accounts, copy SubAccountType and SubAccountId from Customers or Suppliers. Use the ID column, not CustomerCode or SupplierCode. Otherwise leave both fields blank."],
+                [4, "Use yyyy-MM-dd dates and amounts with up to four decimal places, without thousands separators. Enter zero on the unused debit or credit side."],
+                [5, "Select GL Upload, then Save As CSV UTF-8 (current sheet only). Upload that CSV in Utility > GL Import, review the preview, and confirm. Keep this workbook separately for reference."],
+                [6, "Reference sheets show registered active customers/suppliers and visible posting accounts at download time. Download again after master data changes; preview and confirmation validate current records."]
+            });
+            instructions.Cells[2, 1, 7, 2].Style.VerticalAlignment = ExcelVerticalAlignment.Top;
+            instructions.Rows[2, 7].Height = 45;
+            package.Workbook.View.ActiveTab = 0;
+            return await package.GetAsByteArrayAsync(cancellationToken);
+        }
+
+        private static ExcelWorksheet CreateTemplateSheet(ExcelWorkbook workbook, string name, string[] headers)
+        {
+            var sheet = workbook.Worksheets.Add(name);
+            sheet.Cells[1, 1].LoadFromArrays(new[] { headers.Cast<object>().ToArray() });
+            sheet.Cells[1, 1, 1, headers.Length].Style.Font.Bold = true;
+            sheet.Cells[1, 1, 1, headers.Length].Style.Font.Color.SetColor(Color.White);
+            sheet.Cells[1, 1, 1, headers.Length].Style.Fill.PatternType = ExcelFillStyle.Solid;
+            sheet.Cells[1, 1, 1, headers.Length].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(31, 78, 120));
+            sheet.Cells[1, 1, 1, headers.Length].Style.WrapText = true;
+            sheet.Row(1).Height = 30;
+            sheet.View.FreezePanes(2, 1);
+            for (var column = 1; column <= headers.Length; column++)
+            {
+                sheet.Column(column).Width = 22;
+            }
+            return sheet;
         }
 
         public async Task<GlImportPreview> PreviewAsync(byte[] contents, string fileName,

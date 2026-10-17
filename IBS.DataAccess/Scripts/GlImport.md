@@ -2,25 +2,41 @@
 
 This workflow imports GL entries against existing chart-of-accounts, supplier, and customer records. Imports can append journal entries to an empty or populated GL. The importer never clears existing data or updates operational balances.
 
-Sign in as an Admin and open **Utility > GL Import**. Download the template, preview the file, correct any errors, then confirm the complete batch.
+Sign in as an Admin and open **Utility > GL Import**. Download the Excel template, fill **GL Upload**, save that sheet as **CSV UTF-8**, preview the CSV, correct any errors, then confirm the complete batch.
+
+## Template and reference sheets
+
+The single template download is `gl-template.xlsx`, containing:
+
+- **GL Upload**: the nine import headers, with optional Supplier/Customer selection and date, amount, and text-code formats.
+- **Chart of Accounts**: exact AccountNo and AccountName for visible accounts without children.
+- **Customers**: SubAccountType, SubAccountId, CustomerCode, and CustomerName for active registered customers.
+- **Suppliers**: SubAccountType, SubAccountId, SupplierCode, and SupplierName for active registered suppliers.
+- **Instructions**: how to fill the upload sheet and export it as CSV.
+
+Use SubAccountId from the reference sheet, not the customer/supplier code. The lists come from the current database each time the template is downloaded. They guide data entry; they do not create or update master records. Download again after master data changes. Preview and confirmation still validate the current database records.
+
+Keep the Excel workbook for reference. Select **GL Upload** before saving as CSV UTF-8 and export the current sheet only. CSV holds a single sheet; the upload continues to accept `.csv` files, not the reference workbook.
 
 ## File format
 
 ```csv
-Date,Reference,Description,AccountNo,AccountName,Debit,Credit
-2024-01-15,LEG-2024-0001,Illustrative legacy journal,SAMPLE-CASH,Legacy cash,1000.0000,0.0000
-2024-01-15,LEG-2024-0001,Illustrative legacy journal,SAMPLE-REVENUE,Legacy revenue,0.0000,1000.0000
+Date,Reference,Description,AccountNo,AccountName,Debit,Credit,SubAccountType,SubAccountId
+2024-01-15,LEG-2024-0001,Illustrative legacy journal,SAMPLE-CASH,Legacy cash,1000.0000,0.0000,,
+2024-01-15,LEG-2024-0001,Illustrative legacy journal,SAMPLE-REVENUE,Legacy revenue,0.0000,1000.0000,,
 ```
 
 Replace the sample codes with existing visible posting accounts without children. Save as UTF-8 CSV; a UTF-8 BOM is supported. Preserve leading zeros in account codes. The headers and column order must match exactly.
 
+The GL Upload sheet has nine columns. One file can contain lines with and without sub-accounts; leave both final fields blank on lines without a sub-account. Keep all nine fields on every CSV row. Existing seven-column files without the final two columns remain supported.
+
 Each row is one GL line. A journal is identified by its date and reference and must balance exactly. Use `yyyy-MM-dd` dates, positive amounts on one side, and zero on the other. Amounts must fit `numeric(18,4)`, with no currency symbols or thousands separators. Do not include totals or subtotal rows.
 
-Reference is limited to 20 characters, AccountNo to 50, and AccountName to 200. All text fields are required. AccountName must exactly match the chart-of-accounts name for AccountNo, including capitalization; leading and trailing CSV whitespace is trimmed before comparison. This check runs during preview and confirmation. AccountNo resolves the internal account ID, and the chart of accounts supplies financial classifications. No accounts, invoices, vouchers, operational balances, sub-account records, or inventory transactions are created.
+Reference is limited to 20 characters, AccountNo to 50, and AccountName to 200. The first seven fields are required. AccountName must exactly match the chart-of-accounts name for AccountNo, including capitalization; leading and trailing CSV whitespace is trimmed before comparison. This check runs during preview and confirmation. AccountNo resolves the internal account ID, and the chart of accounts supplies financial classifications. No accounts, invoices, vouchers, operational balances, sub-account records, or inventory transactions are created.
 
 ### Supplier and customer sub-accounts
 
-The original seven-column format remains supported. Alternatively, download the GL template with sub-accounts:
+Fill the optional sub-account fields on the applicable lines in the same template:
 
 ```csv
 Date,Reference,Description,AccountNo,AccountName,Debit,Credit,SubAccountType,SubAccountId
@@ -56,5 +72,6 @@ Apply the migration to the intended database. If a database already has the earl
 
 - Preview and import both seven-column and nine-column files, including blank sub-account pairs and supplier/customer records sharing the same numeric ID.
 - Missing/inactive IDs, wrong types, incomplete pairs, account-name mismatches, unbalanced journals, closed periods, and duplicate journals must block the whole batch. Recheck changes to master records between preview and confirmation.
-- Verify both template downloads as Admin and confirm non-Admins cannot access the upload actions.
+- Verify the Excel template as Admin: all nine GL Upload headers, reference IDs/codes/names, inactive-master exclusion, hidden/parent-account exclusion, empty reference lists, and leading-zero codes. Confirm non-Admins cannot access the template/upload actions.
+- Export a completed GL Upload sheet as CSV UTF-8 and preview it, including mixed lines with/without sub-accounts. Reference sheets must not enter the CSV.
 - Reconcile imported GL totals and supplier/customer subsidiary movements. After closing months chronologically, verify financial reports and following-month subsidiary openings, including PDF and Excel outputs.
