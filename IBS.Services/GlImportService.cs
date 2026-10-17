@@ -5,6 +5,7 @@ using CsvHelper;
 using CsvHelper.Configuration;
 using IBS.DataAccess.Data;
 using IBS.DTOs;
+using IBS.Models.Enums;
 using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.MasterFile;
 using IBS.Utility.Helpers;
@@ -15,14 +16,17 @@ namespace IBS.Services
     public class GlImportService
     {
         public const string CsvHeader = "Date,Reference,Description,AccountNo,AccountName,Debit,Credit";
+        public const string SubAccountCsvHeader = CsvHeader + ",SubAccountType,SubAccountId";
         public const int MaximumFileBytes = 10 * 1024 * 1024;
         public const int MaximumRows = 50000;
         public const int MaximumErrors = 100;
         private readonly ApplicationDbContext _dbContext;
+        private readonly ISubAccountResolver _subAccountResolver;
 
-        public GlImportService(ApplicationDbContext dbContext)
+        public GlImportService(ApplicationDbContext dbContext, ISubAccountResolver subAccountResolver)
         {
             _dbContext = dbContext;
+            _subAccountResolver = subAccountResolver;
         }
 
         public async Task<GlImportPreview> PreviewAsync(byte[] contents, string fileName,
@@ -45,6 +49,7 @@ namespace IBS.Services
             }
 
             await ValidateAccountsAsync(preview, cancellationToken);
+            await ValidateSubAccountsAsync(preview, cancellationToken);
             await ValidatePeriodsAsync(preview, cancellationToken);
             await ValidateDuplicatesAsync(preview, cancellationToken);
             return preview;
@@ -95,7 +100,10 @@ namespace IBS.Services
                 CreatedDate = batch.ImportedAt,
                 IsPosted = true,
                 ModuleType = "LegacyGL",
-                ImportBatchId = batch.Id
+                ImportBatchId = batch.Id,
+                SubAccountType = row.SubAccountType,
+                SubAccountId = row.SubAccountId,
+                SubAccountName = row.SubAccountName
             }));
             _dbContext.FilprideAuditTrails.Add(new FilprideAuditTrail(user,
                 $"Imported GL batch {batch.Id}: {batch.RowCount} lines, {batch.JournalCount} journals.", "GL Import"));
@@ -131,6 +139,48 @@ namespace IBS.Services
                 else
                 {
                     row.AccountId = account.AccountId;
+                }
+            }
+        }
+
+        private async Task ValidateSubAccountsAsync(GlImportPreview preview, CancellationToken cancellationToken)
+        {
+            var groups = preview.Rows.Where(row => row.SubAccountType.HasValue && row.SubAccountId.HasValue)
+                .GroupBy(row => (Type: row.SubAccountType!.Value, Id: row.SubAccountId!.Value)).ToList();
+            if (groups.Count == 0)
+            {
+                return;
+            }
+
+            var supplierIds = groups.Where(group => group.Key.Type == SubAccountType.Supplier)
+                .Select(group => group.Key.Id).ToArray();
+            var customerIds = groups.Where(group => group.Key.Type == SubAccountType.Customer)
+                .Select(group => group.Key.Id).ToArray();
+            var activeSupplierIds = await _dbContext.FilprideSuppliers.AsNoTracking()
+                .Where(supplier => supplier.IsActive && supplierIds.Contains(supplier.SupplierId))
+                .Select(supplier => supplier.SupplierId).ToHashSetAsync(cancellationToken);
+            var activeCustomerIds = await _dbContext.FilprideCustomers.AsNoTracking()
+                .Where(customer => customer.IsActive && customerIds.Contains(customer.CustomerId))
+                .Select(customer => customer.CustomerId).ToHashSetAsync(cancellationToken);
+
+            foreach (var group in groups)
+            {
+                var isActive = group.Key.Type == SubAccountType.Supplier
+                    ? activeSupplierIds.Contains(group.Key.Id)
+                    : activeCustomerIds.Contains(group.Key.Id);
+                var subAccount = isActive
+                    ? await _subAccountResolver.ResolveAsync(group.Key.Type, group.Key.Id, cancellationToken)
+                    : null;
+                foreach (var row in group)
+                {
+                    if (subAccount == null)
+                    {
+                        AddError(preview, $"Row {row.RowNumber}: {group.Key.Type} ID {group.Key.Id} does not exist or is inactive.");
+                    }
+                    else if (ValidateText(subAccount.Name, "SubAccountName", 200, row.RowNumber, preview))
+                    {
+                        row.SubAccountName = subAccount.Name;
+                    }
                 }
             }
         }
@@ -213,9 +263,10 @@ namespace IBS.Services
                 {
                     headers[0] = headers[0].TrimStart('\uFEFF');
                 }
-                if (!headers.SequenceEqual(CsvHeader.Split(',')))
+                if (!headers.SequenceEqual(CsvHeader.Split(',')) &&
+                    !headers.SequenceEqual(SubAccountCsvHeader.Split(',')))
                 {
-                    AddError(preview, $"The header must be {CsvHeader}.");
+                    AddError(preview, $"The header must be {CsvHeader} or {SubAccountCsvHeader}.");
                     return preview;
                 }
 
@@ -231,7 +282,7 @@ namespace IBS.Services
                     }
                     if (csv.Parser.Count != headers.Length)
                     {
-                        AddError(preview, $"Row {rowNumber}: expected seven fields.");
+                        AddError(preview, $"Row {rowNumber}: expected {headers.Length} fields.");
                         continue;
                     }
                     ReadRow(csv, rowNumber, preview);
@@ -254,7 +305,7 @@ namespace IBS.Services
 
         private static void ReadRow(CsvReader csv, int rowNumber, GlImportPreview preview)
         {
-            string[] fields = Enumerable.Range(0, 7).Select(column => (csv.GetField(column) ?? string.Empty).Trim()).ToArray();
+            var fields = Enumerable.Range(0, csv.Parser.Count).Select(column => (csv.GetField(column) ?? string.Empty).Trim()).ToArray();
             bool valid = DateOnly.TryParseExact(fields[0], "yyyy-MM-dd", CultureInfo.InvariantCulture,
                 DateTimeStyles.None, out DateOnly date);
             if (!valid)
@@ -277,6 +328,27 @@ namespace IBS.Services
                 AddError(preview, $"Row {rowNumber}: enter a positive amount on exactly one side and zero on the other.");
                 valid = false;
             }
+            var subAccountType = (SubAccountType?)null;
+            var subAccountId = (int?)null;
+            if (fields.Length == 9 && (fields[7].Length > 0 || fields[8].Length > 0))
+            {
+                subAccountType = fields[7] switch
+                {
+                    nameof(SubAccountType.Supplier) => SubAccountType.Supplier,
+                    nameof(SubAccountType.Customer) => SubAccountType.Customer,
+                    _ => null
+                };
+                if (!subAccountType.HasValue ||
+                    !int.TryParse(fields[8], NumberStyles.None, CultureInfo.InvariantCulture, out var id) || id <= 0)
+                {
+                    AddError(preview, $"Row {rowNumber}: supply both SubAccountType (Supplier or Customer) and a positive integer SubAccountId, or leave both blank.");
+                    valid = false;
+                }
+                else
+                {
+                    subAccountId = id;
+                }
+            }
             if (!valid)
             {
                 return;
@@ -290,7 +362,9 @@ namespace IBS.Services
                 AccountNo = fields[3],
                 AccountName = fields[4],
                 Debit = debit,
-                Credit = credit
+                Credit = credit,
+                SubAccountType = subAccountType,
+                SubAccountId = subAccountId
             });
         }
 

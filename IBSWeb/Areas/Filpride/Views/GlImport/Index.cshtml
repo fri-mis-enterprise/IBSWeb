@@ -12,6 +12,7 @@
     <div class="card-body">
         <p>Upload journal entries to generate financial reports. Each journal must balance by date and reference.</p>
         <a asp-action="Template" class="btn btn-outline-secondary mb-3">Download CSV template</a>
+        <a asp-action="Template" asp-route-includeSubAccounts="true" class="btn btn-outline-secondary mb-3">Download GL CSV template with sub-accounts</a>
         <div asp-validation-summary="All" class="text-danger"></div>
         <form asp-action="Preview" method="post" enctype="multipart/form-data">
             <label for="file" class="form-label">CSV file (up to 10 MB and 50,000 lines)</label>
@@ -20,6 +21,7 @@
         </form>
         <p class="mt-3">Use yyyy-MM-dd dates and amounts without thousands separators. Enter zero on the unused debit or credit side. Preserve leading zeros in account codes.</p>
         <p>AccountNo must match an existing posting account. AccountName must exactly match that account's name, including capitalization. Leading and trailing spaces in the CSV are trimmed.</p>
+        <p>For GL lines with a sub-account, supply SubAccountType (Supplier or Customer) and SubAccountId using an existing record's database ID. Both fields may be blank for a line without a sub-account. Preview shows the existing record's name.</p>
 
         @if (Model.Preview is { } preview)
         {
@@ -55,6 +57,7 @@
                             <th>Row</th><th>Date</th><th>Reference</th><th>Description</th>
                             <th>AccountNo</th><th>AccountName</th>
                             <th class="text-end">Debit</th><th class="text-end">Credit</th>
+                            <th>Sub-account type</th><th>Sub-account ID</th><th>Sub-account name</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -66,6 +69,7 @@
                                 <td>@row.AccountNo</td><td>@row.AccountName</td>
                                 <td class="text-end">@row.Debit.ToString("N4")</td>
                                 <td class="text-end">@row.Credit.ToString("N4")</td>
+                                <td>@row.SubAccountType</td><td>@row.SubAccountId</td><td>@row.SubAccountName</td>
                             </tr>
                         }
                     </tbody>

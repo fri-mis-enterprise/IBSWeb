@@ -1,3 +1,5 @@
+using IBS.Models.Enums;
+
 namespace IBS.DTOs
 {
     public class GlImportRow
@@ -11,5 +13,8 @@ namespace IBS.DTOs
         public decimal Debit { get; set; }
         public decimal Credit { get; set; }
         public int AccountId { get; set; }
+        public SubAccountType? SubAccountType { get; set; }
+        public int? SubAccountId { get; set; }
+        public string? SubAccountName { get; set; }
     }
 }

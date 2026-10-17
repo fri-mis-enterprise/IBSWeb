@@ -31,9 +31,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [HttpGet]
-        public IActionResult Template()
+        public IActionResult Template(bool includeSubAccounts = false)
         {
-            return File(Encoding.UTF8.GetBytes(GlImportService.CsvHeader + "\n"), "text/csv", "gl-template.csv");
+            var header = includeSubAccounts ? GlImportService.SubAccountCsvHeader : GlImportService.CsvHeader;
+            var fileName = includeSubAccounts ? "gl-subaccounts-template.csv" : "gl-template.csv";
+            return File(Encoding.UTF8.GetBytes(header + "\n"), "text/csv", fileName);
         }
 
         [HttpPost]
