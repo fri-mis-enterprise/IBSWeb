@@ -21,6 +21,7 @@ namespace IBS.Services
         public const string CsvHeader = "Date,Reference,Description,AccountNo,AccountName,Debit,Credit";
         public const string SubAccountCsvHeader = CsvHeader + ",SubAccountType,SubAccountId";
         public const string CompanyCsvHeader = SubAccountCsvHeader + ",Company";
+        public const string CounterpartyCsvHeader = CompanyCsvHeader + ",CounterpartyType,CounterpartyId";
         public const int MaximumFileBytes = 10 * 1024 * 1024;
         public const int MaximumRows = 50000;
         public const int MaximumErrors = 100;
@@ -59,7 +60,7 @@ namespace IBS.Services
                 .ToListAsync(cancellationToken);
 
             using var package = new ExcelPackage();
-            var upload = CreateTemplateSheet(package.Workbook, "GL Upload", CompanyCsvHeader.Split(','));
+            var upload = CreateTemplateSheet(package.Workbook, "GL Upload", CounterpartyCsvHeader.Split(','));
             upload.Column(1).Style.Numberformat.Format = "yyyy-MM-dd";
             upload.Column(2).Style.Numberformat.Format = "@";
             upload.Column(3).Width = 55;
@@ -70,6 +71,14 @@ namespace IBS.Services
             upload.Column(9).Style.Numberformat.Format = "0";
             upload.Column(10).Style.Numberformat.Format = "@";
             upload.Column(10).Width = 55;
+            upload.Column(12).Style.Numberformat.Format = "0";
+            var counterparties = upload.DataValidations.AddListValidation($"K2:K{MaximumRows + 1}");
+            counterparties.Formula.Values.Add(nameof(CounterpartyType.Customer));
+            counterparties.Formula.Values.Add(nameof(CounterpartyType.Supplier));
+            counterparties.AllowBlank = true;
+            counterparties.ShowErrorMessage = true;
+            counterparties.ErrorTitle = "Invalid counterparty type";
+            counterparties.Error = "Select Customer or Supplier, or leave both counterparty fields blank.";
             var types = upload.DataValidations.AddListValidation($"H2:H{MaximumRows + 1}");
             types.Formula.Values.Add(nameof(SubAccountType.Supplier));
             types.Formula.Values.Add(nameof(SubAccountType.Customer));
@@ -124,16 +133,17 @@ namespace IBS.Services
             instructions.Column(2).Style.WrapText = true;
             instructions.Cells[2, 1].LoadFromArrays(new object[][]
             {
-                [1, "Fill GL Upload starting at row 2. Keep the ten headers in row 1 unchanged; each date/reference journal must balance."],
+                [1, "Fill GL Upload starting at row 2. Keep the twelve headers in row 1 unchanged; each date/reference journal must balance."],
                 [2, "Copy AccountNo and the exact AccountName from Chart of Accounts. Account numbers and customer/supplier codes are text to preserve leading zeros."],
                 [3, "For sub-accounts, copy SubAccountType and SubAccountId from Customers or Suppliers. Use the ID column, not CustomerCode or SupplierCode. Otherwise leave both fields blank."],
                 [4, "Use yyyy-MM-dd dates and amounts with up to four decimal places, without thousands separators. Enter zero on the unused debit or credit side."],
                 [5, "Select GL Upload, then Save As CSV UTF-8 (current sheet only). Upload that CSV in Utility > GL Import, review the preview, and confirm. Keep this workbook separately for reference."],
                 [6, "Reference sheets show registered active customers/suppliers and visible posting accounts at download time. Download again after master data changes; preview and confirmation validate current records."],
-                [7, "Company is required on every GL line (up to 50 characters). Enter the company name directly; no Company master record is needed. Use consistent names for future per-company reports."]
+                [7, "Company is required on every GL line (up to 50 characters). Enter the company name directly; no Company master record is needed. Use consistent names for future per-company reports."],
+                [8, "For counterparties, copy the type and database ID from Customers or Suppliers into CounterpartyType and CounterpartyId. The name is resolved automatically. Leave both blank when not applicable. Counterparty is separate from sub-account; for sales use the customer, and for purchases use the supplier."]
             });
-            instructions.Cells[2, 1, 8, 2].Style.VerticalAlignment = ExcelVerticalAlignment.Top;
-            instructions.Rows[2, 8].Height = 45;
+            instructions.Cells[2, 1, 9, 2].Style.VerticalAlignment = ExcelVerticalAlignment.Top;
+            instructions.Rows[2, 9].Height = 45;
             package.Workbook.View.ActiveTab = 0;
             return await package.GetAsByteArrayAsync(cancellationToken);
         }
@@ -177,6 +187,7 @@ namespace IBS.Services
 
             await ValidateAccountsAsync(preview, cancellationToken);
             await ValidateSubAccountsAsync(preview, cancellationToken);
+            await ValidateCounterpartiesAsync(preview, cancellationToken);
             await ValidatePeriodsAsync(preview, cancellationToken);
             await ValidateDuplicatesAsync(preview, cancellationToken);
             return preview;
@@ -219,6 +230,9 @@ namespace IBS.Services
                 Reference = row.Reference,
                 Description = row.Description,
                 Company = row.Company,
+                CounterpartyType = row.CounterpartyType,
+                CounterpartyId = row.CounterpartyId,
+                CounterpartyName = row.CounterpartyName,
                 AccountId = row.AccountId,
                 AccountNo = row.AccountNo,
                 AccountTitle = row.AccountName,
@@ -313,6 +327,39 @@ namespace IBS.Services
             }
         }
 
+        private async Task ValidateCounterpartiesAsync(GlImportPreview preview, CancellationToken cancellationToken)
+        {
+            var rows = preview.Rows.Where(row => row.CounterpartyType.HasValue && row.CounterpartyId.HasValue).ToList();
+            if (rows.Count == 0)
+            {
+                return;
+            }
+
+            var customerIds = rows.Where(row => row.CounterpartyType == CounterpartyType.Customer)
+                .Select(row => row.CounterpartyId!.Value).Distinct().ToArray();
+            var supplierIds = rows.Where(row => row.CounterpartyType == CounterpartyType.Supplier)
+                .Select(row => row.CounterpartyId!.Value).Distinct().ToArray();
+            var customers = await _dbContext.FilprideCustomers.AsNoTracking()
+                .Where(customer => customer.IsActive && customerIds.Contains(customer.CustomerId))
+                .ToDictionaryAsync(customer => customer.CustomerId, customer => customer.CustomerName, cancellationToken);
+            var suppliers = await _dbContext.FilprideSuppliers.AsNoTracking()
+                .Where(supplier => supplier.IsActive && supplierIds.Contains(supplier.SupplierId))
+                .ToDictionaryAsync(supplier => supplier.SupplierId, supplier => supplier.SupplierName, cancellationToken);
+
+            foreach (var row in rows)
+            {
+                var names = row.CounterpartyType == CounterpartyType.Customer ? customers : suppliers;
+                if (!names.TryGetValue(row.CounterpartyId!.Value, out var name))
+                {
+                    AddError(preview, $"Row {row.RowNumber}: counterparty {row.CounterpartyType} ID {row.CounterpartyId} does not exist or is inactive.");
+                }
+                else if (ValidateText(name, "CounterpartyName", 200, row.RowNumber, preview))
+                {
+                    row.CounterpartyName = name;
+                }
+            }
+        }
+
         private async Task ValidatePeriodsAsync(GlImportPreview preview, CancellationToken cancellationToken)
         {
             DateOnly firstDate = preview.Rows.Min(row => row.Date);
@@ -392,9 +439,11 @@ namespace IBS.Services
                     headers[0] = headers[0].TrimStart('\uFEFF');
                 }
                 if (!headers.SequenceEqual((CsvHeader + ",Company").Split(',')) &&
-                    !headers.SequenceEqual(CompanyCsvHeader.Split(',')))
+                    !headers.SequenceEqual(CompanyCsvHeader.Split(',')) &&
+                    !headers.SequenceEqual((CsvHeader + ",Company,CounterpartyType,CounterpartyId").Split(',')) &&
+                    !headers.SequenceEqual(CounterpartyCsvHeader.Split(',')))
                 {
-                    AddError(preview, $"The header must be {CsvHeader},Company or {CompanyCsvHeader}. Company is required on every GL line.");
+                    AddError(preview, $"The header must be {CsvHeader},Company or {CompanyCsvHeader}. Company is required on every GL line. Either format may append CounterpartyType and CounterpartyId; supply both values or leave both blank. Names are resolved automatically.");
                     return preview;
                 }
 
@@ -444,7 +493,8 @@ namespace IBS.Services
             valid = ValidateText(fields[2], "Description", int.MaxValue, rowNumber, preview) && valid;
             valid = ValidateText(fields[3], "AccountNo", 50, rowNumber, preview) && valid;
             valid = ValidateText(fields[4], "AccountName", 200, rowNumber, preview) && valid;
-            var company = fields[^1];
+            var hasSubAccounts = csv.HeaderRecord!.Contains("SubAccountType");
+            var company = fields[hasSubAccounts ? 9 : 7];
             valid = ValidateText(company, "Company", 50, rowNumber, preview) && valid;
             bool hasDebit = TryParseAmount(fields[5], out decimal debit);
             bool hasCredit = TryParseAmount(fields[6], out decimal credit);
@@ -460,7 +510,7 @@ namespace IBS.Services
             }
             var subAccountType = (SubAccountType?)null;
             var subAccountId = (int?)null;
-            if (fields.Length >= 9 && (fields[7].Length > 0 || fields[8].Length > 0))
+            if (hasSubAccounts && (fields[7].Length > 0 || fields[8].Length > 0))
             {
                 subAccountType = fields[7] switch
                 {
@@ -479,6 +529,27 @@ namespace IBS.Services
                     subAccountId = id;
                 }
             }
+            var counterpartyType = (CounterpartyType?)null;
+            var counterpartyId = (int?)null;
+            if (csv.HeaderRecord.Contains("CounterpartyType") && (fields[^2].Length > 0 || fields[^1].Length > 0))
+            {
+                counterpartyType = fields[^2] switch
+                {
+                    nameof(CounterpartyType.Customer) => CounterpartyType.Customer,
+                    nameof(CounterpartyType.Supplier) => CounterpartyType.Supplier,
+                    _ => null
+                };
+                if (!counterpartyType.HasValue ||
+                    !int.TryParse(fields[^1], NumberStyles.None, CultureInfo.InvariantCulture, out var id) || id <= 0)
+                {
+                    AddError(preview, $"Row {rowNumber}: supply both CounterpartyType (Customer or Supplier) and a positive integer CounterpartyId, or leave both blank.");
+                    valid = false;
+                }
+                else
+                {
+                    counterpartyId = id;
+                }
+            }
             if (!valid)
             {
                 return;
@@ -492,6 +563,8 @@ namespace IBS.Services
                 AccountNo = fields[3],
                 AccountName = fields[4],
                 Company = company,
+                CounterpartyType = counterpartyType,
+                CounterpartyId = counterpartyId,
                 Debit = debit,
                 Credit = credit,
                 SubAccountType = subAccountType,

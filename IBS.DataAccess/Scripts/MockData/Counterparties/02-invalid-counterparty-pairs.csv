@@ -1,0 +1,13 @@
+Date,Reference,Description,AccountNo,AccountName,Debit,Credit,SubAccountType,SubAccountId,Company,CounterpartyType,CounterpartyId
+2026-10-15,MC261019-E1,Mock invalid counterparty pair,V00-11-199,Cash on Hand,10.0000,0.0000,,,Example Trading Company,Customer,
+2026-10-15,MC261019-E1,Mock invalid counterparty pair,V00-11-199,Cash on Hand,0.0000,10.0000,,,Example Trading Company,Customer,
+2026-10-15,MC261019-E2,Mock invalid counterparty pair,V00-11-199,Cash on Hand,10.0000,0.0000,,,Example Trading Company,,1
+2026-10-15,MC261019-E2,Mock invalid counterparty pair,V00-11-199,Cash on Hand,0.0000,10.0000,,,Example Trading Company,,1
+2026-10-15,MC261019-E3,Mock invalid counterparty pair,V00-11-199,Cash on Hand,10.0000,0.0000,,,Example Trading Company,1,1
+2026-10-15,MC261019-E3,Mock invalid counterparty pair,V00-11-199,Cash on Hand,0.0000,10.0000,,,Example Trading Company,1,1
+2026-10-15,MC261019-E4,Mock invalid counterparty pair,V00-11-199,Cash on Hand,10.0000,0.0000,,,Example Trading Company,Customer,0
+2026-10-15,MC261019-E4,Mock invalid counterparty pair,V00-11-199,Cash on Hand,0.0000,10.0000,,,Example Trading Company,Customer,0
+2026-10-15,MC261019-E5,Mock invalid counterparty pair,V00-11-199,Cash on Hand,10.0000,0.0000,,,Example Trading Company,Supplier,-1
+2026-10-15,MC261019-E5,Mock invalid counterparty pair,V00-11-199,Cash on Hand,0.0000,10.0000,,,Example Trading Company,Supplier,-1
+2026-10-15,MC261019-E6,Mock invalid counterparty pair,V00-11-199,Cash on Hand,10.0000,0.0000,,,Example Trading Company,BankAccount,1
+2026-10-15,MC261019-E6,Mock invalid counterparty pair,V00-11-199,Cash on Hand,0.0000,10.0000,,,Example Trading Company,BankAccount,1

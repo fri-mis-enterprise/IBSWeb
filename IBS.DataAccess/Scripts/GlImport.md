@@ -8,7 +8,7 @@ Sign in as an Admin and open **Utility > GL Import**. Download the Excel templat
 
 The single template download is `gl-template.xlsx`, containing:
 
-- **GL Upload**: ten import headers, including optional Supplier/Customer fields and a required free-text Company field, with date, amount, and text-code formats.
+- **GL Upload**: twelve import headers, including optional Supplier/Customer fields, a required free-text Company field, and optional CounterpartyType/CounterpartyId fields, with date, amount, and text-code formats.
 - **Chart of Accounts**: exact AccountNo and AccountName for visible accounts without children.
 - **Customers**: SubAccountType, SubAccountId, CustomerCode, and CustomerName for active registered customers.
 - **Suppliers**: SubAccountType, SubAccountId, SupplierCode, and SupplierName for active registered suppliers.
@@ -21,16 +21,22 @@ Keep the Excel workbook for reference. Select **GL Upload** before saving as CSV
 ## File format
 
 ```csv
-Date,Reference,Description,AccountNo,AccountName,Debit,Credit,SubAccountType,SubAccountId,Company
-2024-01-15,LEG-2024-0001,Illustrative legacy journal,SAMPLE-CASH,Legacy cash,1000.0000,0.0000,,,Example Company
-2024-01-15,LEG-2024-0001,Illustrative legacy journal,SAMPLE-REVENUE,Legacy revenue,0.0000,1000.0000,,,Example Company
+Date,Reference,Description,AccountNo,AccountName,Debit,Credit,SubAccountType,SubAccountId,Company,CounterpartyType,CounterpartyId
+2024-01-15,LEG-2024-0001,Illustrative legacy journal,SAMPLE-CASH,Legacy cash,1000.0000,0.0000,,,Example Company,,
+2024-01-15,LEG-2024-0001,Illustrative legacy journal,SAMPLE-REVENUE,Legacy revenue,0.0000,1000.0000,,,Example Company,,
 ```
 
 Replace the sample codes with existing visible posting accounts without children. Save as UTF-8 CSV; a UTF-8 BOM is supported. Preserve leading zeros in account codes. The headers and column order must match exactly.
 
-The GL Upload sheet has ten columns. One file can contain lines with and without sub-accounts; leave SubAccountType and SubAccountId blank on lines without a sub-account. Keep all ten fields on every CSV row exported from the template. An eight-column format without the two sub-account columns is also supported. Company must be the final column in either format. Existing seven-column and nine-column files must append Company and supply its value on every line before uploading.
+The GL Upload sheet has twelve columns. One file can contain lines with and without sub-accounts or counterparties; leave each unused type/ID pair blank. Keep all twelve fields on every CSV row exported from the template. A ten-column format without SubAccountType/SubAccountId is also supported: the seven base fields, Company, CounterpartyType, CounterpartyId. Existing eight-column and ten-column files ending in Company remain supported. Headers distinguish the two ten-column formats. Files without Company must add it and supply its value on every line before uploading. Files containing a CounterpartyName input column are rejected; enter the type and ID instead.
 
 Company is required free text on every GL line, up to 50 characters, trimmed before storage. No Company master record is required or created. A missing Company column or a blank/whitespace value blocks the entire upload during preview and confirmation. Existing GL entries remain unchanged by the migration, so the database column stays nullable for historical records. Use consistent names and capitalization for future per-company reporting. This change only captures company; financial reports, period balances, journal validation, and duplicate checks retain their current behavior.
+
+For a counterparty, enter `CounterpartyType` (`Customer` or `Supplier`) and a positive integer `CounterpartyId` from an active registered record. Copy the type and database ID from the Customers or Suppliers reference sheet; the same type/ID values work for sub-accounts and counterparties. Supply both fields or leave both blank. Numeric enum values, other types, incomplete pairs, and missing/inactive records are rejected. IDs are qualified by type: customer ID 123 and supplier ID 123 are different records.
+
+Preview resolves CounterpartyName from the selected master record. Confirmation validates the current record again and saves CounterpartyType, CounterpartyId, and the current CounterpartyName together in the existing GL columns. Empty, overlong (more than 200 characters), or NUL-containing master names block the entire batch. Users do not enter the name. No master records are created and no schema change is needed.
+
+Counterparty and sub-account are independent; neither supplies the other's type, ID, or name. Match the source transaction's counterparty: sales use the customer and purchases use the supplier, even when a GL line has a different sub-account. Imports remain LegacyGL entries; the importer does not infer counterparty from the posting account or sub-account.
 
 Each row is one GL line. A journal is identified by its date and reference and must balance exactly. Use `yyyy-MM-dd` dates, positive amounts on one side, and zero on the other. Amounts must fit `numeric(18,4)`, with no currency symbols or thousands separators. Do not include totals or subtotal rows.
 
@@ -41,16 +47,16 @@ Reference is limited to 20 characters, AccountNo to 50, and AccountName to 200. 
 Fill the optional sub-account fields on the applicable lines in the same template:
 
 ```csv
-Date,Reference,Description,AccountNo,AccountName,Debit,Credit,SubAccountType,SubAccountId,Company
-2024-01-15,LEG-2024-0002,Illustrative supplier journal,SAMPLE-EXPENSE,Legacy expense,1000.0000,0.0000,,,Example Company
-2024-01-15,LEG-2024-0002,Illustrative supplier journal,SAMPLE-PAYABLE,Legacy payable,0.0000,1000.0000,Supplier,123,Example Company
+Date,Reference,Description,AccountNo,AccountName,Debit,Credit,SubAccountType,SubAccountId,Company,CounterpartyType,CounterpartyId
+2024-01-15,LEG-2024-0002,Illustrative supplier journal,SAMPLE-EXPENSE,Legacy expense,1000.0000,0.0000,,,Example Company,Supplier,123
+2024-01-15,LEG-2024-0002,Illustrative supplier journal,SAMPLE-PAYABLE,Legacy payable,0.0000,1000.0000,Supplier,123,Example Company,Supplier,123
 ```
 
 Replace the account codes, names, and ID with actual registered records. `SubAccountType` must be exactly `Supplier` or `Customer`; `SubAccountId` must be a positive integer for an active record of that type. Supply both fields or leave both blank. The same numeric ID may identify different supplier and customer records, so type is required. Bank/company types and numeric enum values are not accepted by this template.
 
 Use the existing supplier/customer database ID as `SubAccountId`. GL import is independent of the format or process used to create those master records.
 
-Preview resolves and displays registered names. Confirmation checks activity/existence again and stores the current name with the type and ID in the GL. The importer does not create master records or populate document-level counterparty fields. Rows without the sub-account columns or with blank pairs have no sub-account.
+Preview resolves and displays registered names. Confirmation checks activity/existence again and stores the current name with the type and ID in the GL. The importer does not create master records. CounterpartyName is resolved independently from CounterpartyType and CounterpartyId. Rows without the sub-account columns or with blank pairs have no sub-account.
 
 A file may contain at most 50,000 GL lines and 10 MB. Split larger files at journal boundaries. Preview shows up to 100 valid lines and 100 errors; any error blocks the entire batch. The original file stays in the uploading user's server-side preview cache for up to 15 minutes. Restarting the server or evicting the cache requires another upload.
 
@@ -72,9 +78,10 @@ Apply the migration to the intended database. If a database already has the earl
 
 ## GL import verification
 
-- Preview and import both eight-column and ten-column files, including blank sub-account pairs and supplier/customer records sharing the same numeric ID.
-- Require Company in either format and verify preview and saved GL entries contain the trimmed free-text name without a Company master record. Reject seven-column/nine-column files, blank/whitespace company values, values over 50 characters, and NUL characters. Verify quoted names containing commas and a file where only one line is missing its company.
+- Preview and import eight-column and ten-column files and the ten-column/twelve-column CounterpartyType/CounterpartyId variants, including blank sub-account pairs and supplier/customer records sharing the same numeric ID.
+- Require Company in each supported format and verify preview and saved GL entries contain the trimmed free-text name without a Company master record. Reject files without Company (the old seven-column/nine-column layouts), blank/whitespace company values, values over 50 characters, and NUL characters. Verify quoted names containing commas and a file where only one line is missing its company.
+- Verify optional counterparty pair parsing and all three persisted fields: omitted columns, blank pairs, Customer/Supplier records sharing an ID, names different from the sub-account, and current master names. Reject incomplete pairs, numeric/unknown types, nonpositive/invalid IDs, missing/inactive records, and invalid master names. Change the master name/activity between preview and confirmation and verify confirmation resolves the current name or rejects the entire batch.
 - Missing/inactive IDs, wrong types, incomplete pairs, account-name mismatches, unbalanced journals, closed periods, and duplicate journals must block the whole batch. Recheck changes to master records between preview and confirmation.
-- Verify the Excel template as Admin: all ten GL Upload headers, reference IDs/codes/names, inactive-master exclusion, hidden/parent-account exclusion, empty reference lists, and leading-zero codes. Confirm non-Admins cannot access the template/upload actions.
+- Verify the Excel template as Admin: all twelve GL Upload headers, reference IDs/codes/names, inactive-master exclusion, hidden/parent-account exclusion, empty reference lists, and leading-zero codes. Confirm non-Admins cannot access the template/upload actions.
 - Export a completed GL Upload sheet as CSV UTF-8 and preview it, including mixed lines with/without sub-accounts. Reference sheets must not enter the CSV.
 - Reconcile imported GL totals and supplier/customer subsidiary movements. After closing months chronologically, verify financial reports and following-month subsidiary openings, including PDF and Excel outputs.

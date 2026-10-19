@@ -1,0 +1,19 @@
+Date,Reference,Description,AccountNo,AccountName,Debit,Credit,SubAccountType,SubAccountId,Company,CounterpartyType,CounterpartyId
+2026-10-01,MC261019-001,Mock opening capital,V00-11-199,Cash on Hand,50000.0000,0.0000,,,Example Trading Company,,
+2026-10-01,MC261019-001,Mock opening capital,301-1,Retained Earnings - FRI,0.0000,50000.0000,,,Example Trading Company,,
+2026-10-02,MC261019-002,Mock supplier purchase on account,618-1,Office Supplies,2500.0000,0.0000,,,Example Trading Company,Supplier,1
+2026-10-02,MC261019-002,Mock supplier purchase on account,201-3-1,VOUCHERS PAYABLE -FRI,0.0000,2500.0000,Supplier,1,Example Trading Company,Supplier,1
+2026-10-03,MC261019-003,Mock customer sale on account,102-1-001,AR-TRADE RECEIVABLE,12000.0000,0.0000,Customer,1,Example Trading Company,Customer,1
+2026-10-03,MC261019-003,Mock customer sale on account,501-1-1,SALES-BIODIESEL,0.0000,12000.0000,,,Example Trading Company,Customer,1
+2026-10-04,MC261019-004,Mock partial customer collection,V00-11-199,Cash on Hand,7500.0000,0.0000,,,Example Trading Company,Customer,1
+2026-10-04,MC261019-004,Mock partial customer collection,102-1-001,AR-TRADE RECEIVABLE,0.0000,7500.0000,Customer,1,Example Trading Company,Customer,1
+2026-10-05,MC261019-005,Mock partial supplier payment,201-3-1,VOUCHERS PAYABLE -FRI,1500.0000,0.0000,Supplier,1,Example Trading Company,Supplier,1
+2026-10-05,MC261019-005,Mock partial supplier payment,V00-11-199,Cash on Hand,0.0000,1500.0000,,,Example Trading Company,Supplier,1
+2026-10-06,MC261019-006,Mock cash purchase with four decimal places,618-1,Office Supplies,875.4321,0.0000,,,Example Trading Company,Supplier,2
+2026-10-06,MC261019-006,Mock cash purchase with four decimal places,V00-11-199,Cash on Hand,0.0000,875.4321,,,Example Trading Company,Supplier,2
+2026-10-07,MC261019-007,Mock cash sale without sub-account,V00-11-199,Cash on Hand,3500.0000,0.0000,,,Example Trading Company,Customer,2
+2026-10-07,MC261019-007,Mock cash sale without sub-account,501-1-1,SALES-BIODIESEL,0.0000,3500.0000,,,Example Trading Company,Customer,2
+2026-10-08,MC261019-008,Mock sales freight payable to hauler,602-1-003,FREIGHT OUT - Biodiesel,250.0000,0.0000,,,Example Trading Company,Customer,3
+2026-10-08,MC261019-008,Mock sales freight payable to hauler,201-3-1,VOUCHERS PAYABLE -FRI,0.0000,250.0000,Supplier,3,Example Trading Company,Customer,3
+2026-10-09,MC261019-009,Mock supplies adjustment without counterparty,618-1,Office Supplies,125.0000,0.0000,,,Example Trading Company,,
+2026-10-09,MC261019-009,Mock supplies adjustment without counterparty,V00-11-199,Cash on Hand,0.0000,125.0000,,,Example Trading Company,,

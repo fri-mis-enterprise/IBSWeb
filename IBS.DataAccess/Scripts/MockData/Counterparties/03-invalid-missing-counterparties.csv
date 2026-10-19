@@ -1,0 +1,5 @@
+Date,Reference,Description,AccountNo,AccountName,Debit,Credit,SubAccountType,SubAccountId,Company,CounterpartyType,CounterpartyId
+2026-10-16,MC261019-M1,Mock counterparty record does not exist,V00-11-199,Cash on Hand,10.0000,0.0000,,,Example Trading Company,Customer,1408
+2026-10-16,MC261019-M1,Mock counterparty record does not exist,V00-11-199,Cash on Hand,0.0000,10.0000,,,Example Trading Company,Customer,1408
+2026-10-16,MC261019-M2,Mock counterparty record does not exist,V00-11-199,Cash on Hand,10.0000,0.0000,,,Example Trading Company,Supplier,1408
+2026-10-16,MC261019-M2,Mock counterparty record does not exist,V00-11-199,Cash on Hand,0.0000,10.0000,,,Example Trading Company,Supplier,1408

@@ -10,6 +10,9 @@ namespace IBS.DTOs
         public string Description { get; set; } = string.Empty;
         public string AccountNo { get; set; } = string.Empty;
         public string AccountName { get; set; } = string.Empty;
+        public CounterpartyType? CounterpartyType { get; set; }
+        public int? CounterpartyId { get; set; }
+        public string? CounterpartyName { get; set; }
         public string Company { get; set; } = string.Empty;
         public decimal Debit { get; set; }
         public decimal Credit { get; set; }

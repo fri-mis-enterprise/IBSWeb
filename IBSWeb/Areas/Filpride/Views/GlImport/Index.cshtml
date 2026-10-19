@@ -23,6 +23,7 @@
         <p>AccountNo must match an existing posting account. AccountName must exactly match that account's name, including capitalization. Leading and trailing spaces in the CSV are trimmed.</p>
         <p>The template includes optional SubAccountType and SubAccountId columns. One file can contain lines with and without sub-accounts. For a line with a sub-account, supply Supplier or Customer and the existing record's database ID. Otherwise, leave both fields blank. Preview shows the existing record's name.</p>
         <p>Company is required on every GL line (up to 50 characters). Enter the company name directly; no company registration is needed. Use consistent names for future per-company reports.</p>
+        <p>For a counterparty, enter CounterpartyType (Customer or Supplier) and the existing record's database ID as CounterpartyId. Use the type and ID from the Customers or Suppliers sheet. Leave both blank when not applicable. Preview and confirmation validate the active record and fill its name automatically. Counterparty is separate from sub-account: use the customer for sales and the supplier for purchases.</p>
 
         @if (Model.Preview is { } preview)
         {
@@ -59,7 +60,7 @@
                             <th>AccountNo</th><th>AccountName</th>
                             <th class="text-end">Debit</th><th class="text-end">Credit</th>
                             <th>Sub-account type</th><th>Sub-account ID</th><th>Sub-account name</th>
-                            <th>Company</th>
+                            <th>Company</th><th>Counterparty type</th><th>Counterparty ID</th><th>Counterparty name</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -72,7 +73,7 @@
                                 <td class="text-end">@row.Debit.ToString("N4")</td>
                                 <td class="text-end">@row.Credit.ToString("N4")</td>
                                 <td>@row.SubAccountType</td><td>@row.SubAccountId</td><td>@row.SubAccountName</td>
-                                <td>@row.Company</td>
+                                <td>@row.Company</td><td>@row.CounterpartyType</td><td>@row.CounterpartyId</td><td>@row.CounterpartyName</td>
                             </tr>
                         }
                     </tbody>
