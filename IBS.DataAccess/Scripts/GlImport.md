@@ -2,7 +2,7 @@
 
 This workflow imports GL entries against existing chart-of-accounts, supplier, and customer records. Imports can append journal entries to an empty or populated GL. The importer never clears existing data or updates operational balances.
 
-Sign in as an Admin and open **Utility > GL Import**. Download the Excel template, fill **GL Upload**, save that sheet as **CSV UTF-8**, preview the CSV, correct any errors, then confirm the complete batch.
+Sign in and open **GL Import** from the main menu, beside **Request Form**. Any signed-in user can upload directly. Download the Excel template, fill **GL Upload**, save that sheet as **CSV UTF-8**, preview the CSV, correct any errors, then confirm the complete batch.
 
 ## Template and reference sheets
 

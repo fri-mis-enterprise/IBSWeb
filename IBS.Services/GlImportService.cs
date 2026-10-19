@@ -137,7 +137,7 @@ namespace IBS.Services
                 [2, "Copy AccountNo and the exact AccountName from Chart of Accounts. Account numbers and customer/supplier codes are text to preserve leading zeros."],
                 [3, "For sub-accounts, copy SubAccountType and SubAccountId from Customers or Suppliers. Use the ID column, not CustomerCode or SupplierCode. Otherwise leave both fields blank."],
                 [4, "Use yyyy-MM-dd dates and amounts with up to four decimal places, without thousands separators. Enter zero on the unused debit or credit side."],
-                [5, "Select GL Upload, then Save As CSV UTF-8 (current sheet only). Upload that CSV in Utility > GL Import, review the preview, and confirm. Keep this workbook separately for reference."],
+                [5, "Select GL Upload, then Save As CSV UTF-8 (current sheet only). Upload that CSV in GL Import from the main menu, review the preview, and confirm. Keep this workbook separately for reference."],
                 [6, "Reference sheets show registered active customers/suppliers and visible posting accounts at download time. Download again after master data changes; preview and confirmation validate current records."],
                 [7, "Company is required on every GL line (up to 50 characters). Enter the company name directly; no Company master record is needed. Use consistent names for future per-company reports."],
                 [8, "For counterparties, copy the type and database ID from Customers or Suppliers into CounterpartyType and CounterpartyId. The name is resolved automatically. Leave both blank when not applicable. Counterparty is separate from sub-account; for sales use the customer, and for purchases use the supplier."]

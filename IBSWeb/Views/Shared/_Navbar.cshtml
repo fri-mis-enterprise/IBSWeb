@@ -577,6 +577,13 @@
                     </div>
                 </li>
 
+                <li class="mnav-item" role="none">
+                    <a class="mnav-trigger" asp-area="Filpride" asp-controller="GlImport" asp-action="Index" role="menuitem">
+                        <span class="material-symbols-outlined">upload_file</span>
+                        <span>GL Import</span>
+                    </a>
+                </li>
+
                 @* ══════════════════════════════════════════════════════
                    ADMIN MASTER FILES & UTILITIES (Role Gated)
                    ══════════════════════════════════════════════════════ *@
@@ -681,9 +688,6 @@
                         <div class="mnav-column-deck" role="menu">
                             <div class="mnav-col" data-col-level="1" data-col-id="util-root">
                                 <div class="mnav-col-header">Utility Operations</div>
-                                <a class="mnav-col-item" asp-area="Filpride" asp-controller="GlImport" asp-action="Index" role="menuitem">
-                                    <div class="mnav-col-item-content"><span class="material-symbols-outlined">upload_file</span><div class="mnav-col-item-text"><div class="mnav-col-item-title">GL Import</div></div></div>
-                                </a>
                                 <a class="mnav-col-item" asp-area="Filpride" asp-controller="TransactionMasterControl" asp-action="Index" role="menuitem">
                                     <div class="mnav-col-item-content">
                                         <span class="material-symbols-outlined">tune</span>
