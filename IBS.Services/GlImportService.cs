@@ -20,6 +20,7 @@ namespace IBS.Services
     {
         public const string CsvHeader = "Date,Reference,Description,AccountNo,AccountName,Debit,Credit";
         public const string SubAccountCsvHeader = CsvHeader + ",SubAccountType,SubAccountId";
+        public const string CompanyCsvHeader = SubAccountCsvHeader + ",Company";
         public const int MaximumFileBytes = 10 * 1024 * 1024;
         public const int MaximumRows = 50000;
         public const int MaximumErrors = 100;
@@ -35,9 +36,16 @@ namespace IBS.Services
         public async Task<byte[]> CreateTemplateAsync(CancellationToken cancellationToken = default)
         {
             var accounts = await _dbContext.FilprideChartOfAccounts.AsNoTracking()
+                .Include(account => account.ParentAccount)
                 .Where(account => !account.HasChildren)
                 .OrderBy(account => account.AccountNumber)
-                .Select(account => new { account.AccountNumber, account.AccountName })
+                .Select(account => new
+                {
+                    account.AccountNumber,
+                    account.AccountName,
+                    ParentAccountNo = account.ParentAccount != null ? account.ParentAccount.AccountNumber : string.Empty,
+                    ParentAccountName = account.ParentAccount != null ? account.ParentAccount.AccountName : string.Empty
+                })
                 .ToListAsync(cancellationToken);
             var customers = await _dbContext.FilprideCustomers.AsNoTracking()
                 .Where(customer => customer.IsActive)
@@ -51,7 +59,7 @@ namespace IBS.Services
                 .ToListAsync(cancellationToken);
 
             using var package = new ExcelPackage();
-            var upload = CreateTemplateSheet(package.Workbook, "GL Upload", SubAccountCsvHeader.Split(','));
+            var upload = CreateTemplateSheet(package.Workbook, "GL Upload", CompanyCsvHeader.Split(','));
             upload.Column(1).Style.Numberformat.Format = "yyyy-MM-dd";
             upload.Column(2).Style.Numberformat.Format = "@";
             upload.Column(3).Width = 55;
@@ -60,6 +68,8 @@ namespace IBS.Services
             upload.Column(6).Style.Numberformat.Format = "0.0000";
             upload.Column(7).Style.Numberformat.Format = "0.0000";
             upload.Column(9).Style.Numberformat.Format = "0";
+            upload.Column(10).Style.Numberformat.Format = "@";
+            upload.Column(10).Width = 55;
             var types = upload.DataValidations.AddListValidation($"H2:H{MaximumRows + 1}");
             types.Formula.Values.Add(nameof(SubAccountType.Supplier));
             types.Formula.Values.Add(nameof(SubAccountType.Customer));
@@ -68,14 +78,14 @@ namespace IBS.Services
             types.ErrorTitle = "Invalid sub-account type";
             types.Error = "Select Supplier or Customer, or leave both sub-account fields blank.";
 
-            var accountSheet = CreateTemplateSheet(package.Workbook, "Chart of Accounts", ["AccountNo", "AccountName"]);
+            var accountSheet = CreateTemplateSheet(package.Workbook, "Chart of Accounts", ["AccountNo", "AccountName", "MainAccountNo", "MainAccountName"]);
             accountSheet.Column(1).Style.Numberformat.Format = "@";
             accountSheet.Column(2).Width = 70;
             if (accounts.Count > 0)
             {
                 accountSheet.Cells[2, 1].LoadFromArrays(accounts.Select(account => new object[]
                 {
-                    account.AccountNumber, account.AccountName
+                    account.AccountNumber, account.AccountName, account.ParentAccountNo, account.ParentAccountName
                 }));
             }
 
@@ -114,15 +124,16 @@ namespace IBS.Services
             instructions.Column(2).Style.WrapText = true;
             instructions.Cells[2, 1].LoadFromArrays(new object[][]
             {
-                [1, "Fill GL Upload starting at row 2. Keep the nine headers in row 1 unchanged; each date/reference journal must balance."],
+                [1, "Fill GL Upload starting at row 2. Keep the ten headers in row 1 unchanged; each date/reference journal must balance."],
                 [2, "Copy AccountNo and the exact AccountName from Chart of Accounts. Account numbers and customer/supplier codes are text to preserve leading zeros."],
                 [3, "For sub-accounts, copy SubAccountType and SubAccountId from Customers or Suppliers. Use the ID column, not CustomerCode or SupplierCode. Otherwise leave both fields blank."],
                 [4, "Use yyyy-MM-dd dates and amounts with up to four decimal places, without thousands separators. Enter zero on the unused debit or credit side."],
                 [5, "Select GL Upload, then Save As CSV UTF-8 (current sheet only). Upload that CSV in Utility > GL Import, review the preview, and confirm. Keep this workbook separately for reference."],
-                [6, "Reference sheets show registered active customers/suppliers and visible posting accounts at download time. Download again after master data changes; preview and confirmation validate current records."]
+                [6, "Reference sheets show registered active customers/suppliers and visible posting accounts at download time. Download again after master data changes; preview and confirmation validate current records."],
+                [7, "Company is required on every GL line (up to 50 characters). Enter the company name directly; no Company master record is needed. Use consistent names for future per-company reports."]
             });
-            instructions.Cells[2, 1, 7, 2].Style.VerticalAlignment = ExcelVerticalAlignment.Top;
-            instructions.Rows[2, 7].Height = 45;
+            instructions.Cells[2, 1, 8, 2].Style.VerticalAlignment = ExcelVerticalAlignment.Top;
+            instructions.Rows[2, 8].Height = 45;
             package.Workbook.View.ActiveTab = 0;
             return await package.GetAsByteArrayAsync(cancellationToken);
         }
@@ -207,6 +218,7 @@ namespace IBS.Services
                 Date = row.Date,
                 Reference = row.Reference,
                 Description = row.Description,
+                Company = row.Company,
                 AccountId = row.AccountId,
                 AccountNo = row.AccountNo,
                 AccountTitle = row.AccountName,
@@ -379,10 +391,10 @@ namespace IBS.Services
                 {
                     headers[0] = headers[0].TrimStart('\uFEFF');
                 }
-                if (!headers.SequenceEqual(CsvHeader.Split(',')) &&
-                    !headers.SequenceEqual(SubAccountCsvHeader.Split(',')))
+                if (!headers.SequenceEqual((CsvHeader + ",Company").Split(',')) &&
+                    !headers.SequenceEqual(CompanyCsvHeader.Split(',')))
                 {
-                    AddError(preview, $"The header must be {CsvHeader} or {SubAccountCsvHeader}.");
+                    AddError(preview, $"The header must be {CsvHeader},Company or {CompanyCsvHeader}. Company is required on every GL line.");
                     return preview;
                 }
 
@@ -432,6 +444,8 @@ namespace IBS.Services
             valid = ValidateText(fields[2], "Description", int.MaxValue, rowNumber, preview) && valid;
             valid = ValidateText(fields[3], "AccountNo", 50, rowNumber, preview) && valid;
             valid = ValidateText(fields[4], "AccountName", 200, rowNumber, preview) && valid;
+            var company = fields[^1];
+            valid = ValidateText(company, "Company", 50, rowNumber, preview) && valid;
             bool hasDebit = TryParseAmount(fields[5], out decimal debit);
             bool hasCredit = TryParseAmount(fields[6], out decimal credit);
             if (!hasDebit || !hasCredit)
@@ -446,7 +460,7 @@ namespace IBS.Services
             }
             var subAccountType = (SubAccountType?)null;
             var subAccountId = (int?)null;
-            if (fields.Length == 9 && (fields[7].Length > 0 || fields[8].Length > 0))
+            if (fields.Length >= 9 && (fields[7].Length > 0 || fields[8].Length > 0))
             {
                 subAccountType = fields[7] switch
                 {
@@ -477,6 +491,7 @@ namespace IBS.Services
                 Description = fields[2],
                 AccountNo = fields[3],
                 AccountName = fields[4],
+                Company = company,
                 Debit = debit,
                 Credit = credit,
                 SubAccountType = subAccountType,

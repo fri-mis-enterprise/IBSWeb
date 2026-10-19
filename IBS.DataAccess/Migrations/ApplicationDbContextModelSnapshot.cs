@@ -17,7 +17,7 @@ namespace IBS.DataAccess.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.6")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -2644,6 +2644,10 @@ namespace IBS.DataAccess.Migrations
                         .IsRequired()
                         .HasColumnType("varchar(200)")
                         .HasColumnName("account_title");
+
+                    b.Property<string>("Company")
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("company");
 
                     b.Property<int?>("CounterpartyId")
                         .HasColumnType("integer")
