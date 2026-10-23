@@ -6,6 +6,20 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v5.2.0] - 2026-10-23
+
+### Added
+- Added net-of-VAT, VAT, withholding tax, and customer/supplier information to sales invoice and receiving report Excel exports for IBS-RCD.
+- Included referenced check voucher invoice headers and details in journal voucher Excel exports.
+
+### Changed
+- Removed worksheet and workbook password protection from Filpride master-file and transaction Excel exports.
+
+### Fixed
+- Corrected liquidation report freight cost per liter to use delivery receipt quantities for receipts with freight, including per-hauler and combined cost summaries.
+
+---
+
 ## [v5.1.0] - 2026-10-20
 
 ### Added
