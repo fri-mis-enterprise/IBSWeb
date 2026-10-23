@@ -5726,20 +5726,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
                 }
 
-                var receivingReportsWithFreight = receivingReports.Where(rr => rr.DeliveryReceipt!.Freight > 0).ToList();
+                var receivingReportsWithFreight = receivingReports
+                    .Where(rr => rr.DeliveryReceipt!.Freight > 0)
+                    .ToList();
                 var sumOfFreightAmountWithFreight = receivingReportsWithFreight
                     .Sum(rr => RoundToFour(rr.DeliveryReceipt!.FreightAmount));
 
                 var sumOfQuantityWithFreight = receivingReportsWithFreight
-                    .Sum(rr => rr.QuantityReceived);
+                    .Sum(rr => rr.DeliveryReceipt!.Quantity);
 
                 var sumOfQuantity = receivingReports.Sum(rr => rr.QuantityReceived);
                 var sumOfAmount = receivingReports.Sum(rr => rr.Amount);
                 var averageCostPerLiter = DivideOrZero(sumOfAmount, sumOfQuantity);
 
                 var sumOfFreightAmount = sumOfFreightAmountWithFreight;
-                var averageFreightPerLiterWithFreight = DivideOrZero(sumOfFreightAmountWithFreight, sumOfQuantityWithFreight);
-                var averageFreightPerLiter = DivideOrZero(sumOfFreightAmount, sumOfQuantity);
+                var averageFreightPerLiter = DivideOrZero(sumOfFreightAmountWithFreight, sumOfQuantityWithFreight);
 
                 var sumOfAmountBasedOnSoa = receivingReports.Sum(rr => RoundToFour(rr.CostBasedOnSoa * rr.QuantityReceived));
                 var averageCostBasedOnSoa = DivideOrZero(sumOfAmountBasedOnSoa, sumOfQuantity);
@@ -5750,7 +5751,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[28, 6].Value = sumOfQuantity;
                 worksheet.Cells[29, 3].Value = "Cost/ltr: ";
                 worksheet.Cells[29, 4].Value = averageCostPerLiter;
-                worksheet.Cells[29, 5].Value = averageFreightPerLiterWithFreight;
+                worksheet.Cells[29, 5].Value = averageFreightPerLiter;
                 worksheet.Cells[30, 3].Value = "Total Amount";
                 worksheet.Cells[30, 4].Value = sumOfAmount;
                 worksheet.Cells[30, 5].Value = sumOfFreightAmount;
@@ -5828,10 +5829,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         .Sum(rr => rr.DeliveryReceipt!.FreightAmount);
 
                     var freightQuantityPerSupplier = rrByHauler.Where(rr => rr.DeliveryReceipt!.Freight > 0)
-                        .Sum(rr => rr.QuantityReceived);
+                        .Sum(rr => rr.DeliveryReceipt!.Quantity);
 
                     worksheet.Cells[38, col].Value = freightQuantityPerSupplier > 0
-                        ? freightAmountPerSupplier / freightQuantityPerSupplier
+                        ? DivideOrZero(freightAmountPerSupplier, freightQuantityPerSupplier)
                         : 0;
                     worksheet.Cells[38, col].Style.Numberformat.Format = currencyFormatFourDecimal;
                     col++;
@@ -5860,7 +5861,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 // use if-else to determine value of freight if multiple or single hauler
                 worksheet.Cells[38, col].Value = DivideOrZero(totalFreightAmount, sumOfQuantityWithFreight); // new cost/ltr of freight
                 worksheet.Cells[38, col].Style.Numberformat.Format = currencyFormatFourDecimal;
-                worksheet.Cells[29, 6].Value = RoundToFour(averageFreightPerLiterWithFreight + averageCostPerLiter); // cost/ltr + freight/ltr if multiple hauler
+                worksheet.Cells[29, 6].Value = RoundToFour(averageFreightPerLiter + averageCostPerLiter); // cost/ltr + freight/ltr if multiple hauler
                 worksheet.Cells[30, 6].Value = RoundToFour(sumOfAmount + sumOfFreightAmountWithFreight); // total amount with total freight amount
 
                 worksheet.Cells[32, 4].Value = sumOfAmount;
