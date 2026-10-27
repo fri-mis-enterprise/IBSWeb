@@ -146,7 +146,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     page.Size(PageSizes.Legal.Landscape());
                     page.Margin(20);
-                    page.DefaultTextStyle(x => x.FontSize(9).FontFamily("Times New Roman"));
+                    page.DefaultTextStyle(x => x.FontSize(9).FontFamily("Lato"));
 
                     page.Header().Height(50).Row(row =>
                     {
