@@ -1098,6 +1098,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 columns.RelativeColumn();
                                 columns.RelativeColumn();
                                 columns.RelativeColumn();
+                                columns.RelativeColumn();
                             });
 
                             #endregion -- Columns Definition
@@ -1114,6 +1115,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Quantity").SemiBold();
                                 header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Unit").SemiBold();
                                 header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Price").SemiBold();
+                                header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Final Price").SemiBold();
                                 header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Amount").SemiBold();
                                 header.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignCenter().AlignMiddle().Text("Remarks").SemiBold();
                             });
@@ -1131,8 +1133,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 table.Cell().Border(0.5f).Padding(3).Text(record.ProductName);
                                 table.Cell().Border(0.5f).Padding(3).AlignRight().Text(record.Quantity != 0 ? record.Quantity < 0 ? $"({Math.Abs(record.Quantity).ToString(SD.Two_Decimal_Format)})" : record.Quantity.ToString(SD.Two_Decimal_Format) : null).FontColor(record.Quantity < 0 ? Colors.Red.Medium : Colors.Black);
                                 table.Cell().Border(0.5f).Padding(3).Text(record.Product?.ProductUnit);
-                                table.Cell().Border(0.5f).Padding(3).AlignRight().Text((record.ActualPrices?.Count != 0 ? record.ActualPrices?.First(x => x.IsApproved).TriggeredPrice : record.Price) != 0
+                                table.Cell().Border(0.5f).Padding(3).AlignRight().Text(record.Price != 0
                                     ? record.Price < 0 ? $"({Math.Abs(record.Price).ToString(SD.Four_Decimal_Format)})" : record.Price.ToString(SD.Four_Decimal_Format) : null);
+                                table.Cell().Border(0.5f).Padding(3).AlignRight().Text(record.FinalPrice != 0
+                                    ? record.FinalPrice < 0 ? $"({Math.Abs(record.FinalPrice).ToString(SD.Four_Decimal_Format)})" : record.FinalPrice.ToString(SD.Four_Decimal_Format) : null);
                                 table.Cell().Border(0.5f).Padding(3).AlignRight().Text(record.Amount != 0 ? record.Amount < 0 ? $"({Math.Abs(record.Amount).ToString(SD.Two_Decimal_Format)})" : record.Amount.ToString(SD.Two_Decimal_Format) : null);
                                 table.Cell().Border(0.5f).Padding(3).Text(record.Remarks);
                             }
@@ -1238,18 +1242,19 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["F7"].Value = "Quantity";
                 worksheet.Cells["G7"].Value = "Unit";
                 worksheet.Cells["H7"].Value = "Price";
-                worksheet.Cells["I7"].Value = "Amount";
-                worksheet.Cells["J7"].Value = "Remarks";
+                worksheet.Cells["I7"].Value = "Final Price";
+                worksheet.Cells["J7"].Value = "Amount";
+                worksheet.Cells["K7"].Value = "Remarks";
 
                 if (showVoidCancelColumns)
                 {
-                    worksheet.Cells[7, 11].Value = "Status";
-                    worksheet.Cells[7, 12].Value = "Voided By";
-                    worksheet.Cells[7, 13].Value = "Voided Date";
+                    worksheet.Cells[7, 12].Value = "Status";
+                    worksheet.Cells[7, 13].Value = "Voided By";
+                    worksheet.Cells[7, 14].Value = "Voided Date";
                 }
 
                 // Apply styling to the header row
-                using (var range = worksheet.Cells["A7:" + (showVoidCancelColumns ? "M7" : "J7")])
+                using (var range = worksheet.Cells["A7:" + (showVoidCancelColumns ? "N7" : "K7")])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.Fill.PatternType = ExcelFillStyle.Solid;
@@ -1273,21 +1278,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 5].Value = po.ProductName;
                     worksheet.Cells[row, 6].Value = po.Quantity;
                     worksheet.Cells[row, 7].Value = po.Product?.ProductUnit;
-                    worksheet.Cells[row, 8].Value = po.ActualPrices!.Count != 0 ? po.ActualPrices!.First(x => x.IsApproved).TriggeredPrice : po.Price;
-                    worksheet.Cells[row, 9].Value = po.Amount;
-                    worksheet.Cells[row, 10].Value = po.Remarks;
+                    worksheet.Cells[row, 8].Value = po.Price;
+                    worksheet.Cells[row, 9].Value = po.FinalPrice;
+                    worksheet.Cells[row, 10].Value = po.Amount;
+                    worksheet.Cells[row, 11].Value = po.Remarks;
 
                     worksheet.Cells[row, 3].Style.Numberformat.Format = "MMM/dd/yyyy";
                     worksheet.Cells[row, 6].Style.Numberformat.Format = currencyFormat;
-                    worksheet.Cells[row, 8].Style.Numberformat.Format = currencyFormat;
-                    worksheet.Cells[row, 9].Style.Numberformat.Format = currencyFormat;
+                    worksheet.Cells[row, 8].Style.Numberformat.Format = SD.Four_Decimal_Format;
+                    worksheet.Cells[row, 9].Style.Numberformat.Format = SD.Four_Decimal_Format;
+                    worksheet.Cells[row, 10].Style.Numberformat.Format = currencyFormat;
 
                     if (showVoidCancelColumns)
                     {
-                        worksheet.Cells[row, 11].Value = po.Status;
-                        worksheet.Cells[row, 12].Value = po.VoidedBy;
-                        worksheet.Cells[row, 13].Value = po.VoidedDate;
-                        worksheet.Cells[row, 13].Style.Numberformat.Format = "MMM/dd/yyyy";
+                        worksheet.Cells[row, 12].Value = po.Status;
+                        worksheet.Cells[row, 13].Value = po.VoidedBy;
+                        worksheet.Cells[row, 14].Value = po.VoidedDate;
+                        worksheet.Cells[row, 14].Style.Numberformat.Format = "MMM/dd/yyyy";
                     }
 
                     row++;

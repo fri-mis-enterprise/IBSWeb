@@ -84,7 +84,6 @@ namespace IBS.DataAccess.Repository.Filpride
         public async Task<int> RemoveQuantityReceived(int id, decimal quantityReceived, CancellationToken cancellationToken = default)
         {
             var po = await _db.FilpridePurchaseOrders
-                .Include(po => po.ActualPrices)
                 .FirstOrDefaultAsync(po => po.PurchaseOrderId == id, cancellationToken);
 
             if (po == null)
@@ -100,12 +99,6 @@ namespace IBS.DataAccess.Repository.Filpride
                 po.ReceivedDate = DateTime.MaxValue;
             }
 
-            if (po.ActualPrices!.Count <= 0)
-            {
-                return await _db.SaveChangesAsync(cancellationToken);
-            }
-
-            po.ActualPrices.FirstOrDefault()!.AppliedVolume -= quantityReceived;
             return await _db.SaveChangesAsync(cancellationToken);
         }
 
@@ -235,32 +228,8 @@ namespace IBS.DataAccess.Repository.Filpride
                 model.DueDate = await ComputeDueDateAsync(purchaseOrder.Terms, model.Date, cancellationToken);
                 model.GainOrLoss = model.QuantityDelivered - model.QuantityReceived;
 
-                var poActualPrice = await _db.FilpridePOActualPrices
-                    .FirstOrDefaultAsync(a => a.PurchaseOrderId == purchaseOrder.PurchaseOrderId
-                                              && a.IsApproved
-                                              && a.AppliedVolume != a.TriggeredVolume,
-                        cancellationToken);
-
-                var remainingQuantity = model.QuantityReceived;
-                decimal totalAmount = 0m;
-
-                if (poActualPrice != null)
-                {
-                    var availableQuantity = poActualPrice.TriggeredVolume - poActualPrice.AppliedVolume;
-
-                    if (availableQuantity > 0)
-                    {
-                        var applicableQuantity = Math.Min(remainingQuantity, availableQuantity);
-                        var applicableUnitCost = DecimalRoundingHelper.RoundToFour(poActualPrice.TriggeredPrice + freight);
-                        totalAmount += DecimalRoundingHelper.ComputeAmountFromUnitPrice(applicableQuantity, applicableUnitCost);
-                        poActualPrice.AppliedVolume += applicableQuantity;
-                        remainingQuantity -= applicableQuantity;
-                    }
-                }
-
-                var remainingUnitCost = DecimalRoundingHelper.RoundToFour((poActualPrice?.TriggeredPrice ?? purchaseOrder.Price) + freight);
-                totalAmount += DecimalRoundingHelper.ComputeAmountFromUnitPrice(remainingQuantity, remainingUnitCost);
-                model.Amount = totalAmount;
+                var unitCost = DecimalRoundingHelper.RoundToFour(purchaseOrder.FinalPrice + freight);
+                model.Amount = DecimalRoundingHelper.ComputeAmountFromUnitPrice(model.QuantityReceived, unitCost);
 
                 FilprideAuditTrail auditTrailCreate = new(model.PostedBy,
                     $"Created new receiving report# {model.ReceivingReportNo}",
@@ -500,8 +469,9 @@ namespace IBS.DataAccess.Repository.Filpride
             var purchasePostingDate = isReceivingReportPeriodPosted
                 ? firstDayOfMonth
                 : receivingReportDate;
-            var particulars = $"Update Cost on DR#{model.DeliveryReceipt!.DeliveryReceiptNo}. " +
-                              $"DR dated {model.DeliveryReceipt!.DeliveredDate}";
+            var particulars = model.DeliveryReceipt != null
+                ? $"Update Cost on DR#{model.DeliveryReceipt.DeliveryReceiptNo}. DR dated {model.DeliveryReceipt.DeliveredDate}"
+                : $"Update Cost on PO#{model.PONo}.";
             var netOfVatAmount = model.PurchaseOrder!.VatType == SD.VatType_Vatable
                 ? ComputeNetOfVat(difference)
                 : difference;

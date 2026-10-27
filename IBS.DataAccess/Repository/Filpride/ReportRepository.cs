@@ -276,7 +276,6 @@ namespace IBS.DataAccess.Repository.Filpride
             var purchaseOrder = await query
                 .Include(p => p.Supplier)
                 .Include(p => p.Product)
-                .Include(p => p.ActualPrices)
                 .OrderBy(p => p.Date)
                 .ToListAsync(cancellationToken);
 

@@ -1536,11 +1536,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     : drFreight;
             }
 
-            var hasActualPrice = po.ActualPrices != null && po.ActualPrices.Any(x => x.IsApproved);
-
-            var productCost = hasActualPrice
-                ? po.ActualPrices!.First().TriggeredPrice
-                : po.Price;
+            var productCost = DecimalRoundingHelper.RoundToFour(po.FinalPrice);
 
             var netProductCost = po.VatType == SD.VatType_Vatable
                 ? _unitOfWork.FilprideDeliveryReceipt.ComputeNetOfVat(productCost)

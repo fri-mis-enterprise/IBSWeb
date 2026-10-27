@@ -948,7 +948,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             CustomerOrderSlipForApprovalViewModel model, CancellationToken cancellationToken)
         {
             var appointedSuppliers = await _dbContext.FilprideCOSAppointedSuppliers
-                .Include(p => p.PurchaseOrder).ThenInclude(p => p!.ActualPrices)
+                .Include(p => p.PurchaseOrder)
                 .Where(a => a.CustomerOrderSlipId == customerOrderSlipId)
                 .ToListAsync(cancellationToken);
 
@@ -957,60 +957,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             foreach (var supplier in appointedSuppliers)
             {
-                var po = supplier.PurchaseOrder;
-                var hasTriggeredPrices = po!.UnTriggeredQuantity != po.Quantity &&
-                                         po.ActualPrices!.Any(p => p.IsApproved);
+                var po = supplier.PurchaseOrder!;
+                var grossAmount = supplier.Quantity * DecimalRoundingHelper.RoundToFour(po.FinalPrice);
+                var netOfVat = po.VatType == SD.VatType_Vatable
+                    ? _unitOfWork.FilpridePurchaseOrder.ComputeNetOfVat(grossAmount)
+                    : grossAmount;
 
-                if (hasTriggeredPrices)
-                {
-                    totalPoAmount += await CalculateWeightedCost(po, supplier.Quantity);
-                }
-                else
-                {
-                    var grossAmount = supplier.Quantity * await _unitOfWork.FilpridePurchaseOrder.GetPurchaseOrderCost(po.PurchaseOrderId, cancellationToken);
-                    var netOfVat = po.VatType == SD.VatType_Vatable
-                            ? _unitOfWork.FilpridePurchaseOrder.ComputeNetOfVat(grossAmount)
-                            : grossAmount;
-
-                    totalPoAmount += netOfVat;
-                }
+                totalPoAmount += netOfVat;
             }
 
             model.NetOfVatProductCost = totalQuantity > 0 ? totalPoAmount / totalQuantity : 0;
-        }
-
-        private async Task<decimal> CalculateWeightedCost(FilpridePurchaseOrder po, decimal requiredQuantity)
-        {
-            var weightedCostTotal = 0m;
-            var totalCosVolume = 0m;
-
-            foreach (var price in po.ActualPrices!.Where(p => p.IsApproved).OrderBy(p => p.TriggeredDate))
-            {
-                var effectiveVolume = Math.Min(price.TriggeredVolume, requiredQuantity - totalCosVolume);
-                var roundedTriggeredPrice = DecimalRoundingHelper.RoundToFour(price.TriggeredPrice);
-
-                weightedCostTotal += effectiveVolume * roundedTriggeredPrice;
-                totalCosVolume += effectiveVolume;
-
-                if (totalCosVolume >= requiredQuantity)
-                    break;
-            }
-
-            if (totalCosVolume > 0)
-            {
-                var weightedAvgPrice = DecimalRoundingHelper.DivideOrZero(weightedCostTotal, totalCosVolume);
-                return DecimalRoundingHelper.ComputeVatAwareAmountFromUnitPrice(
-                    requiredQuantity,
-                    weightedAvgPrice,
-                    po.VatType == SD.VatType_Vatable);
-            }
-
-            var finalPrice = await _unitOfWork.FilpridePurchaseOrder.GetPurchaseOrderCost(po.PurchaseOrderId);
-
-            return DecimalRoundingHelper.ComputeVatAwareAmountFromUnitPrice(
-                requiredQuantity,
-                finalPrice,
-                po.VatType == SD.VatType_Vatable);
         }
 
         [Authorize(Roles = "OperationManager, Admin, HeadApprover")]

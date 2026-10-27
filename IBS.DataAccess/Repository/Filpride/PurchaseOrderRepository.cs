@@ -111,7 +111,6 @@ namespace IBS.DataAccess.Repository.Filpride
                 .Include(p => p.Supplier)
                 .Include(p => p.Product)
                 .Include(p => p.PickUpPoint)
-                .Include(po => po.ActualPrices)
                 .AsSplitQuery()
                 .AsNoTracking();
 
@@ -194,12 +193,6 @@ namespace IBS.DataAccess.Repository.Filpride
 
         public async Task UpdateActualCostOnSalesAndReceiptsAsync(FilpridePOActualPrice model, CancellationToken cancellationToken = default)
         {
-            // Early validation
-            if (model.AppliedVolume >= model.TriggeredVolume)
-            {
-                return; // Nothing to process
-            }
-
             // Single query to get all required data with optimized includes
             var receivingReports = await _db.FilprideReceivingReports
                 .Include(rr => rr.PurchaseOrder)
@@ -230,20 +223,15 @@ namespace IBS.DataAccess.Repository.Filpride
                 .ToLookup(inv => inv.Reference);
 
             var unitOfWork = new UnitOfWork(_db);
-            var normalizedTriggeredPrice = DecimalRoundingHelper.RoundToFour(model.TriggeredPrice);
-            var remainingVolume = model.TriggeredVolume - model.AppliedVolume;
-
             // Process receiving reports
             foreach (var receivingReport in receivingReports)
             {
-                if (remainingVolume <= 0)
-                {
-                    break;
-                }
-
-                // Calculate effective volume
-                var effectiveVolume = Math.Min(receivingReport.QuantityReceived, remainingVolume);
-                var updatedAmount = DecimalRoundingHelper.ComputeAmountFromUnitPrice(effectiveVolume, normalizedTriggeredPrice);
+                var customerOrderSlip = receivingReport.DeliveryReceipt?.CustomerOrderSlip;
+                var freight = customerOrderSlip?.DeliveryOption == SD.DeliveryOption_DirectDelivery
+                    ? (decimal)customerOrderSlip.Freight!
+                    : 0m;
+                var unitCost = DecimalRoundingHelper.RoundToFour(receivingReport.PurchaseOrder!.FinalPrice + freight);
+                var updatedAmount = DecimalRoundingHelper.ComputeAmountFromUnitPrice(receivingReport.QuantityReceived, unitCost);
                 var difference = updatedAmount - receivingReport.Amount;
                 var oldUnitCost = receivingReport.PurchaseOrder!.VatType == SD.VatType_Vatable
                     ? DecimalRoundingHelper.ComputeNetUnitValue(receivingReport.Amount, receivingReport.QuantityReceived)
@@ -252,8 +240,6 @@ namespace IBS.DataAccess.Repository.Filpride
                 // Update receiving report
                 receivingReport.Amount = updatedAmount;
                 receivingReport.IsCostUpdated = true;
-                model.AppliedVolume += effectiveVolume;
-                remainingVolume -= effectiveVolume;
 
                 // Update inventory
                 var inventory = inventoryLookup[receivingReport.ReceivingReportNo]
@@ -297,10 +283,10 @@ namespace IBS.DataAccess.Repository.Filpride
                     AdjustmentType = LockedPeriodAdjustmentType.UnitCost,
                     OldValue = oldUnitCost,
                     NewValue = receivingReport.PurchaseOrder!.VatType == SD.VatType_Vatable
-                        ? DecimalRoundingHelper.ComputeNetUnitValue(updatedAmount, effectiveVolume)
-                        : normalizedTriggeredPrice,
+                        ? DecimalRoundingHelper.ComputeNetUnitValue(updatedAmount, receivingReport.QuantityReceived)
+                        : unitCost,
                     AdjustmentValue = difference,
-                    AffectedQuantity = effectiveVolume,
+                    AffectedQuantity = receivingReport.QuantityReceived,
                     Reason = "Update approved unit cost in PO",
                     CreatedBy = model.ApprovedBy!
                 }, cancellationToken);
@@ -316,18 +302,10 @@ namespace IBS.DataAccess.Repository.Filpride
         public async Task<decimal> GetPurchaseOrderCost(int purchaseOrderId, CancellationToken cancellationToken = default)
         {
             var purchaseOrder = await _db.FilpridePurchaseOrders
-                .Include(p => p.ActualPrices)
                 .FirstOrDefaultAsync(x => x.PurchaseOrderId == purchaseOrderId, cancellationToken)
                                 ?? throw new NullReferenceException("PurchaseOrder not found");
 
-            var hasTriggeredPrice = purchaseOrder.ActualPrices?.Count > 0 && purchaseOrder.ActualPrices.Any(x => x.IsApproved);
-
-            return DecimalRoundingHelper.RoundToFour(hasTriggeredPrice
-                ? purchaseOrder.ActualPrices!
-                    .OrderByDescending(x => x.ApprovedDate)
-                    .First(x => x.IsApproved)
-                    .TriggeredPrice
-                : purchaseOrder.Price);
+            return DecimalRoundingHelper.RoundToFour(purchaseOrder.FinalPrice);
         }
     }
 }

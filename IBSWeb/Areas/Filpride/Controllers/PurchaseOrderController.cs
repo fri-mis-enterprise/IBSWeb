@@ -183,7 +183,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         po.VoidedBy,
                         po.CanceledBy,
                         po.PostedBy,
-                        po.UnTriggeredQuantity,
+                        po.Supplier!.RequiresPriceAdjustment,
                         po.IsSubPo,
                         po.SubPoSeries,
                         po.IsClosed,
@@ -280,7 +280,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     CreatedBy = GetUserFullName(),
                     Type = viewModel.Type,
                     TriggerDate = viewModel.TriggerDate,
-                    UnTriggeredQuantity = !supplier.RequiresPriceAdjustment ? 0 : viewModel.Quantity,
                     PickUpPointId = viewModel.PickUpPointId,
                     VatType = supplier.VatType,
                     TaxType = supplier.TaxType,
@@ -402,7 +401,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingModel.SupplierId = viewModel.SupplierId;
                 existingModel.ProductId = viewModel.ProductId;
                 existingModel.Quantity = viewModel.Quantity;
-                existingModel.UnTriggeredQuantity = !supplier.RequiresPriceAdjustment ? 0 : existingModel.Quantity;
                 existingModel.Price = DecimalRoundingHelper.RoundToFour(viewModel.Price);
                 existingModel.FinalPrice = existingModel.Price;
                 existingModel.Amount = DecimalRoundingHelper.ComputeAmountFromUnitPrice(viewModel.Quantity, existingModel.Price);
@@ -772,7 +770,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [Authorize(Policy = nameof(PurchaseOrder.PurchaseOrderUpdatePrice))]
         [HttpPost]
-        public async Task<IActionResult> UpdatePrice(int purchaseOrderId, decimal volume, decimal price, CancellationToken cancellationToken)
+        public async Task<IActionResult> UpdatePrice(int purchaseOrderId, decimal price,
+            CancellationToken cancellationToken)
         {
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
             try
@@ -786,17 +785,26 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     return Json(new { success = false, message = "Record not found." });
                 }
-                if (existingRecord.Price == price)
+                price = DecimalRoundingHelper.RoundToFour(price);
+                if (price <= 0)
+                {
+                    return Json(new { success = false, message = "Price must be greater than zero." });
+                }
+
+                if (existingRecord.Status == nameof(CosStatus.ForApprovalOfOM))
+                {
+                    return Json(new { success = false, message = "A price update is already awaiting approval." });
+                }
+
+                if (existingRecord.FinalPrice == price)
                 {
                     return Json(new { success = false, message = "Unable to update the cost/price when using the same price." });
                 }
 
-                existingRecord.UnTriggeredQuantity -= volume;
-
                 var actualPrice = new FilpridePOActualPrice
                 {
                     PurchaseOrderId = existingRecord.PurchaseOrderId,
-                    TriggeredVolume = volume,
+                    TriggeredVolume = existingRecord.Quantity,
                     TriggeredPrice = price
                 };
 
@@ -807,7 +815,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Select(u => u.Id)
                     .ToListAsync(cancellationToken);
 
-                var message = $"The cost for Purchase Order {existingRecord.PurchaseOrderNo} has been updated by {currentUser}, from {existingRecord.Price:N4} to {price:N4} (gross of VAT). " +
+                var message = $"The cost for Purchase Order {existingRecord.PurchaseOrderNo} has been updated by {currentUser}, from {existingRecord.FinalPrice:N4} to {price:N4} (gross of VAT). " +
                               $"Please review and approve.";
 
                 await _unitOfWork.Notifications.AddNotificationToMultipleUsersAsync(operationManager, message);
@@ -838,14 +846,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 #region --Audit Trail Recording
 
-                FilprideAuditTrail auditTrailBook = new(GetUserFullName(), $"Update actual price for purchase order# {existingRecord.PurchaseOrderNo}, from {existingRecord.Price:N4} to {price:N4} (gross of VAT).", "Purchase Order");
+                FilprideAuditTrail auditTrailBook = new(GetUserFullName(), $"Update actual price for purchase order# {existingRecord.PurchaseOrderNo}, from {existingRecord.FinalPrice:N4} to {price:N4} (gross of VAT).", "Purchase Order");
                 await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
 
                 #endregion --Audit Trail Recording
 
                 await transaction.CommitAsync(cancellationToken);
 
-                TempData["success"] = $"The price for {existingRecord.PurchaseOrderNo} has been updated, from {existingRecord.Price:N4} to {price:N4} (gross of VAT).";
+                TempData["success"] = $"The price for {existingRecord.PurchaseOrderNo} has been updated, from {existingRecord.FinalPrice:N4} to {price:N4} (gross of VAT).";
 
                 return Json(new { success = true, message = TempData["success"] });
             }
@@ -889,9 +897,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 actualPrices.ApprovedDate = DateTimeHelper.GetCurrentPhilippineTime();
                 actualPrices.IsApproved = true;
 
+                existingRecord.FinalPrice = DecimalRoundingHelper.RoundToFour(actualPrices.TriggeredPrice);
                 await _unitOfWork.FilpridePurchaseOrder.UpdateActualCostOnSalesAndReceiptsAsync(actualPrices, cancellationToken);
-
-                existingRecord.FinalPrice = actualPrices.TriggeredPrice;
                 existingRecord.Status = nameof(Status.Posted);
 
                 #region --Audit Trail Recording
