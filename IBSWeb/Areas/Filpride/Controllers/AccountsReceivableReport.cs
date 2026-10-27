@@ -165,7 +165,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                             page.Size(PageSizes.Legal.Landscape());
                             page.Margin(20);
-                            page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Times New Roman"));
+                            page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Lato"));
 
                         #endregion
 
@@ -543,7 +543,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                         page.Size(PageSizes.Legal.Landscape());
                         page.Margin(20);
-                        page.DefaultTextStyle(x => x.FontSize(8).FontFamily("Times New Roman"));
+                        page.DefaultTextStyle(x => x.FontSize(8).FontFamily("Lato"));
 
                         #endregion
 
@@ -1704,7 +1704,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                         page.Size(PageSizes.Legal.Landscape());
                         page.Margin(20);
-                        page.DefaultTextStyle(x => x.FontSize(8).FontFamily("Times New Roman"));
+                        page.DefaultTextStyle(x => x.FontSize(8).FontFamily("Lato"));
 
                         #endregion
 
@@ -2663,7 +2663,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                             page.Size(PageSizes.Legal.Landscape());
                             page.Margin(20);
-                            page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Times New Roman"));
+                            page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Lato"));
 
                         #endregion
 
@@ -3400,7 +3400,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                             page.Size(PageSizes.Legal.Landscape());
                             page.Margin(20);
-                            page.DefaultTextStyle(x => x.FontSize(7).FontFamily("Times New Roman"));
+                            page.DefaultTextStyle(x => x.FontSize(7).FontFamily("Lato"));
 
                         #endregion
 
@@ -3945,7 +3945,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                             page.Size(PageSizes.Legal.Landscape());
                             page.Margin(20);
-                            page.DefaultTextStyle(x => x.FontSize(7).FontFamily("Times New Roman"));
+                            page.DefaultTextStyle(x => x.FontSize(7).FontFamily("Lato"));
 
                         #endregion
 
@@ -4654,7 +4654,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                             page.Size(PageSizes.Legal.Landscape());
                             page.Margin(20);
-                            page.DefaultTextStyle(x => x.FontSize(9).FontFamily("Times New Roman"));
+                            page.DefaultTextStyle(x => x.FontSize(9).FontFamily("Lato"));
 
                         #endregion
 
