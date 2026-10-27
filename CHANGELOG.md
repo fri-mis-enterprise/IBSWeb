@@ -6,6 +6,19 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v5.2.1] - 2026-10-27
+
+### Changed
+- Display original and final purchase-order prices separately in PDF and Excel reports, with four-decimal price formatting in Excel.
+
+### Fixed
+- Use the approved final purchase-order price consistently for receiving reports, customer order slip product costs, and delivery receipt margin calculations.
+- Apply approved price updates to all posted receiving reports for the purchase order, including direct-delivery freight, instead of limiting updates by triggered volume.
+- Reject nonpositive or unchanged purchase-order price updates and additional updates while approval is pending; allow cost-adjustment entries for receiving reports without a delivery receipt.
+- Replaced Times New Roman with Lato in Filpride PDF reports to address font compatibility after the QuestPDF update.
+
+---
+
 ## [v5.2.0] - 2026-10-23
 
 ### Added
