@@ -6,6 +6,18 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v5.3.0] - 2026-10-30
+
+### Added
+- Display check amounts in the Filpride disbursement list.
+- Add confirmation actions to remove DCP or DCR dates from disbursement vouchers and connected invoices. Removing DCP also clears DCR; removing DCR preserves DCP. Record date removals in the audit trail.
+
+### Fixed
+- Align disbursement date filters with the new Check Amount column.
+- Validate disbursement date requests and require antiforgery tokens for DCP/DCR updates and removals.
+
+---
+
 ## [v5.2.1] - 2026-10-27
 
 ### Changed
