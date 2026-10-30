@@ -6,6 +6,13 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v5.3.1] - 2026-10-30
+
+### Fixed
+- Prevent Transaction Master Control edits to check vouchers, journal vouchers, sales invoices, service invoices, and collection receipts in locked accounting periods. Also block linked payment voucher updates when their periods are locked, and display a message to reopen the affected period.
+
+---
+
 ## [v5.3.0] - 2026-10-30
 
 ### Added
