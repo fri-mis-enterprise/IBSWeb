@@ -10,6 +10,7 @@ using IBS.Utility.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
 
 namespace IBSWeb.Areas.Filpride.Controllers
@@ -142,8 +143,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [Authorize(Policy = nameof(Disbursement.DisbursementUpdateDcpDate))]
         [HttpPost]
-        public async Task<IActionResult> UpdateDCPDate(int cvId, DateOnly dcpDate, CancellationToken cancellationToken)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateDCPDate(int cvId, [BindRequired] DateOnly? dcpDate, CancellationToken cancellationToken)
         {
+            if (!ModelState.IsValid)
+            {
+                return Json(new { success = false, message = "Invalid DCP date request." });
+            }
+
             var cv = await _unitOfWork.FilprideCheckVoucher
                 .GetAsync(cv => cv.CheckVoucherHeaderId == cvId, cancellationToken);
 
@@ -177,9 +184,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 invoice.DcrDate = null;
             }
 
+            var action = dcpDate.HasValue ? "Update DCP date" : "Remove DCP and DCR dates";
             var auditMessage = connectedInvoices.Count == 0
-                ? $"Update DCP date of CV# {cv.CheckVoucherHeaderNo}"
-                : $"Update DCP date of CV# {cv.CheckVoucherHeaderNo} and {connectedInvoices.Count} connected invoice(s)";
+                ? $"{action} of CV# {cv.CheckVoucherHeaderNo}"
+                : $"{action} of CV# {cv.CheckVoucherHeaderNo} and {connectedInvoices.Count} connected invoice(s)";
 
             FilprideAuditTrail auditTrailBook = new(GetUserFullName(), auditMessage, "Disbursement");
             await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
@@ -191,8 +199,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         [Authorize(Policy = nameof(Disbursement.DisbursementUpdateDcrDate))]
         [HttpPost]
-        public async Task<IActionResult> UpdateDCRDate(int cvId, DateOnly dcrDate, CancellationToken cancellationToken)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateDCRDate(int cvId, [BindRequired] DateOnly? dcrDate, CancellationToken cancellationToken)
         {
+            if (!ModelState.IsValid)
+            {
+                return Json(new { success = false, message = "Invalid DCR date request." });
+            }
+
             var cv = await _unitOfWork.FilprideCheckVoucher
                 .GetAsync(cv => cv.CheckVoucherHeaderId == cvId, cancellationToken);
 
@@ -201,7 +215,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return Json(new { success = false, message = "Record not found" });
             }
 
-            if (cv.DcpDate == null)
+            if (dcrDate.HasValue && cv.DcpDate == null)
             {
                 return Json(new { success = false, message = "Cannot update DCR date because DCP date is not set." });
             }
@@ -234,9 +248,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 invoice.DcrDate = dcrDate;
             }
 
+            var action = dcrDate.HasValue ? "Update DCR date" : "Remove DCR date";
             var auditMessage = connectedInvoices.Count == 0
-                ? $"Update DCR date of CV# {cv.CheckVoucherHeaderNo}"
-                : $"Update DCR date of CV# {cv.CheckVoucherHeaderNo} and {connectedInvoices.Count} connected invoice(s)";
+                ? $"{action} of CV# {cv.CheckVoucherHeaderNo}"
+                : $"{action} of CV# {cv.CheckVoucherHeaderNo} and {connectedInvoices.Count} connected invoice(s)";
 
             FilprideAuditTrail auditTrailBook = new(GetUserFullName(), auditMessage, "Disbursement");
             await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);

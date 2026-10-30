@@ -6,6 +6,8 @@
 
 <link rel="stylesheet" href="~/css/index-style.css">
 
+@Html.AntiForgeryToken()
+
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center bg-secondary p-3 rounded shadow">
         <h2 class="text-white m-0">@ViewData["Title"]</h2>
@@ -36,6 +38,7 @@
                     <th class="text-start">Payee</th>
                     <th class="text-start">INV#</th>
                     <th class="text-start">Check#</th>
+                    <th class="text-start">Check Amount</th>
                     <th class="text-start">Total</th>
                     <th class="text-start">DCP Date</th>
                     <th class="text-start">DCR Date</th>
@@ -107,6 +110,13 @@
                     { "data": "reference" },
                     { "data": "checkNo" },
                     {
+                        "data": "checkAmount",
+                        "render": function (data, type, row){
+                            var amount = $.fn.dataTable.render.number(',', '.', 2).display(row.checkAmount);
+                            return `<span class="d-block fw-medium">${amount}</span>`;
+                        }
+                    },
+                    {
                         "data": "total",
                         "render": function (data, type, row){
                             var amount = $.fn.dataTable.render.number(',', '.', 2).display(row.total);
@@ -163,12 +173,17 @@
                                 actions += `<li><a class="dropdown-item" href="#" onclick="showAddDCPDate('${data}')"> Add DCP Date</a></li>`;
                             } else  {
                                 actions += `<li><a class="dropdown-item" href="#" onclick="showAddDCPDate('${data}', '${row.dcpDate}', ${row.dcrDate ? `'${row.dcrDate}'` : null})"> Update DCP Date</a></li>`;
+                                actions += `<li><button type="button" class="dropdown-item" onclick="showRemoveDate('${data}', 'DCP')">Remove DCP Date</button></li>`;
 
                                 if (row.dcrDate === null) {
                                     actions += `<li><a class="dropdown-item" href="#" onclick="showAddDCRDate('${data}', '${row.dcpDate}')"> Add DCR Date</a></li>`;
                                 } else  {
                                     actions += `<li><a class="dropdown-item" href="#" onclick="showAddDCRDate('${data}', '${row.dcpDate}', '${row.dcrDate}')"> Update DCR Date</a></li>`;
                                 }
+                            }
+
+                            if (row.dcrDate !== null) {
+                                actions += `<li><button type="button" class="dropdown-item" onclick="showRemoveDate('${data}', 'DCR')">Remove DCR Date</button></li>`;
                             }
 
                             if (row.category === "Non-Trade") {
@@ -191,18 +206,18 @@
 
             $('#filterWithDCP').on('click', function() {
                 table.columns().search(''); // Clear previous filters
-                table.columns(6).search('not-null', true, true).draw();
+                table.columns(7).search('not-null', true, true).draw();
             });
 
             $('#filterWithDCR').on('click', function() {
                 table.columns().search(''); // Clear previous filters
-                table.columns(7).search('not-null', true, true).draw();
+                table.columns(8).search('not-null', true, true).draw();
             });
 
             $('#filterWithoutDates').on('click', function() {
                 table.columns().search(''); // Clear previous filters
-                table.columns(6).search('^$|^\\s*$', true, true)
-                    .columns(7).search('^$|^\\s*$', true, true)
+                table.columns(7).search('^$|^\\s*$', true, true)
+                    .columns(8).search('^$|^\\s*$', true, true)
                     .draw();
             });
             });
@@ -356,6 +371,29 @@
             });
         }
 
+        function showRemoveDate(cvId, dateType) {
+            Swal.fire({
+                title: `Remove ${dateType} Date?`,
+                text: dateType === 'DCP'
+                    ? 'This will remove both DCP and DCR dates from this voucher and its connected invoices.'
+                    : 'This will remove the DCR date from this voucher and its connected invoices. The DCP date will be kept.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, remove',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (dateType === 'DCP') {
+                        updateDCPDate(cvId, null);
+                    } else {
+                        updateDCRDate(cvId, null);
+                    }
+                }
+            });
+        }
+
         function updateDCPDate(cvId, dcpDate) {
             $.ajax({
                 url: '@Url.Action("UpdateDCPDate", "Disbursement", new { area = "Filpride" })',
@@ -368,13 +406,13 @@
                 success: function(response) {
                     if (response.success) {
                         $('#paginatedTable').DataTable().ajax.reload();
-                        Swal.fire('Success', 'DCP date added successfully', 'success');
+                        Swal.fire('Success', dcpDate === null ? 'DCP and DCR dates removed successfully' : 'DCP date saved successfully', 'success');
                     } else {
-                        Swal.fire('Error', response.message || 'Error adding DCP date', 'error');
+                        Swal.fire('Error', response.message || 'Error saving DCP date', 'error');
                     }
                 },
                 error: function() {
-                    Swal.fire('Error', 'Error adding DCP date', 'error');
+                    Swal.fire('Error', 'Error saving DCP date', 'error');
                 }
             });
         }
@@ -391,13 +429,13 @@
                 success: function(response) {
                     if (response.success) {
                         $('#paginatedTable').DataTable().ajax.reload();
-                        Swal.fire('Success', 'DCR date added successfully', 'success');
+                        Swal.fire('Success', dcrDate === null ? 'DCR date removed successfully' : 'DCR date saved successfully', 'success');
                     } else {
-                        Swal.fire('Error', response.message || 'Error adding DCR date', 'error');
+                        Swal.fire('Error', response.message || 'Error saving DCR date', 'error');
                     }
                 },
                 error: function() {
-                    Swal.fire('Error', 'Error adding DCR date', 'error');
+                    Swal.fire('Error', 'Error saving DCR date', 'error');
                 }
             });
         }
