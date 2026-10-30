@@ -192,6 +192,8 @@ namespace IBS.Services
                 return null;
             }
 
+            await EnsurePeriodOpenAsync(type, model.Date, referenceNo, cancellationToken);
+
             return model;
         }
 
@@ -210,6 +212,8 @@ namespace IBS.Services
                     {
                         throw new InvalidOperationException("CV Header not found.");
                     }
+
+                    await EnsurePeriodOpenAsync("CV", header.Date, model.ReferenceNo, cancellationToken);
 
                     var finalParticulars = !string.IsNullOrWhiteSpace(model.PaymentFor)
                         ? $"{model.Particulars}{_paymentForSeparator}{model.PaymentFor}"
@@ -257,6 +261,8 @@ namespace IBS.Services
                                 continue;
                             }
 
+                            await EnsurePeriodOpenAsync("CV", paymentHeader.Date, paymentHeader.CheckVoucherHeaderNo!, cancellationToken);
+
                             paymentHeader.Particulars = newPaymentParticulars;
                             StampEdited(paymentHeader, userFullName);
 
@@ -273,6 +279,8 @@ namespace IBS.Services
                         throw new InvalidOperationException("JV Header not found.");
                     }
 
+                    await EnsurePeriodOpenAsync("JV", header.Date, model.ReferenceNo, cancellationToken);
+
                     header.Particulars = model.Particulars;
                     StampEdited(header, userFullName);
 
@@ -287,6 +295,8 @@ namespace IBS.Services
                         throw new InvalidOperationException("SI Header not found.");
                     }
 
+                    await EnsurePeriodOpenAsync("SI", header.TransactionDate, model.ReferenceNo, cancellationToken);
+
                     header.Remarks = model.Particulars;
                     StampEdited(header, userFullName);
 
@@ -300,6 +310,8 @@ namespace IBS.Services
                         throw new InvalidOperationException("SV Header not found.");
                     }
 
+                    await EnsurePeriodOpenAsync("SV", header.Period, model.ReferenceNo, cancellationToken);
+
                     header.Instructions = model.Particulars;
                     StampEdited(header, userFullName);
 
@@ -312,6 +324,8 @@ namespace IBS.Services
                     {
                         throw new InvalidOperationException("CR Header not found.");
                     }
+
+                    await EnsurePeriodOpenAsync("CR", header.TransactionDate, model.ReferenceNo, cancellationToken);
 
                     header.Remarks = model.Particulars;
                     StampEdited(header, userFullName);
@@ -336,6 +350,25 @@ namespace IBS.Services
                 var safeRefNo = model.ReferenceNo.Replace("\r", string.Empty).Replace("\n", string.Empty);
                 logger.LogError(ex, "Error updating transaction via Master Control. Ref: {Ref}", safeRefNo);
                 throw;
+            }
+        }
+
+        private async Task EnsurePeriodOpenAsync(string type, DateOnly date, string referenceNo, CancellationToken cancellationToken)
+        {
+            var module = type switch
+            {
+                "CV" => Module.CheckVoucher,
+                "JV" => Module.JournalVoucher,
+                "SI" => Module.SalesInvoice,
+                "SV" => Module.ServiceInvoice,
+                "CR" => Module.CollectionReceipt,
+                _ => throw new ArgumentException("Invalid transaction type.", nameof(type))
+            };
+
+            if (await unitOfWork.IsPeriodPostedAsync(module, date, cancellationToken))
+            {
+                throw new ArgumentException(
+                    $"Cannot modify {referenceNo} because the period {date:MMM yyyy} is locked. Reopen the period before modifying this transaction.");
             }
         }
 

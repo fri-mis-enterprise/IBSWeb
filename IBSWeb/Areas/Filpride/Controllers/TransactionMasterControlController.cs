@@ -61,15 +61,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(string referenceNo, string type, CancellationToken cancellationToken)
         {
-
-            var model = await transactionMasterControlService.GetTransactionDetailsAsync(referenceNo, type, cancellationToken);
-
-            if (model == null)
+            try
             {
-                return NotFound();
-            }
+                var model = await transactionMasterControlService.GetTransactionDetailsAsync(referenceNo, type, cancellationToken);
 
-            return View(model);
+                if (model == null)
+                {
+                    return NotFound();
+                }
+
+                return View(model);
+            }
+            catch (ArgumentException ex)
+            {
+                TempData["error"] = ex.Message;
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         [Authorize(Roles = "Admin")]
@@ -89,6 +96,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 TempData["success"] = "Transaction updated successfully across all records.";
                 return RedirectToAction(nameof(Index));
+            }
+            catch (ArgumentException ex)
+            {
+                TempData["error"] = ex.Message;
+                return View(model);
             }
             catch (Exception ex)
             {
