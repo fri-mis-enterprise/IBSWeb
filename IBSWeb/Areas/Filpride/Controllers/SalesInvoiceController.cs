@@ -925,6 +925,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
             worksheet.Cells["AJ1"].Value = "VoidedDate";
             worksheet.Cells["AK1"].Value = "Customer Type";
             worksheet.Cells["AL1"].Value = "Customer Name";
+            worksheet.Cells["AM1"].Value = "CustomerAddress";
+            worksheet.Cells["AN1"].Value = "CustomerTin";
+            worksheet.Cells["AO1"].Value = "PaymentStatus";
+            worksheet.Cells["AP1"].Value = "PurchaseOrderId";
+            worksheet.Cells["AQ1"].Value = "ReceivingReportId";
+            worksheet.Cells["AR1"].Value = "DeliveryReceiptId";
+            worksheet.Cells["AS1"].Value = "CustomerOrderSlipId";
+            worksheet.Cells["AT1"].Value = "Terms";
+            worksheet.Cells["AU1"].Value = "DebitAmount";
+            worksheet.Cells["AV1"].Value = "CreditAmount";
+            worksheet.Cells["AW1"].Value = "CwtPercent";
+            worksheet.Cells["AX1"].Value = "CwVatPercent";
 
             int row = 2;
 
@@ -970,6 +982,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 36].Value = item.VoidedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
                 worksheet.Cells[row, 37].Value = item.Customer?.CustomerType;
                 worksheet.Cells[row, 38].Value = item.CustomerOrderSlip != null ? item.CustomerOrderSlip.CustomerName : item.Customer?.CustomerName;
+                worksheet.Cells[row, 39].Value = item.CustomerAddress;
+                worksheet.Cells[row, 40].Value = item.CustomerTin;
+                worksheet.Cells[row, 41].Value = item.PaymentStatus;
+                worksheet.Cells[row, 42].Value = item.PurchaseOrderId;
+                worksheet.Cells[row, 43].Value = item.ReceivingReportId;
+                worksheet.Cells[row, 44].Value = item.DeliveryReceiptId;
+                worksheet.Cells[row, 45].Value = item.CustomerOrderSlipId;
+                worksheet.Cells[row, 46].Value = item.Terms;
+                worksheet.Cells[row, 47].Value = item.DebitAmount;
+                worksheet.Cells[row, 48].Value = item.CreditAmount;
+                worksheet.Cells[row, 49].Value = item.CwtPercent;
+                worksheet.Cells[row, 50].Value = item.CwVatPercent;
 
                 row++;
             }

@@ -3594,6 +3594,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet3.Cells["AE1"].Value = "CanceledDate";
                 worksheet3.Cells["AF1"].Value = "VoidedBy";
                 worksheet3.Cells["AG1"].Value = "VoidedDate";
+                worksheet3.Cells["AH1"].Value = "CustomerAddress";
+                worksheet3.Cells["AI1"].Value = "CustomerTin";
+                worksheet3.Cells["AJ1"].Value = "PaymentStatus";
+                worksheet3.Cells["AK1"].Value = "PurchaseOrderId";
+                worksheet3.Cells["AL1"].Value = "ReceivingReportId";
+                worksheet3.Cells["AM1"].Value = "DeliveryReceiptId";
+                worksheet3.Cells["AN1"].Value = "CustomerOrderSlipId";
+                worksheet3.Cells["AO1"].Value = "Terms";
+                worksheet3.Cells["AP1"].Value = "DebitAmount";
+                worksheet3.Cells["AQ1"].Value = "CreditAmount";
+                worksheet3.Cells["AR1"].Value = "CwtPercent";
+                worksheet3.Cells["AS1"].Value = "CwVatPercent";
 
                 #endregion -- Sales Invoice Table Header --
 
@@ -3628,6 +3640,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet4.Cells["Y1"].Value = "CanceledDate";
                 worksheet4.Cells["Z1"].Value = "VoidedBy";
                 worksheet4.Cells["AA1"].Value = "VoidedDate";
+                worksheet4.Cells["AB1"].Value = "CustomerName";
+                worksheet4.Cells["AC1"].Value = "CustomerAddress";
+                worksheet4.Cells["AD1"].Value = "CustomerTin";
+                worksheet4.Cells["AE1"].Value = "CustomerBusinessStyle";
+                worksheet4.Cells["AF1"].Value = "ServiceName";
+                worksheet4.Cells["AG1"].Value = "ServicePercent";
+                worksheet4.Cells["AH1"].Value = "PaymentStatus";
+                worksheet4.Cells["AI1"].Value = "CwtBalance";
+                worksheet4.Cells["AJ1"].Value = "CwVatBalance";
+                worksheet4.Cells["AK1"].Value = "CwtAmountPaid";
+                worksheet4.Cells["AL1"].Value = "CwVatAmountPaid";
+                worksheet4.Cells["AM1"].Value = "DebitAmount";
+                worksheet4.Cells["AN1"].Value = "CreditAmount";
+                worksheet4.Cells["AO1"].Value = "VatType";
+                worksheet4.Cells["AP1"].Value = "HasEwt";
+                worksheet4.Cells["AQ1"].Value = "HasWvat";
+                worksheet4.Cells["AR1"].Value = "DeliveryReceiptId";
 
                 #endregion -- Service Invoice Table Header --
 
@@ -3678,6 +3707,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["AO1"].Value = "MultipleSV";
                 worksheet.Cells["AP1"].Value = "MultipleSVId";
                 worksheet.Cells["AQ1"].Value = "SVMultipleAmount";
+                worksheet.Cells["AR1"].Value = "BankId";
+                worksheet.Cells["AS1"].Value = "BankAccountName";
+                worksheet.Cells["AT1"].Value = "BankAccountNumber";
+                worksheet.Cells["AU1"].Value = "EwtPeriodFrom";
+                worksheet.Cells["AV1"].Value = "EwtPeriodTo";
+                worksheet.Cells["AW1"].Value = "EwtReference1";
+                worksheet.Cells["AX1"].Value = "EwtReference2";
+                worksheet.Cells["AY1"].Value = "CwVatPeriodFrom";
+                worksheet.Cells["AZ1"].Value = "CwVatPeriodTo";
+                worksheet.Cells["BA1"].Value = "CwVatReference1";
+                worksheet.Cells["BB1"].Value = "CwVatReference2";
+                worksheet.Cells["BC1"].Value = "F2306FileName";
+                worksheet.Cells["BD1"].Value = "F2307FileName";
+                worksheet.Cells["BE1"].Value = "Status";
+                worksheet.Cells["BF1"].Value = "DepositedDate";
+                worksheet.Cells["BG1"].Value = "ClearedDate";
+                worksheet.Cells["BH1"].Value = "BatchNumber";
 
                 #endregion -- Collection Receipt Table Header --
 
@@ -3736,6 +3782,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[row, 42].Value = string.Join(", ", item.MultipleSVId);
                         worksheet.Cells[row, 43].Value = string.Join(", ", item.SVMultipleAmount?.Select(amount => amount.ToString(SD.Four_Decimal_Format)) ?? Array.Empty<string>());
                     }
+                    worksheet.Cells[row, 44].Value = item.BankId;
+                    worksheet.Cells[row, 45].Value = item.BankAccountName;
+                    worksheet.Cells[row, 46].Value = item.BankAccountNumber;
+                    worksheet.Cells[row, 47].Value = item.EwtPeriodFrom?.ToString("yyyy-MM-dd") ?? null;
+                    worksheet.Cells[row, 48].Value = item.EwtPeriodTo?.ToString("yyyy-MM-dd") ?? null;
+                    worksheet.Cells[row, 49].Value = item.EwtReference1;
+                    worksheet.Cells[row, 50].Value = item.EwtReference2;
+                    worksheet.Cells[row, 51].Value = item.CwVatPeriodFrom?.ToString("yyyy-MM-dd") ?? null;
+                    worksheet.Cells[row, 52].Value = item.CwVatPeriodTo?.ToString("yyyy-MM-dd") ?? null;
+                    worksheet.Cells[row, 53].Value = item.CwVatReference1;
+                    worksheet.Cells[row, 54].Value = item.CwVatReference2;
+                    worksheet.Cells[row, 55].Value = item.F2306FileName;
+                    worksheet.Cells[row, 56].Value = item.F2307FileName;
+                    worksheet.Cells[row, 57].Value = item.Status;
+                    worksheet.Cells[row, 58].Value = item.DepositedDate?.ToString("yyyy-MM-dd") ?? null;
+                    worksheet.Cells[row, 59].Value = item.ClearedDate?.ToString("yyyy-MM-dd") ?? null;
+                    worksheet.Cells[row, 60].Value = item.BatchNumber;
 
                     row++;
                 }
@@ -3792,6 +3855,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet3.Cells[siRow, 31].Value = item.SalesInvoice.CanceledDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
                     worksheet3.Cells[siRow, 32].Value = item.SalesInvoice.VoidedBy;
                     worksheet3.Cells[siRow, 33].Value = item.SalesInvoice.VoidedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                    worksheet3.Cells[siRow, 34].Value = item.SalesInvoice.CustomerAddress;
+                    worksheet3.Cells[siRow, 35].Value = item.SalesInvoice.CustomerTin;
+                    worksheet3.Cells[siRow, 36].Value = item.SalesInvoice.PaymentStatus;
+                    worksheet3.Cells[siRow, 37].Value = item.SalesInvoice.PurchaseOrderId;
+                    worksheet3.Cells[siRow, 38].Value = item.SalesInvoice.ReceivingReportId;
+                    worksheet3.Cells[siRow, 39].Value = item.SalesInvoice.DeliveryReceiptId;
+                    worksheet3.Cells[siRow, 40].Value = item.SalesInvoice.CustomerOrderSlipId;
+                    worksheet3.Cells[siRow, 41].Value = item.SalesInvoice.Terms;
+                    worksheet3.Cells[siRow, 42].Value = item.SalesInvoice.DebitAmount;
+                    worksheet3.Cells[siRow, 43].Value = item.SalesInvoice.CreditAmount;
+                    worksheet3.Cells[siRow, 44].Value = item.SalesInvoice.CwtPercent;
+                    worksheet3.Cells[siRow, 45].Value = item.SalesInvoice.CwVatPercent;
 
                     siRow++;
                 }
@@ -3854,6 +3929,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet4.Cells[svRow, 25].Value = serviceInvoice.CanceledDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
                         worksheet4.Cells[svRow, 26].Value = serviceInvoice.VoidedBy;
                         worksheet4.Cells[svRow, 27].Value = serviceInvoice.VoidedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                        worksheet4.Cells[svRow, 28].Value = serviceInvoice.CustomerName;
+                        worksheet4.Cells[svRow, 29].Value = serviceInvoice.CustomerAddress;
+                        worksheet4.Cells[svRow, 30].Value = serviceInvoice.CustomerTin;
+                        worksheet4.Cells[svRow, 31].Value = serviceInvoice.CustomerBusinessStyle;
+                        worksheet4.Cells[svRow, 32].Value = serviceInvoice.ServiceName;
+                        worksheet4.Cells[svRow, 33].Value = serviceInvoice.ServicePercent;
+                        worksheet4.Cells[svRow, 34].Value = serviceInvoice.PaymentStatus;
+                        worksheet4.Cells[svRow, 35].Value = serviceInvoice.CwtBalance;
+                        worksheet4.Cells[svRow, 36].Value = serviceInvoice.CwVatBalance;
+                        worksheet4.Cells[svRow, 37].Value = serviceInvoice.CwtAmountPaid;
+                        worksheet4.Cells[svRow, 38].Value = serviceInvoice.CwVatAmountPaid;
+                        worksheet4.Cells[svRow, 39].Value = serviceInvoice.DebitAmount;
+                        worksheet4.Cells[svRow, 40].Value = serviceInvoice.CreditAmount;
+                        worksheet4.Cells[svRow, 41].Value = serviceInvoice.VatType;
+                        worksheet4.Cells[svRow, 42].Value = serviceInvoice.HasEwt;
+                        worksheet4.Cells[svRow, 43].Value = serviceInvoice.HasWvat;
+                        worksheet4.Cells[svRow, 44].Value = serviceInvoice.DeliveryReceiptId;
 
                         svRow++;
                     }
@@ -3907,6 +3999,18 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet3.Cells[siRow, 31].Value = item.CanceledDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
                     worksheet3.Cells[siRow, 32].Value = item.VoidedBy;
                     worksheet3.Cells[siRow, 33].Value = item.VoidedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                    worksheet3.Cells[siRow, 34].Value = item.CustomerAddress;
+                    worksheet3.Cells[siRow, 35].Value = item.CustomerTin;
+                    worksheet3.Cells[siRow, 36].Value = item.PaymentStatus;
+                    worksheet3.Cells[siRow, 37].Value = item.PurchaseOrderId;
+                    worksheet3.Cells[siRow, 38].Value = item.ReceivingReportId;
+                    worksheet3.Cells[siRow, 39].Value = item.DeliveryReceiptId;
+                    worksheet3.Cells[siRow, 40].Value = item.CustomerOrderSlipId;
+                    worksheet3.Cells[siRow, 41].Value = item.Terms;
+                    worksheet3.Cells[siRow, 42].Value = item.DebitAmount;
+                    worksheet3.Cells[siRow, 43].Value = item.CreditAmount;
+                    worksheet3.Cells[siRow, 44].Value = item.CwtPercent;
+                    worksheet3.Cells[siRow, 45].Value = item.CwVatPercent;
 
                     siRow++;
                 }

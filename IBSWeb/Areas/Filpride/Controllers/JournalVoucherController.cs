@@ -1048,6 +1048,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet3.Cells["X1"].Value = "CanceledDate";
                 worksheet3.Cells["Y1"].Value = "VoidedBy";
                 worksheet3.Cells["Z1"].Value = "VoidedDate";
+                worksheet3.Cells["AA1"].Value = "SupplierName";
+                worksheet3.Cells["AB1"].Value = "SupplierAddress";
+                worksheet3.Cells["AC1"].Value = "SupplierTin";
+                worksheet3.Cells["AD1"].Value = "ProductName";
+                worksheet3.Cells["AE1"].Value = "SupplierSalesOrderNo";
+                worksheet3.Cells["AF1"].Value = "Status";
+                worksheet3.Cells["AG1"].Value = "IsSubPo";
+                worksheet3.Cells["AH1"].Value = "SubPoSeries";
+                worksheet3.Cells["AI1"].Value = "CustomerId";
+                worksheet3.Cells["AJ1"].Value = "OldPoNo";
+                worksheet3.Cells["AK1"].Value = "TriggerDate";
+                worksheet3.Cells["AL1"].Value = "UnTriggeredQuantity";
+                worksheet3.Cells["AM1"].Value = "PickUpPointId";
+                worksheet3.Cells["AN1"].Value = "VatType";
+                worksheet3.Cells["AO1"].Value = "TaxType";
+                worksheet3.Cells["AP1"].Value = "TypeOfPurchase";
 
                 #endregion -- Purchase Order Table Header --
 
@@ -1085,6 +1101,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet4.Cells["AB1"].Value = "CanceledDate";
                 worksheet4.Cells["AC1"].Value = "VoidedBy";
                 worksheet4.Cells["AD1"].Value = "VoidedDate";
+                worksheet4.Cells["AE1"].Value = "SupplierDrNo";
+                worksheet4.Cells["AF1"].Value = "WithdrawalCertificate";
+                worksheet4.Cells["AG1"].Value = "AuthorityToLoadNo";
+                worksheet4.Cells["AH1"].Value = "DeliveryReceiptId";
+                worksheet4.Cells["AI1"].Value = "Status";
+                worksheet4.Cells["AJ1"].Value = "IsCostUpdated";
+                worksheet4.Cells["AK1"].Value = "OldRRNo";
+                worksheet4.Cells["AL1"].Value = "CostBasedOnSoa";
+                worksheet4.Cells["AM1"].Value = "TaxPercentage";
 
                 #endregion -- Receiving Report Table Header --
 
@@ -1131,6 +1156,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet5.Cells["AK1"].Value = "CanceledDate";
                 worksheet5.Cells["AL1"].Value = "VoidedBy";
                 worksheet5.Cells["AM1"].Value = "VoidedDate";
+                worksheet5.Cells["AN1"].Value = "OldCvNo";
+                worksheet5.Cells["AO1"].Value = "SupplierName";
+                worksheet5.Cells["AP1"].Value = "BankAccountName";
+                worksheet5.Cells["AQ1"].Value = "BankAccountNumber";
+                worksheet5.Cells["AR1"].Value = "Status";
+                worksheet5.Cells["AS1"].Value = "IsDocumentedByOtherCompany";
+                worksheet5.Cells["AT1"].Value = "DocumentedByCompanyName";
+                worksheet5.Cells["AU1"].Value = "SupportingFileSavedFileName";
+                worksheet5.Cells["AV1"].Value = "SupportingFileSavedUrl";
+                worksheet5.Cells["AW1"].Value = "DcpDate";
+                worksheet5.Cells["AX1"].Value = "DcrDate";
+                worksheet5.Cells["AY1"].Value = "IsAdvances";
+                worksheet5.Cells["AZ1"].Value = "IsEmployeeAdvance";
+                worksheet5.Cells["BA1"].Value = "Address";
+                worksheet5.Cells["BB1"].Value = "Tin";
+                worksheet5.Cells["BC1"].Value = "VatType";
+                worksheet5.Cells["BD1"].Value = "TaxType";
+                worksheet5.Cells["BE1"].Value = "TaxPercent";
+                worksheet5.Cells["BF1"].Value = "IsPayroll";
+                worksheet5.Cells["BG1"].Value = "LiquidationDate";
+                worksheet5.Cells["BH1"].Value = "ApprovedBy";
+                worksheet5.Cells["BI1"].Value = "ApprovedDate";
 
                 #endregion -- Check Voucher Header Table Header --
 
@@ -1145,6 +1192,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet6.Cells["E1"].Value = "Credit";
                 worksheet6.Cells["F1"].Value = "CVHeaderId";
                 worksheet6.Cells["G1"].Value = "OriginalDocumentId";
+                worksheet6.Cells["H1"].Value = "Amount";
+                worksheet6.Cells["I1"].Value = "AmountPaid";
+                worksheet6.Cells["J1"].Value = "SupplierId";
+                worksheet6.Cells["K1"].Value = "EwtPercent";
+                worksheet6.Cells["L1"].Value = "IsUserSelected";
+                worksheet6.Cells["M1"].Value = "IsVatable";
+                worksheet6.Cells["N1"].Value = "IsDisplayEntry";
+                worksheet6.Cells["O1"].Value = "SubAccountType";
+                worksheet6.Cells["P1"].Value = "SubAccountId";
+                worksheet6.Cells["Q1"].Value = "SubAccountName";
 
                 #endregion -- Check Voucher Details Table Header --
 
@@ -1194,6 +1251,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["Q1"].Value = "CanceledDate";
                 worksheet.Cells["R1"].Value = "VoidedBy";
                 worksheet.Cells["S1"].Value = "VoidedDate";
+                worksheet.Cells["T1"].Value = "Status";
+                worksheet.Cells["U1"].Value = "JvType";
+                worksheet.Cells["V1"].Value = "ApprovedBy";
+                worksheet.Cells["W1"].Value = "ApprovedDate";
+                worksheet.Cells["X1"].Value = "Payee";
+                worksheet.Cells["Y1"].Value = "AutoReverseNextMonth";
 
                 #endregion -- Journal Voucher Header Table Header --
 
@@ -1208,6 +1271,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet2.Cells["E1"].Value = "Credit";
                 worksheet2.Cells["F1"].Value = "JVHeaderId";
                 worksheet2.Cells["G1"].Value = "OriginalDocumentId";
+                worksheet2.Cells["H1"].Value = "SubAccountType";
+                worksheet2.Cells["I1"].Value = "SubAccountId";
+                worksheet2.Cells["J1"].Value = "SubAccountName";
 
                 #endregion -- Journal Voucher Details Table Header --
 
@@ -1236,6 +1302,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 17].Value = item.CanceledDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
                     worksheet.Cells[row, 18].Value = item.VoidedBy;
                     worksheet.Cells[row, 19].Value = item.VoidedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                    worksheet.Cells[row, 20].Value = item.Status;
+                    worksheet.Cells[row, 21].Value = item.JvType;
+                    worksheet.Cells[row, 22].Value = item.ApprovedBy;
+                    worksheet.Cells[row, 23].Value = item.ApprovedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                    worksheet.Cells[row, 24].Value = item.Payee;
+                    worksheet.Cells[row, 25].Value = item.AutoReverseNextMonth;
 
                     row++;
                 }
@@ -1303,6 +1375,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet5.Cells[cvhRow, 37].Value = item.CheckVoucherHeader.CanceledDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
                     worksheet5.Cells[cvhRow, 38].Value = item.CheckVoucherHeader.VoidedBy;
                     worksheet5.Cells[cvhRow, 39].Value = item.CheckVoucherHeader.VoidedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                    worksheet5.Cells[cvhRow, 40].Value = item.CheckVoucherHeader.OldCvNo;
+                    worksheet5.Cells[cvhRow, 41].Value = item.CheckVoucherHeader.SupplierName;
+                    worksheet5.Cells[cvhRow, 42].Value = item.CheckVoucherHeader.BankAccountName;
+                    worksheet5.Cells[cvhRow, 43].Value = item.CheckVoucherHeader.BankAccountNumber;
+                    worksheet5.Cells[cvhRow, 44].Value = item.CheckVoucherHeader.Status;
+                    worksheet5.Cells[cvhRow, 45].Value = item.CheckVoucherHeader.IsDocumentedByOtherCompany;
+                    worksheet5.Cells[cvhRow, 46].Value = item.CheckVoucherHeader.DocumentedByCompanyName;
+                    worksheet5.Cells[cvhRow, 47].Value = item.CheckVoucherHeader.SupportingFileSavedFileName;
+                    worksheet5.Cells[cvhRow, 48].Value = item.CheckVoucherHeader.SupportingFileSavedUrl;
+                    worksheet5.Cells[cvhRow, 49].Value = item.CheckVoucherHeader.DcpDate?.ToString("yyyy-MM-dd") ?? null;
+                    worksheet5.Cells[cvhRow, 50].Value = item.CheckVoucherHeader.DcrDate?.ToString("yyyy-MM-dd") ?? null;
+                    worksheet5.Cells[cvhRow, 51].Value = item.CheckVoucherHeader.IsAdvances;
+                    worksheet5.Cells[cvhRow, 52].Value = item.CheckVoucherHeader.IsEmployeeAdvance;
+                    worksheet5.Cells[cvhRow, 53].Value = item.CheckVoucherHeader.Address;
+                    worksheet5.Cells[cvhRow, 54].Value = item.CheckVoucherHeader.Tin;
+                    worksheet5.Cells[cvhRow, 55].Value = item.CheckVoucherHeader.VatType;
+                    worksheet5.Cells[cvhRow, 56].Value = item.CheckVoucherHeader.TaxType;
+                    worksheet5.Cells[cvhRow, 57].Value = item.CheckVoucherHeader.TaxPercent;
+                    worksheet5.Cells[cvhRow, 58].Value = item.CheckVoucherHeader.IsPayroll;
+                    worksheet5.Cells[cvhRow, 59].Value = item.CheckVoucherHeader.LiquidationDate?.ToString("yyyy-MM-dd") ?? null;
+                    worksheet5.Cells[cvhRow, 60].Value = item.CheckVoucherHeader.ApprovedBy;
+                    worksheet5.Cells[cvhRow, 61].Value = item.CheckVoucherHeader.ApprovedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
 
                     cvhRow++;
                 }
@@ -1390,6 +1484,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet5.Cells[cvhRow, 37].Value = item.CanceledDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
                     worksheet5.Cells[cvhRow, 38].Value = item.VoidedBy;
                     worksheet5.Cells[cvhRow, 39].Value = item.VoidedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                    worksheet5.Cells[cvhRow, 40].Value = item.OldCvNo;
+                    worksheet5.Cells[cvhRow, 41].Value = item.SupplierName;
+                    worksheet5.Cells[cvhRow, 42].Value = item.BankAccountName;
+                    worksheet5.Cells[cvhRow, 43].Value = item.BankAccountNumber;
+                    worksheet5.Cells[cvhRow, 44].Value = item.Status;
+                    worksheet5.Cells[cvhRow, 45].Value = item.IsDocumentedByOtherCompany;
+                    worksheet5.Cells[cvhRow, 46].Value = item.DocumentedByCompanyName;
+                    worksheet5.Cells[cvhRow, 47].Value = item.SupportingFileSavedFileName;
+                    worksheet5.Cells[cvhRow, 48].Value = item.SupportingFileSavedUrl;
+                    worksheet5.Cells[cvhRow, 49].Value = item.DcpDate?.ToString("yyyy-MM-dd") ?? null;
+                    worksheet5.Cells[cvhRow, 50].Value = item.DcrDate?.ToString("yyyy-MM-dd") ?? null;
+                    worksheet5.Cells[cvhRow, 51].Value = item.IsAdvances;
+                    worksheet5.Cells[cvhRow, 52].Value = item.IsEmployeeAdvance;
+                    worksheet5.Cells[cvhRow, 53].Value = item.Address;
+                    worksheet5.Cells[cvhRow, 54].Value = item.Tin;
+                    worksheet5.Cells[cvhRow, 55].Value = item.VatType;
+                    worksheet5.Cells[cvhRow, 56].Value = item.TaxType;
+                    worksheet5.Cells[cvhRow, 57].Value = item.TaxPercent;
+                    worksheet5.Cells[cvhRow, 58].Value = item.IsPayroll;
+                    worksheet5.Cells[cvhRow, 59].Value = item.LiquidationDate?.ToString("yyyy-MM-dd") ?? null;
+                    worksheet5.Cells[cvhRow, 60].Value = item.ApprovedBy;
+                    worksheet5.Cells[cvhRow, 61].Value = item.ApprovedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
 
                     cvhRow++;
                 }
@@ -1439,6 +1555,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet2.Cells[jvdRow, 5].Value = item.Credit;
                     worksheet2.Cells[jvdRow, 6].Value = item.JournalVoucherHeaderId;
                     worksheet2.Cells[jvdRow, 7].Value = item.JournalVoucherDetailId;
+                    worksheet2.Cells[jvdRow, 8].Value = item.SubAccountType?.ToString();
+                    worksheet2.Cells[jvdRow, 9].Value = item.SubAccountId;
+                    worksheet2.Cells[jvdRow, 10].Value = item.SubAccountName;
 
                     jvdRow++;
                 }
@@ -1469,6 +1588,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet6.Cells[cvdRow, 11].Value = item.EwtPercent;
                     worksheet6.Cells[cvdRow, 12].Value = item.IsUserSelected;
                     worksheet6.Cells[cvdRow, 13].Value = item.IsVatable;
+                    worksheet6.Cells[cvdRow, 14].Value = item.IsDisplayEntry;
+                    worksheet6.Cells[cvdRow, 15].Value = item.SubAccountType?.ToString();
+                    worksheet6.Cells[cvdRow, 16].Value = item.SubAccountId;
+                    worksheet6.Cells[cvdRow, 17].Value = item.SubAccountName;
 
                     cvdRow++;
                 }
@@ -1497,6 +1620,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet6.Cells[cvdRow, 11].Value = item.EwtPercent;
                     worksheet6.Cells[cvdRow, 12].Value = item.IsUserSelected;
                     worksheet6.Cells[cvdRow, 13].Value = item.IsVatable;
+                    worksheet6.Cells[cvdRow, 14].Value = item.IsDisplayEntry;
+                    worksheet6.Cells[cvdRow, 15].Value = item.SubAccountType?.ToString();
+                    worksheet6.Cells[cvdRow, 16].Value = item.SubAccountId;
+                    worksheet6.Cells[cvdRow, 17].Value = item.SubAccountName;
 
                     cvdRow++;
                 }
@@ -1554,6 +1681,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet4.Cells[rrRow, 28].Value = item.CanceledDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
                     worksheet4.Cells[rrRow, 29].Value = item.VoidedBy;
                     worksheet4.Cells[rrRow, 30].Value = item.VoidedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                    worksheet4.Cells[rrRow, 31].Value = item.SupplierDrNo;
+                    worksheet4.Cells[rrRow, 32].Value = item.WithdrawalCertificate;
+                    worksheet4.Cells[rrRow, 33].Value = item.AuthorityToLoadNo;
+                    worksheet4.Cells[rrRow, 34].Value = item.DeliveryReceiptId;
+                    worksheet4.Cells[rrRow, 35].Value = item.Status;
+                    worksheet4.Cells[rrRow, 36].Value = item.IsCostUpdated;
+                    worksheet4.Cells[rrRow, 37].Value = item.OldRRNo;
+                    worksheet4.Cells[rrRow, 38].Value = item.CostBasedOnSoa;
+                    worksheet4.Cells[rrRow, 39].Value = item.TaxPercentage;
 
                     rrRow++;
                 }
@@ -1604,6 +1740,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet3.Cells[poRow, 24].Value = item.CanceledDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
                     worksheet3.Cells[poRow, 25].Value = item.VoidedBy;
                     worksheet3.Cells[poRow, 26].Value = item.VoidedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                    worksheet3.Cells[poRow, 27].Value = item.SupplierName;
+                    worksheet3.Cells[poRow, 28].Value = item.SupplierAddress;
+                    worksheet3.Cells[poRow, 29].Value = item.SupplierTin;
+                    worksheet3.Cells[poRow, 30].Value = item.ProductName;
+                    worksheet3.Cells[poRow, 31].Value = item.SupplierSalesOrderNo;
+                    worksheet3.Cells[poRow, 32].Value = item.Status;
+                    worksheet3.Cells[poRow, 33].Value = item.IsSubPo;
+                    worksheet3.Cells[poRow, 34].Value = item.SubPoSeries;
+                    worksheet3.Cells[poRow, 35].Value = item.CustomerId;
+                    worksheet3.Cells[poRow, 36].Value = item.OldPoNo;
+                    worksheet3.Cells[poRow, 37].Value = item.TriggerDate.ToString("yyyy-MM-dd");
+                    worksheet3.Cells[poRow, 38].Value = item.UnTriggeredQuantity;
+                    worksheet3.Cells[poRow, 39].Value = item.PickUpPointId;
+                    worksheet3.Cells[poRow, 40].Value = item.VatType;
+                    worksheet3.Cells[poRow, 41].Value = item.TaxType;
+                    worksheet3.Cells[poRow, 42].Value = item.TypeOfPurchase;
 
                     poRow++;
                 }

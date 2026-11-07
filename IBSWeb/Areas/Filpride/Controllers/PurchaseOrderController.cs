@@ -713,6 +713,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
             worksheet.Cells["X1"].Value = "CanceledDate";
             worksheet.Cells["Y1"].Value = "VoidedBy";
             worksheet.Cells["Z1"].Value = "VoidedDate";
+            worksheet.Cells["AA1"].Value = "SupplierName";
+            worksheet.Cells["AB1"].Value = "SupplierAddress";
+            worksheet.Cells["AC1"].Value = "SupplierTin";
+            worksheet.Cells["AD1"].Value = "ProductName";
+            worksheet.Cells["AE1"].Value = "SupplierSalesOrderNo";
+            worksheet.Cells["AF1"].Value = "Status";
+            worksheet.Cells["AG1"].Value = "IsSubPo";
+            worksheet.Cells["AH1"].Value = "SubPoSeries";
+            worksheet.Cells["AI1"].Value = "CustomerId";
+            worksheet.Cells["AJ1"].Value = "OldPoNo";
+            worksheet.Cells["AK1"].Value = "TriggerDate";
+            worksheet.Cells["AL1"].Value = "UnTriggeredQuantity";
+            worksheet.Cells["AM1"].Value = "PickUpPointId";
+            worksheet.Cells["AN1"].Value = "VatType";
+            worksheet.Cells["AO1"].Value = "TaxType";
+            worksheet.Cells["AP1"].Value = "TypeOfPurchase";
 
             int row = 2;
 
@@ -744,6 +760,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 24].Value = item.CanceledDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
                 worksheet.Cells[row, 25].Value = item.VoidedBy;
                 worksheet.Cells[row, 26].Value = item.VoidedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                worksheet.Cells[row, 27].Value = item.SupplierName;
+                worksheet.Cells[row, 28].Value = item.SupplierAddress;
+                worksheet.Cells[row, 29].Value = item.SupplierTin;
+                worksheet.Cells[row, 30].Value = item.ProductName;
+                worksheet.Cells[row, 31].Value = item.SupplierSalesOrderNo;
+                worksheet.Cells[row, 32].Value = item.Status;
+                worksheet.Cells[row, 33].Value = item.IsSubPo;
+                worksheet.Cells[row, 34].Value = item.SubPoSeries;
+                worksheet.Cells[row, 35].Value = item.CustomerId;
+                worksheet.Cells[row, 36].Value = item.OldPoNo;
+                worksheet.Cells[row, 37].Value = item.TriggerDate.ToString("yyyy-MM-dd");
+                worksheet.Cells[row, 38].Value = item.UnTriggeredQuantity;
+                worksheet.Cells[row, 39].Value = item.PickUpPointId;
+                worksheet.Cells[row, 40].Value = item.VatType;
+                worksheet.Cells[row, 41].Value = item.TaxType;
+                worksheet.Cells[row, 42].Value = item.TypeOfPurchase;
 
                 row++;
             }

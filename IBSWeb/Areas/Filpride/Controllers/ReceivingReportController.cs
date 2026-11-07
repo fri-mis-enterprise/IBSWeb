@@ -898,6 +898,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet2.Cells["X1"].Value = "CanceledDate";
                 worksheet2.Cells["Y1"].Value = "VoidedBy";
                 worksheet2.Cells["Z1"].Value = "VoidedDate";
+                worksheet2.Cells["AA1"].Value = "SupplierName";
+                worksheet2.Cells["AB1"].Value = "SupplierAddress";
+                worksheet2.Cells["AC1"].Value = "SupplierTin";
+                worksheet2.Cells["AD1"].Value = "ProductName";
+                worksheet2.Cells["AE1"].Value = "SupplierSalesOrderNo";
+                worksheet2.Cells["AF1"].Value = "Status";
+                worksheet2.Cells["AG1"].Value = "IsSubPo";
+                worksheet2.Cells["AH1"].Value = "SubPoSeries";
+                worksheet2.Cells["AI1"].Value = "CustomerId";
+                worksheet2.Cells["AJ1"].Value = "OldPoNo";
+                worksheet2.Cells["AK1"].Value = "TriggerDate";
+                worksheet2.Cells["AL1"].Value = "UnTriggeredQuantity";
+                worksheet2.Cells["AM1"].Value = "PickUpPointId";
+                worksheet2.Cells["AN1"].Value = "VatType";
+                worksheet2.Cells["AO1"].Value = "TaxType";
+                worksheet2.Cells["AP1"].Value = "TypeOfPurchase";
 
                 #endregion -- Purchase Order Table Header --
 
@@ -939,6 +955,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["AF1"].Value = "VoidedBy";
                 worksheet.Cells["AG1"].Value = "VoidedDate";
                 worksheet.Cells["AH1"].Value = "Supplier Name";
+                worksheet.Cells["AI1"].Value = "SupplierDrNo";
+                worksheet.Cells["AJ1"].Value = "WithdrawalCertificate";
+                worksheet.Cells["AK1"].Value = "AuthorityToLoadNo";
+                worksheet.Cells["AL1"].Value = "DeliveryReceiptId";
+                worksheet.Cells["AM1"].Value = "Status";
+                worksheet.Cells["AN1"].Value = "IsCostUpdated";
+                worksheet.Cells["AO1"].Value = "OldRRNo";
+                worksheet.Cells["AP1"].Value = "CostBasedOnSoa";
+                worksheet.Cells["AQ1"].Value = "TaxPercentage";
 
                 #endregion -- Receving Report Table Header --
 
@@ -985,6 +1010,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet.Cells[row, 32].Value = item.VoidedBy;
                     worksheet.Cells[row, 33].Value = item.VoidedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
                     worksheet.Cells[row, 34].Value = item.PurchaseOrder?.SupplierName;
+                    worksheet.Cells[row, 35].Value = item.SupplierDrNo;
+                    worksheet.Cells[row, 36].Value = item.WithdrawalCertificate;
+                    worksheet.Cells[row, 37].Value = item.AuthorityToLoadNo;
+                    worksheet.Cells[row, 38].Value = item.DeliveryReceiptId;
+                    worksheet.Cells[row, 39].Value = item.Status;
+                    worksheet.Cells[row, 40].Value = item.IsCostUpdated;
+                    worksheet.Cells[row, 41].Value = item.OldRRNo;
+                    worksheet.Cells[row, 42].Value = item.CostBasedOnSoa;
+                    worksheet.Cells[row, 43].Value = item.TaxPercentage;
 
                     row++;
                 }
@@ -1035,6 +1069,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet2.Cells[poRow, 24].Value = item.PurchaseOrder.CanceledDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
                     worksheet2.Cells[poRow, 25].Value = item.PurchaseOrder.VoidedBy;
                     worksheet2.Cells[poRow, 26].Value = item.PurchaseOrder.VoidedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                    worksheet2.Cells[poRow, 27].Value = item.PurchaseOrder.SupplierName;
+                    worksheet2.Cells[poRow, 28].Value = item.PurchaseOrder.SupplierAddress;
+                    worksheet2.Cells[poRow, 29].Value = item.PurchaseOrder.SupplierTin;
+                    worksheet2.Cells[poRow, 30].Value = item.PurchaseOrder.ProductName;
+                    worksheet2.Cells[poRow, 31].Value = item.PurchaseOrder.SupplierSalesOrderNo;
+                    worksheet2.Cells[poRow, 32].Value = item.PurchaseOrder.Status;
+                    worksheet2.Cells[poRow, 33].Value = item.PurchaseOrder.IsSubPo;
+                    worksheet2.Cells[poRow, 34].Value = item.PurchaseOrder.SubPoSeries;
+                    worksheet2.Cells[poRow, 35].Value = item.PurchaseOrder.CustomerId;
+                    worksheet2.Cells[poRow, 36].Value = item.PurchaseOrder.OldPoNo;
+                    worksheet2.Cells[poRow, 37].Value = item.PurchaseOrder.TriggerDate.ToString("yyyy-MM-dd");
+                    worksheet2.Cells[poRow, 38].Value = item.PurchaseOrder.UnTriggeredQuantity;
+                    worksheet2.Cells[poRow, 39].Value = item.PurchaseOrder.PickUpPointId;
+                    worksheet2.Cells[poRow, 40].Value = item.PurchaseOrder.VatType;
+                    worksheet2.Cells[poRow, 41].Value = item.PurchaseOrder.TaxType;
+                    worksheet2.Cells[poRow, 42].Value = item.PurchaseOrder.TypeOfPurchase;
 
                     poRow++;
                 }
