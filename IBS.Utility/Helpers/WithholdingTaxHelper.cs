@@ -2,6 +2,17 @@ namespace IBS.Utility.Helpers
 {
     public static class WithholdingTaxHelper
     {
+        public static decimal? GetDefaultSupplierPercentByCategory(string? category)
+        {
+            return category switch
+            {
+                "Trade" => 0.005m,
+                "Commissionee" => 0.10m,
+                "Hauler" => 0.02m,
+                _ => null
+            };
+        }
+
         public static string? GetAccountNumberByPercent(decimal taxPercent)
         {
             return taxPercent switch

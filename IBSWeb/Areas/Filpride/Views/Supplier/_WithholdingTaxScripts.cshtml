@@ -1,0 +1,65 @@
+@using System.Globalization
+@using IBS.Utility.Constants
+@using IBS.Utility.Helpers
+@model FilprideSupplier
+
+@{
+    var categoryDefaults = new[] { "Trade", "Commissionee", "Hauler" }
+        .ToDictionary(category => category, category => WithholdingTaxHelper.GetDefaultSupplierPercentByCategory(category)?.ToString("0.0000", CultureInfo.InvariantCulture));
+    var taxTitles = new[] { 0.005m, 0.01m, 0.02m, 0.05m, 0.10m }
+        .ToDictionary(percent => percent.ToString("0.0000", CultureInfo.InvariantCulture), percent => Model.WithholdingTaxList?
+            .FirstOrDefault(item => item.Value.StartsWith(WithholdingTaxHelper.GetAccountNumberByPercent(percent) + " ", StringComparison.Ordinal))?.Value);
+}
+
+<script>
+    const supplierWithholdingDefaults = @Json.Serialize(categoryDefaults);
+    const supplierWithholdingTitles = @Json.Serialize(taxTitles);
+    const supplierWithholdingTaxType = @Json.Serialize(SD.TaxType_WithTax);
+    const supplierExemptTaxType = @Json.Serialize(SD.TaxType_Exempt);
+    let previousSupplierCategory;
+
+    function updateSupplierWithholdingTitle() {
+        const percent = $('#WithholdingTaxPercent').val();
+        const key = percent ? Number(percent).toFixed(4) : '';
+        $('#WithholdingTaxTitle').val(supplierWithholdingTitles[key] || '');
+    }
+
+    function applySupplierWithholdingDefault() {
+        const category = document.querySelector('input[name="Category"]:checked')?.value;
+        const percent = supplierWithholdingDefaults[category];
+        if (percent) {
+            $('#WithholdingTaxPercent').val(percent).trigger('change');
+        }
+    }
+
+    function toggleExemptionFields(selectElement, applyDefault = true) {
+        const isExempt = selectElement.value === supplierExemptTaxType;
+        const isWithholding = selectElement.value === supplierWithholdingTaxType;
+        document.getElementById('exemptionFields').style.display = isExempt ? 'block' : 'none';
+        document.getElementById('withholdingTaxPercentField').style.display = isWithholding ? 'block' : 'none';
+        document.getElementById('withholdingTaxTitleField').style.display = isWithholding ? 'block' : 'none';
+
+        if (isExempt) {
+            $('#WithholdingTaxPercent').val(null).trigger('change');
+        } else if (isWithholding && applyDefault && !$('#WithholdingTaxPercent').val()) {
+            applySupplierWithholdingDefault();
+        }
+        updateSupplierWithholdingTitle();
+    }
+
+    function updateSupplierWithholdingCategory() {
+        const category = document.querySelector('input[name="Category"]:checked')?.value;
+        const taxType = document.getElementById('TaxType');
+        if (category !== previousSupplierCategory && taxType.value !== supplierExemptTaxType) {
+            applySupplierWithholdingDefault();
+        }
+        previousSupplierCategory = category;
+        toggleExemptionFields(taxType, false);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        previousSupplierCategory = document.querySelector('input[name="Category"]:checked')?.value;
+        $('#WithholdingTaxPercent').on('change', updateSupplierWithholdingTitle);
+        toggleExemptionFields(document.getElementById('TaxType'), false);
+    });
+</script>
