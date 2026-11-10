@@ -764,6 +764,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
             worksheet.Cells["Y1"].Value = "CanceledDate";
             worksheet.Cells["Z1"].Value = "VoidedBy";
             worksheet.Cells["AA1"].Value = "VoidedDate";
+            worksheet.Cells["AB1"].Value = "CustomerName";
+            worksheet.Cells["AC1"].Value = "CustomerAddress";
+            worksheet.Cells["AD1"].Value = "CustomerTin";
+            worksheet.Cells["AE1"].Value = "CustomerBusinessStyle";
+            worksheet.Cells["AF1"].Value = "ServiceName";
+            worksheet.Cells["AG1"].Value = "ServicePercent";
+            worksheet.Cells["AH1"].Value = "PaymentStatus";
+            worksheet.Cells["AI1"].Value = "CwtBalance";
+            worksheet.Cells["AJ1"].Value = "CwVatBalance";
+            worksheet.Cells["AK1"].Value = "CwtAmountPaid";
+            worksheet.Cells["AL1"].Value = "CwVatAmountPaid";
+            worksheet.Cells["AM1"].Value = "DebitAmount";
+            worksheet.Cells["AN1"].Value = "CreditAmount";
+            worksheet.Cells["AO1"].Value = "VatType";
+            worksheet.Cells["AP1"].Value = "HasEwt";
+            worksheet.Cells["AQ1"].Value = "HasWvat";
+            worksheet.Cells["AR1"].Value = "DeliveryReceiptId";
 
             int row = 2;
 
@@ -796,6 +813,23 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 25].Value = item.CanceledDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
                 worksheet.Cells[row, 26].Value = item.VoidedBy;
                 worksheet.Cells[row, 27].Value = item.VoidedDate?.ToString("yyyy-MM-dd HH:mm:ss.ffffff") ?? null;
+                worksheet.Cells[row, 28].Value = item.CustomerName;
+                worksheet.Cells[row, 29].Value = item.CustomerAddress;
+                worksheet.Cells[row, 30].Value = item.CustomerTin;
+                worksheet.Cells[row, 31].Value = item.CustomerBusinessStyle;
+                worksheet.Cells[row, 32].Value = item.ServiceName;
+                worksheet.Cells[row, 33].Value = item.ServicePercent;
+                worksheet.Cells[row, 34].Value = item.PaymentStatus;
+                worksheet.Cells[row, 35].Value = item.CwtBalance;
+                worksheet.Cells[row, 36].Value = item.CwVatBalance;
+                worksheet.Cells[row, 37].Value = item.CwtAmountPaid;
+                worksheet.Cells[row, 38].Value = item.CwVatAmountPaid;
+                worksheet.Cells[row, 39].Value = item.DebitAmount;
+                worksheet.Cells[row, 40].Value = item.CreditAmount;
+                worksheet.Cells[row, 41].Value = item.VatType;
+                worksheet.Cells[row, 42].Value = item.HasEwt;
+                worksheet.Cells[row, 43].Value = item.HasWvat;
+                worksheet.Cells[row, 44].Value = item.DeliveryReceiptId;
 
                 row++;
             }
