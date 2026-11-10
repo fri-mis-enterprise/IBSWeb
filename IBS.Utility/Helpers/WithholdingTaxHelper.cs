@@ -2,6 +2,9 @@ namespace IBS.Utility.Helpers
 {
     public static class WithholdingTaxHelper
     {
+        public const decimal DefaultCustomerCwVatPercent = 0.05m;
+        public const decimal DefaultCustomerCwtPercent = 0.005m;
+
         public static decimal? GetDefaultSupplierPercentByCategory(string? category)
         {
             return category switch
