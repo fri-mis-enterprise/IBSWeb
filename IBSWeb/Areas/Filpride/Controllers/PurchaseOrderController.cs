@@ -770,7 +770,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[row, 34].Value = item.SubPoSeries;
                 worksheet.Cells[row, 35].Value = item.CustomerId;
                 worksheet.Cells[row, 36].Value = item.OldPoNo;
-                worksheet.Cells[row, 37].Value = item.TriggerDate.ToString("yyyy-MM-dd");
+                worksheet.Cells[row, 37].Value = item.TriggerDate != default ? item.TriggerDate.ToString("yyyy-MM-dd") : null;
                 worksheet.Cells[row, 38].Value = item.UnTriggeredQuantity;
                 worksheet.Cells[row, 39].Value = item.PickUpPointId;
                 worksheet.Cells[row, 40].Value = item.VatType;

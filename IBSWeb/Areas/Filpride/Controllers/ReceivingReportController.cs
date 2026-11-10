@@ -1079,7 +1079,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet2.Cells[poRow, 34].Value = item.PurchaseOrder.SubPoSeries;
                     worksheet2.Cells[poRow, 35].Value = item.PurchaseOrder.CustomerId;
                     worksheet2.Cells[poRow, 36].Value = item.PurchaseOrder.OldPoNo;
-                    worksheet2.Cells[poRow, 37].Value = item.PurchaseOrder.TriggerDate.ToString("yyyy-MM-dd");
+                    worksheet2.Cells[poRow, 37].Value = item.PurchaseOrder.TriggerDate != default ? item.PurchaseOrder.TriggerDate.ToString("yyyy-MM-dd") : null;
                     worksheet2.Cells[poRow, 38].Value = item.PurchaseOrder.UnTriggeredQuantity;
                     worksheet2.Cells[poRow, 39].Value = item.PurchaseOrder.PickUpPointId;
                     worksheet2.Cells[poRow, 40].Value = item.PurchaseOrder.VatType;

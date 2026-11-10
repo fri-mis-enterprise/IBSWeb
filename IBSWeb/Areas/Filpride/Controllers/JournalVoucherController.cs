@@ -1584,7 +1584,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet6.Cells[cvdRow, 7].Value = item.CheckVoucherDetailId;
                     worksheet6.Cells[cvdRow, 8].Value = item.Amount;
                     worksheet6.Cells[cvdRow, 9].Value = item.AmountPaid;
-                    worksheet6.Cells[cvdRow, 10].Value = item.SubAccountId;
+                    worksheet6.Cells[cvdRow, 10].Value = item.SubAccountType == SubAccountType.Supplier ? item.SubAccountId : null;
                     worksheet6.Cells[cvdRow, 11].Value = item.EwtPercent;
                     worksheet6.Cells[cvdRow, 12].Value = item.IsUserSelected;
                     worksheet6.Cells[cvdRow, 13].Value = item.IsVatable;
@@ -1616,7 +1616,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet6.Cells[cvdRow, 7].Value = item.CheckVoucherDetailId;
                     worksheet6.Cells[cvdRow, 8].Value = item.Amount;
                     worksheet6.Cells[cvdRow, 9].Value = item.AmountPaid;
-                    worksheet6.Cells[cvdRow, 10].Value = item.SubAccountId;
+                    worksheet6.Cells[cvdRow, 10].Value = item.SubAccountType == SubAccountType.Supplier ? item.SubAccountId : null;
                     worksheet6.Cells[cvdRow, 11].Value = item.EwtPercent;
                     worksheet6.Cells[cvdRow, 12].Value = item.IsUserSelected;
                     worksheet6.Cells[cvdRow, 13].Value = item.IsVatable;
@@ -1750,7 +1750,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     worksheet3.Cells[poRow, 34].Value = item.SubPoSeries;
                     worksheet3.Cells[poRow, 35].Value = item.CustomerId;
                     worksheet3.Cells[poRow, 36].Value = item.OldPoNo;
-                    worksheet3.Cells[poRow, 37].Value = item.TriggerDate.ToString("yyyy-MM-dd");
+                    worksheet3.Cells[poRow, 37].Value = item.TriggerDate != default ? item.TriggerDate.ToString("yyyy-MM-dd") : "UNDETERMINED";
                     worksheet3.Cells[poRow, 38].Value = item.UnTriggeredQuantity;
                     worksheet3.Cells[poRow, 39].Value = item.PickUpPointId;
                     worksheet3.Cells[poRow, 40].Value = item.VatType;

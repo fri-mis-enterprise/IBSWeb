@@ -3783,8 +3783,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         worksheet.Cells[row, 43].Value = string.Join(", ", item.SVMultipleAmount?.Select(amount => amount.ToString(SD.Four_Decimal_Format)) ?? Array.Empty<string>());
                     }
                     worksheet.Cells[row, 44].Value = item.BankId;
-                    worksheet.Cells[row, 45].Value = item.BankAccountName;
-                    worksheet.Cells[row, 46].Value = item.BankAccountNumber;
+                    worksheet.Cells[row, 45].Value = item.BankAccountName ?? item.BankAccount?.AccountName;
+                    worksheet.Cells[row, 46].Value = item.BankAccountNumber ?? item.BankAccount?.AccountNo;
                     worksheet.Cells[row, 47].Value = item.EwtPeriodFrom?.ToString("yyyy-MM-dd") ?? null;
                     worksheet.Cells[row, 48].Value = item.EwtPeriodTo?.ToString("yyyy-MM-dd") ?? null;
                     worksheet.Cells[row, 49].Value = item.EwtReference1;
