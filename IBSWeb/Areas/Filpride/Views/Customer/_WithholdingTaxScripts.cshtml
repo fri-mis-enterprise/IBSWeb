@@ -1,0 +1,32 @@
+@using IBS.Utility.Helpers
+
+<script>
+    $(function () {
+        toggleCwvFields(document.getElementById('WithHoldingVat'), false);
+        toggleCwtFields(document.getElementById('WithHoldingTax'), false);
+    });
+
+    function toggleCwvFields(element, applyDefault = true) {
+        const field = document.getElementById('WithholdingVatPercent');
+        const percent = $('#CwVatPercent');
+        field.style.display = element.checked ? 'block' : 'none';
+
+        if (!element.checked) {
+            percent.val(0).trigger('change');
+        } else if (applyDefault && !Number(percent.val())) {
+            percent.val(Number(@Json.Serialize(WithholdingTaxHelper.DefaultCustomerCwVatPercent)).toFixed(4)).trigger('change');
+        }
+    }
+
+    function toggleCwtFields(element, applyDefault = true) {
+        const field = document.getElementById('WithholdingTaxPercent');
+        const percent = $('#CwtPercent');
+        field.style.display = element.checked ? 'block' : 'none';
+
+        if (!element.checked) {
+            percent.val(0).trigger('change');
+        } else if (applyDefault && !Number(percent.val())) {
+            percent.val(Number(@Json.Serialize(WithholdingTaxHelper.DefaultCustomerCwtPercent)).toFixed(4)).trigger('change');
+        }
+    }
+</script>

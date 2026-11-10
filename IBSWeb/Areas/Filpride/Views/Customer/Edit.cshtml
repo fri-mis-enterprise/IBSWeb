@@ -1,4 +1,4 @@
-﻿@using IBS.Models.Enums
+@using IBS.Models.Enums
 @using IBS.Utility.Constants
 @model FilprideCustomer
 
@@ -202,6 +202,7 @@
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
+        await Html.RenderPartialAsync("_WithholdingTaxScripts");
     }
     <script>
         $(document).ready(function () {
@@ -222,26 +223,5 @@
             // Initial check on page load
             toggleStationDiv();
         });
-
-        $(function () {
-            toggleCwvFields(document.getElementById("WithHoldingVat"));
-            toggleCwtFields(document.getElementById("WithHoldingTax"));
-        });
-
-        function toggleCwvFields(element) {
-            const withHoldingVatPercent = document.getElementById("WithholdingVatPercent");
-
-            withHoldingVatPercent.style.display = element.checked
-                ? "block"
-                : ($(".withHoldingVatPercent").val(0).trigger("change"), "none");
-        }
-
-        function toggleCwtFields(element) {
-            const withHoldingTaxPercent = document.getElementById("WithholdingTaxPercent");
-
-            withHoldingTaxPercent.style.display = element.checked
-                ? "block"
-                : ($(".withHoldingTaxPercent").val(0).trigger("change"), "none");
-        }
     </script>
 }

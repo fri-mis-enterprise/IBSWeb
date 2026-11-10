@@ -6,6 +6,17 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v5.4.0] - 2026-11-10
+
+### Added
+- Extend Filpride Excel exports for IBS-RCD with transaction status, linked document IDs, customer and supplier details, withholding information, payment tracking, approval details, and sub-account fields across purchase orders, receiving reports, invoices, receipts, memos, and vouchers.
+
+### Fixed
+- Default supplier withholding percentages by category: 0.5% for Trade, 10% for Commissionee, and 2% for Hauler. Automatically derive the withholding tax title from the selected percentage, validate its matching account on save, and clear withholding fields for exempt suppliers.
+- Default customer CWT to 0.5% and CWVAT to 5% when withholding is enabled without a selected percentage, while preserving saved percentages when opening the form.
+
+---
+
 ## [v5.3.1] - 2026-10-30
 
 ### Fixed

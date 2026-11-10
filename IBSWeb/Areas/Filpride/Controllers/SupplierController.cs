@@ -7,6 +7,7 @@ using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.MasterFile;
 using IBS.Models;
 using IBS.Services;
+using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -79,6 +80,42 @@ namespace IBSWeb.Areas.Filpride.Controllers
             model.PaymentTerms = await _unitOfWork.FilprideTerms.GetFilprideTermsListAsyncByCode(cancellationToken);
         }
 
+        private void ApplyWithholdingTaxRules(FilprideSupplier model)
+        {
+            ModelState.Remove(nameof(model.WithholdingTaxTitle));
+            model.WithholdingTaxTitle = null;
+
+            if (model.TaxType == SD.TaxType_Exempt)
+            {
+                model.WithholdingTaxPercent = null;
+                ModelState.Remove(nameof(model.WithholdingTaxPercent));
+                return;
+            }
+
+            if (model.TaxType != SD.TaxType_WithTax)
+            {
+                return;
+            }
+
+            var accountNumber = model.WithholdingTaxPercent.HasValue
+                ? WithholdingTaxHelper.GetAccountNumberByPercent(model.WithholdingTaxPercent.Value)
+                : null;
+
+            if (accountNumber == null)
+            {
+                ModelState.AddModelError(nameof(model.WithholdingTaxPercent), "Select a supported withholding tax percentage.");
+                return;
+            }
+
+            model.WithholdingTaxTitle = model.WithholdingTaxList?
+                .FirstOrDefault(item => item.Value.StartsWith(accountNumber + " ", StringComparison.Ordinal))?.Value;
+
+            if (model.WithholdingTaxTitle == null)
+            {
+                ModelState.AddModelError(nameof(model.WithholdingTaxTitle), "The selected percentage has no matching withholding tax account. Please contact MIS.");
+            }
+        }
+
         private void ApplyEmployeeCategoryRules(FilprideSupplier model)
         {
             if (string.Equals(model.Category, "Employee", StringComparison.OrdinalIgnoreCase))
@@ -125,6 +162,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             await PopulateSupplierFormListsAsync(model, cancellationToken);
             ApplyEmployeeCategoryRules(model);
+            ApplyWithholdingTaxRules(model);
 
             if (!ModelState.IsValid)
             {
@@ -297,6 +335,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             await PopulateSupplierFormListsAsync(model, cancellationToken);
             ApplyEmployeeCategoryRules(model);
+            ApplyWithholdingTaxRules(model);
 
             if (!ModelState.IsValid)
             {
