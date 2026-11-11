@@ -171,5 +171,14 @@ namespace IBS.Models.Filpride.Integrated
 
         [Column(TypeName = "numeric(18,4)")]
         public decimal CwvPercent { get; set; }
+
+        [StringLength(200)]
+        public string? HaulerInvoiceNo { get; set; }
+
+        [Column(TypeName = "date")]
+        public DateOnly? HaulerInvoiceDate { get; set; }
+
+        [Column(TypeName = "numeric(18,4)")]
+        public decimal HaulerInvoiceAmount { get; set; }
     }
 }
