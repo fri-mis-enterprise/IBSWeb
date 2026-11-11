@@ -436,6 +436,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             drList = drList.Where(dr =>
                                 !dr.HasReceivingReport && dr.CanceledBy == null && dr.VoidedBy == null);
                             break;
+
+                        case "RecordHaulerDetails":
+                            drList = drList.Where(dr =>(dr.HaulerInvoiceNo == null || dr.HaulerInvoiceDate == null || dr.HaulerInvoiceAmount == 0)
+                                && (dr.Status == nameof(DRStatus.ForInvoicing) ||
+                                    dr.Status == nameof(DRStatus.Invoiced)));
+                            break;
                             // Add other cases as needed
                     }
                 }
