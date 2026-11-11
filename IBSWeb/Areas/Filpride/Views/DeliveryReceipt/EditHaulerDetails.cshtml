@@ -589,10 +589,8 @@
             });
 
             $('#edit-delivery-receipt-form').on('submit', function (e) {
-                rebuildDetailItems();
-                if (detailItems.length === 0) {
-                    e.preventDefault();
-                    setDetailError(defaultDetailError);
+                if (detailItems.length > 0) {
+                    rebuildDetailItems();
                 }
             });
 

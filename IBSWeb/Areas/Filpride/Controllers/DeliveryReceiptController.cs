@@ -1822,6 +1822,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             await PopulateDeliveryReceiptViewModelAsync(viewModel, cancellationToken);
 
+            ModelState.Remove(nameof(DeliveryReceiptViewModel.Driver));
+            ModelState.Remove(nameof(DeliveryReceiptViewModel.PlateNo));
+
             if (!ModelState.IsValid)
             {
                 TempData["warning"] = "The submitted information is invalid.";
@@ -1840,6 +1843,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (existingRecord == null)
                 {
                     return NotFound();
+                }
+
+                if (existingRecord.Status != nameof(DRStatus.ForInvoicing) &&
+                    existingRecord.Status != nameof(DRStatus.Invoiced))
+                {
+                    return BadRequest("This delivery receipt is not eligible for editing hauler details.");
                 }
 
                 existingRecord.HaulerInvoiceNo = viewModel.HaulerInvoiceNo;
