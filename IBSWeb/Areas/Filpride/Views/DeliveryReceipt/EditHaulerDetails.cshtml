@@ -589,8 +589,10 @@
             });
 
             $('#edit-delivery-receipt-form').on('submit', function (e) {
-                if (detailItems.length > 0) {
-                    rebuildDetailItems();
+                if (detailItems.length) {
+                    $('input[name="PurchaseOrderId"]').val(detailItems[0].purchaseOrderId);
+                    $('input[name="ATLId"]').val(detailItems[0].authorityToLoadId);
+                    $('input[name="ATLNo"]').val(detailItems[0].atlNo);
                 }
             });
 
