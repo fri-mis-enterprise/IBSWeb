@@ -1,8 +1,7 @@
-@using IBS.Utility.Constants
 @model DeliveryReceiptHaulerDetailsViewModel
 
 @{
-    ViewData["Title"] = "Delivery Receipt - Edit";
+    ViewData["Title"] = "Delivery Receipt - Edit Hauler Details";
 }
 
 <link rel="stylesheet" href="~/css/form-style.css">
@@ -25,170 +24,103 @@
             <div class="border-2">
                 <div asp-validation-summary="ModelOnly"></div>
                 <input asp-for="DeliveryReceiptId" type="hidden" />
-                <input asp-for="ATLId" type="hidden" />
-                <input asp-for="ATLNo" type="hidden" />
-                <input asp-for="IsECCEdited" type="hidden" />
                 <div class="form-floating col-12">
                     <input asp-for="Date" type="date" class="form-control border-0 shadow" placeholder="" readonly/>
                     <label asp-for="Date" class="ms-2">Date<span class="required">*</span></label>
-                    <span asp-validation-for="Date" class="text-danger"></span>
                 </div>
                 <div class="form-floating py-2 col-12">
                     <input asp-for="ManualDrNo" class="form-control border-0 shadow" placeholder="" readonly/>
                     <label asp-for="ManualDrNo">Manual DR#<span class="required">*</span></label>
-                    <span asp-validation-for="ManualDrNo" class="text-danger"></span>
                 </div>
                 <fieldset class="border p-2 py-2">
                     <legend class="w-auto px-2">Customer Details</legend>
-                    <div class="form-group py-2 col-12">
-                        <label class="control-label">Customer List<span class="required">*</span></label>
-                        @if (Model.HasReceivingReport)
-                        {
-                            <select asp-for="CustomerId" asp-items="@Model.Customers" class="form-select js-select2 border-0 shadow" style="width:100%" disabled>
-                                <option value="" selected>Select customer</option>
-                            </select>
-                            <input type="hidden" asp-for="CustomerId" />
-                            <small class="fst-italic">Please note: Customer cannot be changed as the lifting date has already been added by TNS.</small>
-                        }
-                        else
-                        {
-                            <select asp-for="CustomerId" asp-items="@Model.Customers" class="form-select js-select2 border-0 shadow" style="width:100%" disabled>
-                                <option value="" selected>Select customer</option>
-                            </select>
-                            <input type="hidden" asp-for="CustomerId" />
-                        }
-                        <span asp-validation-for="CustomerId" class="text-danger"></span>
+                    <div class="form-floating py-2 col-12">
+                        <input asp-for="CustomerName" class="form-control border-0 shadow" placeholder="" readonly/>
+                        <label asp-for="CustomerName">Customer Name<span class="required">*</span></label>
                     </div>
                     <div class="form-floating py-2 col-12">
                         <input asp-for="CustomerAddress" class="form-control border-0 shadow" placeholder="" readonly tabindex="-1" />
                         <label asp-for="CustomerAddress">Address</label>
-                        <span asp-validation-for="CustomerAddress" class="text-danger"></span>
                     </div>
                     <div class="form-floating py-2 col-12">
                         <input asp-for="CustomerTin" class="form-control border-0 shadow" placeholder="" readonly tabindex="-1" />
                         <label asp-for="CustomerTin">TIN</label>
-                        <span asp-validation-for="CustomerTin" class="text-danger"></span>
                     </div>
                 </fieldset>
                 <hr />
                 <fieldset class="border p-2 py-2">
                     <legend class="w-auto px-2">Order Details</legend>
-                    <div class="form-group py-2 col-12">
-                        <label class="control-label">COS List<span class="required">*</span></label>
-                        @if (Model.HasReceivingReport)
-                        {
-                            <select asp-for="CustomerOrderSlipId" asp-items="@Model.CustomerOrderSlips" class="form-select js-select2 border-0 shadow" style="width:100%" disabled>
-                                <option value="" selected>Select cos</option>
-                            </select>
-                            <input type="hidden" asp-for="CustomerOrderSlipId" />
-                            <small class="fst-italic">Please note: COS lines cannot be changed as the lifting date has already been added by TNS.</small>
-                        }
-                        else
-                        {
-                            <select asp-for="CustomerOrderSlipId" asp-items="@Model.CustomerOrderSlips" class="form-select js-select2 border-0 shadow" style="width:100%" disabled>
-                                <option value="" selected>Select cos</option>
-                            </select>
-                            <input type="hidden" asp-for="CustomerOrderSlipId" />
-                        }
-                        <span asp-validation-for="CustomerOrderSlipId" class="text-danger"></span>
-                    </div>
-                    <div class="form-group py-2 col-12">
-                        <label class="control-label">ATL List<span class="required">*</span></label>
-                        <select id="AtlSelector" class="form-select js-select2 border-0 shadow" style="width:100%" disabled>
-                            <option value="">Select ATL</option>
-                        </select>
-                        <input asp-for="PurchaseOrderId" type="hidden" />
-                        <span asp-validation-for="PurchaseOrderId" class="text-danger"></span>
+                    <div class="form-floating py-2 col-12">
+                        <input asp-for="CustomerOrderSlipNo" class="form-control border-0 shadow" placeholder="" readonly/>
+                        <label asp-for="CustomerOrderSlipNo">Customer OrderSlip No<span class="required">*</span></label>
                     </div>
                     <div class="form-floating py-2 col-12">
                         <input asp-for="Product" class="form-control border-0 shadow" placeholder="" readonly tabindex="-1" />
                         <label asp-for="Product"></label>
-                        <span asp-validation-for="Product" class="text-danger"></span>
                     </div>
                     <div class="form-floating py-2 col-12">
                         <input asp-for="CosVolume" class="form-control border-0 shadow" placeholder="" readonly tabindex="-1" />
                         <label asp-for="CosVolume">COS Volume</label>
-                        <span asp-validation-for="CosVolume" class="text-danger"></span>
                     </div>
                     <div class="form-floating py-2 col-12">
                         <input asp-for="RemainingVolume" class="form-control border-0 shadow" placeholder="" readonly tabindex="-1" />
                         <label asp-for="RemainingVolume">Remaining Volume</label>
-                        <span asp-validation-for="RemainingVolume" class="text-danger"></span>
                     </div>
                     <div class="form-floating py-2 col-12">
                         <input asp-for="DeliveryOption" class="form-control border-0 shadow" placeholder="" readonly tabindex="-1" />
                         <label asp-for="DeliveryOption">Delivery Option</label>
-                        <span asp-validation-for="DeliveryOption" class="text-danger"></span>
                     </div>
                     <div class="form-floating py-2 col-12">
                         <input asp-for="Price" class="form-control border-0 shadow" placeholder="" readonly tabindex="-1" />
                         <label asp-for="Price"></label>
-                        <span asp-validation-for="Price" class="text-danger"></span>
                     </div>
                 </fieldset>
                 <div class="form-floating py-2 col-12">
                     <input asp-for="Volume" class="form-control border-0 shadow" placeholder="" required min="0.01" readonly />
                     <label asp-for="Volume">Volume<span class="required">*</span></label>
-                    <span asp-validation-for="Volume" class="text-danger"></span>
-                </div>
-                <div class="col-12 py-2">
-                    <div class="small text-muted" id="selectedPoSummary">No ATL selected.</div>
-                    <div id="detailInputs"></div>
-                    <div class="text-danger d-none" id="detailError">Please select an ATL and enter a valid volume within the selected ATL balance.</div>
                 </div>
                 <div class="form-floating py-2 col-12">
                     <input asp-for="ATLNo" class="form-control border-0 shadow" placeholder="" readonly tabindex="-1" />
                     <label asp-for="ATLNo" class="ms-2">ATL#</label>
-                    <span asp-validation-for="ATLNo" class="text-danger"></span>
                 </div>
-                <div class="form-group py-2 col-12" id="haulerList">
-                    <label class="control-label">Hauler List<span class="required">*</span></label>
-                    <select asp-for="HaulerId" asp-items="@Model.Haulers" class="form-select js-select2 border-0 shadow" style="width:100%" disabled>
-                        <option value="" selected>Select hauler</option>
-                    </select>
-                    <span asp-validation-for="HaulerId" class="text-danger"></span>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="HaulerName" class="form-control border-0 shadow" placeholder="" readonly/>
+                    <label asp-for="HaulerName">Hauler Name<span class="required">*</span></label>
                 </div>
                 <div class="form-floating py-2 col-12">
                     <input asp-for="Driver" class="form-control border-0 shadow" placeholder="" readonly/>
                     <label asp-for="Driver" class="ms-2">Driver<span class="required">*</span></label>
-                    <span asp-validation-for="Driver" class="text-danger"></span>
                 </div>
                 <div class="form-floating py-2 col-12">
                     <input asp-for="PlateNo" class="form-control border-0 shadow" placeholder="" readonly/>
                     <label asp-for="PlateNo" class="ms-2">Plate #<span class="required">*</span></label>
-                    <span asp-validation-for="PlateNo" class="text-danger"></span>
                 </div>
                 <div class="form-floating py-2 col-12">
                     <input asp-for="Freight" class="form-control border-0 shadow" placeholder="" readonly/>
                     <label asp-for="Freight">Freight</label>
-                    <span asp-validation-for="Freight" class="text-danger"></span>
                 </div>
                 <div class="form-floating py-2 col-12">
                     <input asp-for="ECC" class="form-control border-0 shadow" placeholder="" readonly/>
                     <label asp-for="ECC">ECC</label>
-                    <span asp-validation-for="ECC" class="text-danger"></span>
                 </div>
                 <div class="form-floating py-2 col-12">
                     <input asp-for="TotalAmount" class="form-control border-0 shadow" placeholder="" tabindex="-1" readonly/>
                     <label asp-for="TotalAmount">Total Amount</label>
-                    <span asp-validation-for="TotalAmount" class="text-danger"></span>
                 </div>
                 <div class="form-floating py-2 col-12">
                     <textarea asp-for="Remarks" class="form-control border-0 shadow" placeholder="Indicate the reason of this changes." style="height: 100px" readonly></textarea>
                     <label asp-for="Remarks" class="control-label">Remarks<span class="required">*</span></label>
-                    <span asp-validation-for="Remarks" class="text-danger"></span>
                 </div>
                 <fieldset class="border p-2 py-2 mb-3">
                     <legend class="w-auto px-2">Hauler Details</legend>
                     <div class="form-floating py-2 col-12">
                         <input asp-for="HaulerInvoiceNo" class="form-control border-0 shadow" placeholder="" />
                         <label asp-for="HaulerInvoiceNo">Hauler Invoice #</label>
-                        <span asp-validation-for="HaulerInvoiceNo" class="text-danger"></span>
                     </div>
                     <div class="form-floating py-2 col-12">
                         <input asp-for="HaulerInvoiceDate" type="date" class="form-control border-0 shadow" placeholder="" />
                         <label asp-for="HaulerInvoiceDate">Hauler Invoice Date</label>
-                        <span asp-validation-for="HaulerInvoiceDate" class="text-danger"></span>
+
                     </div>
                     <div class="form-floating py-2 col-12">
                         <input asp-for="HaulerInvoiceAmount" class="form-control border-0 shadow" placeholder="" />
@@ -213,421 +145,4 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-
-    <script>
-        $(document).ready(function () {
-            const hasReceivingReport = @Model.HasReceivingReport.ToString().ToLower();
-            const deliveryReceiptId = @Model.DeliveryReceiptId;
-            const initialCustomerId = '@Model.CustomerId';
-            const initialCosId = '@Model.CustomerOrderSlipId';
-            const initialAtlId = @Model.Details.Select(d => d.AuthorityToLoadId).FirstOrDefault();
-            const initialHaulerId = '@Model.HaulerId';
-            const initialFreight = parseNumber('@Model.Freight');
-            const initialDriver = @Html.Raw(Json.Serialize(Model.Driver ?? string.Empty));
-            const initialPlateNo = @Html.Raw(Json.Serialize(Model.PlateNo ?? string.Empty));
-            const initialVolume = parseNumber('@Model.Volume');
-            const detailItems = [];
-            const atlPurchaseOrders = [];
-            const $atlSelect = $('#AtlSelector');
-            const defaultDetailError = 'Please select an ATL and enter a valid volume within the selected ATL balance.';
-            let suppressVolumeRefresh = false;
-
-            function setDetailError(message) {
-                $('#detailError').removeClass('d-none').text(message);
-            }
-
-            function clearDetailError() {
-                $('#detailError').addClass('d-none').text(defaultDetailError);
-            }
-
-            function calculateBuilderTotalAmount() {
-                const volume = parseNumber($('input[name="Volume"]').val());
-                const price = roundToFour(parseNumber($('input[name="Price"]').val()));
-                $('input[name="TotalAmount"]').val(formatNumber(roundToFour(volume * price)));
-            }
-
-            function getSelectedAtlId() {
-                return parseInt($atlSelect.val() || '0');
-            }
-
-            function getSelectedAtlPurchaseOrders() {
-                const selectedAtlId = getSelectedAtlId();
-                if (!selectedAtlId) {
-                    return [];
-                }
-
-                return atlPurchaseOrders.filter(item => item.atlId === selectedAtlId);
-            }
-
-            function getSelectedUnservedTotal() {
-                return getSelectedAtlPurchaseOrders().reduce((sum, item) => sum + item.unservedQuantity, 0);
-            }
-
-            function buildAtlOptions(purchaseOrders) {
-                const atlMap = new Map();
-
-                purchaseOrders.forEach(item => {
-                    if (!item.atlId) {
-                        return;
-                    }
-
-                    if (!atlMap.has(item.atlId)) {
-                        atlMap.set(item.atlId, {
-                            atlId: item.atlId,
-                            atlNo: item.atlNo || '',
-                            totalUnserved: 0,
-                            poCount: 0
-                        });
-                    }
-
-                    const atl = atlMap.get(item.atlId);
-                    atl.totalUnserved += item.unservedQuantity;
-                    atl.poCount += 1;
-                });
-
-                return Array.from(atlMap.values());
-            }
-
-            function refreshVolumeFromSelection() {
-                const remainingVolume = parseNumber($("#RemainingVolume").val());
-                const selectedUnservedTotal = getSelectedUnservedTotal();
-
-                if (selectedUnservedTotal <= 0 || hasReceivingReport || suppressVolumeRefresh) {
-                    return;
-                }
-
-                $('input[name="Volume"]').val(Math.min(remainingVolume, selectedUnservedTotal));
-                calculateBuilderTotalAmount();
-            }
-
-            function syncDetails() {
-                const $inputs = $('#detailInputs');
-                $inputs.empty();
-
-                let totalAmount = 0;
-
-                detailItems.forEach((item, index) => {
-                    totalAmount += item.amount;
-                    $inputs.append(`
-                        <input type="hidden" name="Details[${index}].CustomerOrderSlipId" value="${item.customerOrderSlipId}" />
-                        <input type="hidden" name="Details[${index}].CustomerOrderSlipNo" value="${item.cosNo}" />
-                        <input type="hidden" name="Details[${index}].PurchaseOrderId" value="${item.purchaseOrderId}" />
-                        <input type="hidden" name="Details[${index}].AuthorityToLoadId" value="${item.authorityToLoadId}" />
-                        <input type="hidden" name="Details[${index}].AuthorityToLoadNo" value="${item.atlNo}" />
-                        <input type="hidden" name="Details[${index}].ProductName" value="${item.productName}" />
-                        <input type="hidden" name="Details[${index}].Price" value="${item.price}" />
-                        <input type="hidden" name="Details[${index}].Quantity" value="${item.quantity}" />
-                        <input type="hidden" name="Details[${index}].Amount" value="${item.amount}" />
-                    `);
-                });
-
-                if (detailItems.length) {
-                    $('input[name="PurchaseOrderId"]').val(detailItems[0].purchaseOrderId);
-                    $('input[name="ATLId"]').val(detailItems[0].authorityToLoadId);
-                    $('input[name="ATLNo"]').val(detailItems[0].atlNo);
-                }
-                $('input[name="TotalAmount"]').val(formatNumber(totalAmount || parseNumber($('input[name="Volume"]').val()) * parseNumber($('input[name="Price"]').val())));
-                $('#selectedPoSummary').text(detailItems.length
-                    ? `ATL ${detailItems[0].atlNo || ''} selected. ${detailItems.length} PO allocation(s) applied.`
-                    : 'No ATL selected.');
-            }
-
-            function rebuildDetailItems() {
-                const cosId = parseInt($('select[name="CustomerOrderSlipId"]').val() || '0');
-                const cosNo = $('select[name="CustomerOrderSlipId"] option:selected').text();
-                const productName = $('input[name="Product"]').val();
-                const price = parseNumber($('input[name="Price"]').val());
-                const quantity = parseNumber($('input[name="Volume"]').val());
-                const remainingVolume = parseNumber($('#RemainingVolume').val());
-                const selectedPurchaseOrders = getSelectedAtlPurchaseOrders();
-
-                detailItems.length = 0;
-
-                if (!cosId || !selectedPurchaseOrders.length || quantity <= 0) {
-                    syncDetails();
-                    return;
-                }
-
-                if (quantity > remainingVolume) {
-                    setDetailError('Volume exceeds the remaining COS balance.');
-                    syncDetails();
-                    return;
-                }
-
-                let remainingAllocation = quantity;
-
-                selectedPurchaseOrders.forEach(item => {
-                    if (remainingAllocation <= 0) {
-                        return;
-                    }
-
-                    const available = item.unservedQuantity || 0;
-                    const allocatedQuantity = Math.min(available, remainingAllocation);
-
-                    if (allocatedQuantity <= 0) {
-                        return;
-                    }
-
-                    detailItems.push({
-                        customerOrderSlipId: cosId,
-                        cosNo: cosNo,
-                        purchaseOrderId: item.purchaseOrderId,
-                        purchaseOrderNo: item.purchaseOrderNo,
-                        authorityToLoadId: item.atlId,
-                        atlNo: item.atlNo || '',
-                        productName: productName,
-                        price: price,
-                        quantity: allocatedQuantity,
-                        amount: allocatedQuantity * price
-                    });
-
-                    remainingAllocation -= allocatedQuantity;
-                });
-
-                if (remainingAllocation > 0) {
-                    detailItems.length = 0;
-                    setDetailError('Selected ATL balance is not enough for the requested volume.');
-                } else {
-                    clearDetailError();
-                }
-
-                syncDetails();
-            }
-
-            function validateVolume() {
-                const remainingVolume = parseNumber($("#RemainingVolume").val());
-                const volume = parseNumber($("#Volume").val());
-                let maxUnserved = getSelectedUnservedTotal() || remainingVolume;
-                const maxVolume = Math.min(remainingVolume, maxUnserved);
-
-                if (volume > maxVolume) {
-                    alert("Volume cannot exceed " + formatNumber(maxVolume));
-                    $("#Volume").val(maxVolume);
-                }
-            }
-
-            function updateCustomerOrderSlips(customerId, callback) {
-                if (!customerId) {
-                    return;
-                }
-
-                $.ajax({
-                    url: '@Url.Action("GetCustomerOrderSlipList", "DeliveryReceipt", new { area = "Filpride" })',
-                    type: "GET",
-                    data: { customerId: customerId, deliveryReceiptId: deliveryReceiptId },
-                    success: function (data) {
-                        const $cosSelect = $('select[name="CustomerOrderSlipId"]');
-                        $cosSelect.empty();
-
-                        if (data && data.length > 0) {
-                            $cosSelect.append('<option value="">Select cos</option>');
-                            $.each(data, function (_, item) {
-                                $cosSelect.append('<option value="' + item.value + '">' + item.text + '</option>');
-                            });
-                        } else {
-                            $cosSelect.append('<option value="">No cos available</option>');
-                        }
-
-                        if (callback) {
-                            callback();
-                        }
-                    }
-                });
-            }
-
-            function loadCustomerDetails(customerId) {
-                if (!customerId) {
-                    return;
-                }
-
-                $.ajax({
-                    url: '@Url.Action("GetCustomerDetails", "DeliveryReceipt", new { area = "Filpride" })',
-                    type: "GET",
-                    data: { id: customerId },
-                    success: function (data) {
-                        $('input[name="CustomerAddress"]').val(data ? data.address : '');
-                        $('input[name="CustomerTin"]').val(data ? data.tinNo : '');
-                        updateCustomerOrderSlips(customerId, function () {
-                            if (initialCosId) {
-                                $('select[name="CustomerOrderSlipId"]').val(initialCosId);
-                                loadCosDetails(initialCosId, true);
-                            }
-                        });
-                    }
-                });
-            }
-
-            function loadCosDetails(cosId, isInitialLoad) {
-                if (!cosId) {
-                    return;
-                }
-
-                suppressVolumeRefresh = isInitialLoad;
-
-                $.ajax({
-                    url: '@Url.Action("GetCosDetails", "DeliveryReceipt", new { area = "Filpride" })',
-                    type: "GET",
-                    data: {
-                        id: cosId,
-                        currentVolume: parseNumber($('input[name="Volume"]').val()),
-                        deliveryReceiptId: deliveryReceiptId
-                    },
-                    success: function (data) {
-                        if (!data) {
-                            return;
-                        }
-
-                        if (data.deliveryOption === "@SD.DeliveryOption_ForPickUpByHauler") {
-                            $('#haulerList').show();
-                            $('input[name="Freight"]').parent().show();
-                            $('input[name="ECC"]').parent().show();
-                            $('select[name="HaulerId"]').val(initialHaulerId || data.haulerId).change();
-                            if (!isInitialLoad) {
-                                $('input[name="Freight"]').val(data.freight);
-                            }
-                        } else if (data.deliveryOption === "@SD.DeliveryOption_DirectDelivery") {
-                            $('#haulerList').show();
-                            $('input[name="Freight"]').parent().hide();
-                            $('input[name="ECC"]').parent().hide();
-                            $('select[name="HaulerId"]').val(initialHaulerId || data.haulerId).change();
-                        } else {
-                            $('input[name="Freight"]').parent().hide();
-                            $('input[name="ECC"]').parent().hide();
-                            $('#haulerList').hide();
-                        }
-
-                        $('input[name="Driver"]').val($('input[name="Driver"]').val() || initialDriver || data.driver);
-                        $('input[name="PlateNo"]').val($('input[name="PlateNo"]').val() || initialPlateNo || data.plateNo);
-                        $('input[name="Product"]').val(data.product);
-                        $('input[name="CosVolume"]').val(formatNumber(data.quantity));
-                        $('input[name="RemainingVolume"]').val(formatNumber(data.remainingVolume));
-                        $('input[name="DeliveryOption"]').val(data.deliveryOption);
-                        $('input[name="Price"]').val(data.price);
-
-                        atlPurchaseOrders.length = 0;
-                        $atlSelect.empty().append('<option value="">Select ATL</option>');
-
-                        if (data.purchaseOrders && data.purchaseOrders.length > 0) {
-                            $.each(data.purchaseOrders, function (_, item) {
-                                atlPurchaseOrders.push({
-                                    purchaseOrderId: item.purchaseOrderId,
-                                    purchaseOrderNo: item.purchaseOrderNo,
-                                    supplierName: item.supplierName,
-                                    unservedQuantity: parseFloat(item.unservedQuantity) || 0,
-                                    atlId: item.atlId || 0,
-                                    atlNo: item.atlNo || ''
-                                });
-                            });
-
-                            $.each(buildAtlOptions(atlPurchaseOrders), function (_, item) {
-                                const formattedOption =
-                                    'ATL#: ' + (item.atlNo || '') + ' | ' +
-                                    'PO Count: ' + item.poCount + ' | ' +
-                                    'Unserved: ' + formatNumber(item.totalUnserved);
-
-                                const option = $('<option>', {
-                                    value: item.atlId,
-                                    text: formattedOption
-                                });
-
-                                if (isInitialLoad && item.atlId === initialAtlId) {
-                                    option.prop('selected', true);
-                                }
-
-                                $atlSelect.append(option);
-                            });
-                        }
-
-                        if (!hasReceivingReport) {
-                            const maxUnserved = getSelectedUnservedTotal();
-
-                            if (!isInitialLoad) {
-                                $('input[name="Volume"]').val(Math.min(data.remainingVolume, maxUnserved || data.remainingVolume));
-                            } else {
-                                $('input[name="Volume"]').val(initialVolume);
-                            }
-                        }
-
-                        refreshVolumeFromSelection();
-                        $atlSelect.trigger('change');
-                        calculateBuilderTotalAmount();
-                        suppressVolumeRefresh = false;
-                    }
-                });
-            }
-
-            $('select[name="CustomerId"]').on('change', function () {
-                if (hasReceivingReport) {
-                    return;
-                }
-
-                const customerId = $(this).val();
-                $('input[name="CustomerAddress"]').val('');
-                $('input[name="CustomerTin"]').val('');
-                $('select[name="CustomerOrderSlipId"]').empty();
-                atlPurchaseOrders.length = 0;
-                $atlSelect.empty().append('<option value="">Select ATL</option>').trigger('change');
-                loadCustomerDetails(customerId);
-            });
-
-            $('select[name="CustomerOrderSlipId"]').on('change', function () {
-                if (hasReceivingReport) {
-                    return;
-                }
-
-                loadCosDetails($(this).val(), false);
-            });
-
-            $atlSelect.on('change', function () {
-                refreshVolumeFromSelection();
-                validateVolume();
-                rebuildDetailItems();
-            });
-
-            $('input[name="Volume"]').on('input change', function () {
-                validateVolume();
-                calculateBuilderTotalAmount();
-                rebuildDetailItems();
-            });
-
-            $('#edit-delivery-receipt-form').on('submit', function (e) {
-                if (detailItems.length > 0) {
-                    rebuildDetailItems();
-                }
-            });
-
-            $('input[name="ManualDrNo"]').on('blur', function () {
-                const manualDrNo = $(this).val();
-                if (!manualDrNo) {
-                    return;
-                }
-
-                $.ajax({
-                    url: '@Url.Action("CheckManualDrNoExists", "DeliveryReceipt", new { area = "Filpride" })',
-                    type: "GET",
-                    data: { manualDrNo: manualDrNo, drId: deliveryReceiptId },
-                    success: function (exists) {
-                        const submitButton = $('button[type="submit"]');
-
-                        if (exists) {
-                            alert("Manual DR# already exists. Please enter a different number.");
-                            $('input[name="ManualDrNo"]').addClass('is-invalid');
-                            if ($('input[name="ManualDrNo"]').next('.text-danger.manual-dr-exists').length === 0) {
-                                $('input[name="ManualDrNo"]').after('<span class="text-danger manual-dr-exists">Manual DR# already exists</span>');
-                            }
-                            submitButton.prop('disabled', true);
-                        } else {
-                            $('input[name="ManualDrNo"]').removeClass('is-invalid');
-                            $('.manual-dr-exists').remove();
-                            submitButton.prop('disabled', false);
-                        }
-                    }
-                });
-            });
-
-            $('input[name="Freight"]').val(initialFreight ? formatNumber(initialFreight) : $('input[name="Freight"]').val());
-            syncDetails();
-            loadCustomerDetails(initialCustomerId);
-        });
-    </script>
 }

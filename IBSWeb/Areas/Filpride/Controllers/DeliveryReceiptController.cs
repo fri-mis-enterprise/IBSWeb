@@ -1709,7 +1709,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
             try
             {
-                var minDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.DeliveryReceipt, cancellationToken);
                 var existingRecord = await _unitOfWork.FilprideDeliveryReceipt
                     .GetAsync(dr => dr.DeliveryReceiptId == id, cancellationToken);
 
@@ -1718,91 +1717,33 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
-                var purchaseOrders = await _dbContext.FilprideBookAtlDetails
-                    .Include(x => x.Header)
-                    .Include(x => x.CustomerOrderSlip)
-                    .Include(x => x.AppointedSupplier!)
-                    .ThenInclude(x => x.PurchaseOrder!)
-                    .ThenInclude(x => x.Supplier)
-                    .Where(x => x.CustomerOrderSlipId == existingRecord.CustomerOrderSlipId)
-                    .Select(a => new SelectListItem
-                    {
-                        Value = a.AppointedSupplier!.PurchaseOrderId.ToString(),
-                        Text = $"PO: {a.AppointedSupplier.PurchaseOrder!.PurchaseOrderNo} | " +
-                               $"Supplier: {a.AppointedSupplier.Supplier!.SupplierName} | " +
-                               $"ATL#: {a.Header!.AuthorityToLoadNo} | " +
-                               $"Unserved: {a.UnservedQuantity}"
-                    })
-                    .ToListAsync(cancellationToken);
-
                 DeliveryReceiptHaulerDetailsViewModel viewModel = new()
                 {
                     DeliveryReceiptId = existingRecord.DeliveryReceiptId,
                     Date = existingRecord.Date,
-                    CustomerId = existingRecord.Customer!.CustomerId,
-                    Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken),
+                    ManualDrNo = existingRecord.ManualDrNo,
+                    CustomerName = existingRecord.Customer?.CustomerName,
                     CustomerAddress = existingRecord.CustomerAddress,
                     CustomerTin = existingRecord.CustomerTin,
-                    CustomerOrderSlipId = existingRecord.CustomerOrderSlipId,
-                    CustomerOrderSlips = await _unitOfWork.FilprideCustomerOrderSlip.GetCosListNotDeliveredAsync(cancellationToken),
-                    PurchaseOrderId = existingRecord.PurchaseOrderId ?? 0,
-                    PurchaseOrders = purchaseOrders,
+                    CustomerOrderSlipNo = existingRecord.CustomerOrderSlip?.CustomerOrderSlipNo,
                     Product = existingRecord.CustomerOrderSlip!.Product!.ProductName,
                     CosVolume = existingRecord.CustomerOrderSlip.Quantity,
                     RemainingVolume = existingRecord.CustomerOrderSlip.BalanceQuantity + existingRecord.Quantity,
+                    DeliveryOption = existingRecord.CustomerOrderSlip.DeliveryOption,
                     Price = existingRecord.CustomerOrderSlip.DeliveredPrice,
                     Volume = existingRecord.Quantity,
-                    TotalAmount = existingRecord.TotalAmount,
-                    Remarks = existingRecord.Remarks,
-                    ManualDrNo = existingRecord.ManualDrNo,
-                    Freight = existingRecord.Freight,
-                    ECC = existingRecord.ECC,
-                    DeliveryOption = existingRecord.CustomerOrderSlip.DeliveryOption,
-                    HaulerId = existingRecord.HaulerId,
-                    Haulers = await _unitOfWork.GetFilprideHaulerListAsyncById(cancellationToken),
+                    ATLNo = existingRecord.AuthorityToLoadNo,
+                    HaulerName = existingRecord.HaulerName ?? string.Empty,
                     Driver = existingRecord.Driver!,
                     PlateNo = existingRecord.PlateNo!,
-                    ATLId = existingRecord.AuthorityToLoadId,
-                    ATLNo = existingRecord.AuthorityToLoadNo,
-                    HasReceivingReport = existingRecord.HasReceivingReport,
-                    MinDate = minDate,
-                    Details = existingRecord.Details.Any()
-                        ? existingRecord.Details
-                            .OrderBy(d => d.ProductName)
-                            .Select(d => new DeliveryReceiptDetailInput
-                            {
-                                CustomerOrderSlipId = d.CustomerOrderSlipId,
-                                CustomerOrderSlipNo = d.CustomerOrderSlip?.CustomerOrderSlipNo,
-                                PurchaseOrderId = d.PurchaseOrderId,
-                                AuthorityToLoadId = d.AuthorityToLoadId,
-                                AuthorityToLoadNo = d.AuthorityToLoadNo,
-                                ProductName = d.ProductName,
-                                Price = d.UnitPrice,
-                                Quantity = d.Quantity,
-                                Amount = d.TotalAmount
-                            })
-                            .ToList()
-                        : new List<DeliveryReceiptDetailInput>
-                        {
-                            new()
-                            {
-                                CustomerOrderSlipId = existingRecord.CustomerOrderSlipId,
-                                CustomerOrderSlipNo = existingRecord.CustomerOrderSlip.CustomerOrderSlipNo,
-                                PurchaseOrderId = existingRecord.PurchaseOrderId ?? 0,
-                                AuthorityToLoadId = existingRecord.AuthorityToLoadId,
-                                AuthorityToLoadNo = existingRecord.AuthorityToLoadNo,
-                                ProductName = existingRecord.CustomerOrderSlip.Product?.ProductName,
-                                Price = existingRecord.CustomerOrderSlip.DeliveredPrice,
-                                Quantity = existingRecord.Quantity,
-                                Amount = existingRecord.TotalAmount
-                            }
-                        },
+                    Freight = existingRecord.Freight,
+                    ECC = existingRecord.ECC,
+                    TotalAmount = existingRecord.TotalAmount,
+                    Remarks = existingRecord.Remarks,
                     HaulerInvoiceNo = existingRecord.HaulerInvoiceNo,
                     HaulerInvoiceDate = existingRecord.HaulerInvoiceDate,
                     HaulerInvoiceAmount = existingRecord.HaulerInvoiceAmount
                 };
-
-                ViewBag.DeliveryOption = existingRecord.CustomerOrderSlip.DeliveryOption;
 
                 return View(viewModel);
             }
@@ -1820,14 +1761,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditHaulerDetails(DeliveryReceiptHaulerDetailsViewModel viewModel, CancellationToken cancellationToken)
         {
-            await PopulateDeliveryReceiptViewModelAsync(viewModel, cancellationToken);
-
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             try
             {
-                viewModel.CurrentUser = GetUserFullName();
-
                 var existingRecord = await _unitOfWork.FilprideDeliveryReceipt
                     .GetAsync(dr => dr.DeliveryReceiptId == viewModel.DeliveryReceiptId, cancellationToken);
 
@@ -1846,7 +1783,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingRecord.HaulerInvoiceDate = viewModel.HaulerInvoiceDate;
                 existingRecord.HaulerInvoiceAmount = viewModel.HaulerInvoiceAmount;
 
-                FilprideAuditTrail auditTrailBook = new(viewModel.CurrentUser, $"Edit hauler details delivery receipt# {existingRecord.DeliveryReceiptNo}", "Delivery Receipt");
+                FilprideAuditTrail auditTrailBook = new(GetUserFullName(), $"Edit hauler details delivery receipt# {existingRecord.DeliveryReceiptNo}", "Delivery Receipt");
                 await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
 
                 await _unitOfWork.SaveAsync(cancellationToken);
