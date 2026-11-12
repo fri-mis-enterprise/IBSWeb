@@ -7,10 +7,9 @@ namespace IBS.Models.Filpride.ViewModels
     {
         public int DeliveryReceiptId { get; set; }
 
-        public DateOnly Date { get; set; }
+        public DateOnly? Date { get; set; }
 
-        [StringLength(50)]
-        public string ManualDrNo { get; set; } = null!;
+        public string? ManualDrNo { get; set; }
 
         #region--Customer
 
@@ -42,29 +41,24 @@ namespace IBS.Models.Filpride.ViewModels
         #endregion
 
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = false)]
-        public decimal Volume { get; set; }
+        public decimal? Volume { get; set; }
 
         public string? ATLNo { get; set; }
 
-        [StringLength(200)]
-        public string Driver { get; set; } = null!;
+        public string? Driver { get; set; }
 
-        [StringLength(200)]
-        public string PlateNo { get; set; } = null!;
+        public string? PlateNo { get; set; }
 
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
-        public decimal Freight { get; set; }
+        public decimal? Freight { get; set; }
 
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
-        public decimal ECC { get; set; }
+        public decimal? ECC { get; set; }
 
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = true)]
-        public decimal TotalAmount { get; set; }
+        public decimal? TotalAmount { get; set; }
 
-        [StringLength(1000)]
-        public string Remarks { get; set; } = null!;
-
-        public bool HasReceivingReport { get; set; }
+        public string? Remarks { get; set; }
 
         [StringLength(200)]
         public string? HaulerInvoiceNo { get; set; }
@@ -73,7 +67,6 @@ namespace IBS.Models.Filpride.ViewModels
 
         public decimal HaulerInvoiceAmount { get; set; }
 
-        [StringLength(200)]
-        public string HaulerName { get; set; } = null!;
+        public string? HaulerName { get; set; }
     }
 }
