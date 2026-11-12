@@ -1822,15 +1822,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
             await PopulateDeliveryReceiptViewModelAsync(viewModel, cancellationToken);
 
-            ModelState.Remove(nameof(DeliveryReceiptViewModel.Driver));
-            ModelState.Remove(nameof(DeliveryReceiptViewModel.PlateNo));
-
-            if (!ModelState.IsValid)
-            {
-                TempData["warning"] = "The submitted information is invalid.";
-                return View(viewModel);
-            }
-
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             try
