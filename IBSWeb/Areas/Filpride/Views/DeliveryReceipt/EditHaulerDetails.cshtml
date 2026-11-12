@@ -321,9 +321,11 @@
                     `);
                 });
 
-                $('input[name="PurchaseOrderId"]').val(detailItems.length ? detailItems[0].purchaseOrderId : '');
-                $('input[name="ATLId"]').val(detailItems.length ? detailItems[0].authorityToLoadId : '');
-                $('input[name="ATLNo"]').val(detailItems.length ? detailItems[0].atlNo : '');
+                if (detailItems.length) {
+                    $('input[name="PurchaseOrderId"]').val(detailItems[0].purchaseOrderId);
+                    $('input[name="ATLId"]').val(detailItems[0].authorityToLoadId);
+                    $('input[name="ATLNo"]').val(detailItems[0].atlNo);
+                }
                 $('input[name="TotalAmount"]').val(formatNumber(totalAmount || parseNumber($('input[name="Volume"]').val()) * parseNumber($('input[name="Price"]').val())));
                 $('#selectedPoSummary').text(detailItems.length
                     ? `ATL ${detailItems[0].atlNo || ''} selected. ${detailItems.length} PO allocation(s) applied.`
@@ -589,10 +591,8 @@
             });
 
             $('#edit-delivery-receipt-form').on('submit', function (e) {
-                if (detailItems.length) {
-                    $('input[name="PurchaseOrderId"]').val(detailItems[0].purchaseOrderId);
-                    $('input[name="ATLId"]').val(detailItems[0].authorityToLoadId);
-                    $('input[name="ATLNo"]').val(detailItems[0].atlNo);
+                if (detailItems.length > 0) {
+                    rebuildDetailItems();
                 }
             });
 
