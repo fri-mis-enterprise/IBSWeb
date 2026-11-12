@@ -25,25 +25,25 @@
                 <div asp-validation-summary="ModelOnly"></div>
                 <input asp-for="DeliveryReceiptId" type="hidden" />
                 <div class="form-floating col-12">
-                    <input asp-for="Date" type="date" class="form-control border-0 shadow" placeholder="" readonly/>
-                    <label asp-for="Date" class="ms-2">Date<span class="required">*</span></label>
+                    <input asp-for="Date" type="date" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                    <label asp-for="Date" class="ms-2">Date</label>
                 </div>
                 <div class="form-floating py-2 col-12">
-                    <input asp-for="ManualDrNo" class="form-control border-0 shadow" placeholder="" readonly/>
-                    <label asp-for="ManualDrNo">Manual DR#<span class="required">*</span></label>
+                    <input asp-for="ManualDrNo" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                    <label asp-for="ManualDrNo">Manual DR#</label>
                 </div>
                 <fieldset class="border p-2 py-2">
                     <legend class="w-auto px-2">Customer Details</legend>
                     <div class="form-floating py-2 col-12">
-                        <input asp-for="CustomerName" class="form-control border-0 shadow" placeholder="" readonly/>
-                        <label asp-for="CustomerName">Customer Name<span class="required">*</span></label>
+                        <input asp-for="CustomerName" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                        <label asp-for="CustomerName">Customer Name</label>
                     </div>
                     <div class="form-floating py-2 col-12">
-                        <input asp-for="CustomerAddress" class="form-control border-0 shadow" placeholder="" readonly tabindex="-1" />
+                        <input asp-for="CustomerAddress" class="form-control border-0 shadow" placeholder="" disabled readonly/>
                         <label asp-for="CustomerAddress">Address</label>
                     </div>
                     <div class="form-floating py-2 col-12">
-                        <input asp-for="CustomerTin" class="form-control border-0 shadow" placeholder="" readonly tabindex="-1" />
+                        <input asp-for="CustomerTin" class="form-control border-0 shadow" placeholder="" disabled readonly/>
                         <label asp-for="CustomerTin">TIN</label>
                     </div>
                 </fieldset>
@@ -51,65 +51,65 @@
                 <fieldset class="border p-2 py-2">
                     <legend class="w-auto px-2">Order Details</legend>
                     <div class="form-floating py-2 col-12">
-                        <input asp-for="CustomerOrderSlipNo" class="form-control border-0 shadow" placeholder="" readonly/>
-                        <label asp-for="CustomerOrderSlipNo">Customer OrderSlip No<span class="required">*</span></label>
+                        <input asp-for="CustomerOrderSlipNo" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                        <label asp-for="CustomerOrderSlipNo">Customer OrderSlip No</label>
                     </div>
                     <div class="form-floating py-2 col-12">
-                        <input asp-for="Product" class="form-control border-0 shadow" placeholder="" readonly tabindex="-1" />
-                        <label asp-for="Product"></label>
+                        <input asp-for="Product" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                        <label asp-for="Product">Product</label>
                     </div>
                     <div class="form-floating py-2 col-12">
-                        <input asp-for="CosVolume" class="form-control border-0 shadow" placeholder="" readonly tabindex="-1" />
+                        <input asp-for="CosVolume" class="form-control border-0 shadow" placeholder="" disabled readonly/>
                         <label asp-for="CosVolume">COS Volume</label>
                     </div>
                     <div class="form-floating py-2 col-12">
-                        <input asp-for="RemainingVolume" class="form-control border-0 shadow" placeholder="" readonly tabindex="-1" />
+                        <input asp-for="RemainingVolume" class="form-control border-0 shadow" placeholder="" disabled readonly/>
                         <label asp-for="RemainingVolume">Remaining Volume</label>
                     </div>
                     <div class="form-floating py-2 col-12">
-                        <input asp-for="DeliveryOption" class="form-control border-0 shadow" placeholder="" readonly tabindex="-1" />
+                        <input asp-for="DeliveryOption" class="form-control border-0 shadow" placeholder="" disabled readonly/>
                         <label asp-for="DeliveryOption">Delivery Option</label>
                     </div>
                     <div class="form-floating py-2 col-12">
-                        <input asp-for="Price" class="form-control border-0 shadow" placeholder="" readonly tabindex="-1" />
-                        <label asp-for="Price"></label>
+                        <input asp-for="Price" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                        <label asp-for="Price">Price</label>
                     </div>
                 </fieldset>
                 <div class="form-floating py-2 col-12">
-                    <input asp-for="Volume" class="form-control border-0 shadow" placeholder="" required min="0.01" readonly />
-                    <label asp-for="Volume">Volume<span class="required">*</span></label>
+                    <input asp-for="Volume" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                    <label asp-for="Volume">Volume</label>
                 </div>
                 <div class="form-floating py-2 col-12">
-                    <input asp-for="ATLNo" class="form-control border-0 shadow" placeholder="" readonly tabindex="-1" />
+                    <input asp-for="ATLNo" class="form-control border-0 shadow" placeholder="" disabled readonly/>
                     <label asp-for="ATLNo" class="ms-2">ATL#</label>
                 </div>
                 <div class="form-floating py-2 col-12">
-                    <input asp-for="HaulerName" class="form-control border-0 shadow" placeholder="" readonly/>
-                    <label asp-for="HaulerName">Hauler Name<span class="required">*</span></label>
+                    <input asp-for="HaulerName" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                    <label asp-for="HaulerName">Hauler Name</label>
                 </div>
                 <div class="form-floating py-2 col-12">
-                    <input asp-for="Driver" class="form-control border-0 shadow" placeholder="" readonly/>
-                    <label asp-for="Driver" class="ms-2">Driver<span class="required">*</span></label>
+                    <input asp-for="Driver" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                    <label asp-for="Driver" class="ms-2">Driver</label>
                 </div>
                 <div class="form-floating py-2 col-12">
-                    <input asp-for="PlateNo" class="form-control border-0 shadow" placeholder="" readonly/>
-                    <label asp-for="PlateNo" class="ms-2">Plate #<span class="required">*</span></label>
+                    <input asp-for="PlateNo" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                    <label asp-for="PlateNo" class="ms-2">Plate #</label>
                 </div>
                 <div class="form-floating py-2 col-12">
-                    <input asp-for="Freight" class="form-control border-0 shadow" placeholder="" readonly/>
+                    <input asp-for="Freight" class="form-control border-0 shadow" placeholder="" disabled readonly/>
                     <label asp-for="Freight">Freight</label>
                 </div>
                 <div class="form-floating py-2 col-12">
-                    <input asp-for="ECC" class="form-control border-0 shadow" placeholder="" readonly/>
+                    <input asp-for="ECC" class="form-control border-0 shadow" placeholder="" disabled readonly/>
                     <label asp-for="ECC">ECC</label>
                 </div>
                 <div class="form-floating py-2 col-12">
-                    <input asp-for="TotalAmount" class="form-control border-0 shadow" placeholder="" tabindex="-1" readonly/>
+                    <input asp-for="TotalAmount" class="form-control border-0 shadow" placeholder="" disabled readonly/>
                     <label asp-for="TotalAmount">Total Amount</label>
                 </div>
                 <div class="form-floating py-2 col-12">
-                    <textarea asp-for="Remarks" class="form-control border-0 shadow" placeholder="Indicate the reason of this changes." style="height: 100px" readonly></textarea>
-                    <label asp-for="Remarks" class="control-label">Remarks<span class="required">*</span></label>
+                    <textarea asp-for="Remarks" class="form-control border-0 shadow" placeholder="Indicate the reason of this changes." style="height: 100px" disabled readonly></textarea>
+                    <label asp-for="Remarks" class="control-label">Remarks</label>
                 </div>
                 <fieldset class="border p-2 py-2 mb-3">
                     <legend class="w-auto px-2">Hauler Details</legend>
