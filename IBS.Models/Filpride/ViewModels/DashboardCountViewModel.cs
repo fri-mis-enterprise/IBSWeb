@@ -18,6 +18,7 @@ namespace IBS.Models.Filpride.ViewModels
         public int ForInvoiceCount { get; set; }
         public int RecordLiftingDateCount { get; set; }
         public int RecordSupplierDetails { get; set; }
+        public int RecordHaulerDetails { get; set; }
 
         // Accounting - For Approval Counts
         public int JournalVoucherForApprovalCount { get; set; }

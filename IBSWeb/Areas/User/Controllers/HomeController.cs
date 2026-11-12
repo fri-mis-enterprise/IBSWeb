@@ -185,6 +185,10 @@ namespace IBSWeb.Areas.User.Controllers
                               || rr.WithdrawalCertificate == null || rr.CostBasedOnSoa == 0)
                              && rr.CanceledBy == null && rr.VoidedBy == null)
                 .CountAsync();
+            counts.RecordHaulerDetails = await ctx.FilprideDeliveryReceipts
+                .Where(dr => (dr.HaulerInvoiceNo == null || dr.HaulerInvoiceDate == null || dr.HaulerInvoiceAmount == 0)
+                             && (dr.Status == nameof(DRStatus.ForInvoicing) || dr.Status == nameof(DRStatus.Invoiced)))
+                .CountAsync();
             counts.JournalVoucherForApprovalCount = await ctx.FilprideJournalVoucherHeaders
                 .Where(jv =>
                     jv.Status == nameof(JvStatus.ForApproval) &&

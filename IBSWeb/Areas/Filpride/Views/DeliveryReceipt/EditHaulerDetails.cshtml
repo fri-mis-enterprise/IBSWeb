@@ -1,0 +1,148 @@
+@model DeliveryReceiptHaulerDetailsViewModel
+
+@{
+    ViewData["Title"] = "Delivery Receipt - Edit Hauler Details";
+}
+
+<link rel="stylesheet" href="~/css/form-style.css">
+
+<div class="loader-container">
+    <div class="loader"></div>
+    <div class="loader-text">Loading...</div>
+</div>
+<div class="card shadow border-0 mt-4">
+    <div class="card-header bg-secondary bg-gradient ml-0 py-3">
+        <div class="row">
+            <div class="col-12 text-center">
+                <h2 class="text-white py-2">@ViewData["Title"]</h2>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-4">
+        <form id="edit-delivery-receipt-form" method="post" class="row">
+            @Html.AntiForgeryToken()
+            <div class="border-2">
+                <div asp-validation-summary="ModelOnly"></div>
+                <input asp-for="DeliveryReceiptId" type="hidden" />
+                <div class="form-floating col-12">
+                    <input asp-for="Date" type="date" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                    <label asp-for="Date" class="ms-2">Date</label>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="ManualDrNo" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                    <label asp-for="ManualDrNo">Manual DR#</label>
+                </div>
+                <fieldset class="border p-2 py-2">
+                    <legend class="w-auto px-2">Customer Details</legend>
+                    <div class="form-floating py-2 col-12">
+                        <input asp-for="CustomerName" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                        <label asp-for="CustomerName">Customer Name</label>
+                    </div>
+                    <div class="form-floating py-2 col-12">
+                        <input asp-for="CustomerAddress" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                        <label asp-for="CustomerAddress">Address</label>
+                    </div>
+                    <div class="form-floating py-2 col-12">
+                        <input asp-for="CustomerTin" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                        <label asp-for="CustomerTin">TIN</label>
+                    </div>
+                </fieldset>
+                <hr />
+                <fieldset class="border p-2 py-2">
+                    <legend class="w-auto px-2">Order Details</legend>
+                    <div class="form-floating py-2 col-12">
+                        <input asp-for="CustomerOrderSlipNo" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                        <label asp-for="CustomerOrderSlipNo">Customer OrderSlip No</label>
+                    </div>
+                    <div class="form-floating py-2 col-12">
+                        <input asp-for="Product" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                        <label asp-for="Product">Product</label>
+                    </div>
+                    <div class="form-floating py-2 col-12">
+                        <input asp-for="CosVolume" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                        <label asp-for="CosVolume">COS Volume</label>
+                    </div>
+                    <div class="form-floating py-2 col-12">
+                        <input asp-for="RemainingVolume" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                        <label asp-for="RemainingVolume">Remaining Volume</label>
+                    </div>
+                    <div class="form-floating py-2 col-12">
+                        <input asp-for="DeliveryOption" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                        <label asp-for="DeliveryOption">Delivery Option</label>
+                    </div>
+                    <div class="form-floating py-2 col-12">
+                        <input asp-for="Price" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                        <label asp-for="Price">Price</label>
+                    </div>
+                </fieldset>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="Volume" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                    <label asp-for="Volume">Volume</label>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="ATLNo" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                    <label asp-for="ATLNo" class="ms-2">ATL#</label>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="HaulerName" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                    <label asp-for="HaulerName">Hauler Name</label>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="Driver" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                    <label asp-for="Driver" class="ms-2">Driver</label>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="PlateNo" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                    <label asp-for="PlateNo" class="ms-2">Plate #</label>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="Freight" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                    <label asp-for="Freight">Freight</label>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="ECC" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                    <label asp-for="ECC">ECC</label>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <input asp-for="TotalAmount" class="form-control border-0 shadow" placeholder="" disabled readonly/>
+                    <label asp-for="TotalAmount">Total Amount</label>
+                </div>
+                <div class="form-floating py-2 col-12">
+                    <textarea asp-for="Remarks" class="form-control border-0 shadow" placeholder="Indicate the reason of this changes." style="height: 100px" disabled readonly></textarea>
+                    <label asp-for="Remarks" class="control-label">Remarks</label>
+                </div>
+                <fieldset class="border p-2 py-2 mb-3">
+                    <legend class="w-auto px-2">Hauler Details</legend>
+                    <div class="form-floating py-2 col-12">
+                        <input asp-for="HaulerInvoiceNo" class="form-control border-0 shadow" placeholder="" />
+                        <label asp-for="HaulerInvoiceNo">Hauler Invoice #</label>
+                    </div>
+                    <div class="form-floating py-2 col-12">
+                        <input asp-for="HaulerInvoiceDate" type="date" class="form-control border-0 shadow" placeholder="" />
+                        <label asp-for="HaulerInvoiceDate">Hauler Invoice Date</label>
+
+                    </div>
+                    <div class="form-floating py-2 col-12">
+                        <input asp-for="HaulerInvoiceAmount" class="form-control border-0 shadow" placeholder="" />
+                        <label asp-for="HaulerInvoiceAmount">Hauler Invoice Amount</label>
+                        <span asp-validation-for="HaulerInvoiceAmount" class="text-danger"></span>
+                    </div>
+                </fieldset>
+                <div class="row pt-3">
+                    <div class="col-6 col-md-3">
+                        <button type="submit" class="btn btn-primary form-control">Save</button>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <a asp-area="Filpride" asp-controller="DeliveryReceipt" asp-action="Index" asp-route-filterType="@ViewBag.FilterType" class="btn btn-outline-primary border form-control">Back to List</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

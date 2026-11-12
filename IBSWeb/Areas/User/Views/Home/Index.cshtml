@@ -391,6 +391,16 @@ else
                     <span class="pipe-label">Record Supplier Details</span>
                 </a>
 
+                <a href="@Url.Action("Index", "DeliveryReceipt", new { area = "Filpride", filterType = "RecordHaulerDetails" })" class="pipe-card">
+                    <div class="pipe-card-top">
+                        <div class="pipe-icon-wrap pipe-icon-blue">
+                            <span class="material-symbols-outlined pipe-icon">assignment_ind</span>
+                        </div>
+                        <span class="pipe-count">@Model.RecordHaulerDetails.ToString("N0")</span>
+                    </div>
+                    <span class="pipe-label">Record Hauler Details</span>
+                </a>
+
             </div>
         </section>
 

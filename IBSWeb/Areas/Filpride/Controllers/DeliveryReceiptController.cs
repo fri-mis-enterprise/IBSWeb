@@ -436,6 +436,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             drList = drList.Where(dr =>
                                 !dr.HasReceivingReport && dr.CanceledBy == null && dr.VoidedBy == null);
                             break;
+
+                        case "RecordHaulerDetails":
+                            drList = drList.Where(dr =>(dr.HaulerInvoiceNo == null || dr.HaulerInvoiceDate == null || dr.HaulerInvoiceAmount == 0)
+                                && (dr.Status == nameof(DRStatus.ForInvoicing) ||
+                                    dr.Status == nameof(DRStatus.Invoiced)));
+                            break;
                             // Add other cases as needed
                     }
                 }
@@ -1688,6 +1694,112 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 await transaction.RollbackAsync(cancellationToken);
                 return Json(new { success = false, error = ex.Message });
+            }
+        }
+
+        [Authorize(Policy = nameof(DeliveryReceipts.DeliveryReceiptsEdit))]
+        [HttpGet]
+        public async Task<IActionResult> EditHaulerDetails(int? id, CancellationToken cancellationToken)
+        {
+            ViewBag.FilterType = await GetCurrentFilterType();
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            try
+            {
+                var existingRecord = await _unitOfWork.FilprideDeliveryReceipt
+                    .GetAsync(dr => dr.DeliveryReceiptId == id, cancellationToken);
+
+                if (existingRecord == null)
+                {
+                    return BadRequest();
+                }
+
+                DeliveryReceiptHaulerDetailsViewModel viewModel = new()
+                {
+                    DeliveryReceiptId = existingRecord.DeliveryReceiptId,
+                    Date = existingRecord.Date,
+                    ManualDrNo = existingRecord.ManualDrNo,
+                    CustomerName = existingRecord.Customer?.CustomerName,
+                    CustomerAddress = existingRecord.CustomerAddress,
+                    CustomerTin = existingRecord.CustomerTin,
+                    CustomerOrderSlipNo = existingRecord.CustomerOrderSlip?.CustomerOrderSlipNo,
+                    Product = existingRecord.CustomerOrderSlip!.Product!.ProductName,
+                    CosVolume = existingRecord.CustomerOrderSlip.Quantity,
+                    RemainingVolume = existingRecord.CustomerOrderSlip.BalanceQuantity + existingRecord.Quantity,
+                    DeliveryOption = existingRecord.CustomerOrderSlip.DeliveryOption,
+                    Price = existingRecord.CustomerOrderSlip.DeliveredPrice,
+                    Volume = existingRecord.Quantity,
+                    ATLNo = existingRecord.AuthorityToLoadNo,
+                    HaulerName = existingRecord.HaulerName ?? string.Empty,
+                    Driver = existingRecord.Driver!,
+                    PlateNo = existingRecord.PlateNo!,
+                    Freight = existingRecord.Freight,
+                    ECC = existingRecord.ECC,
+                    TotalAmount = existingRecord.TotalAmount,
+                    Remarks = existingRecord.Remarks,
+                    HaulerInvoiceNo = existingRecord.HaulerInvoiceNo,
+                    HaulerInvoiceDate = existingRecord.HaulerInvoiceDate,
+                    HaulerInvoiceAmount = existingRecord.HaulerInvoiceAmount
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                TempData["error"] = ex.Message;
+                _logger.LogError(ex, "Failed to fetch delivery receipt edit hauler details. Error: {ErrorMessage}, Stack: {StackTrace}.",
+                    ex.Message, ex.StackTrace);
+                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
+            }
+        }
+
+        [Authorize(Policy = nameof(DeliveryReceipts.DeliveryReceiptsEdit))]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditHaulerDetails(DeliveryReceiptHaulerDetailsViewModel viewModel, CancellationToken cancellationToken)
+        {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            try
+            {
+                var existingRecord = await _unitOfWork.FilprideDeliveryReceipt
+                    .GetAsync(dr => dr.DeliveryReceiptId == viewModel.DeliveryReceiptId, cancellationToken);
+
+                if (existingRecord == null)
+                {
+                    return NotFound();
+                }
+
+                if (existingRecord.Status != nameof(DRStatus.ForInvoicing) &&
+                    existingRecord.Status != nameof(DRStatus.Invoiced))
+                {
+                    return BadRequest("This delivery receipt is not eligible for editing hauler details.");
+                }
+
+                existingRecord.HaulerInvoiceNo = viewModel.HaulerInvoiceNo;
+                existingRecord.HaulerInvoiceDate = viewModel.HaulerInvoiceDate;
+                existingRecord.HaulerInvoiceAmount = viewModel.HaulerInvoiceAmount;
+
+                FilprideAuditTrail auditTrailBook = new(GetUserFullName(), $"Edit hauler details delivery receipt# {existingRecord.DeliveryReceiptNo}", "Delivery Receipt");
+                await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
+
+                await _unitOfWork.SaveAsync(cancellationToken);
+
+                await transaction.CommitAsync(cancellationToken);
+
+                TempData["success"] = "Delivery receipt hauler details updated successfully.";
+                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                TempData["error"] = ex.Message;
+                _logger.LogError(ex, "Failed to edit delivery receipt hauler details. Error: {ErrorMessage}, Stack: {StackTrace}. Edited by: {UserName}",
+                    ex.Message, ex.StackTrace, _userManager.GetUserName(User));
+                return View(viewModel);
             }
         }
     }
