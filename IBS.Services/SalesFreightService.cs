@@ -50,7 +50,7 @@ namespace IBS.Services
             }
 
             return freight > standardFreight
-                ? "Freight exceeds the customer standard. Obtain signed AR approval, then contact MIS for assistance."
+                ? $"Freight exceeds the customer standard of {standardFreight:N4}. Obtain signed AR approval, then contact MIS for assistance."
                 : null;
         }
 
