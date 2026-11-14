@@ -17,7 +17,6 @@ using OfficeOpenXml;
 namespace IBSWeb.Areas.Filpride.Controllers
 {
     [Area(nameof(Filpride))]
-    [Authorize(Roles = "Admin")]
     public class CustomerController : Controller
     {
         private readonly IUnitOfWork _unitOfWork;
