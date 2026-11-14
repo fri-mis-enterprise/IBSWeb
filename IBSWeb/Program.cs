@@ -79,6 +79,7 @@ if (builder.Environment.IsDevelopment())
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<ProvisionalReceiptTaggingService>();
 builder.Services.AddScoped<CheckVoucherDocumentationService>();
+builder.Services.AddScoped<SalesFreightService>();
 builder.Services.AddOptions<BrandingOptions>()
     .Bind(builder.Configuration.GetSection(BrandingOptions.SectionName))
     .Validate(BrandingOptions.IsValid, "Branding configuration is incomplete.")

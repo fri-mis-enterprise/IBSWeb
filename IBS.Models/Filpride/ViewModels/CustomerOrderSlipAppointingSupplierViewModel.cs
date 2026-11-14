@@ -33,6 +33,8 @@ namespace IBS.Models.Filpride.ViewModels
 
         public int ProductId { get; set; }
 
+        public string? ProductName { get; set; }
+
         public List<PurchaseOrderQuantityInfo> PurchaseOrderQuantities { get; set; } = new();
     }
 

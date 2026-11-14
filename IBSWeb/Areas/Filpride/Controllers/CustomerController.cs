@@ -8,6 +8,7 @@ using IBS.Models.Filpride.MasterFile;
 using IBS.Models;
 using IBS.Services;
 using IBS.Utility.Helpers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -184,6 +185,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
             if (existingCustomer == null)
             {
                 return NotFound();
+            }
+
+            if (model.StandardFreight != existingCustomer.StandardFreight && !User.IsInRole("Admin"))
+            {
+                ModelState.AddModelError(nameof(model.StandardFreight), "Only Admin can maintain approved customer standard freight. Contact MIS.");
+                return View(model);
             }
 
             model.BirDocumentFileName = existingCustomer.BirDocumentFileName;
