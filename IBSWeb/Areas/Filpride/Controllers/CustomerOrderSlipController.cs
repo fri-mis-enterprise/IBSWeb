@@ -80,6 +80,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .GetAsync(c => c.CustomerOrderSlipId == viewModel.CustomerOrderSlipId, cancellationToken);
             viewModel.COSVolume = cos?.Quantity ?? 0m;
             viewModel.ProductId = cos?.ProductId ?? 0;
+            viewModel.ProductName = cos?.ProductName;
             viewModel.Suppliers = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(cancellationToken);
             viewModel.PurchaseOrders = await _unitOfWork.FilpridePurchaseOrder.GetPurchaseOrderListAsyncById(cancellationToken);
             viewModel.PickUpPoints = await _unitOfWork.GetDistinctFilpridePickupPointListById(cancellationToken);
@@ -1363,6 +1364,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     CustomerOrderSlipId = existingRecord.CustomerOrderSlipId,
                     COSVolume = existingRecord.Quantity,
                     Freight = existingRecord.Freight ?? 0m,
+                    ProductId = existingRecord.ProductId,
+                    ProductName = existingRecord.ProductName,
                     Suppliers = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(cancellationToken),
                     PurchaseOrders = await _unitOfWork.FilpridePurchaseOrder.GetPurchaseOrderListAsyncById(cancellationToken),
                     PickUpPoints = await _unitOfWork.GetDistinctFilpridePickupPointListById(cancellationToken),
@@ -1509,6 +1512,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     PurchaseOrders = await _unitOfWork.FilpridePurchaseOrder.GetPurchaseOrderListAsyncById(cancellationToken),
                     COSVolume = existingRecord.Quantity,
                     DeliveryOption = existingRecord.DeliveryOption!,
+                    ProductId = existingRecord.ProductId,
+                    ProductName = existingRecord.ProductName,
                     Freight = existingRecord.Freight ?? 0,
                     PickUpPointId = (int)existingRecord.PickUpPointId!,
                     PickUpPoints = await _unitOfWork.GetDistinctFilpridePickupPointListById(cancellationToken),
@@ -1697,6 +1702,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             {
                 Value = p.PurchaseOrderId,
                 Text = $"{p.PurchaseOrderNo} - {p.ProductName}",
+                p.ProductId,
                 AvailableBalance = p.Quantity - p.QuantityReceived,
                 p.SupplierId,
                 p.Supplier!.SupplierName,

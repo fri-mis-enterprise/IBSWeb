@@ -21,7 +21,7 @@
         </div>
     </div>
     <div class="card-body p-4">
-        <form method="post" id="reappointSupplierForm">
+        <form method="post" id="reappointSupplierForm" data-cos-product-id="@Model.ProductId" data-cos-product-name="@Model.ProductName">
             @Html.AntiForgeryToken()
             <div class="border-2 p-3">
                 <div asp-validation-summary="All" class="text-danger mb-3"></div>
@@ -304,6 +304,7 @@
                                         $optgroup.append($('<option></option>')
                                             .val(po.value)
                                             .text(po.text)
+                                            .data('product-id', po.productId)
                                             .data('available-balance', po.availableBalance)
                                             .data('supplier-id', po.supplierId)
                                             .data('supplier-name', po.supplierName)
@@ -513,4 +514,5 @@
             }
         });
     </script>
+    <script src="~/js/cos-supplier-product-confirmation.js" asp-append-version="true"></script>
 }
