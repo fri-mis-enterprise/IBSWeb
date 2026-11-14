@@ -39,12 +39,15 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private readonly ICloudStorageService _cloudStorageService;
 
+        private readonly SalesFreightService _salesFreightService;
+
         public CustomerOrderSlipController (IUnitOfWork unitOfWork,
             UserManager<ApplicationUser> userManager,
             ApplicationDbContext dbContext,
             IHubContext<NotificationHub> hubContext,
             ILogger<CustomerOrderSlipController> logger,
-            ICloudStorageService cloudStorageService)
+            ICloudStorageService cloudStorageService,
+            SalesFreightService salesFreightService)
         {
             _unitOfWork = unitOfWork;
             _userManager = userManager;
@@ -52,12 +55,34 @@ namespace IBSWeb.Areas.Filpride.Controllers
             _hubContext = hubContext;
             _logger = logger;
             _cloudStorageService = cloudStorageService;
+            _salesFreightService = salesFreightService;
         }
 
         private string GetUserFullName()
         {
             return User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.GivenName)?.Value
                    ?? User.Identity?.Name!;
+        }
+
+        private async Task PopulateCosViewModelAsync(CustomerOrderSlipViewModel viewModel, CancellationToken cancellationToken)
+        {
+            viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
+            viewModel.Commissionee = await _unitOfWork.GetFilprideCommissioneeListAsyncById(cancellationToken);
+            viewModel.Products = await _unitOfWork.GetProductListAsyncById(cancellationToken);
+            viewModel.Branches = await _unitOfWork.FilprideCustomer.GetCustomerBranchesSelectListAsync(viewModel.CustomerId, cancellationToken);
+            viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CustomerOrderSlip, cancellationToken);
+            viewModel.PaymentTerms = await _unitOfWork.FilprideTerms.GetFilprideTermsListAsyncByCode(cancellationToken);
+        }
+
+        private async Task PopulateSupplierViewModelAsync(CustomerOrderSlipAppointingSupplierViewModel viewModel, CancellationToken cancellationToken)
+        {
+            var cos = await _unitOfWork.FilprideCustomerOrderSlip
+                .GetAsync(c => c.CustomerOrderSlipId == viewModel.CustomerOrderSlipId, cancellationToken);
+            viewModel.COSVolume = cos?.Quantity ?? 0m;
+            viewModel.ProductId = cos?.ProductId ?? 0;
+            viewModel.Suppliers = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(cancellationToken);
+            viewModel.PurchaseOrders = await _unitOfWork.FilpridePurchaseOrder.GetPurchaseOrderListAsyncById(cancellationToken);
+            viewModel.PickUpPoints = await _unitOfWork.GetDistinctFilpridePickupPointListById(cancellationToken);
         }
 
         private async Task UpdateFilterTypeClaim(string filterType)
@@ -267,15 +292,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
         public async Task<IActionResult> Create(CustomerOrderSlipViewModel viewModel, CancellationToken cancellationToken)
         {
 
-            viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
-            viewModel.Commissionee = await _unitOfWork.GetFilprideCommissioneeListAsyncById(cancellationToken);
-            viewModel.Products = await _unitOfWork.GetProductListAsyncById(cancellationToken);
-            viewModel.Branches = await _unitOfWork.FilprideCustomer.GetCustomerBranchesSelectListAsync(viewModel.CustomerId, cancellationToken);
-            viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CustomerOrderSlip, cancellationToken);
-            viewModel.PaymentTerms = await _unitOfWork.FilprideTerms.GetFilprideTermsListAsyncByCode(cancellationToken);
+            await PopulateCosViewModelAsync(viewModel, cancellationToken);
 
             var customer = await _unitOfWork.FilprideCustomer
                 .GetAsync(x => x.CustomerId == viewModel.CustomerId, cancellationToken);
+
+            var freightError = await _salesFreightService.ValidateCosAsync(viewModel.CustomerId, viewModel.Freight, null, cancellationToken);
+            if (freightError != null)
+            {
+                ModelState.AddModelError(nameof(viewModel.Freight), freightError);
+            }
 
             if (!ModelState.IsValid)
             {
@@ -512,11 +538,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         public async Task<IActionResult> EditCos(CustomerOrderSlipViewModel viewModel, CancellationToken cancellationToken)
         {
 
-            if (!ModelState.IsValid)
-            {
-                TempData["warning"] = "The submitted information is invalid.";
-                return View(viewModel);
-            }
+            await PopulateCosViewModelAsync(viewModel, cancellationToken);
 
             var existingRecord = await _unitOfWork.FilprideCustomerOrderSlip
                 .GetAsync(cos => cos.CustomerOrderSlipId == viewModel.CustomerOrderSlipId, cancellationToken);
@@ -526,19 +548,36 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return NotFound();
             }
 
-            viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
-            viewModel.Commissionee = await _unitOfWork.GetFilprideCommissioneeListAsyncById(cancellationToken);
-            viewModel.Products = await _unitOfWork.GetProductListAsyncById(cancellationToken);
+            viewModel.Status = existingRecord.Status;
             viewModel.Vat = _unitOfWork.FilprideCustomerOrderSlip.ComputeVatAmount(
                 _unitOfWork.FilprideCustomerOrderSlip.ComputeNetOfVat(existingRecord.TotalAmount));
-            viewModel.Branches = await _unitOfWork.FilprideCustomer.GetCustomerBranchesSelectListAsync(existingRecord.CustomerId, cancellationToken);
-            viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.CustomerOrderSlip, cancellationToken);
-            viewModel.PaymentTerms = await _unitOfWork.FilprideTerms.GetFilprideTermsListAsyncByCode(cancellationToken);
+            viewModel.FileInfos = new List<COSFileInfo>();
+            foreach (var file in existingRecord.UploadedFiles ?? [])
+            {
+                viewModel.FileInfos.Add(new COSFileInfo
+                {
+                    FileName = file,
+                    SignedUrl = await _cloudStorageService.GetSignedUrlAsync(file)
+                });
+            }
+
+            if (!ModelState.IsValid)
+            {
+                TempData["warning"] = "The submitted information is invalid.";
+                return View(viewModel);
+            }
 
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             try
             {
+                var freightError = await _salesFreightService.ValidateCosAsync(viewModel.CustomerId, viewModel.Freight, existingRecord, cancellationToken);
+                if (freightError != null)
+                {
+                    ModelState.AddModelError(nameof(viewModel.Freight), freightError);
+                    return View(viewModel);
+                }
+
                 // TODO uncomment this when implementing the feature to restrict the user to create for the previous posted period
                 // if (await _unitOfWork.IsPeriodPostedAsync(viewModel.Date, cancellationToken))
                 // {
@@ -764,20 +803,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 TempData["error"] = ex.Message;
                 _logger.LogError(ex, "Failed to edit customer order slip. Error: {ErrorMessage}, Stack: {StackTrace}. Edited by: {UserName}",
                     ex.Message, ex.StackTrace, _userManager.GetUserName(User));
-
-                var fileInfos = new List<COSFileInfo>();
-
-                foreach (var file in existingRecord.UploadedFiles!)
-                {
-                    var fileInfo = new COSFileInfo
-                    {
-                        FileName = file,
-                        SignedUrl = await _cloudStorageService.GetSignedUrlAsync(file)
-                    };
-                    fileInfos.Add(fileInfo);
-                }
-
-                viewModel.FileInfos = fileInfos;
 
                 return View(viewModel);
             }
@@ -1297,6 +1322,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 TinNo = customer.CustomerTin,
                 Terms = customer.CustomerTerms,
                 customer.CustomerType,
+                customer.StandardFreight,
                 Branches = !customer.HasBranch ? null : await _unitOfWork.FilprideCustomer
                     .GetCustomerBranchesSelectListAsync(customer.CustomerId, cancellationToken),
                 customer.HasMultipleTerms,
@@ -1336,6 +1362,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     CustomerOrderSlipId = existingRecord.CustomerOrderSlipId,
                     COSVolume = existingRecord.Quantity,
+                    Freight = existingRecord.Freight ?? 0m,
                     Suppliers = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(cancellationToken),
                     PurchaseOrders = await _unitOfWork.FilpridePurchaseOrder.GetPurchaseOrderListAsyncById(cancellationToken),
                     PickUpPoints = await _unitOfWork.GetDistinctFilpridePickupPointListById(cancellationToken),
@@ -1359,9 +1386,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
 
             viewModel.CurrentUser = _userManager.GetUserName(User);
-            viewModel.Suppliers = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(cancellationToken);
-            viewModel.PurchaseOrders = await _unitOfWork.FilpridePurchaseOrder.GetPurchaseOrderListAsyncById(cancellationToken);
-            viewModel.PickUpPoints = await _unitOfWork.GetDistinctFilpridePickupPointListById(cancellationToken);
+            await PopulateSupplierViewModelAsync(viewModel, cancellationToken);
 
             if (!ModelState.IsValid)
             {
@@ -1383,6 +1408,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (existingCos == null || depot == null)
                 {
                     return BadRequest();
+                }
+
+                var requestedFreight = viewModel.DeliveryOption == SD.DeliveryOption_ForPickUpByClient
+                    ? 0m
+                    : viewModel.DeliveryOption == SD.DeliveryOption_DirectDelivery ? viewModel.Freight : existingCos.Freight ?? 0m;
+                var freightError = await _salesFreightService.ValidateCosAsync(existingCos.CustomerId, requestedFreight, existingCos, cancellationToken);
+                if (freightError != null)
+                {
+                    ModelState.AddModelError(nameof(viewModel.Freight), freightError);
+                    return View(viewModel);
                 }
 
                 existingCos.PickUpPointId = viewModel.PickUpPointId;
@@ -1517,9 +1552,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         {
 
             viewModel.CurrentUser = _userManager.GetUserName(User);
-            viewModel.Suppliers = await _unitOfWork.FilprideSupplier.GetFilprideTradeSupplierListAsyncById(cancellationToken);
-            viewModel.PurchaseOrders = await _unitOfWork.FilpridePurchaseOrder.GetPurchaseOrderListAsyncById(cancellationToken);
-            viewModel.PickUpPoints = await _unitOfWork.GetDistinctFilpridePickupPointListById(cancellationToken);
+            await PopulateSupplierViewModelAsync(viewModel, cancellationToken);
 
             if (!ModelState.IsValid)
             {
@@ -1545,6 +1578,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 if (depot == null)
                 {
                     return BadRequest();
+                }
+
+                var requestedFreight = viewModel.DeliveryOption == SD.DeliveryOption_ForPickUpByClient
+                    ? 0m
+                    : viewModel.DeliveryOption == SD.DeliveryOption_DirectDelivery ? viewModel.Freight : existingCos.Freight ?? 0m;
+                var freightError = await _salesFreightService.ValidateCosAsync(existingCos.CustomerId, requestedFreight, existingCos, cancellationToken);
+                if (freightError != null)
+                {
+                    ModelState.AddModelError(nameof(viewModel.Freight), freightError);
+                    return View(viewModel);
                 }
 
                 existingCos.PickUpPointId = viewModel.PickUpPointId;

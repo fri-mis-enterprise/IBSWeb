@@ -149,7 +149,7 @@
                     <span asp-validation-for="PlateNo" class="text-danger"></span>
                 </div>
                 <div class="form-floating py-2 col-12">
-                    <input asp-for="Freight" class="form-control border-0 shadow" min="0.01" placeholder=""/>
+                    <input asp-for="Freight" class="form-control border-0 shadow" min="0" placeholder=""/>
                     <label asp-for="Freight">Freight</label>
                     <span asp-validation-for="Freight" class="text-danger"></span>
                 </div>
@@ -187,7 +187,15 @@
     }
     <script>
         $(document).ready(function () {
-            const detailItems = [];
+            const initialCustomerId = @Html.Raw(Json.Serialize(Model.CustomerId));
+            const initialCosId = @Html.Raw(Json.Serialize(Model.CustomerOrderSlipId));
+            const initialAtlId = @Html.Raw(Json.Serialize(Model.Details.FirstOrDefault()?.AuthorityToLoadId ?? Model.ATLId));
+            const initialVolume = parseNumber($('input[name="Volume"]').val());
+            const initialDetails = @Html.Raw(Json.Serialize(Model.Details));
+            const detailItems = initialDetails.map(item => ({
+                ...item, cosNo: item.customerOrderSlipNo, atlNo: item.authorityToLoadNo
+            }));
+            let suppressVolumeRefresh = false;
             const atlPurchaseOrders = [];
             const $atlSelect = $('#AtlSelector');
             const defaultDetailError = 'Please select an ATL and enter a valid volume within the selected ATL balance.';
@@ -249,6 +257,9 @@
             }
 
             function refreshVolumeFromSelection() {
+                if (suppressVolumeRefresh) {
+                    return;
+                }
                 const remainingVolume = parseNumber($("#RemainingVolume").val());
                 const selectedUnservedTotal = getSelectedUnservedTotal();
 
@@ -364,7 +375,7 @@
                 }
             }
 
-            function updateCustomerOrderSlips(customerId) {
+            function updateCustomerOrderSlips(customerId, preserveValues = false) {
                 if (customerId) {
                     $.ajax({
                         url: '@Url.Action("GetCustomerOrderSlipList", "DeliveryReceipt", new { area = "Filpride" })',
@@ -380,6 +391,10 @@
                                 });
                             } else {
                                 $cosSelect.append('<option value="">No cos available</option>');
+                            }
+
+                            if (preserveValues && initialCosId) {
+                                $cosSelect.val(initialCosId).trigger('change', [true]);
                             }
                         }
                     });
@@ -405,12 +420,14 @@
                 }
             });
 
-            $('select[name="CustomerOrderSlipId"]').on('change', function () {
+            $('select[name="CustomerOrderSlipId"]').on('change', function (event, preserveValues = false) {
                 var cosId = $(this).val();
-                $('input[name="Volume"]').val('0.0000');
-                detailItems.length = 0;
-                syncDetails();
-                clearDetailError();
+                if (!preserveValues) {
+                    $('input[name="Volume"]').val('0.0000');
+                    detailItems.length = 0;
+                    syncDetails();
+                    clearDetailError();
+                }
 
                 if (cosId) {
                     $.ajax({
@@ -426,25 +443,39 @@
                                 $('#haulerList').show();
                                 $('input[name="Freight"]').parent().show();
                                 $('input[name="ECC"]').parent().show();
-                                $('input[name="Freight"]').val(data.freight);
-                                $('select[name="HaulerId"]').val(data.haulerId).change();
+                                if (!preserveValues) {
+                                    $('input[name="Freight"]').val(Number(data.freight ?? 0).toFixed(4));
+                                    $('select[name="HaulerId"]').val(data.haulerId).change();
+                                }
                             } else if (data.deliveryOption === "@SD.DeliveryOption_DirectDelivery") {
+                                if (!preserveValues) {
+                                    $('input[name="Freight"]').val('0.0000');
+                                }
                                 $('#haulerList').show();
                                 $('input[name="Freight"]').parent().hide();
                                 $('input[name="ECC"]').parent().hide();
-                                $('select[name="HaulerId"]').val(data.haulerId).change();
+                                if (!preserveValues) {
+                                    $('select[name="HaulerId"]').val(data.haulerId).change();
+                                }
                             } else {
+                                if (!preserveValues) {
+                                    $('input[name="Freight"]').val('0.0000');
+                                }
                                 $('input[name="Freight"]').parent().hide();
                                 $('input[name="ECC"]').parent().hide();
                                 $('#haulerList').hide();
                             }
 
-                            $('input[name="Driver"]').val(data.driver);
-                            $('input[name="PlateNo"]').val(data.plateNo);
+                            if (!preserveValues) {
+                                $('input[name="Driver"]').val(data.driver);
+                                $('input[name="PlateNo"]').val(data.plateNo);
+                            }
                             $('input[name="Product"]').val(data.product);
                             $('input[name="CosVolume"]').val(formatNumber(data.quantity));
                             $('input[name="RemainingVolume"]').val(formatNumber(data.remainingVolume));
-                            $('input[name="Volume"]').val('0.0000');
+                            if (!preserveValues) {
+                                $('input[name="Volume"]').val('0.0000');
+                            }
                             $('input[name="DeliveryOption"]').val(data.deliveryOption);
                             $('input[name="Price"]').val(data.price);
                             calculateBuilderTotalAmount();
@@ -474,7 +505,12 @@
                                 });
                             }
 
-                            $atlSelect.val('').trigger('change');
+                            suppressVolumeRefresh = preserveValues;
+                            if (preserveValues) {
+                                $('input[name="Volume"]').val(initialVolume);
+                            }
+                            $atlSelect.val(preserveValues ? initialAtlId : '').trigger('change');
+                            suppressVolumeRefresh = false;
                         }
                     });
                 } else {
@@ -489,6 +525,10 @@
             });
 
             $atlSelect.on('change', function () {
+                if (suppressVolumeRefresh) {
+                    syncDetails();
+                    return;
+                }
                 refreshVolumeFromSelection();
                 validateVolume();
                 rebuildDetailItems();
@@ -534,6 +574,10 @@
                     });
                 }
             });
+            syncDetails();
+            if (initialCustomerId) {
+                updateCustomerOrderSlips(initialCustomerId, true);
+            }
         });
     </script>
 }

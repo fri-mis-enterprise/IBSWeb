@@ -1,4 +1,4 @@
-﻿@using IBS.Utility.Constants
+@using IBS.Utility.Constants
 @model CustomerOrderSlipAppointingSupplierViewModel
 
 @{
@@ -24,7 +24,7 @@
         <form method="post" id="appointSupplierForm">
             @Html.AntiForgeryToken()
             <div class="border-2 p-3">
-                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                <div asp-validation-summary="All" class="text-danger mb-3"></div>
                 <input asp-for="CustomerOrderSlipId" type="hidden"/>
 
                 <!-- Progress indicator -->
@@ -157,7 +157,10 @@
     }
     <script>
         $(document).ready(function () {
-            const cosVolume = @Model.COSVolume;
+            const cosVolume = @Html.Raw(Json.Serialize(Model.COSVolume));
+            const initialPoIds = @Html.Raw(Json.Serialize(Model.PurchaseOrderIds));
+            const initialAllocations = @Html.Raw(Json.Serialize(Model.PurchaseOrderQuantities));
+            let restoreAllocations = false;
 
             // Initialize select2
             $('.js-select2').select2();
@@ -250,7 +253,7 @@
             }
 
             // Function to fetch Purchase Orders based on selected suppliers
-            function fetchPurchaseOrders() {
+            function fetchPurchaseOrders(preserveValues = false) {
                 const supplierIds = $('#SupplierIds').val();
                 const depot = $('#PickUpPointId option:selected').text();
                 const $poSelect = $('#PurchaseOrderIds');
@@ -301,7 +304,12 @@
                                 });
                             }
 
+                            if (preserveValues) {
+                                $poSelect.val(initialPoIds.map(String));
+                            }
+                            restoreAllocations = preserveValues;
                             $poSelect.trigger('change');
+                            restoreAllocations = false;
 
                             // Hide loading indicator
                             $('.loader-container').hide();
@@ -332,12 +340,15 @@
                         const availableBalance = selectedOption.data('available-balance');
                         const supplierId = selectedOption.data('supplier-id');
                         const supplierName = selectedOption.data('supplier-name');
+                        const savedAllocation = restoreAllocations
+                            ? initialAllocations.find(item => String(item.purchaseOrderId) === String(po))
+                            : null;
 
                         // Default value calculation - distribute COS volume across POs
                         const remainingToAllocate = cosVolume - getCurrentTotalAllocated();
-                        const defaultValue = index === selectedPOs.length - 1 ?
-                            remainingToAllocate :
-                            Math.min(availableBalance, remainingToAllocate / (selectedPOs.length - index));
+                        const defaultValue = savedAllocation ? savedAllocation.quantity :
+                            (index === selectedPOs.length - 1 ? remainingToAllocate :
+                                Math.min(availableBalance, remainingToAllocate / (selectedPOs.length - index)));
 
                         const card = `
                         <div class="card mb-3">
@@ -359,7 +370,7 @@
                                                max="${availableBalance}"
                                                step="0.01"
                                                placeholder="Enter quantity"
-                                               value="${defaultValue > 0 && defaultValue <= availableBalance ? defaultValue.toFixed(2) : ''}"
+                                               value="${savedAllocation ? savedAllocation.quantity : (defaultValue > 0 && defaultValue <= availableBalance ? defaultValue.toFixed(2) : '')}"
                                                required
                                                aria-describedby="quantity_help_${index}" />
                                         <span class="input-group-text">Max: ${formatNumber(availableBalance)}</span>
@@ -464,6 +475,10 @@
                 $('.loader-container').show();
                 return true;
             });
+            $('input[name="DeliveryOption"]:checked').trigger('change');
+            if ($('#SupplierIds').val() && $('#SupplierIds').val().length > 0) {
+                fetchPurchaseOrders(true);
+            }
         });
     </script>
 }

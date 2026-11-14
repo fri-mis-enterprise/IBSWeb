@@ -72,6 +72,7 @@ namespace IBS.DataAccess.Repository.Filpride
             existingCustomer.ClusterCode = model.ClusterCode;
             existingCustomer.CreditLimit = model.CreditLimit;
             existingCustomer.CreditLimitAsOfToday = model.CreditLimitAsOfToday;
+            existingCustomer.StandardFreight = model.StandardFreight;
             existingCustomer.ZipCode = model.ZipCode;
             existingCustomer.RetentionRate = model.RetentionRate;
             existingCustomer.VatType = model.VatType;

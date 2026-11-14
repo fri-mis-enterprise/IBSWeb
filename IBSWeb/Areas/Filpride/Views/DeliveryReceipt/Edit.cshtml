@@ -165,7 +165,7 @@
                     <span asp-validation-for="PlateNo" class="text-danger"></span>
                 </div>
                 <div class="form-floating py-2 col-12">
-                    <input asp-for="Freight" class="form-control border-0 shadow" min="0.01" placeholder="" />
+                    <input asp-for="Freight" class="form-control border-0 shadow" min="0" placeholder="" />
                     <label asp-for="Freight">Freight</label>
                     <span asp-validation-for="Freight" class="text-danger"></span>
                 </div>
@@ -210,11 +210,14 @@
             const initialCosId = '@Model.CustomerOrderSlipId';
             const initialAtlId = @Model.Details.Select(d => d.AuthorityToLoadId).FirstOrDefault();
             const initialHaulerId = '@Model.HaulerId';
-            const initialFreight = parseNumber('@Model.Freight');
+            const initialFreight = @Html.Raw(Json.Serialize(Model.Freight));
             const initialDriver = @Html.Raw(Json.Serialize(Model.Driver ?? string.Empty));
             const initialPlateNo = @Html.Raw(Json.Serialize(Model.PlateNo ?? string.Empty));
             const initialVolume = parseNumber('@Model.Volume');
-            const detailItems = [];
+            const initialDetails = @Html.Raw(Json.Serialize(Model.Details));
+            const detailItems = initialDetails.map(item => ({
+                ...item, cosNo: item.customerOrderSlipNo, atlNo: item.authorityToLoadNo
+            }));
             const atlPurchaseOrders = [];
             const $atlSelect = $('#AtlSelector');
             const defaultDetailError = 'Please select an ATL and enter a valid volume within the selected ATL balance.';
@@ -421,7 +424,7 @@
                 });
             }
 
-            function loadCustomerDetails(customerId) {
+            function loadCustomerDetails(customerId, isInitialLoad = false) {
                 if (!customerId) {
                     return;
                 }
@@ -431,10 +434,12 @@
                     type: "GET",
                     data: { id: customerId },
                     success: function (data) {
-                        $('input[name="CustomerAddress"]').val(data ? data.address : '');
-                        $('input[name="CustomerTin"]').val(data ? data.tinNo : '');
+                        if (!isInitialLoad) {
+                            $('input[name="CustomerAddress"]').val(data ? data.address : '');
+                            $('input[name="CustomerTin"]').val(data ? data.tinNo : '');
+                        }
                         updateCustomerOrderSlips(customerId, function () {
-                            if (initialCosId) {
+                            if (isInitialLoad && initialCosId) {
                                 $('select[name="CustomerOrderSlipId"]').val(initialCosId);
                                 loadCosDetails(initialCosId, true);
                             }
@@ -467,23 +472,22 @@
                             $('#haulerList').show();
                             $('input[name="Freight"]').parent().show();
                             $('input[name="ECC"]').parent().show();
-                            $('select[name="HaulerId"]').val(initialHaulerId || data.haulerId).change();
-                            if (!isInitialLoad) {
-                                $('input[name="Freight"]').val(data.freight);
-                            }
+                            $('select[name="HaulerId"]').val(isInitialLoad ? initialHaulerId : data.haulerId).change();
                         } else if (data.deliveryOption === "@SD.DeliveryOption_DirectDelivery") {
                             $('#haulerList').show();
                             $('input[name="Freight"]').parent().hide();
                             $('input[name="ECC"]').parent().hide();
-                            $('select[name="HaulerId"]').val(initialHaulerId || data.haulerId).change();
+                            $('select[name="HaulerId"]').val(isInitialLoad ? initialHaulerId : data.haulerId).change();
                         } else {
                             $('input[name="Freight"]').parent().hide();
                             $('input[name="ECC"]').parent().hide();
                             $('#haulerList').hide();
                         }
 
-                        $('input[name="Driver"]').val($('input[name="Driver"]').val() || initialDriver || data.driver);
-                        $('input[name="PlateNo"]').val($('input[name="PlateNo"]').val() || initialPlateNo || data.plateNo);
+                        if (!isInitialLoad) {
+                            $('input[name="Driver"]').val($('input[name="Driver"]').val() || initialDriver || data.driver);
+                            $('input[name="PlateNo"]').val($('input[name="PlateNo"]').val() || initialPlateNo || data.plateNo);
+                        }
                         $('input[name="Product"]').val(data.product);
                         $('input[name="CosVolume"]').val(formatNumber(data.quantity));
                         $('input[name="RemainingVolume"]').val(formatNumber(data.remainingVolume));
@@ -565,6 +569,10 @@
             });
 
             $atlSelect.on('change', function () {
+                if (suppressVolumeRefresh) {
+                    syncDetails();
+                    return;
+                }
                 refreshVolumeFromSelection();
                 validateVolume();
                 rebuildDetailItems();
@@ -613,9 +621,9 @@
                 });
             });
 
-            $('input[name="Freight"]').val(initialFreight ? formatNumber(initialFreight) : $('input[name="Freight"]').val());
+            $('input[name="Freight"]').val(initialFreight.toFixed(4));
             syncDetails();
-            loadCustomerDetails(initialCustomerId);
+            loadCustomerDetails(initialCustomerId, true);
         });
     </script>
 }

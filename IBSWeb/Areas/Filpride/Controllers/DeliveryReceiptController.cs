@@ -8,6 +8,7 @@ using IBS.Models.Filpride.Books;
 using IBS.Models.Filpride.Integrated;
 using IBS.Models.Filpride.ViewModels;
 using IBS.Models;
+using IBS.Services;
 using IBS.Utility.Constants;
 using IBS.Utility.Helpers;
 using IBS.Utility;
@@ -43,13 +44,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         private readonly ILogger<DeliveryReceiptController> _logger;
 
+        private readonly SalesFreightService _salesFreightService;
+
         public DeliveryReceiptController(IUnitOfWork unitOfWork,
             UserManager<ApplicationUser> userManager,
             ApplicationDbContext dbContext,
             IWebHostEnvironment webHostEnvironment,
             IHubContext<NotificationHub> hubContext,
             ILogger<DeliveryReceiptController> logger,
-            IOptions<BrandingOptions> brandingOptions)
+            IOptions<BrandingOptions> brandingOptions,
+            SalesFreightService salesFreightService)
         {
             _brandingOptions = brandingOptions.Value;
             _unitOfWork = unitOfWork;
@@ -58,6 +62,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             _webHostEnvironment = webHostEnvironment;
             _hubContext = hubContext;
             _logger = logger;
+            _salesFreightService = salesFreightService;
         }
 
         private string GetUserFullName()
@@ -112,7 +117,24 @@ namespace IBSWeb.Areas.Filpride.Controllers
             CancellationToken cancellationToken)
         {
             viewModel.Customers = await _unitOfWork.GetFilprideCustomerListAsyncById(cancellationToken);
-            viewModel.CustomerOrderSlips = await _unitOfWork.FilprideCustomerOrderSlip.GetCosListNotDeliveredAsync(cancellationToken);
+            viewModel.CustomerOrderSlips = await _unitOfWork.FilprideCustomerOrderSlip
+                .GetAllQuery(c => c.CustomerId == viewModel.CustomerId
+                    && ((!c.IsDelivered && c.Status == nameof(CosStatus.Completed)) || c.Status == nameof(CosStatus.ForDR)))
+                .Select(c => new SelectListItem(c.CustomerOrderSlipNo, c.CustomerOrderSlipId.ToString()))
+                .ToListAsync(cancellationToken);
+            if (viewModel.CustomerOrderSlipId > 0
+                && viewModel.CustomerOrderSlips.All(c => c.Value != viewModel.CustomerOrderSlipId.ToString()))
+            {
+                var selectedCos = await _unitOfWork.FilprideCustomerOrderSlip.GetAsync(c =>
+                    c.CustomerOrderSlipId == viewModel.CustomerOrderSlipId && c.CustomerId == viewModel.CustomerId, cancellationToken);
+                if (selectedCos != null)
+                {
+                    viewModel.CustomerOrderSlips.Add(new SelectListItem(selectedCos.CustomerOrderSlipNo, selectedCos.CustomerOrderSlipId.ToString()));
+                }
+            }
+
+            viewModel.HasReceivingReport = await _dbContext.FilprideDeliveryReceipts
+                .AnyAsync(dr => dr.DeliveryReceiptId == viewModel.DeliveryReceiptId && dr.HasReceivingReport, cancellationToken);
             viewModel.Haulers = await _unitOfWork.GetFilprideHaulerListAsyncById(cancellationToken);
             viewModel.MinDate = await _unitOfWork.GetMinimumPeriodBasedOnThePostedPeriods(Module.DeliveryReceipt, cancellationToken);
         }
@@ -146,6 +168,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 .Include(p => p.Supplier)
                 .Where(p => poIds.Contains(p.PurchaseOrderId))
                 .ToDictionaryAsync(p => p.PurchaseOrderId, cancellationToken);
+
+            if (cosRecords.Values.Any(c => c.CustomerId != model.CustomerId))
+            {
+                throw new ArgumentException("All COS lines must belong to the selected customer.");
+            }
 
             var atlRecords = await _dbContext.FilprideAuthorityToLoads
                 .Where(a => atlIds.Contains(a.AuthorityToLoadId))
@@ -276,14 +303,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 return nameof(DRStatus.PendingDelivery);
             }
 
-            var cosId = detailInputs.Select(d => d.CustomerOrderSlipId).First();
-
-            var cos = await _dbContext.FilprideCustomerOrderSlips
-                .FirstOrDefaultAsync(c => c.CustomerOrderSlipId == cosId, cancellationToken)
-                ?? throw new ArgumentException("Customer order slip not found.");
-
-            var cosFreight = cos.Freight ?? 0m;
-            var needsOmApproval = cosFreight != drFreight;
+            var cosIds = detailInputs.Select(d => d.CustomerOrderSlipId).Distinct().ToList();
+            var needsOmApproval = await _dbContext.FilprideCustomerOrderSlips
+                .AnyAsync(c => cosIds.Contains(c.CustomerOrderSlipId) && (c.Freight ?? 0m) != drFreight, cancellationToken);
 
             return needsOmApproval
                 ? nameof(CosStatus.ForApprovalOfOM)
@@ -375,6 +397,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             decimal freight,
             string? driver,
             string? plateNo,
+            bool updateFreight,
             CancellationToken cancellationToken)
         {
             var atlIds = authorityToLoadIds.Distinct().ToList();
@@ -385,7 +408,10 @@ namespace IBSWeb.Areas.Filpride.Controllers
             foreach (var atl in atls)
             {
                 atl.HaulerName = haulerName;
-                atl.Freight = freight;
+                if (updateFreight)
+                {
+                    atl.Freight = freight;
+                }
                 atl.Driver = driver;
                 atl.PlateNo = plateNo;
             }
@@ -597,6 +623,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
+                var freightError = await _salesFreightService.ValidateAsync(viewModel.CustomerId, viewModel.Freight,
+                    null, false, cancellationToken);
+                if (freightError != null)
+                {
+                    ModelState.AddModelError(nameof(viewModel.Freight), freightError);
+                    return View(viewModel);
+                }
+
                 FilprideDeliveryReceipt model = new()
                 {
                     DeliveryReceiptNo = await _unitOfWork.FilprideDeliveryReceipt.GenerateCodeAsync(viewModel.Type, cancellationToken),
@@ -621,7 +655,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 _dbContext.FilprideDeliveryReceipts.Add(model);
                 var atlIds = await ApplyDeliveryReceiptDetailsAsync(model, normalizedDetails, reserveQuantities: true, cancellationToken);
-                await UpdateAuthorityToLoadsAsync(atlIds, hauler?.SupplierName, viewModel.Freight, viewModel.Driver, viewModel.PlateNo, cancellationToken);
+                await UpdateAuthorityToLoadsAsync(atlIds, hauler?.SupplierName, viewModel.Freight, viewModel.Driver, viewModel.PlateNo, true, cancellationToken);
 
                 FilprideAuditTrail auditTrailBook = new(model.CreatedBy!, $"Create new delivery receipt# {model.DeliveryReceiptNo}", "Delivery Receipt");
                 await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
@@ -806,7 +840,24 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     return BadRequest();
                 }
 
+                var freightError = await _salesFreightService.ValidateAsync(viewModel.CustomerId, viewModel.Freight,
+                    existingRecord.CustomerId == viewModel.CustomerId ? existingRecord.Freight : null,
+                    existingRecord.DeliveredDate != null, cancellationToken);
+                if (freightError != null)
+                {
+                    ModelState.AddModelError(nameof(viewModel.Freight), freightError);
+                    return View(viewModel);
+                }
+
+                if (existingRecord.DeliveredDate != null)
+                {
+                    TempData["error"] = "This DR has already been delivered. Use Edit Hauler Details for unrelated changes or contact MIS for freight assistance.";
+                    return RedirectToAction(nameof(Index));
+                }
+
                 await RestoreDeliveryReceiptDetailsAsync(existingRecord, cancellationToken);
+
+                var freightChanged = existingRecord.Freight != viewModel.Freight;
 
                 var hauler = await _unitOfWork.FilprideSupplier
                     .GetAsync(x => x.SupplierId == viewModel.HaulerId, cancellationToken);
@@ -830,7 +881,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 existingRecord.EditedDate = DateTimeHelper.GetCurrentPhilippineTime();
 
                 var atlIds = await ApplyDeliveryReceiptDetailsAsync(existingRecord, normalizedDetails, reserveQuantities: true, cancellationToken);
-                await UpdateAuthorityToLoadsAsync(atlIds, hauler?.SupplierName, existingRecord.Freight, existingRecord.Driver, existingRecord.PlateNo, cancellationToken);
+                await UpdateAuthorityToLoadsAsync(atlIds, hauler?.SupplierName, existingRecord.Freight, existingRecord.Driver, existingRecord.PlateNo, freightChanged, cancellationToken);
 
                 FilprideAuditTrail auditTrailBook = new(existingRecord.EditedBy!, $"Edit delivery receipt# {existingRecord.DeliveryReceiptNo}", "Delivery Receipt");
                 await _unitOfWork.FilprideAuditTrail.AddAsync(auditTrailBook, cancellationToken);
@@ -1044,15 +1095,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
             if (deliveryReceiptId != null)
             {
                 var existingCos = (await _unitOfWork.FilprideDeliveryReceipt
-                    .GetAllAsync(dr => dr.DeliveryReceiptId == deliveryReceiptId
-, cancellationToken))
+                    .GetAllAsync(dr => dr.DeliveryReceiptId == deliveryReceiptId && dr.CustomerId == customerId, cancellationToken))
                     .Select(dr => new SelectListItem
                     {
                         Value = dr.CustomerOrderSlipId.ToString(),
                         Text = dr.CustomerOrderSlip!.CustomerOrderSlipNo
                     });
 
-                orderSlips = orderSlips.Union(existingCos);
+                orderSlips = orderSlips.Concat(existingCos).DistinctBy(c => c.Value);
             }
 
             var result = orderSlips.ToList();
@@ -1170,6 +1220,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
             if (existingRecord.PostedBy != null || existingRecord.DeliveredDate != null)
             {
                 TempData["info"] = "Delivery Receipt has already been marked as delivered.";
+                return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
+            }
+
+            if (existingRecord.Status == nameof(CosStatus.ForApprovalOfOM))
+            {
+                TempData["error"] = "OM approval is required before marking this DR as delivered.";
                 return RedirectToAction(nameof(Index), new { filterType = await GetCurrentFilterType() });
             }
 
@@ -1569,11 +1625,21 @@ namespace IBSWeb.Areas.Filpride.Controllers
         }
 
         [Authorize(Policy = nameof(DeliveryReceipts.DeliveryReceiptsChangeHaulerFreight))]
+        [Authorize(Roles = "Admin")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangeHaulerFreight(int? id, decimal? freight, string? haulerId, CancellationToken cancellationToken)
         {
             if (id == null)
             {
                 return NotFound();
+            }
+
+            if (!ModelState.IsValid || freight == null || SalesFreightService.ValidateRate(freight.Value) != null
+                || !int.TryParse(haulerId, out var parsedHaulerId))
+            {
+                TempData["error"] = "Select a hauler and enter nonnegative freight with at most four decimal places.";
+                return RedirectToAction(nameof(Index));
             }
 
             await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
@@ -1593,11 +1659,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var userName = GetUserFullName();
 
                 var hauler = await _unitOfWork.FilprideSupplier
-                    .GetAsync(s => s.SupplierId == int.Parse(haulerId!), cancellationToken);
+                    .GetAsync(s => s.SupplierId == parsedHaulerId, cancellationToken);
 
                 if (hauler == null)
                 {
                     return NotFound();
+                }
+
+                if (existingRecord.CanceledBy != null || existingRecord.VoidedBy != null)
+                {
+                    return BadRequest("Cannot update a canceled or voided DR.");
                 }
 
                 var newFreightAmount = DecimalRoundingHelper.ComputeAmountFromUnitPrice(existingRecord.Quantity, (freight ?? 0m) + existingRecord.ECC);
@@ -1614,6 +1685,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 {
                     await _unitOfWork.FilprideDeliveryReceipt.CreateEntriesForUpdatingFreight(existingRecord,
                         difference, userName, cancellationToken);
+                }
+                else
+                {
+                    existingRecord.Status = await ResolveDeliveryReceiptStatusAsync(
+                        GetEffectiveDeliveryReceiptDetails(existingRecord).Select(d => new DeliveryReceiptDetailInput
+                        {
+                            CustomerOrderSlipId = d.CustomerOrderSlipId
+                        }), existingRecord.Freight, cancellationToken);
                 }
 
                 FilprideAuditTrail auditTrailBook = new(userName,

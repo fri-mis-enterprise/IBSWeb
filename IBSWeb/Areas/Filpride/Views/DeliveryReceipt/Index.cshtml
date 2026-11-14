@@ -241,7 +241,7 @@
                                     }
                                 }
 
-                                if (isAdmin && row.deliveredDate) {
+                                if (isAdmin) {
                                     actions += `<li><a class="dropdown-item" href="#" onclick="changeHaulerFreight('${deliveryReceiptId}')">Change Hauler/Freight</a></li>`;
                                 }
                             }
@@ -532,11 +532,14 @@
             Swal.fire({
                 title: 'Change Hauler/Freight',
                 html: `
+                    <p>For an above-standard rate, obtain signed AR approval outside IBS before applying the change. This update affects only this DR.</p>
                     <div class="form-group py-2">
                         <label for="freight"><b>Freight</b></label></br>
                         <input
                             id="freight"
                             type="number"
+                            min="0"
+                            step="0.0001"
                             class="swal2-input"
                             placeholder="Enter Freight"
                             value="${dr.freight}">
