@@ -1239,6 +1239,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
         #region -- Generate Trial Balance Report Excel File --
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> TrialBalanceReport(DateOnly monthDate, CancellationToken cancellationToken)
         {
             if (!ModelState.IsValid || monthDate == default)
