@@ -1,5 +1,4 @@
 @using IBS.Utility.Helpers
-@model ViewModelBook
 
 @{
     ViewData["Title"] = "Financial Report - Trial Balance";
@@ -14,41 +13,20 @@
         </div>
     </div>
     <div class="card-body p-4">
-        <form id="dynamicForm" method="post" target="_blank">
-            <div class="row">
-                <div class="mb-3">
-                    <label asp-for="DateFrom" class="control-label"></label>
-                    <input type="date" asp-for="DateFrom" class="form-control" value="@DateTimeHelper.GetCurrentPhilippineTime().ToString("yyyy-MM-dd")" />
-                    <span asp-validation-for="DateFrom" class="text-danger"></span>
+        <form asp-action="TrialBalanceReport" method="post" target="_blank">
+            <div class="mb-4 row align-items-center">
+                <label for="monthDate" class="col-sm-4 col-form-label text-end fw-semibold">As Of (Month and Year)</label>
+                <div class="col-sm-6">
+                    <input type="month" id="monthDate" name="monthDate" class="form-control" value="@DateTimeHelper.GetCurrentPhilippineTime().ToString("yyyy-MM")" required />
                 </div>
-                <div class="mb-3">
-                    <label asp-for="DateTo" class="control-label"></label>
-                    <input type="date" asp-for="DateTo" class="form-control" value="@DateTimeHelper.GetCurrentPhilippineTime().ToString("yyyy-MM-dd")" />
-                    <span asp-validation-for="DateTo" class="text-danger"></span>
-                </div>
-                <div class="form-group row align-content-center justify-content-center mt-4">
-                    @* <div class="col-6 col-md-3"> *@
-                    @*     <button type="button" class="btn btn-primary form-control" onclick="submitForm('GenerateTrialBalanceReport')"><i class="bi bi-printer"></i> Generate</button> *@
-                    @* </div> *@
-                    <div class="col-6 col-md-3">
-                        <button type="button" class="btn btn-primary form-control" onclick="submitForm('TrialBalanceReport')"><i class="bi bi-file-text"></i> Generate as Excel file</button>
-                    </div>
+            </div>
+
+            <div class="form-group row align-content-center justify-content-center mt-4">
+                <div class="col-6 col-md-3">
+                    <button type="submit" class="btn btn-primary form-control"><i class="bi bi-file-text"></i> Generate as Excel file</button>
                 </div>
             </div>
         </form>
     </div>
 </div>
-
-@section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
-    <script>
-        function submitForm(action) {
-            var form = document.getElementById('dynamicForm');
-            form.action = action;
-            form.submit();
-        }
-    </script>
-}
 

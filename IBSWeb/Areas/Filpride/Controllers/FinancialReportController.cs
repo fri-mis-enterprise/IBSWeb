@@ -56,6 +56,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
                    ?? User.Identity?.Name!;
         }
 
+        private static void AddCloseNote(ExcelRange range, string note)
+        {
+            range.Merge = true;
+            range.Value = note;
+            range.Style.Font.Italic = true;
+            range.Style.WrapText = true;
+            range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+            range.Worksheet.Row(range.Start.Row).Height = 34;
+        }
+
         [HttpGet]
         public IActionResult ProfitAndLossReport()
         {
@@ -88,8 +98,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .Include(gl => gl.Account)
                     .Where(gl =>
                         gl.Date >= firstDayOfMonth &&
-                        gl.Date <= lastDayOfMonth &&
-                        true)
+                        gl.Date <= lastDayOfMonth)
                     .ToListAsync(cancellationToken);
 
                 var chartOfAccounts = await _dbContext.FilprideChartOfAccounts
@@ -344,12 +353,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var nibitForThePeriod = nibitsForYearToDate
                     .FirstOrDefault(m => m.Month == monthDate.Month);
 
-                if (nibitForThePeriod == null)
-                {
-                    TempData["info"] = "NIBIT For The Period not found. Contact MIS-Enterprise.";
-                    return RedirectToAction(nameof(ProfitAndLossReport));
-                }
-
                 if (!generalLedgers.Any())
                 {
                     TempData["info"] = "No Record Found";
@@ -358,9 +361,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 using var package = new ExcelPackage();
                 var worksheet = package.Workbook.Worksheets.Add("PNL Report");
-                string currencyFormat = "#,##0.00_);[Red](#,##0.00)";
+                var currencyFormat = "#,##0.00_);[Red](#,##0.00)";
                 worksheet.View.FreezePanes(5, 1);
-                int row = 1;
+                var row = 1;
 
                 #region == Column Header ==
 
@@ -416,11 +419,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 row++;
 
-                using (var range = worksheet.Cells[row, 1, row, 7])
+                if (nibitsForYearToDate.Select(nibit => nibit.Month).Distinct().Count() < monthDate.Month)
                 {
-                    range.Merge = true;
-                    range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                    var note = nibitForThePeriod is null
+                        ? "Monthly NIBIT is unavailable until month-end close. Year-to-date NIBIT includes closed months only."
+                        : "Year-to-date NIBIT is incomplete until all months through the selected month are closed.";
+                    AddCloseNote(worksheet.Cells[row, 1, row, 7], note);
                 }
+
                 row += 2;
                 worksheet.Cells[row, 1].Value = "L1";
                 worksheet.Cells[row, 2].Value = "L2";
@@ -459,22 +465,22 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     decimal grandTotalMonthToDate = 0;
                     decimal grandTotalYearToDate = 0;
 
-                    bool mainHeadingWritten = false;
+                    var mainHeadingWritten = false;
 
                     foreach (var levelTwo in account.Children.OrderBy(l => l.AccountNumber))
                     {
                         decimal subTotalMonthToDate = 0;
                         decimal subTotalYearToDate = 0;
-                        bool levelTwoHeadingWritten = false;
+                        var levelTwoHeadingWritten = false;
 
                         foreach (var levelThree in levelTwo.Children.OrderBy(l => l.AccountNumber))
                         {
-                            bool levelThreeHeadingWritten = false;
+                            var levelThreeHeadingWritten = false;
 
                             foreach (var levelFour in levelThree.Children.OrderBy(l => l.AccountNumber))
                             {
-                                decimal levelFourMonthToDateBalance = monthToDateAccountBalances[levelFour.AccountNumber].Sum();
-                                decimal levelFourYearToDateBalance = yearToDateAccountBalances[levelFour.AccountNumber].Sum();
+                                var levelFourMonthToDateBalance = monthToDateAccountBalances[levelFour.AccountNumber].Sum();
+                                var levelFourYearToDateBalance = yearToDateAccountBalances[levelFour.AccountNumber].Sum();
                                 var visibleLevelFiveAccounts = levelFour.Children
                                     .Where(l => monthToDateAccountBalances[l.AccountNumber].Sum() != 0 ||
                                                 yearToDateAccountBalances[l.AccountNumber].Sum() != 0)
@@ -519,8 +525,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 foreach (var levelFive in visibleLevelFiveAccounts)
                                 {
                                     worksheet.Cells[row, 5].Value = levelFive.AccountName;
-                                    decimal levelFiveMonthToDateBalance = monthToDateAccountBalances[levelFive.AccountNumber].Sum();
-                                    decimal levelFiveYearToDateBalance = yearToDateAccountBalances[levelFive.AccountNumber].Sum();
+                                    var levelFiveMonthToDateBalance = monthToDateAccountBalances[levelFive.AccountNumber].Sum();
+                                    var levelFiveYearToDateBalance = yearToDateAccountBalances[levelFive.AccountNumber].Sum();
                                     worksheet.Cells[row, 6].Value = levelFiveMonthToDateBalance != 0 ? levelFiveMonthToDateBalance : null;
                                     worksheet.Cells[row, 7].Value = levelFiveYearToDateBalance != 0 ? levelFiveYearToDateBalance : null;
                                     subTotalMonthToDate += levelFiveMonthToDateBalance;
@@ -588,7 +594,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 worksheet.Cells[row + 1, 1].Value = "NIBIT";
-                worksheet.Cells[row + 1, 6].Value = nibitForThePeriod.NetIncome != 0 ? nibitForThePeriod.NetIncome : null;
+                worksheet.Cells[row + 1, 6].Value = nibitForThePeriod?.NetIncome != 0 ? nibitForThePeriod?.NetIncome : null;
                 var nibitYearToDate = nibitsForYearToDate.Sum(n => n.NetIncome);
                 worksheet.Cells[row + 1, 7].Value = nibitYearToDate != 0 ? nibitYearToDate : null;
                 worksheet.Cells[row + 1, 1].Style.Font.Bold = true;
@@ -599,7 +605,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["F:G"].Style.Numberformat.Format = currencyFormat;
 
                 worksheet.Cells.AutoFitColumns();
-                for (int i = 1; i <= 4; i++)
+                for (var i = 1; i <= 4; i++)
                 {
                     worksheet.Column(i).Width = 4.5;
                 }
@@ -618,7 +624,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to generate profit and loss report excel file.");
+                _logger.LogError(ex, "Failed to generate profit and loss report excel file");
                 TempData["error"] = ex.Message;
                 return RedirectToAction(nameof(ProfitAndLossReport));
             }
@@ -656,8 +662,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ThenInclude(ac => ac!.ParentAccount) // Level 1
                     .Where(gl =>
                         gl.Date >= firstDayOfMonth &&
-                        gl.Date <= lastDayOfMonth &&
-                        true)
+                        gl.Date <= lastDayOfMonth)
                     .ToListAsync(cancellationToken);
 
                 if (!generalLedgers.Any())
@@ -847,8 +852,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ThenInclude(ac => ac!.ParentAccount) // Level 1
                     .Where(gl =>
                         gl.Date >= firstDayOfMonth &&
-                        gl.Date <= lastDayOfMonth &&
-                        true)
+                        gl.Date <= lastDayOfMonth)
                     .ToListAsync(cancellationToken);
 
                 if (!generalLedgers.Any())
@@ -859,9 +863,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 using var package = new ExcelPackage();
                 var worksheet = package.Workbook.Worksheets.Add("Level One");
-                string currencyFormat = "#,##0.00_);[Red](#,##0.00)";
+                var currencyFormat = "#,##0.00_);[Red](#,##0.00)";
                 worksheet.View.FreezePanes(5, 1);
-                int row = 1;
+                var row = 1;
 
                 #region == Top of Header ==
 
@@ -996,7 +1000,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to generate level one report excel file.");
+                _logger.LogError(ex, "Failed to generate level one report excel file");
                 TempData["error"] = ex.Message;
                 return RedirectToAction(nameof(LevelOneReport));
             }
@@ -1031,8 +1035,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ThenInclude(ac => ac!.ParentAccount) // Level 1
                     .Where(gl =>
                         gl.Date >= model.DateFrom &&
-                        gl.Date <= model.DateTo &&
-                        true)
+                        gl.Date <= model.DateTo)
                     .ToListAsync(cancellationToken);
 
                 var priorLedgers = await _dbContext.FilprideGeneralLedgerBooks
@@ -1042,8 +1045,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .ThenInclude(ac => ac!.ParentAccount) // Level 2
                     .ThenInclude(ac => ac!.ParentAccount) // Level 1
                     .Where(gl =>
-                        gl.Date < model.DateFrom &&
-                        true)
+                        gl.Date < model.DateFrom)
                     .ToListAsync(cancellationToken);
 
                 var chartOfAccounts = await _dbContext.FilprideChartOfAccounts
@@ -1186,11 +1188,11 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(totalEndingDr.ToString(SD.Two_Decimal_Format)).SemiBold();
                                table.Cell().Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(totalEndingCr.ToString(SD.Two_Decimal_Format)).SemiBold();
 
-                               decimal beginningGrandTotal = totalBeginningDr - totalBeginningCr;
+                               var beginningGrandTotal = totalBeginningDr - totalBeginningCr;
                                table.Cell().ColumnSpan(6).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(beginningGrandTotal != 0 ? beginningGrandTotal.ToString(SD.Two_Decimal_Format) : null).SemiBold();
-                               decimal currentGrandTotal = totalcurrentDr - totalcurrentCr;
+                               var currentGrandTotal = totalcurrentDr - totalcurrentCr;
                                table.Cell().ColumnSpan(2).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(currentGrandTotal != 0 ? currentGrandTotal.ToString(SD.Two_Decimal_Format) : null).SemiBold();
-                               decimal endingGrandTotal = totalEndingDr - totalEndingCr;
+                               var endingGrandTotal = totalEndingDr - totalEndingCr;
                                table.Cell().ColumnSpan(2).Background(Colors.Grey.Lighten1).Border(0.5f).Padding(3).AlignRight().Text(endingGrandTotal != 0 ? endingGrandTotal.ToString(SD.Two_Decimal_Format) : null).SemiBold();
 
                             #endregion
@@ -1236,50 +1238,51 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
         #region -- Generate Trial Balance Report Excel File --
 
-        public async Task<IActionResult> TrialBalanceReport(ViewModelBook model, CancellationToken cancellationToken)
+        [HttpPost]
+        public async Task<IActionResult> TrialBalanceReport(DateOnly monthDate, CancellationToken cancellationToken)
         {
+            if (!ModelState.IsValid || monthDate == default)
+            {
+                TempData["warning"] = "Select a valid month.";
+                return RedirectToAction(nameof(TrialBalanceReport));
+            }
+
             try
             {
-                var dateFrom = model.DateFrom;
-                var dateTo = model.DateTo;
+                var monthStart = new DateOnly(monthDate.Year, monthDate.Month, 1);
+                var monthEnd = new DateOnly(monthDate.Year, monthDate.Month, DateTime.DaysInMonth(monthDate.Year, monthDate.Month));
 
-                var periodBalances = await _dbContext.FilprideGlPeriodBalances
+                var ledgerTotals = _dbContext.FilprideGeneralLedgerBooks
+                    .Where(entry => entry.IsPosted && entry.Date >= monthStart && entry.Date <= monthEnd)
+                    .GroupBy(entry => entry.AccountId)
+                    .Select(entries => new
+                    {
+                        AccountId = entries.Key,
+                        DebitTotal = entries.Sum(entry => entry.Debit),
+                        CreditTotal = entries.Sum(entry => entry.Credit)
+                    });
+
+                var accounts = _dbContext.FilprideChartOfAccounts
                     .IgnoreQueryFilters()
                     .AsNoTracking()
-                    .Include(g => g.Account)
-                    .Where(pb =>
-                        !pb.Account.HasChildren &&
-                        pb.IsValid &&
-                        pb.PeriodStartDate >= dateFrom &&
-                        pb.PeriodEndDate <= dateTo)
-                    .ToListAsync(cancellationToken);
+                    .Where(account => !account.HasChildren);
 
-                var glPeriodBalances = periodBalances
-                    .GroupBy(pb => pb.AccountId)
-                    .Select(g =>
+                var trialBalance = await (
+                    from totals in ledgerTotals
+                    join account in accounts on totals.AccountId equals account.AccountId
+                    orderby account.AccountNumber
+                    select new
                     {
-                        var first = g
-                            .OrderBy(pb => pb.PeriodStartDate)
-                            .ThenBy(pb => pb.PeriodEndDate)
-                            .First();
-                        var last = g
-                            .OrderByDescending(pb => pb.PeriodEndDate)
-                            .ThenByDescending(pb => pb.PeriodStartDate)
-                            .First();
+                        Account = account,
+                        BeginningBalance = account.Balances
+                            .Where(balance => balance.IsValid && balance.IsClosed && balance.PeriodStartDate == monthStart)
+                            .Select(balance => (decimal?)balance.BeginningBalance)
+                            .FirstOrDefault(),
+                        totals.DebitTotal,
+                        totals.CreditTotal
+                    }).ToListAsync(cancellationToken);
 
-                        return new
-                        {
-                            first.Account,
-                            first.BeginningBalance,
-                            DebitTotal = g.Sum(pb => pb.DebitTotal),
-                            CreditTotal = g.Sum(pb => pb.CreditTotal),
-                            last.EndingBalance
-                        };
-                    })
-                    .OrderBy(pb => pb.Account.AccountNumber)
-                    .ToList();
-
-                if (!glPeriodBalances.Any())
+                if (trialBalance.Count == 0)
                 {
                     TempData["info"] = "No Record Found";
                     return RedirectToAction(nameof(TrialBalanceReport));
@@ -1290,7 +1293,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     new
                     {
                         Name = "ASSET",
-                        Balances = glPeriodBalances
+                        Balances = trialBalance
                             .Where(pb => pb.Account.AccountType == "Asset")
                             .ToList(),
                         IsNotAssetOrLiability = false
@@ -1298,7 +1301,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     new
                     {
                         Name = "LIABILITIES",
-                        Balances = glPeriodBalances
+                        Balances = trialBalance
                             .Where(pb => pb.Account.AccountType == "Liabilities")
                             .ToList(),
                         IsNotAssetOrLiability = false
@@ -1306,7 +1309,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     new
                     {
                         Name = "STOCKHOLDERS EQUITY",
-                        Balances = glPeriodBalances
+                        Balances = trialBalance
                             .Where(pb => pb.Account.AccountType != "Asset" &&
                                          pb.Account.AccountType != "Liabilities")
                             .ToList(),
@@ -1338,10 +1341,16 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 worksheet.Cells["B3"].Value = "TRIAL BALANCE";
                 worksheet.Cells["B3"].Style.HorizontalAlignment = alignmentCenter;
-                worksheet.Cells["B4"].Value = $"For the Period {dateFrom.ToString("MMM dd")} to {dateTo.ToString("MMM dd, yyyy")}";
+                worksheet.Cells["B4"].Value = $"For {monthStart:MMMM yyyy}";
                 worksheet.Cells["B4"].Style.HorizontalAlignment = alignmentCenter;
                 worksheet.Cells["B5"].Value = $"Date and Time Generated: {DateTimeHelper.GetCurrentPhilippineTime()}";
                 worksheet.Cells["B5"].Style.HorizontalAlignment = alignmentCenter;
+
+                if (trialBalance.Any(record => record.BeginningBalance is null))
+                {
+                    AddCloseNote(worksheet.Cells["A6:E6"],
+                        "Beginning balances are saved at month-end close. Where blank, ending balances show only this month's activity.");
+                }
 
                 worksheet.Cells["A7"].Value = "ACCOUNT NUMBER";
                 worksheet.Cells["B7"].Value = "ACCOUNT NAME";
@@ -1375,43 +1384,45 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["E:H"].Style.Numberformat.Format = "#,##0.00_);[Red](#,##0.00)";
 
                 var row = 8;
-                var totalLiabilitiesBeginning = 0m;
+                var totalLiabilitiesBeginning = (decimal?)null;
                 var totalLiabilitiesEnding = 0m;
-                var totalStockholdersEquityBeginning = 0m;
+                var totalStockholdersEquityBeginning = (decimal?)null;
                 var totalStockholdersEquityEnding = 0m;
                 var totalCurrentDr = 0m;
                 var totalCurrentCr = 0m;
 
                 foreach (var section in reportSections.Where(s => s.Balances.Any()))
                 {
-                    var sectionBeginningBalance = 0m;
+                    var sectionBeginningBalance = (decimal?)null;
                     var sectionEndingBalance = 0m;
 
                     foreach (var record in section.Balances)
                     {
                         var account = record.Account;
                         var beginningBalance = record.BeginningBalance;
-                        var endingBalance = record.EndingBalance;
                         var currentDr = record.DebitTotal;
                         var currentCr = record.CreditTotal;
+                        var netMovement = account.NormalBalance == nameof(NormalBalance.Debit)
+                            ? currentDr - currentCr
+                            : currentCr - currentDr;
+                        var endingBalance = (beginningBalance ?? 0m) + netMovement;
 
-                        if (section.IsNotAssetOrLiability &&
-                            account.NormalBalance != nameof(NormalBalance.Credit))
+                        var sectionBalanceSign = section.IsNotAssetOrLiability && account.NormalBalance != nameof(NormalBalance.Credit)
+                            ? -1
+                            : 1;
+
+                        if (beginningBalance.HasValue)
                         {
-                            sectionBeginningBalance -= beginningBalance;
-                            sectionEndingBalance -= endingBalance;
+                            sectionBeginningBalance = (sectionBeginningBalance ?? 0m) + (sectionBalanceSign * beginningBalance.Value);
                         }
-                        else
-                        {
-                            sectionBeginningBalance += beginningBalance;
-                            sectionEndingBalance += endingBalance;
-                        }
+
+                        sectionEndingBalance += sectionBalanceSign * endingBalance;
 
                         worksheet.Cells[row, 1].Value = account.AccountNumber;
                         worksheet.Cells[row, 2].Value = account.AccountName;
                         worksheet.Cells[row, 3].Value = account.NormalBalance;
                         worksheet.Cells[row, 4].Value = account.Level;
-                        worksheet.Cells[row, 5].Value = beginningBalance != 0 ? beginningBalance : null;
+                        worksheet.Cells[row, 5].Value = beginningBalance;
                         worksheet.Cells[row, 6].Value = currentDr != 0 ? currentDr : null;
                         worksheet.Cells[row, 7].Value = currentCr != 0 ? currentCr : null;
                         worksheet.Cells[row, 8].Value = endingBalance != 0 ? endingBalance : null;
@@ -1450,7 +1461,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 worksheet.Cells[row, 1].Value = "TOTAL LIABILITIES & STOCKHOLDERS EQUITY";
-                worksheet.Cells[row, 5].Value = totalLiabilitiesBeginning + totalStockholdersEquityBeginning;
+                worksheet.Cells[row, 5].Value = totalLiabilitiesBeginning.HasValue || totalStockholdersEquityBeginning.HasValue
+                    ? (totalLiabilitiesBeginning ?? 0m) + (totalStockholdersEquityBeginning ?? 0m)
+                    : null;
                 worksheet.Cells[row, 6].Value = null;
                 worksheet.Cells[row, 7].Value = null;
                 worksheet.Cells[row, 8].Value = totalLiabilitiesEnding + totalStockholdersEquityEnding;
@@ -1496,7 +1509,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to generate trial balance report excel file.");
+                _logger.LogError(ex, "Failed to generate trial balance report excel file");
                 TempData["error"] = ex.Message;
 
                 return RedirectToAction(nameof(TrialBalanceReport));
@@ -1531,8 +1544,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .IgnoreQueryFilters()
                     .Include(gl => gl.Account)
                     .Where(gl =>
-                        gl.Date <= lastDayOfMonth &&
-                        true)
+                        gl.Date <= lastDayOfMonth)
                     .ToListAsync(cancellationToken);
 
                 var chartOfAccounts = await _dbContext.FilprideChartOfAccounts
@@ -1798,8 +1810,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .IgnoreQueryFilters()
                     .Include(gl => gl.Account) // Level 4
                     .Where(gl =>
-                        gl.Date <= lastDayOfMonth &&
-                        true)
+                        gl.Date <= lastDayOfMonth)
                     .ToListAsync(cancellationToken);
 
                 var chartOfAccounts = await _dbContext.FilprideChartOfAccounts
@@ -1813,15 +1824,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .FirstOrDefaultAsync(m => m.Year == monthDate.Year &&
                                               m.Month == monthDate.Month, cancellationToken);
 
-                if (nibitForThePeriod == null)
-                {
-                    if (nibitForThePeriod == null)
-                    {
-                        TempData["info"] = "NIBIT For The Period not found. Contact MIS-Enterprise.";
-                        return RedirectToAction(nameof(BalanceSheetReport));
-                    }
-                }
-
                 if (!generalLedgers.Any())
                 {
                     TempData["info"] = "No Record Found";
@@ -1830,9 +1832,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 using var package = new ExcelPackage();
                 var worksheet = package.Workbook.Worksheets.Add("Balance Sheet Report");
-                string currencyFormat = "#,##0.00_);[Red](#,##0.00)";
+                var currencyFormat = "#,##0.00_);[Red](#,##0.00)";
                 worksheet.View.FreezePanes(5, 1);
-                int row = 1;
+                var row = 1;
 
                 #region == Column Header ==
 
@@ -1888,11 +1890,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 row++;
 
-                using (var range = worksheet.Cells[row, 1, row, 6])
+                if (nibitForThePeriod is null)
                 {
-                    range.Merge = true;
-                    range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                    AddCloseNote(worksheet.Cells[row, 1, row, 6],
+                        "Retained earnings figures are unavailable until month-end close. Equity totals are incomplete.");
                 }
+
                 row += 2;
                 worksheet.Cells[row, 1].Value = "L1";
                 worksheet.Cells[row, 2].Value = "L2";
@@ -1932,14 +1935,14 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 if (levelFour.AccountName.Contains("Retained Earnings"))
                                 {
                                     worksheet.Cells[row, 4].Value = "Retained Earnings Beg";
-                                    worksheet.Cells[row, 6].Value = nibitForThePeriod.BeginningBalance != 0
-                                        ? nibitForThePeriod.BeginningBalance
+                                    worksheet.Cells[row, 6].Value = nibitForThePeriod?.BeginningBalance != 0
+                                        ? nibitForThePeriod?.BeginningBalance
                                         : null;
                                     row++;
 
                                     worksheet.Cells[row, 4].Value = "Net Income for the Period";
-                                    worksheet.Cells[row, 6].Value = nibitForThePeriod.NetIncome != 0
-                                        ? nibitForThePeriod.NetIncome
+                                    worksheet.Cells[row, 6].Value = nibitForThePeriod?.NetIncome != 0
+                                        ? nibitForThePeriod?.NetIncome
                                         : null;
 
                                     row++;
@@ -1950,17 +1953,17 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 if (levelFour.AccountName.Contains("Prior Period"))
                                 {
                                     worksheet.Cells[row, 4].Value = levelFour.AccountName;
-                                    worksheet.Cells[row, 6].Value = nibitForThePeriod.PriorPeriodAdjustment != 0
-                                        ? nibitForThePeriod.PriorPeriodAdjustment
+                                    worksheet.Cells[row, 6].Value = nibitForThePeriod?.PriorPeriodAdjustment != 0
+                                        ? nibitForThePeriod?.PriorPeriodAdjustment
                                         : null;
                                     row++;
 
                                     worksheet.Cells[row, 2].Value = "Retained Earnings End";
-                                    worksheet.Cells[row, 6].Value = nibitForThePeriod.EndingBalance != 0
-                                        ? nibitForThePeriod.EndingBalance
+                                    worksheet.Cells[row, 6].Value = nibitForThePeriod?.EndingBalance != 0
+                                        ? nibitForThePeriod?.EndingBalance
                                         : null;
 
-                                    subTotal += nibitForThePeriod.EndingBalance;
+                                    subTotal += nibitForThePeriod?.EndingBalance ?? 0m;
                                     row++;
 
                                     continue;
@@ -2042,7 +2045,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["F"].Style.Numberformat.Format = currencyFormat;
 
                 worksheet.Cells.AutoFitColumns();
-                for (int i = 1; i <= 4; i++)
+                for (var i = 1; i <= 4; i++)
                 {
                     worksheet.Column(i).Width = 4.5;
                 }
@@ -2054,7 +2057,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to generate balance sheet report excel file.");
+                _logger.LogError(ex, "Failed to generate balance sheet report excel file");
                 TempData["error"] = ex.Message;
                 return RedirectToAction(nameof(BalanceSheetReport));
             }
@@ -2248,12 +2251,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .FirstOrDefaultAsync(m => m.Year == monthDate.Year &&
                                               m.Month == monthDate.Month, cancellationToken);
 
-                if (nibitForThePeriod == null)
-                {
-                    TempData["info"] = "NIBIT For The Period not found. Contact MIS-Enterprise.";
-                    return RedirectToAction(nameof(StatementOfRetainedEarningsReport));
-                }
-
                 using var package = new ExcelPackage();
                 var worksheet = package.Workbook.Worksheets.Add("SRE Report");
                 var currencyFormat = "#,##0.00_);[Red](#,##0.00)";
@@ -2314,11 +2311,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
                 row++;
 
-                using (var range = worksheet.Cells[row, 1, row, 6])
+                if (nibitForThePeriod is null)
                 {
-                    range.Merge = true;
-                    range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                    AddCloseNote(worksheet.Cells[row, 1, row, 6],
+                        "Retained earnings amounts are unavailable until the selected month is closed.");
                 }
+
                 row += 2;
                 worksheet.Cells[row, 1].Value = "L1";
                 worksheet.Cells[row, 2].Value = "L2";
@@ -2328,8 +2326,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
 
                 worksheet.Cells[row, 1, row, 5].Style.Font.Bold = true;
 
-                row++;
-
                 #endregion
 
                 worksheet.Cells[8, 2].Value = "Retained Earnings";
@@ -2338,12 +2334,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[9, 3].Value = "Retained Earnings";
 
                 worksheet.Cells[10, 4].Value = "Retained Earnings Beg";
-                worksheet.Cells[10, 6].Value = nibitForThePeriod.BeginningBalance != 0 ? nibitForThePeriod.BeginningBalance : null;
+                worksheet.Cells[10, 6].Value = nibitForThePeriod?.BeginningBalance != 0 ? nibitForThePeriod?.BeginningBalance : null;
                 worksheet.Cells[10, 6].Style.Border.Top.Style = ExcelBorderStyle.Thin;
                 worksheet.Cells[10, 6].Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
 
                 worksheet.Cells[11, 4].Value = "Net Income for the Period";
-                worksheet.Cells[11, 6].Value = nibitForThePeriod.NetIncome != 0 ? nibitForThePeriod.NetIncome : null;
+                worksheet.Cells[11, 6].Value = nibitForThePeriod?.NetIncome != 0 ? nibitForThePeriod?.NetIncome : null;
                 worksheet.Cells[11, 6].Style.Border.Top.Style = ExcelBorderStyle.Thin;
                 worksheet.Cells[11, 6].Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
 
@@ -2353,13 +2349,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells[13, 3].Value = "Prior Period Adjustment";
 
                 worksheet.Cells[14, 4].Value = "Prior Period Adjustment";
-                worksheet.Cells[14, 6].Value = nibitForThePeriod.PriorPeriodAdjustment != 0 ? nibitForThePeriod.PriorPeriodAdjustment : null;
+                worksheet.Cells[14, 6].Value = nibitForThePeriod?.PriorPeriodAdjustment != 0 ? nibitForThePeriod?.PriorPeriodAdjustment : null;
                 worksheet.Cells[14, 6].Style.Border.Top.Style = ExcelBorderStyle.Thin;
                 worksheet.Cells[14, 6].Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
 
                 worksheet.Cells[15, 2].Value = "Retained Earnings End";
                 worksheet.Cells[15, 2].Style.Font.Bold = true;
-                worksheet.Cells[15, 6].Value = nibitForThePeriod.EndingBalance != 0 ? nibitForThePeriod.EndingBalance : null;
+                worksheet.Cells[15, 6].Value = nibitForThePeriod?.EndingBalance != 0 ? nibitForThePeriod?.EndingBalance : null;
                 worksheet.Cells[15, 6].Style.Border.Top.Style = ExcelBorderStyle.Thin;
                 worksheet.Cells[15, 6].Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
 
@@ -2367,7 +2363,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["F"].Style.Numberformat.Format = currencyFormat;
 
                 worksheet.Cells.AutoFitColumns();
-                for (int i = 1; i <= 4; i++)
+                for (var i = 1; i <= 4; i++)
                 {
                     worksheet.Column(i).Width = 4.5;
                 }
@@ -2386,7 +2382,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to generate statement of retained Earnings report excel file.");
+                _logger.LogError(ex, "Failed to generate statement of retained Earnings report excel file");
                 TempData["error"] = ex.Message;
                 return RedirectToAction(nameof(StatementOfRetainedEarningsReport));
             }
