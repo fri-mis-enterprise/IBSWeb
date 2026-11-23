@@ -31,9 +31,9 @@
                     <select asp-for="AccountNo"
                             asp-items="@Model.ChartOfAccounts"
                             class="form-control js-select2"
-                            style="width: 100%;"
-                            required >
-                        <option value="">Select account</option>
+                            data-placeholder="All accounts"
+                            style="width: 100%;">
+                        <option value="">All accounts</option>
                     </select>
                     <span asp-validation-for="AccountNo" class="text-danger"></span>
                 </div>
