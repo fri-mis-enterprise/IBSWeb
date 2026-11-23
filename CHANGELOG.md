@@ -6,6 +6,23 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v5.6.0] - 2026-11-23
+
+### Added
+- Allow Filpride users to export the Profit and Loss, Balance Sheet, and Statement of Retained Earnings reports to Excel before month-end close. The exports flag unavailable net income or retained earnings figures and indicate when year-to-date net income includes only closed months.
+
+### Changed
+- Generate the Filpride Trial Balance Excel export for a selected month using posted ledger activity. When a saved beginning balance is unavailable, the export leaves it blank and calculates the ending balance from that month's activity.
+
+---
+
+## [v5.5.0] - 2026-11-23
+
+### Added
+- Allow users to leave the account selection blank in the Filpride Subsidiary Ledger report to export all accounts with qualifying sub-account transactions for the selected date range. The Excel export includes per-account subtotals and a grand total.
+
+---
+
 ## [v5.4.0] - 2026-11-10
 
 ### Added

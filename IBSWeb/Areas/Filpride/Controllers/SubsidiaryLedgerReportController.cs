@@ -1188,21 +1188,12 @@ namespace IBSWeb.Areas.Filpride.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> GenerateSubsidiaryLedgerExcelFile(SubsidiaryLedgerReportViewModel model, CancellationToken cancellationToken)
         {
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid || model.DateFrom == default || model.DateTo == default)
             {
-                TempData["warning"] = "Please complete the form all inputs are required";
+                TempData["warning"] = "Please enter a valid Date From and Date To.";
                 return RedirectToAction(nameof(SubsidiaryLedgerReport));
             }
 
-            model.ChartOfAccounts = await _dbContext.FilprideChartOfAccounts
-                .IgnoreQueryFilters()
-                .Where(coa => !coa.HasChildren)
-                .OrderBy(coa => coa.AccountNumber)
-                .Select(s => new SelectListItem
-                {
-                    Value = s.AccountNumber + " " + s.AccountName, Text = s.AccountNumber + " " + s.AccountName
-                })
-                .ToListAsync(cancellationToken);
             try
             {
                 var dateFrom = model.DateFrom;
@@ -1213,24 +1204,28 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     throw new ArgumentException("Date From must not be greater than Date To!");
                 }
 
-                var selectedAccountNo = model.AccountNo
-                    .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                    .FirstOrDefault();
+                var selectedAccountNo = string.IsNullOrWhiteSpace(model.AccountNo)
+                    ? null
+                    : model.AccountNo.Trim().Split(' ', 2)[0];
+                var selectedAccount = selectedAccountNo is null
+                    ? null
+                    : await _unitOfWork.FilprideChartOfAccount.GetAsyncIgnoreQueryFilters(
+                        coa => coa.AccountNumber == selectedAccountNo, cancellationToken);
 
-                var selectedAccount = await _unitOfWork.FilprideChartOfAccount
-                    .GetAsyncIgnoreQueryFilters(coa => selectedAccountNo != null && coa.AccountNumber == selectedAccountNo, cancellationToken);
-
-                if (selectedAccount == null)
+                if (selectedAccountNo is not null && selectedAccount is null)
                 {
-                    TempData["warning"] = "Selected Account is Null";
+                    TempData["warning"] = "The selected account was not found.";
                     return RedirectToAction(nameof(SubsidiaryLedgerReport));
                 }
+
+                var leafAccountNumbers = _dbContext.FilprideChartOfAccounts
+                    .IgnoreQueryFilters()
+                    .Where(coa => !coa.HasChildren)
+                    .Select(coa => coa.AccountNumber);
                 var subsidiaryLedgerByAccountNo = await _dbContext.FilprideGeneralLedgerBooks
-                    .Where(g =>
-                        g.Date >= dateFrom && g.Date <= dateTo &&
-                        g.AccountNo == selectedAccount.AccountNumber &&
-                        g.SubAccountId.HasValue && g.SubAccountType.HasValue &&
-                        true)
+                    .Where(g => g.Date >= dateFrom && g.Date <= dateTo
+                        && (selectedAccountNo == null ? leafAccountNumbers.Contains(g.AccountNo) : g.AccountNo == selectedAccountNo)
+                        && g.SubAccountId.HasValue && g.SubAccountType.HasValue)
                     .ToListAsync(cancellationToken);
 
                 if (subsidiaryLedgerByAccountNo.Count == 0)
@@ -1295,8 +1290,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["A5"].Value = "Date and Time Generated:";
 
                 worksheet.Cells["B2"].Value = $"{dateFrom:yyyy-MM-dd} - {dateTo:yyyy-MM-dd}";
-                worksheet.Cells["B3"].Value = $"{selectedAccount.AccountNumber}";
-                worksheet.Cells["B4"].Value = $"{selectedAccount.AccountName}";
+                worksheet.Cells["B3"].Value = selectedAccount?.AccountNumber;
+                worksheet.Cells["B4"].Value = selectedAccount?.AccountName ?? "All accounts";
                 worksheet.Cells["B5"].Value = $"{DateTimeHelper.GetCurrentPhilippineTime()}";
 
                 worksheet.Cells["A7"].Value = "Date";
@@ -1323,135 +1318,144 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
                 }
 
-                int row = 8;
-                string currencyFormat = "#,##0.00";
-                decimal totalDebit = 0;
-                decimal totalCredit = 0;
-                decimal totalMtd = 0;
-                decimal finalBalance = 0;
+                var row = 8;
+                var currencyFormat = "#,##0.00";
+                var totalDebit = 0m;
+                var totalCredit = 0m;
+                var totalMtd = 0m;
+                var finalBalance = 0m;
 
-                var accountBalances = new Dictionary<int, decimal>();
-
-                foreach (var grouped in subsidiaryLedgerByAccountNo
+                foreach (var accountGroup in subsidiaryLedgerByAccountNo
                     .Where(g => !string.IsNullOrEmpty(g.AccountNo))
-                    .OrderBy(g => g.SubAccountName)
-                    .GroupBy(g => new
-                    {
-                        g.AccountId,
-                        g.SubAccountId,
-                        g.SubAccountType,
-                        g.SubAccountName,
-                        g.AccountNo
-                    }))
+                    .GroupBy(g => g.AccountNo)
+                    .OrderBy(group => group.Key))
                 {
-                    var accountId = grouped.Key.AccountId;
-                    var subAccountType = grouped.Key.SubAccountType;
-                    var subAccountId = grouped.Key.SubAccountId ?? 0;
-                    var subAccountName = grouped.Key.SubAccountName;
-                    var accountNo = grouped.Key.AccountNo;
-                    var subAccountTypeDisplay = GetSubAccountTypeDisplay(grouped.First(), supplierCategories);
-
-                    var accountBeginningBalance = beginningBalanceDictionary
-                        .GetValueOrDefault(accountId + "_" + subAccountType + "_" + subAccountId + "_" + subAccountName)?
-                        .Sum() ?? 0m;
-
-                    // Initialize running balance for this account
-                    accountBalances[subAccountId] = accountBeginningBalance;
-
-                    // Get account details from dictionary
-                    var account = accountDictionary.TryGetValue(accountNo, out var value)
-                        ? value
-                        : null;
-
+                    var accountNo = accountGroup.Key;
+                    var account = accountDictionary.GetValueOrDefault(accountNo);
                     var isDebitAccount = account?.NormalBalance == nameof(NormalBalance.Debit);
+                    var accountDebit = 0m;
+                    var accountCredit = 0m;
+                    var accountMtd = 0m;
+                    var accountClosingBalance = 0m;
 
-                    // Add beginning balance row for this account
-                    worksheet.Cells[row, 4].Value = "Beginning Balance";
-                    worksheet.Cells[row, 5].Value = accountNo;
-                    worksheet.Cells[row, 6].Value = account?.AccountName;
-                    worksheet.Cells[row, 12].Value = accountBeginningBalance;
-                    worksheet.Cells[row, 12].Style.Numberformat.Format = currencyFormat;
-
-                    using (var range = worksheet.Cells[row, 1, row, 12])
+                    foreach (var grouped in accountGroup
+                        .OrderBy(g => g.SubAccountName)
+                        .GroupBy(g => new { g.AccountId, g.SubAccountId, g.SubAccountType, g.SubAccountName }))
                     {
-                        range.Style.Font.Italic = true;
-                        range.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                        range.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(242, 242, 242));
-                    }
+                        var accountId = grouped.Key.AccountId;
+                        var subAccountType = grouped.Key.SubAccountType;
+                        var subAccountId = grouped.Key.SubAccountId ?? 0;
+                        var subAccountName = grouped.Key.SubAccountName;
+                        var subAccountTypeDisplay = GetSubAccountTypeDisplay(grouped.First(), supplierCategories);
 
-                    row++;
+                        var accountBeginningBalance = beginningBalanceDictionary
+                            .GetValueOrDefault(accountId + "_" + subAccountType + "_" + subAccountId + "_" + subAccountName)?
+                            .Sum() ?? 0m;
 
-                    decimal groupDebit = 0;
-                    decimal groupCredit = 0;
-                    decimal groupMtd = 0;
+                        var runningBalance = accountBeginningBalance;
 
-                    foreach (var journal in grouped.OrderBy(g => g.Date))
-                    {
-                        decimal transaction;
+                        // Add beginning balance row for this account
+                        worksheet.Cells[row, 4].Value = "Beginning Balance";
+                        worksheet.Cells[row, 5].Value = accountNo;
+                        worksheet.Cells[row, 6].Value = account?.AccountName;
+                        worksheet.Cells[row, 12].Value = accountBeginningBalance;
+                        worksheet.Cells[row, 12].Style.Numberformat.Format = currencyFormat;
 
-                        if (isDebitAccount)
+                        using (var range = worksheet.Cells[row, 1, row, 12])
                         {
-                            transaction = journal.Debit - journal.Credit;
-                            groupMtd += transaction;
-                            accountBalances[subAccountId] += transaction;
-                        }
-                        else
-                        {
-                            transaction = journal.Credit - journal.Debit;
-                            groupMtd += transaction;
-                            accountBalances[subAccountId] += transaction;
+                            range.Style.Font.Italic = true;
+                            range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                            range.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(242, 242, 242));
                         }
 
-                        worksheet.Cells[row, 1].Value = journal.Date.ToString("dd-MMM-yyyy");
-                        worksheet.Cells[row, 2].Value = journal.ModuleType;
-                        worksheet.Cells[row, 3].Value = journal.Reference;
-                        worksheet.Cells[row, 4].Value = journal.Description;
-                        worksheet.Cells[row, 5].Value = journal.AccountNo;
-                        worksheet.Cells[row, 6].Value = journal.AccountTitle;
-                        worksheet.Cells[row, 7].Value = subAccountNames.GetValueOrDefault(journal.GeneralLedgerBookId);
-                        worksheet.Cells[row, 8].Value = subAccountTypeDisplay;
-                        worksheet.Cells[row, 9].Value = journal.Debit;
-                        worksheet.Cells[row, 10].Value = journal.Credit;
+                        row++;
+
+                        var groupDebit = 0m;
+                        var groupCredit = 0m;
+                        var groupMtd = 0m;
+
+                        foreach (var journal in grouped.OrderBy(g => g.Date).ThenBy(g => g.GeneralLedgerBookId))
+                        {
+                            var transaction = isDebitAccount
+                                ? journal.Debit - journal.Credit
+                                : journal.Credit - journal.Debit;
+                            groupMtd += transaction;
+                            runningBalance += transaction;
+
+                            worksheet.Cells[row, 1].Value = journal.Date.ToString("dd-MMM-yyyy");
+                            worksheet.Cells[row, 2].Value = journal.ModuleType;
+                            worksheet.Cells[row, 3].Value = journal.Reference;
+                            worksheet.Cells[row, 4].Value = journal.Description;
+                            worksheet.Cells[row, 5].Value = journal.AccountNo;
+                            worksheet.Cells[row, 6].Value = journal.AccountTitle;
+                            worksheet.Cells[row, 7].Value = subAccountNames.GetValueOrDefault(journal.GeneralLedgerBookId);
+                            worksheet.Cells[row, 8].Value = subAccountTypeDisplay;
+                            worksheet.Cells[row, 9].Value = journal.Debit;
+                            worksheet.Cells[row, 10].Value = journal.Credit;
+                            worksheet.Cells[row, 11].Value = groupMtd;
+                            worksheet.Cells[row, 12].Value = runningBalance;
+
+                            worksheet.Cells[row, 9].Style.Numberformat.Format = currencyFormat;
+                            worksheet.Cells[row, 10].Style.Numberformat.Format = currencyFormat;
+                            worksheet.Cells[row, 11].Style.Numberformat.Format = currencyFormat;
+                            worksheet.Cells[row, 12].Style.Numberformat.Format = currencyFormat;
+
+                            groupDebit += journal.Debit;
+                            groupCredit += journal.Credit;
+
+                            row++;
+                        }
+
+                        // Subtotal for this account
+                        worksheet.Cells[row, 6].Value = "Sub Total:";
+                        worksheet.Cells[row, 7].Value = grouped.Key.SubAccountName;
+                        worksheet.Cells[row, 9].Value = groupDebit;
+                        worksheet.Cells[row, 10].Value = groupCredit;
                         worksheet.Cells[row, 11].Value = groupMtd;
-                        worksheet.Cells[row, 12].Value = accountBalances[subAccountId];
+                        worksheet.Cells[row, 12].Value = runningBalance;
 
                         worksheet.Cells[row, 9].Style.Numberformat.Format = currencyFormat;
                         worksheet.Cells[row, 10].Style.Numberformat.Format = currencyFormat;
                         worksheet.Cells[row, 11].Style.Numberformat.Format = currencyFormat;
                         worksheet.Cells[row, 12].Style.Numberformat.Format = currencyFormat;
 
-                        groupDebit += journal.Debit;
-                        groupCredit += journal.Credit;
+                        using (var range = worksheet.Cells[row, 1, row, 12])
+                        {
+                            range.Style.Font.Bold = true;
+                            range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                            range.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(172, 185, 202));
+                        }
+
+                        accountDebit += groupDebit;
+                        accountCredit += groupCredit;
+                        accountMtd += groupMtd;
+                        accountClosingBalance += runningBalance;
 
                         row++;
                     }
 
-                    // Subtotal for this account
-                    worksheet.Cells[row, 6].Value = "Sub Total:";
-                    worksheet.Cells[row, 7].Value = grouped.Key.SubAccountName;
-                    worksheet.Cells[row, 9].Value = groupDebit;
-                    worksheet.Cells[row, 10].Value = groupCredit;
-                    worksheet.Cells[row, 11].Value = groupMtd;
-                    worksheet.Cells[row, 12].Value = accountBalances[subAccountId];
+                    totalDebit += accountDebit;
+                    totalCredit += accountCredit;
+                    totalMtd += accountMtd;
+                    finalBalance += accountClosingBalance;
 
-                    worksheet.Cells[row, 9].Style.Numberformat.Format = currencyFormat;
-                    worksheet.Cells[row, 10].Style.Numberformat.Format = currencyFormat;
-                    worksheet.Cells[row, 11].Style.Numberformat.Format = currencyFormat;
-                    worksheet.Cells[row, 12].Style.Numberformat.Format = currencyFormat;
-
-                    using (var range = worksheet.Cells[row, 1, row, 12])
+                    if (selectedAccount is null)
                     {
+                        worksheet.Cells[row, 5].Value = accountNo;
+                        worksheet.Cells[row, 6].Value = $"Total {account?.AccountName}";
+                        worksheet.Cells[row, 9].Value = accountDebit;
+                        worksheet.Cells[row, 10].Value = accountCredit;
+                        worksheet.Cells[row, 11].Value = accountMtd;
+                        worksheet.Cells[row, 12].Value = accountClosingBalance;
+                        worksheet.Cells[row, 9, row, 12].Style.Numberformat.Format = currencyFormat;
+
+                        using var range = worksheet.Cells[row, 1, row, 12];
                         range.Style.Font.Bold = true;
                         range.Style.Fill.PatternType = ExcelFillStyle.Solid;
                         range.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(172, 185, 202));
+
+                        row++;
                     }
-
-                    totalDebit += groupDebit;
-                    totalCredit += groupCredit;
-                    totalMtd += groupMtd;
-                    finalBalance += accountBalances[subAccountId];
-
-                    row++;
                 }
 
                 // Grand total
@@ -1463,7 +1467,9 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 worksheet.Cells[row, 6].Value = "Grand Total:";
-                worksheet.Cells[row, 7].Value = selectedAccount.AccountNumber + " " + selectedAccount.AccountName;
+                worksheet.Cells[row, 7].Value = selectedAccount is null
+                    ? null
+                    : selectedAccount.AccountNumber + " " + selectedAccount.AccountName;
                 worksheet.Cells[row, 7].Style.Font.Bold = true;
                 worksheet.Cells[row, 9].Value = totalDebit;
                 worksheet.Cells[row, 10].Value = totalCredit;
@@ -1532,11 +1538,13 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             dr.SupplierName,
                             dr.CommissioneeName),
                         cancellationToken);
-            var generalLedgerBooksByReference = generalLedgerBooks.ToLookup(gl => gl.Reference);
+            var ledgerReferencesByAccount = generalLedgerBooks
+                .GroupBy(gl => gl.AccountNo)
+                .ToDictionary(group => group.Key, group => group.ToLookup(gl => gl.Reference));
 
             return generalLedgerBooks.ToDictionary(
                 gl => gl.GeneralLedgerBookId,
-                gl => ResolveSubAccountName(gl, generalLedgerBooksByReference, deliveryReceipts));
+                gl => ResolveSubAccountName(gl, ledgerReferencesByAccount[gl.AccountNo], deliveryReceipts));
         }
 
         private sealed record DeliveryReceiptSubAccountNames(
