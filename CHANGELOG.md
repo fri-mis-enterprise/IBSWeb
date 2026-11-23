@@ -6,6 +6,13 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v5.5.0] - 2026-11-23
+
+### Added
+- Allow users to leave the account selection blank in the Filpride Subsidiary Ledger report to export all accounts with qualifying sub-account transactions for the selected date range. The Excel export includes per-account subtotals and a grand total.
+
+---
+
 ## [v5.4.0] - 2026-11-10
 
 ### Added
