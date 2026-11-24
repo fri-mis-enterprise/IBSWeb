@@ -40,6 +40,31 @@ namespace IBS.DataAccess.Repository.Filpride
             return generalLedgerBooks;
         }
 
+        public async Task<Dictionary<string, decimal>> GetBalanceSheetAccountBalancesAsync(DateOnly monthEnd, CancellationToken cancellationToken = default)
+        {
+            var signedEntries =
+                from entry in _db.FilprideGeneralLedgerBooks.IgnoreQueryFilters()
+                join account in _db.FilprideChartOfAccounts.IgnoreQueryFilters()
+                    on entry.AccountId equals account.AccountId
+                where entry.Date <= monthEnd
+                select new
+                {
+                    entry.AccountNo,
+                    Amount = account.NormalBalance == nameof(NormalBalance.Debit)
+                        ? entry.Debit - entry.Credit
+                        : entry.Credit - entry.Debit
+                };
+
+            return await signedEntries
+                .GroupBy(entry => entry.AccountNo)
+                .Select(entries => new
+                {
+                    AccountNo = entries.Key,
+                    Balance = entries.Sum(entry => entry.Amount)
+                })
+                .ToDictionaryAsync(entry => entry.AccountNo, entry => entry.Balance, cancellationToken);
+        }
+
         public List<FilprideInventory> GetInventoryBooks(DateOnly dateFrom, DateOnly dateTo)
         {
             if (dateFrom > dateTo)

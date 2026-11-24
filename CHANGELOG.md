@@ -6,6 +6,16 @@ and this project adheres to **Semantic Versioning (SemVer)**.
 
 ---
 
+## [v5.6.1] - 2026-11-24
+
+### Changed
+- Aggregate month-end account balances in the database for the Filpride Balance Sheet Excel export, reducing the ledger data loaded by the application.
+
+### Fixed
+- Calculate beginning balances in the Filpride Trial Balance Excel export from posted ledger entries before the selected month. Include accounts with prior activity even when they have no entries that month, and apply debit and credit signs consistently in section totals.
+
+---
+
 ## [v5.6.0] - 2026-11-23
 
 ### Added
