@@ -1254,19 +1254,20 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var monthEnd = new DateOnly(monthDate.Year, monthDate.Month, DateTime.DaysInMonth(monthDate.Year, monthDate.Month));
 
                 var ledgerTotals = _dbContext.FilprideGeneralLedgerBooks
-                    .Where(entry => entry.IsPosted && entry.Date >= monthStart && entry.Date <= monthEnd)
+                    .Where(entry => entry.IsPosted && entry.Date <= monthEnd)
                     .GroupBy(entry => entry.AccountId)
                     .Select(entries => new
                     {
                         AccountId = entries.Key,
-                        DebitTotal = entries.Sum(entry => entry.Debit),
-                        CreditTotal = entries.Sum(entry => entry.Credit)
+                        BeginningDebitTotal = entries.Sum(entry => entry.Date < monthStart ? entry.Debit : 0m),
+                        BeginningCreditTotal = entries.Sum(entry => entry.Date < monthStart ? entry.Credit : 0m),
+                        DebitTotal = entries.Sum(entry => entry.Date >= monthStart ? entry.Debit : 0m),
+                        CreditTotal = entries.Sum(entry => entry.Date >= monthStart ? entry.Credit : 0m)
                     });
 
                 var accounts = _dbContext.FilprideChartOfAccounts
                     .IgnoreQueryFilters()
-                    .AsNoTracking()
-                    .Where(account => !account.HasChildren);
+                    .AsNoTracking();
 
                 var trialBalance = await (
                     from totals in ledgerTotals
@@ -1275,10 +1276,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     select new
                     {
                         Account = account,
-                        BeginningBalance = account.Balances
-                            .Where(balance => balance.IsValid && balance.IsClosed && balance.PeriodStartDate == monthStart)
-                            .Select(balance => (decimal?)balance.BeginningBalance)
-                            .FirstOrDefault(),
+                        totals.BeginningDebitTotal,
+                        totals.BeginningCreditTotal,
                         totals.DebitTotal,
                         totals.CreditTotal
                     }).ToListAsync(cancellationToken);
@@ -1297,7 +1296,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         Balances = trialBalance
                             .Where(pb => pb.Account.AccountType == "Asset")
                             .ToList(),
-                        IsNotAssetOrLiability = false
+                        IsDebitNormal = true
                     },
                     new
                     {
@@ -1305,7 +1304,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                         Balances = trialBalance
                             .Where(pb => pb.Account.AccountType == "Liabilities")
                             .ToList(),
-                        IsNotAssetOrLiability = false
+                        IsDebitNormal = false
                     },
                     new
                     {
@@ -1314,7 +1313,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                             .Where(pb => pb.Account.AccountType != "Asset" &&
                                          pb.Account.AccountType != "Liabilities")
                             .ToList(),
-                        IsNotAssetOrLiability = true
+                        IsDebitNormal = false
                     }
                 };
 
@@ -1346,12 +1345,6 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["B4"].Style.HorizontalAlignment = alignmentCenter;
                 worksheet.Cells["B5"].Value = $"Date and Time Generated: {DateTimeHelper.GetCurrentPhilippineTime()}";
                 worksheet.Cells["B5"].Style.HorizontalAlignment = alignmentCenter;
-
-                if (trialBalance.Any(record => record.BeginningBalance is null))
-                {
-                    AddCloseNote(worksheet.Cells["A6:E6"],
-                        "Beginning balances are saved at month-end close. Where blank, ending balances show only this month's activity.");
-                }
 
                 worksheet.Cells["A7"].Value = "ACCOUNT NUMBER";
                 worksheet.Cells["B7"].Value = "ACCOUNT NAME";
@@ -1385,38 +1378,33 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 worksheet.Cells["E:H"].Style.Numberformat.Format = "#,##0.00_);[Red](#,##0.00)";
 
                 var row = 8;
-                var totalLiabilitiesBeginning = (decimal?)null;
+                var totalLiabilitiesBeginning = 0m;
                 var totalLiabilitiesEnding = 0m;
-                var totalStockholdersEquityBeginning = (decimal?)null;
+                var totalStockholdersEquityBeginning = 0m;
                 var totalStockholdersEquityEnding = 0m;
                 var totalCurrentDr = 0m;
                 var totalCurrentCr = 0m;
 
                 foreach (var section in reportSections.Where(s => s.Balances.Any()))
                 {
-                    var sectionBeginningBalance = (decimal?)null;
+                    var sectionBeginningBalance = 0m;
                     var sectionEndingBalance = 0m;
 
                     foreach (var record in section.Balances)
                     {
                         var account = record.Account;
-                        var beginningBalance = record.BeginningBalance;
+                        var isDebitNormal = account.NormalBalance == nameof(NormalBalance.Debit);
+                        var beginningBalance = isDebitNormal
+                            ? record.BeginningDebitTotal - record.BeginningCreditTotal
+                            : record.BeginningCreditTotal - record.BeginningDebitTotal;
                         var currentDr = record.DebitTotal;
                         var currentCr = record.CreditTotal;
-                        var netMovement = account.NormalBalance == nameof(NormalBalance.Debit)
-                            ? currentDr - currentCr
-                            : currentCr - currentDr;
-                        var endingBalance = (beginningBalance ?? 0m) + netMovement;
+                        var netMovement = isDebitNormal ? currentDr - currentCr : currentCr - currentDr;
+                        var endingBalance = beginningBalance + netMovement;
 
-                        var sectionBalanceSign = section.IsNotAssetOrLiability && account.NormalBalance != nameof(NormalBalance.Credit)
-                            ? -1
-                            : 1;
+                        var sectionBalanceSign = section.IsDebitNormal == isDebitNormal ? 1 : -1;
 
-                        if (beginningBalance.HasValue)
-                        {
-                            sectionBeginningBalance = (sectionBeginningBalance ?? 0m) + (sectionBalanceSign * beginningBalance.Value);
-                        }
-
+                        sectionBeginningBalance += sectionBalanceSign * beginningBalance;
                         sectionEndingBalance += sectionBalanceSign * endingBalance;
 
                         worksheet.Cells[row, 1].Value = account.AccountNumber;
@@ -1462,9 +1450,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 }
 
                 worksheet.Cells[row, 1].Value = "TOTAL LIABILITIES & STOCKHOLDERS EQUITY";
-                worksheet.Cells[row, 5].Value = totalLiabilitiesBeginning.HasValue || totalStockholdersEquityBeginning.HasValue
-                    ? (totalLiabilitiesBeginning ?? 0m) + (totalStockholdersEquityBeginning ?? 0m)
-                    : null;
+                worksheet.Cells[row, 5].Value = totalLiabilitiesBeginning + totalStockholdersEquityBeginning;
                 worksheet.Cells[row, 6].Value = null;
                 worksheet.Cells[row, 7].Value = null;
                 worksheet.Cells[row, 8].Value = totalLiabilitiesEnding + totalStockholdersEquityEnding;
