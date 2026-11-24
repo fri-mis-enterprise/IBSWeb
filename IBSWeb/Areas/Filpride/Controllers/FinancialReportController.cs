@@ -1793,12 +1793,8 @@ namespace IBSWeb.Areas.Filpride.Controllers
                 var firstDayOfMonth = new DateOnly(monthDate.Year, monthDate.Month, 1);
                 var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
 
-                var generalLedgers = await _dbContext.FilprideGeneralLedgerBooks
-                    .IgnoreQueryFilters()
-                    .Include(gl => gl.Account) // Level 4
-                    .Where(gl =>
-                        gl.Date <= lastDayOfMonth)
-                    .ToListAsync(cancellationToken);
+                var accountBalances = await _unitOfWork.FilprideReport
+                    .GetBalanceSheetAccountBalancesAsync(lastDayOfMonth, cancellationToken);
 
                 var chartOfAccounts = await _dbContext.FilprideChartOfAccounts
                     .IgnoreQueryFilters()
@@ -1811,7 +1807,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                     .FirstOrDefaultAsync(m => m.Year == monthDate.Year &&
                                               m.Month == monthDate.Month, cancellationToken);
 
-                if (!generalLedgers.Any())
+                if (accountBalances.Count == 0)
                 {
                     TempData["info"] = "No Record Found";
                     return RedirectToAction(nameof(BalanceSheetReport));
@@ -1957,11 +1953,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 }
 
                                 worksheet.Cells[row, 4].Value = levelFour.AccountName;
-                                var levelFourBalance = generalLedgers
-                                    .Where(gl => gl.AccountNo == levelFour.AccountNumber)
-                                    .Sum(gl => gl.Account.NormalBalance == nameof(NormalBalance.Debit)
-                                        ? gl.Debit - gl.Credit
-                                        : gl.Credit - gl.Debit);
+                                var levelFourBalance = accountBalances.GetValueOrDefault(levelFour.AccountNumber);
                                 worksheet.Cells[row, 6].Value = levelFourBalance != 0 ? levelFourBalance : null;
                                 subTotal += levelFourBalance;
                                 row++;
@@ -1969,11 +1961,7 @@ namespace IBSWeb.Areas.Filpride.Controllers
                                 foreach (var levelFive in levelFour.Children.OrderBy(l => l.AccountNumber))
                                 {
                                     worksheet.Cells[row, 5].Value = levelFive.AccountName;
-                                    var levelFiveBalance = generalLedgers
-                                        .Where(gl => gl.AccountNo == levelFive.AccountNumber)
-                                        .Sum(gl => gl.Account.NormalBalance == nameof(NormalBalance.Debit) ?
-                                            gl.Debit - gl.Credit :
-                                            gl.Credit - gl.Debit);
+                                    var levelFiveBalance = accountBalances.GetValueOrDefault(levelFive.AccountNumber);
                                     worksheet.Cells[row, 6].Value = levelFiveBalance != 0 ? levelFiveBalance : null;
                                     subTotal += levelFiveBalance;
                                     row++;

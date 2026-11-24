@@ -15,6 +15,8 @@ namespace IBS.DataAccess.Repository.Filpride.IRepository
 
         Task<List<FilprideGeneralLedgerBook>> GetGeneralLedgerBooks(DateOnly dateFrom, DateOnly dateTo, CancellationToken cancellationToken = default);
 
+        Task<Dictionary<string, decimal>> GetBalanceSheetAccountBalancesAsync(DateOnly monthEnd, CancellationToken cancellationToken = default);
+
         Task<List<FilprideAuditTrail>> GetAuditTrails(DateOnly dateFrom, DateOnly dateTo);
 
         Task<List<FilprideCustomerOrderSlip>> GetCosUnservedVolume(DateOnly dateFrom, DateOnly dateTo);
