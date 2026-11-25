@@ -94,6 +94,11 @@ namespace IBS.Models.Filpride.MasterFile
         [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = false)]
         public decimal CreditLimitAsOfToday { get; set; }
 
+        [Display(Name = "Standard Freight")]
+        [Column(TypeName = "numeric(18,4)")]
+        [DisplayFormat(DataFormatString = "{0:#,##0.0000;(#,##0.0000)}", ApplyFormatInEditMode = false)]
+        public decimal StandardFreight { get; set; }
+
         public bool HasBranch { get; set; }
 
         public ICollection<FilprideCustomerBranch>? Branches { get; set; }

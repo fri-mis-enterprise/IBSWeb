@@ -1,4 +1,4 @@
-﻿@using System.Text.Json
+@using System.Text.Json
 @using IBS.Models.Enums
 @using IBS.Utility.Constants
 @model CustomerOrderSlipViewModel
@@ -281,8 +281,7 @@
     }
     <script>
         $(document).ready(function () {
-            var isInitialize = true;
-            function loadCustomerData() {
+            function loadCustomerData(preserveValues) {
                 var customerId = $('select[name="CustomerId"]').val();
                 if (customerId) {
                     $.ajax({
@@ -291,6 +290,11 @@
                         data: { id: customerId },
                         success: function (data) {
                             if (data) {
+                                if (preserveValues) {
+                                    $('select[name="SelectedBranch"]').closest('.form-group').toggle(Boolean(data.branches && data.branches.length));
+                                    updateTermsEditability(data.hasMultipleTerms);
+                                    return;
+                                }
                                 $('input[name="CustomerAddress"]').val(data.address);
                                 $('input[name="TinNo"]').val(data.tinNo);
                                 $('input[name="CustomerType"]').val(data.customerType);
@@ -302,26 +306,14 @@
                                         .prop('checked', true)
                                         .trigger('change');
 
-                                    let modelCommissioneeId = @Html.Raw(Json.Serialize(Model.CommissioneeId));
-                                    let modelCommissionRate = @Html.Raw(Json.Serialize(Model.CommissionRate));
-                                    if (isInitialize && modelCommissioneeId) {
-                                        // Master
-                                        $('select[name="CommissioneeId"]').val(modelCommissioneeId).trigger('change');
-                                        $('input[name="CommissionRate"]').val(modelCommissionRate);
-                                    } else {
-                                        // Customer (only first load)
-                                        $('select[name="CommissioneeId"]').val(data.commissioneeId).trigger('change');
-                                        $('input[name="CommissionRate"]').val(data.commissionRate);
-                                    }
+                                    $('select[name="CommissioneeId"]').val(data.commissioneeId).trigger('change');
+                                    $('input[name="CommissionRate"]').val(data.commissionRate);
                                 }
 
-                                if (!isInitialize) {
-                                    populateBranches(data.branches);
-                                }
+                                populateBranches(data.branches);
 
                                 updateTermsEditability(data.hasMultipleTerms);
 
-                                hasInitialized = true;
                             }
                             else {
                                 $('input[name="CustomerAddress"]').val('');
@@ -333,9 +325,7 @@
                             var poSelect = $(".customerPoNo");
                             var products = $(".products");
 
-                            if (!isInitialize) {
-                                products.val(null).trigger("change");
-                            }
+                            products.val(null).trigger("change");
 
                             @*TODO Delete this feature once the mobility company is live*@
                             $(".customerPOContainer").show();
@@ -345,7 +335,6 @@
                             $('input[name="Quantity"]').removeAttr('readonly');
                             $('input[name="DeliveredPrice"]').removeAttr('readonly');
 
-                            isInitialize = false;
                         },
                         error: function (xhr, status, error) {
                             console.log("Error: " + error);
@@ -359,8 +348,10 @@
                     clearBranches();
                 }
             }
-            $('select[name="CustomerId"]').on('change', loadCustomerData);
-            loadCustomerData();
+            $('select[name="CustomerId"]').on('change', function () {
+                loadCustomerData(false);
+            });
+            loadCustomerData(true);
 
             // Function to populate branches dropdown
             function populateBranches(branches) {
@@ -388,9 +379,10 @@
             }
 
             function updateTermsEditability(hasMultipleTerms) {
-                var termsSelect = $('#termsSelect');
+                var termsSelect = $('select[name="Terms"]');
                 var selectedValue = termsSelect.val(); // Get the current selected value
 
+                $('input[name="Terms"]').prop('disabled', hasMultipleTerms);
                 if (hasMultipleTerms) {
                     termsSelect.prop('disabled', false);
                     termsSelect.removeClass('bg-light');

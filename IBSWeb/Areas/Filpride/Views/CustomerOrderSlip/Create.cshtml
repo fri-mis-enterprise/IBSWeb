@@ -1,4 +1,4 @@
-﻿@using IBS.Models.Enums
+@using IBS.Models.Enums
 @using IBS.Utility.Constants
 @model CustomerOrderSlipViewModel
 
@@ -164,7 +164,7 @@
                         <span asp-validation-for="DeliveredPrice" class="text-danger"></span>
                     </div>
                     <div class="form-floating col-12 col-md-3 mb-2">
-                        <input asp-for="Freight" class="form-control border-0 shadow" placeholder="" value="0.0000" />
+                        <input asp-for="Freight" class="form-control border-0 shadow" placeholder="" />
                         <label asp-for="Freight" class="ms-2">Freight</label>
                         <span asp-validation-for="Freight" class="text-danger"></span>
                     </div>
@@ -185,7 +185,7 @@
                     <input type="radio" asp-for="HasCommission" value="true" id="HasCommissionYes" />
                     <label for="HasCommissionYes">Yes</label>
 
-                    <input type="radio" asp-for="HasCommission" value="false" id="HasCommissionNo" checked />
+                    <input type="radio" asp-for="HasCommission" value="false" id="HasCommissionNo" />
                     <label for="HasCommissionNo">No</label>
 
                     <span asp-validation-for="HasCommission" class="text-danger"></span>
@@ -256,8 +256,8 @@
     }
     <script>
         $(document).ready(function () {
-            $('select[name="CustomerId"]').on('change', function () {
-                let customerId = $(this).val();
+            function loadCustomerData(preserveValues) {
+                let customerId = $('select[name="CustomerId"]').val();
                 if (customerId) {
                     $.ajax({
                         url: '@Url.Action("GetCustomerDetails", "CustomerOrderSlip", new { area = "Filpride" })',
@@ -265,11 +265,17 @@
                         data: { id: customerId },
                         success: function (data) {
                             if (data) {
+                                if (preserveValues) {
+                                    $('select[name="SelectedBranch"]').closest('.form-group').toggle(Boolean(data.branches && data.branches.length));
+                                    updateTermsEditability(data.hasMultipleTerms);
+                                    return;
+                                }
                                 $('input[name="CustomerAddress"]').val(data.address);
                                 $('input[name="TinNo"]').val(data.tinNo);
                                 $('input[name="CustomerType"]').val(data.customerType);
                                 $('select[name="Terms"]').val(data.terms).change();
                                 $('input[name="StationCode"]').val(data.stationCode);
+                                $('input[name="Freight"]').val(Number(data.standardFreight).toFixed(4));
 
                                 // If data has commisionee Id check the Yes radio button else No
                                 if(data.commissioneeId) {
@@ -315,7 +321,12 @@
                     $('select[name="StationCode"]').val('');
                     clearBranches();
                 }
+            }
+
+            $('select[name="CustomerId"]').on('change', function () {
+                loadCustomerData(false);
             });
+            loadCustomerData(true);
 
             // Function to populate branches dropdown
             function populateBranches(branches) {
@@ -343,9 +354,10 @@
             }
 
             function updateTermsEditability(hasMultipleTerms) {
-                const termsSelect = $('#termsSelect');
+                const termsSelect = $('select[name="Terms"]');
                 let selectedValue = termsSelect.val(); // Get the current selected value
 
+                $('input[name="Terms"]').prop('disabled', hasMultipleTerms);
                 if (hasMultipleTerms) {
                     termsSelect.prop('disabled', false);
                     termsSelect.removeClass('bg-light');
